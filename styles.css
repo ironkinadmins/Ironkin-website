@@ -16,7 +16,7 @@ body {
   color: var(--text);
   background:
     linear-gradient(rgba(13, 11, 10, 0.70), rgba(13, 11, 10, 0.88)),
-    url("assets/ironkin-bg.png");
+    url("./assets/ironkin-bg.png");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
