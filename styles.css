@@ -75,3 +75,17 @@ footer { border-top: 1px solid var(--border); text-align: center; color: var(--m
   .three, .two, .progress-stats { grid-template-columns: 1fr; }
   .progress-header { align-items: flex-start; flex-direction: column; }
 }
+.rank-images {
+  display: grid;
+  gap: 24px;
+}
+
+.rank-images img {
+  width: 100%;
+  max-width: 1150px;
+  margin: 0 auto;
+  display: block;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+}
