@@ -1,9 +1,9 @@
 export async function onRequestGet() {
   const GROUP_ID = "12095";
-  const METRIC = "overall";
+  const METRIC = "woodcutting";
   const GOAL_XP = 1000000000;
 
-  const START_DATE = "2026-05-20T00:00:00.000Z";
+  const START_DATE = "2026-01-01T00:00:00.000Z";
   const END_DATE = new Date().toISOString();
 
   const url =
