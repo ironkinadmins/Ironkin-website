@@ -36,25 +36,37 @@ async function loadHomeStats() {
 
   if (!homeClanXp) return;
 
-  const formatXp = (num) => `${Number(num).toLocaleString()} XP`;
+  const formatNumber = (num) =>
+    Number(num || 0).toLocaleString();
 
   try {
-    const eventResponse = await fetch("/api/wom-event");
-    const eventData = await eventResponse.json();
+    const eventResponse =
+      await fetch("/api/event-standings");
 
-    if (eventResponse.ok) {
+    const eventData =
+      await eventResponse.json();
+
+    if (eventResponse.ok && eventData.active) {
       document.getElementById("homeClanXp").textContent =
-        formatXp(eventData.totalGained);
+        `${formatNumber(eventData.totalGained)} gained`;
 
       document.getElementById("homeEventPercent").textContent =
-        `${eventData.percent.toFixed(1)}%`;
+        eventData.type === "clan_goal"
+          ? "Clan Goal"
+          : eventData.type.toUpperCase();
+    } else {
+      document.getElementById("homeClanXp").textContent =
+        "No Active Event";
+
+      document.getElementById("homeEventPercent").textContent =
+        "Standby";
     }
 
-    const womResponse = await fetch(
-      "https://api.wiseoldman.net/v2/groups/12095"
-    );
+    const womResponse =
+      await fetch("https://api.wiseoldman.net/v2/groups/12095");
 
-    const womData = await womResponse.json();
+    const womData =
+      await womResponse.json();
 
     if (womResponse.ok) {
       document.getElementById("homeClanMembers").textContent =
