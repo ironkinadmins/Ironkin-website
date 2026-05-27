@@ -33,52 +33,49 @@ async function loadDiscordUser() {
 
 async function loadHomeStats() {
   const homeClanXp = document.getElementById("homeClanXp");
-
   if (!homeClanXp) return;
 
-  const formatNumber = (num) =>
-    Number(num || 0).toLocaleString();
+  const formatNumber = (num) => Number(num || 0).toLocaleString();
 
   try {
-    const eventResponse =
-      await fetch("/api/event-standings");
-
-    const eventData =
-      await eventResponse.json();
+    const eventResponse = await fetch("/api/event-standings");
+    const eventData = await eventResponse.json();
 
     if (eventResponse.ok && eventData.active) {
-      document.getElementById("homeClanXp").textContent =
-        `${formatNumber(eventData.totalGained)} gained`;
+      homeClanXp.textContent = `${formatNumber(eventData.totalGained)} gained`;
 
       document.getElementById("homeEventPercent").textContent =
-        eventData.type === "clan_goal"
-          ? "Clan Goal"
-          : eventData.type.toUpperCase();
-    } else {
-      document.getElementById("homeClanXp").textContent =
-        "No Active Event";
+        eventData.type === "clan_goal" ? "Clan Goal" : eventData.type.toUpperCase();
 
-      document.getElementById("homeEventPercent").textContent =
-        "Standby";
+      document.getElementById("homeEventTitle").textContent = eventData.title;
+
+      document.getElementById("homeEventMeta").textContent =
+        `${eventData.metric || "Competition"} • Ends ${new Date(eventData.endsAt).toLocaleDateString()}`;
+
+      const topThree = document.getElementById("homeTopThree");
+      topThree.innerHTML = "";
+
+      if (eventData.standings?.length) {
+        eventData.standings.slice(0, 3).forEach((player, index) => {
+          const div = document.createElement("div");
+          div.innerHTML = `<strong>#${index + 1} ${player.name}</strong><span>${formatNumber(player.gained)} gained</span>`;
+          topThree.appendChild(div);
+        });
+      } else {
+        topThree.textContent = "No standings yet.";
+      }
     }
 
-    const womResponse =
-      await fetch("https://api.wiseoldman.net/v2/groups/12095");
-
-    const womData =
-      await womResponse.json();
+    const womResponse = await fetch("https://api.wiseoldman.net/v2/groups/12095");
+    const womData = await womResponse.json();
 
     if (womResponse.ok) {
       document.getElementById("homeClanMembers").textContent =
-        womData.memberCount ||
-        womData.members?.length ||
-        "0";
+        womData.memberCount || womData.members?.length || "0";
     }
   } catch {
     homeClanXp.textContent = "Unavailable";
-
-    document.getElementById("homeEventPercent").textContent =
-      "Unavailable";
+    document.getElementById("homeEventPercent").textContent = "Unavailable";
   }
 }
 

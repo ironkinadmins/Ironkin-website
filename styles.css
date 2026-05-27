@@ -567,3 +567,42 @@ footer {
 .leaderboard-row span {
   color: var(--muted);
 }
+.home-event-card {
+  margin-top: 28px;
+  max-width: 850px;
+  background: rgba(24, 19, 17, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 22px;
+  backdrop-filter: blur(4px);
+}
+
+.home-event-card h2 {
+  margin-bottom: 8px;
+}
+
+.home-event-card p {
+  color: var(--muted);
+}
+
+.home-top-three {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.home-top-three div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.home-top-three strong {
+  color: var(--ember);
+}
+
+.home-top-three span {
+  color: var(--muted);
+}
