@@ -71,19 +71,36 @@ export async function onRequestGet() {
 
     );
 
-  const achievements =
-    achievementResults
-      .flatMap(result =>
-        result.status === "fulfilled"
-          ? result.value
-          : []
-      )
-      .filter(item => item.createdAt)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt) -
-          new Date(a.createdAt)
+const oneMonthAgo = new Date();
+
+oneMonthAgo.setMonth(
+  oneMonthAgo.getMonth() - 1
+);
+
+const achievements =
+  achievementResults
+    .flatMap(result =>
+      result.status === "fulfilled"
+        ? result.value
+        : []
+    )
+
+    .filter(item => {
+
+      if (!item.createdAt) return false;
+
+      return (
+        new Date(item.createdAt) >=
+        oneMonthAgo
       );
+
+    })
+
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+    );
 
   return Response.json({
 
