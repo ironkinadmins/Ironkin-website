@@ -161,11 +161,10 @@ async function loadRecentActivity() {
       const card = document.createElement("div");
       card.className = "achievement-pill";
 
-      card.innerHTML = `
-        <strong>${item.player}</strong>
-        <span>${item.name}</span>
-        <small>${new Date(item.createdAt).toLocaleDateString()}</small>
-      `;
+card.innerHTML = `
+  <strong>${item.player}</strong>
+  <span>${item.name}</span>
+`;
 
       container.appendChild(card);
     });

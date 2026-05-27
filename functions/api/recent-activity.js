@@ -1,6 +1,5 @@
 export async function onRequestGet() {
   const GROUP_ID = "12095";
-  const LIMIT = 12;
 
   const groupResponse = await fetch(
     `https://api.wiseoldman.net/v2/groups/${GROUP_ID}`
@@ -27,8 +26,7 @@ export async function onRequestGet() {
       member.displayName ||
       member.username
     )
-    .filter(Boolean)
-    .slice(0, 40);
+    .filter(Boolean);
 
   const achievementResults = await Promise.allSettled(
     usernames.map(async username => {
@@ -42,7 +40,7 @@ export async function onRequestGet() {
 
       return achievements.map(achievement => ({
         player: username,
-        name: achievement.name,
+        name: achievement.name || achievement.metric || "Achievement unlocked",
         metric: achievement.metric,
         measure: achievement.measure,
         createdAt: achievement.createdAt
@@ -55,8 +53,7 @@ export async function onRequestGet() {
       result.status === "fulfilled" ? result.value : []
     )
     .filter(item => item.createdAt)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, LIMIT);
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return Response.json({
     title: "Recent Achievements",

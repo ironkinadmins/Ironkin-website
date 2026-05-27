@@ -167,11 +167,62 @@ footer { border-top: 1px solid var(--border); text-align: center; color: var(--m
   color: var(--muted);
 }
 .activity-scroll {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  margin-top: 18px;
+}
+
+.activity-track {
   display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding: 14px 2px 4px;
-  scroll-snap-type: x mandatory;
+  align-items: center;
+  gap: 18px;
+  width: max-content;
+  animation: marqueeScroll 40s linear infinite;
+}
+
+.activity-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marqueeScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.achievement-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 18px;
+
+  border-radius: 999px;
+
+  background: rgba(255,255,255,0.05);
+
+  border: 1px solid var(--border);
+
+  white-space: nowrap;
+
+  flex-shrink: 0;
+}
+
+.achievement-pill strong {
+  color: var(--ember);
+}
+
+.achievement-pill span {
+  color: var(--text);
+}
+
+.achievement-pill small {
+  color: var(--muted);
 }
 
 .achievement-pill {
