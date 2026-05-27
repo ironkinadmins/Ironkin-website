@@ -138,3 +138,41 @@ if (womResponse.ok) {
 }
 
 loadHomeStats();
+async function loadRecentActivity() {
+  const container = document.getElementById("recentActivity");
+  if (!container) return;
+
+  const formatXp = (num) => `${Number(num).toLocaleString()} XP`;
+
+  try {
+    const response = await fetch("/api/recent-activity");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load activity.");
+    }
+
+    container.innerHTML = "";
+
+    if (!data.topGains || data.topGains.length === 0) {
+      container.textContent = "No recent gains found yet.";
+      return;
+    }
+
+    data.topGains.forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className = "activity-item";
+
+      row.innerHTML = `
+        <strong>#${index + 1} ${item.name}</strong>
+        <p>${formatXp(item.gained)} gained</p>
+      `;
+
+      container.appendChild(row);
+    });
+  } catch (error) {
+    container.textContent = "Could not load recent activity.";
+  }
+}
+
+loadRecentActivity();

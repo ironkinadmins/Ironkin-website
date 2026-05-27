@@ -144,3 +144,25 @@ footer { border-top: 1px solid var(--border); text-align: center; color: var(--m
     grid-template-columns: 1fr;
   }
 }
+.activity-card {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.activity-item {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item strong {
+  color: var(--ember);
+}
+
+.activity-item p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
