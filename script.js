@@ -162,10 +162,11 @@ async function loadRecentActivity() {
       card.className =
         "achievement-pill";
 
-      card.innerHTML = `
-        <strong>${item.player}</strong>
-        <span>${item.name}</span>
-      `;
+card.innerHTML = `
+  <strong>${item.player}</strong>
+  <span>${item.name}</span>
+  <small>${new Date(item.createdAt).toLocaleDateString()}</small>
+`;
 
       track.appendChild(card);
 

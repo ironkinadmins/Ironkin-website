@@ -443,7 +443,7 @@ h2 {
   width: max-content;
 
   animation:
-    marqueeScroll 80s linear infinite;
+    marqueeScroll 180s linear infinite;
 }
 
 .activity-track:hover {
@@ -543,4 +543,8 @@ footer {
     flex-direction: column;
   }
 
+}
+.achievement-pill small {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
