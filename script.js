@@ -165,7 +165,7 @@ async function loadRecentActivity() {
 card.innerHTML = `
   <strong>${item.player}</strong>
   <span>${item.name}</span>
-  <small>${new Date(item.createdAt).toLocaleDateString()}</small>
+  <small>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent"}</small>
 `;
 
       track.appendChild(card);
