@@ -102,3 +102,39 @@ async function loadDiscordUser() {
 }
 
 loadDiscordUser();
+async function loadHomeStats() {
+  const homeClanXp = document.getElementById("homeClanXp");
+  if (!homeClanXp) return;
+
+  const formatXp = (num) => `${Number(num).toLocaleString()} XP`;
+
+  try {
+    const eventResponse = await fetch("/api/wom-event");
+    const eventData = await eventResponse.json();
+
+    if (eventResponse.ok) {
+      document.getElementById("homeClanXp").textContent =
+        formatXp(eventData.totalGained);
+
+      document.getElementById("homeEventPercent").textContent =
+        `${eventData.percent.toFixed(1)}%`;
+    }
+
+    const authResponse = await fetch("/api/auth/me");
+    const authData = await authResponse.json();
+
+    if (authData.signedIn && authData.user?.inGuild) {
+      document.getElementById("homeMemberStatus").textContent =
+        "Verified Kin";
+    } else if (authData.signedIn) {
+      document.getElementById("homeMemberStatus").textContent =
+        "Signed In";
+    }
+
+  } catch {
+    homeClanXp.textContent = "Unavailable";
+    document.getElementById("homeEventPercent").textContent = "Unavailable";
+  }
+}
+
+loadHomeStats();
