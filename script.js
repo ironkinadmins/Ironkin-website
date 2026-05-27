@@ -142,8 +142,6 @@ async function loadRecentActivity() {
   const container = document.getElementById("recentActivity");
   if (!container) return;
 
-  const formatXp = (num) => `${Number(num).toLocaleString()} XP`;
-
   try {
     const response = await fetch("/api/recent-activity");
     const data = await response.json();
@@ -154,24 +152,25 @@ async function loadRecentActivity() {
 
     container.innerHTML = "";
 
-    if (!data.topGains || data.topGains.length === 0) {
-      container.textContent = "No recent gains found yet.";
+    if (!data.achievements || data.achievements.length === 0) {
+      container.textContent = "No recent achievements found yet.";
       return;
     }
 
-    data.topGains.forEach((item, index) => {
-      const row = document.createElement("div");
-      row.className = "activity-item";
+    data.achievements.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "achievement-pill";
 
-      row.innerHTML = `
-        <strong>#${index + 1} ${item.name}</strong>
-        <p>${formatXp(item.gained)} gained</p>
+      card.innerHTML = `
+        <strong>${item.player}</strong>
+        <span>${item.name}</span>
+        <small>${new Date(item.createdAt).toLocaleDateString()}</small>
       `;
 
-      container.appendChild(row);
+      container.appendChild(card);
     });
   } catch (error) {
-    container.textContent = "Could not load recent activity.";
+    container.textContent = "Could not load recent achievements.";
   }
 }
 

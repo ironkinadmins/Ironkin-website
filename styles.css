@@ -166,3 +166,38 @@ footer { border-top: 1px solid var(--border); text-align: center; color: var(--m
   margin: 6px 0 0;
   color: var(--muted);
 }
+.activity-scroll {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 14px 2px 4px;
+  scroll-snap-type: x mandatory;
+}
+
+.achievement-pill {
+  min-width: 240px;
+  max-width: 240px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  scroll-snap-align: start;
+}
+
+.achievement-pill strong {
+  display: block;
+  color: var(--ember);
+  margin-bottom: 8px;
+}
+
+.achievement-pill span {
+  display: block;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.achievement-pill small {
+  display: block;
+  color: var(--muted);
+  margin-top: 10px;
+}

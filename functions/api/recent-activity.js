@@ -1,59 +1,66 @@
 export async function onRequestGet() {
   const GROUP_ID = "12095";
-  const METRIC = "overall";
-  const LIMIT = 8;
+  const LIMIT = 12;
 
-  const START_DATE = "2026-05-01T00:00:00.000Z";
-  const END_DATE = new Date().toISOString();
+  const groupResponse = await fetch(
+    `https://api.wiseoldman.net/v2/groups/${GROUP_ID}`
+  );
 
-  const gainsUrl =
-    `https://api.wiseoldman.net/v2/groups/${GROUP_ID}/gained` +
-    `?metric=${METRIC}` +
-    `&startDate=${START_DATE}` +
-    `&endDate=${END_DATE}` +
-    `&limit=500`;
+  const groupData = await groupResponse.json();
 
-  const response = await fetch(gainsUrl);
-  const data = await response.json();
-
-  if (!response.ok) {
+  if (!groupResponse.ok) {
     return Response.json(
-      { error: "Failed to load WOM activity", details: data },
-      { status: response.status }
+      { error: "Failed to load WOM group", details: groupData },
+      { status: groupResponse.status }
     );
   }
 
-  const rows = Array.isArray(data) ? data : data.results || data.data || [];
+  const members =
+    groupData.members ||
+    groupData.memberships ||
+    [];
 
-  const getName = (entry) =>
-    entry.player?.displayName ||
-    entry.player?.username ||
-    entry.displayName ||
-    entry.username ||
-    "Unknown";
+  const usernames = members
+    .map(member =>
+      member.player?.displayName ||
+      member.player?.username ||
+      member.displayName ||
+      member.username
+    )
+    .filter(Boolean)
+    .slice(0, 40);
 
-  const getGained = (entry) =>
-    entry.gained ||
-    entry.data?.gained ||
-    entry.data?.experience?.gained ||
-    entry.data?.skills?.[METRIC]?.experience?.gained ||
-    entry.skills?.[METRIC]?.experience?.gained ||
-    0;
+  const achievementResults = await Promise.allSettled(
+    usernames.map(async username => {
+      const response = await fetch(
+        `https://api.wiseoldman.net/v2/players/${encodeURIComponent(username)}/achievements`
+      );
 
-  const topGains = rows
-    .map(entry => ({
-      name: getName(entry),
-      gained: getGained(entry)
-    }))
-    .filter(item => item.gained > 0)
-    .sort((a, b) => b.gained - a.gained)
+      if (!response.ok) return [];
+
+      const achievements = await response.json();
+
+      return achievements.map(achievement => ({
+        player: username,
+        name: achievement.name,
+        metric: achievement.metric,
+        measure: achievement.measure,
+        createdAt: achievement.createdAt
+      }));
+    })
+  );
+
+  const achievements = achievementResults
+    .flatMap(result =>
+      result.status === "fulfilled" ? result.value : []
+    )
+    .filter(item => item.createdAt)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, LIMIT);
 
   return Response.json({
-    title: "Recent Clan Activity",
-    metric: METRIC,
-    startDate: START_DATE,
+    title: "Recent Achievements",
     updatedAt: new Date().toISOString(),
-    topGains
+    achievements
   });
 }
