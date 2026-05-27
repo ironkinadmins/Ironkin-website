@@ -120,16 +120,16 @@ async function loadHomeStats() {
         `${eventData.percent.toFixed(1)}%`;
     }
 
-    const authResponse = await fetch("/api/auth/me");
-    const authData = await authResponse.json();
+const womResponse = await fetch(
+  "https://api.wiseoldman.net/v2/groups/12095"
+);
 
-    if (authData.signedIn && authData.user?.inGuild) {
-      document.getElementById("homeMemberStatus").textContent =
-        "Verified Kin";
-    } else if (authData.signedIn) {
-      document.getElementById("homeMemberStatus").textContent =
-        "Signed In";
-    }
+const womData = await womResponse.json();
+
+if (womResponse.ok) {
+  document.getElementById("homeClanMembers").textContent =
+    womData.memberCount || womData.members?.length || "0";
+}
 
   } catch {
     homeClanXp.textContent = "Unavailable";
