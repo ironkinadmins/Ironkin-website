@@ -25,14 +25,15 @@ export async function onRequestGet() {
     groupData.memberships ||
     [];
 
-  const usernames = members
-    .map(member =>
-      member.player?.displayName ||
-      member.player?.username ||
-      member.displayName ||
-      member.username
-    )
-    .filter(Boolean);
+const usernames = members
+  .map(member =>
+    member.player?.displayName ||
+    member.player?.username ||
+    member.displayName ||
+    member.username
+  )
+  .filter(Boolean)
+  .slice(0, 75);
 
   const achievementResults =
     await Promise.allSettled(
