@@ -42,6 +42,24 @@ async function loadHomeStats() {
     const eventData = await eventResponse.json();
 
     if (eventResponse.ok && eventData.active) {
+      else {
+
+  document.getElementById("homeClanXp").textContent =
+    "No Active Event";
+
+  document.getElementById("homeEventPercent").textContent =
+    "Standby";
+
+  document.getElementById("homeEventTitle").textContent =
+    "No Active Competition";
+
+  document.getElementById("homeEventMeta").textContent =
+    "Waiting for the next SOTW, BOTW, or Clan Goal.";
+
+  document.getElementById("homeTopThree").textContent =
+    "No standings available.";
+
+}
       homeClanXp.textContent = `${formatNumber(eventData.totalGained)} gained`;
 
       document.getElementById("homeEventPercent").textContent =
