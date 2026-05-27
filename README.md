@@ -21,15 +21,6 @@ const clanEvent = {
 };
 ```
 
-## How to host for free with GitHub Pages
-1. Create a new GitHub repo named `ironkin-website`.
-2. Upload all files in this folder.
-3. Go to Settings > Pages.
-4. Under Source, select `Deploy from a branch`.
-5. Select branch `main` and folder `/root`.
-6. Save.
-7. Wait 1-2 minutes and GitHub will give you a website link.
-
 ## What to change first
 - Replace `https://discord.gg/YOUR-INVITE-HERE` in `index.html` with your real Discord invite.
 - Edit event numbers in `script.js`.
