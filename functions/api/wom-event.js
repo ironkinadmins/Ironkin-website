@@ -8,33 +8,25 @@ export async function onRequestGet() {
 
   const url = `https://api.wiseoldman.net/v2/groups/${GROUP_ID}/gained?metric=${METRIC}&startDate=${START_DATE}&endDate=${END_DATE}&limit=500`;
 
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
-
-  if (!response.ok) {
-    return Response.json(
-      { error: "Failed to fetch Wise Old Man data" },
-      { status: 500 }
-    );
-  }
-
+  const response = await fetch(url);
   const gains = await response.json();
 
+  if (!response.ok) {
+    return Response.json({ error: gains }, { status: response.status });
+  }
+
   const totalGained = gains.reduce((sum, entry) => {
-    return sum + (entry.data?.gained || 0);
+    return sum + (entry.data?.skills?.[METRIC]?.experience?.gained || 0);
   }, 0);
 
   const topContributors = gains
-    .filter(entry => (entry.data?.gained || 0) > 0)
-    .sort((a, b) => b.data.gained - a.data.gained)
-    .slice(0, 10)
     .map(entry => ({
       name: entry.player.displayName,
-      gained: entry.data.gained
-    }));
+      gained: entry.data?.skills?.[METRIC]?.experience?.gained || 0
+    }))
+    .filter(player => player.gained > 0)
+    .sort((a, b) => b.gained - a.gained)
+    .slice(0, 10);
 
   return Response.json({
     eventName: "Ironkin Woodcutting Forge",
