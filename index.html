@@ -11,12 +11,21 @@
     <nav class="nav">
       <a class="brand" href="index.html">🔥 Ironkin</a>
       <button class="menu-toggle" onclick="toggleMenu()">☰</button>
-      <div id="navLinks" class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="events.html">Events</a>
-        <a href="ranks.html">Ranks</a>
-        <a href="shop.html">Ember Shop</a>
-        <a href="rules.html">Rules</a>
+<div id="navLinks" class="nav-links">
+  <a href="index.html">Home</a>
+  <a href="events.html">Events</a>
+  <a href="ranks.html">Ranks</a>
+  <a href="shop.html">Ember Shop</a>
+  <a href="rules.html">Rules</a>
+
+  <a id="discordLoginBtn" class="nav-discord-btn" href="/api/auth/login">
+    Sign in
+  </a>
+
+  <a id="discordLogoutBtn" class="nav-discord-btn logout" href="/api/auth/logout" style="display:none;">
+    Logout
+  </a>
+</div>
       </div>
     </nav>
   </header>

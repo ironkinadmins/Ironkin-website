@@ -98,3 +98,16 @@ footer { border-top: 1px solid var(--border); text-align: center; color: var(--m
   border: 1px solid var(--border);
   box-shadow: 0 20px 50px rgba(0,0,0,0.35);
 }
+.nav-discord-btn {
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+  color: #180a02 !important;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.nav-discord-btn.logout {
+  background: rgba(255,255,255,0.08);
+  color: white !important;
+  border: 1px solid var(--border);
+}

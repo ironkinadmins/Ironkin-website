@@ -78,3 +78,27 @@ async function loadDiscordUser() {
 }
 
 loadDiscordUser();
+async function loadDiscordUser() {
+  const loginBtn = document.getElementById("discordLoginBtn");
+  const logoutBtn = document.getElementById("discordLogoutBtn");
+
+  if (!loginBtn) return;
+
+  const response = await fetch("/api/auth/me");
+  const data = await response.json();
+
+  if (!data.signedIn) return;
+
+  loginBtn.textContent = `Signed in as ${data.user.global_name || data.user.username}`;
+  loginBtn.href = "#";
+
+  if (data.user.inGuild) {
+    loginBtn.title = "Verified Ironkin Discord member";
+  }
+
+  if (logoutBtn) {
+    logoutBtn.style.display = "inline-block";
+  }
+}
+
+loadDiscordUser();
