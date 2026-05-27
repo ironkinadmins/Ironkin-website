@@ -33,7 +33,7 @@ const usernames = members
     member.username
   )
   .filter(Boolean)
-  .slice(0, 75);
+  .slice(0, 20);
 
   const achievementResults =
     await Promise.allSettled(
