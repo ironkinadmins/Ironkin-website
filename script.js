@@ -177,11 +177,22 @@ async function loadRecentActivity() {
       card.className =
         "achievement-pill";
 
-      card.innerHTML = `
-        <strong>${item.player}</strong>
-        <span>${item.name}</span>
-        <small>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent"}</small>
-      `;
+const player =
+  item.player || "Unknown";
+
+const achievement =
+  item.name || "Achievement";
+
+const date =
+  item.createdAt
+    ? new Date(item.createdAt).toLocaleDateString()
+    : "Recent";
+
+card.innerHTML = `
+  <strong>${player}</strong>
+  <span>${achievement}</span>
+  <small>${date}</small>
+`;
 
       track.appendChild(card);
     });
