@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ironkin Events</title>
+  <title>Events | Ironkin Clan</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -24,45 +24,43 @@
   <main class="page">
     <section class="page-title">
       <p class="eyebrow">Clan Events</p>
-      <h1>Clan XP Goal</h1>
-      <p>Example progress bar for a clan-wide XP event. You can edit the numbers in <strong>script.js</strong>.</p>
+      <h1>Live Clan XP Goal</h1>
+      <p>Progress is pulled directly from the Ironkin Wise Old Man group.</p>
     </section>
 
     <section class="progress-card">
       <div class="progress-header">
         <div>
-          <h2 id="eventName">Loading Event...</h2>
-          <p id="eventSkill">Skill: Loading...</p>
+          <p class="eyebrow">Live Wise Old Man Event</p>
+          <h2 id="eventName">Loading event...</h2>
+          <p id="eventMeta">Fetching clan XP gains...</p>
         </div>
         <div class="percent" id="eventPercent">0%</div>
       </div>
 
       <div class="progress-bar">
-        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-fill" id="eventProgressFill"></div>
       </div>
 
       <div class="progress-stats">
-        <div><span id="currentXp">0</span><small>Current XP Gained</small></div>
-        <div><span id="goalXp">0</span><small>Goal XP</small></div>
-        <div><span id="remainingXp">0</span><small>Remaining XP</small></div>
+        <div>
+          <span id="eventCurrent">0 XP</span>
+          <small>Current Progress</small>
+        </div>
+        <div>
+          <span id="eventGoal">0 XP</span>
+          <small>Goal</small>
+        </div>
+        <div>
+          <span id="eventUpdated">Loading...</span>
+          <small>Last Updated</small>
+        </div>
       </div>
     </section>
 
-    <section class="cards two">
-      <article class="card">
-        <h2>How this works</h2>
-        <p>Right now this uses demo data. Later, this page can pull Wise Old Man data and calculate clan XP gained since the event started.</p>
-      </article>
-      <article class="card">
-        <h2>Events to add</h2>
-        <ul>
-          <li>Skill of the Week</li>
-          <li>Boss of the Week</li>
-          <li>Bounties</li>
-          <li>Bingo</li>
-          <li>Secret Challenges</li>
-        </ul>
-      </article>
+    <section class="card">
+      <h2>Top Contributors</h2>
+      <ol id="topContributors"></ol>
     </section>
   </main>
 
