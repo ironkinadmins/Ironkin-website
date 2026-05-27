@@ -443,7 +443,7 @@ h2 {
   width: max-content;
 
   animation:
-    marqueeScroll 600s linear infinite;
+    marqueeScroll 500s linear infinite;
 }
 
 .activity-track:hover {
