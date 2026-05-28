@@ -41,7 +41,15 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const key = `drop:${name}`;
+const eventResponse = await fetch(
+  "https://ironkin-website.pages.dev/api/event-standings"
+);
+
+const eventData = await eventResponse.json();
+
+const metric = eventData.metric || "default";
+
+const key = `drop-count:${metric}:${name}`;
   const current = Number(await env.DROPS_KV.get(key) || 0);
   const next = current + 1;
 
