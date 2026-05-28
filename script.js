@@ -552,12 +552,18 @@ async function loadDrops() {
 
     dropsList.innerHTML = "";
 
-    if (!data.drops || data.drops.length === 0) {
-      dropsList.textContent = "No drops tracked yet.";
-      return;
-    }
+let drops = data.drops || [];
 
-    data.drops.forEach(drop => {
+if (drops.length === 0) {
+  drops = [
+    { name: "Huey Hide", count: 0 },
+    { name: "Tome of Earth", count: 0 },
+    { name: "Dragon Hunter Wand", count: 0 },
+    { name: "Huberte", count: 0 }
+  ];
+}
+
+drops.forEach(drop => {
       const row = document.createElement("div");
       row.className = "drop-row";
 
