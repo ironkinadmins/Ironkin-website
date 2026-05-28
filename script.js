@@ -24,11 +24,11 @@ function formatEventType(type) {
 
 function getEventIcon(type) {
   const icons = {
-    sotw: "🔥",
-    botw: "⚔️",
-    "clan-goal-boss": "♨️",
-    "clan-goal-skill": "♨️",
-    clan_goal: "♨️"
+    sotw: "📊",
+    botw: "☠️",
+    "clan-goal-boss": "🔥",
+    "clan-goal-skill": "🔥",
+    clan_goal: "🔥"
   };
 
   return icons[type] || "🔥";
@@ -196,47 +196,29 @@ async function loadRecentActivity() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.error ||
-        "Could not load activity."
-      );
+      throw new Error(data.error || "Could not load activity.");
     }
 
     if (!data.achievements || data.achievements.length === 0) {
-      container.textContent =
-        "No recent achievements found yet.";
-
+      container.textContent = "No recent achievements found yet.";
       return;
     }
 
-    container.innerHTML =
-      `<div class="activity-track"></div>`;
+    container.innerHTML = `<div class="activity-track"></div>`;
 
-    const track =
-      container.querySelector(".activity-track");
-
-    const doubled = [
-      ...data.achievements,
-      ...data.achievements
-    ];
+    const track = container.querySelector(".activity-track");
+    const doubled = [...data.achievements, ...data.achievements];
 
     doubled.forEach(item => {
-      const card =
-        document.createElement("div");
+      const card = document.createElement("div");
 
-      card.className =
-        "achievement-pill";
+      card.className = "achievement-pill";
 
-      const player =
-        item.player || "Unknown";
-
-      const achievement =
-        item.name || "Achievement";
-
-      const date =
-        item.createdAt
-          ? new Date(item.createdAt).toLocaleDateString()
-          : "Recent";
+      const player = item.player || "Unknown";
+      const achievement = item.name || "Achievement";
+      const date = item.createdAt
+        ? new Date(item.createdAt).toLocaleDateString()
+        : "Recent";
 
       card.innerHTML = `
         <strong>${player}</strong>
@@ -247,8 +229,7 @@ async function loadRecentActivity() {
       track.appendChild(card);
     });
   } catch {
-    container.textContent =
-      "Could not load recent achievements.";
+    container.textContent = "Could not load recent achievements.";
   }
 }
 
