@@ -577,8 +577,29 @@ async function loadDrops() {
       row.className = "drop-row";
 
       row.innerHTML = `
-        <span>${drop.name}</span>
-        <strong>${drop.count}</strong>
+row.innerHTML = `
+  <span>${drop.name}</span>
+
+  <div class="drop-controls">
+
+    <strong>${drop.count}</strong>
+
+    ${
+      isStaff
+        ? `
+          <button onclick="changeDrop('${drop.name}', 1)">
+            +
+          </button>
+
+          <button onclick="changeDrop('${drop.name}', -1)">
+            −
+          </button>
+        `
+        : ""
+    }
+
+  </div>
+`;
         ${
           isStaff
             ? `<button onclick="changeDrop('${drop.name}', 1)">+</button>
