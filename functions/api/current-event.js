@@ -1,18 +1,24 @@
 export async function onRequestGet() {
   const GROUP_ID = "12095";
 
-  const response = await fetch(
-    `https://api.wiseoldman.net/v2/competitions?status=ongoing&limit=50`
-  );
-
-  const competitions = await response.json();
-
-  if (!response.ok) {
-    return Response.json(
-      { error: "Failed to load WOM competitions", details: competitions },
-      { status: response.status }
+  async function fetchCompetitions(status) {
+    const response = await fetch(
+      `https://api.wiseoldman.net/v2/competitions?status=${status}&limit=50`
     );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Failed to load ${status} competitions`);
+    }
+
+    return data;
   }
+
+  const ongoing = await fetchCompetitions("ongoing");
+  const upcoming = await fetchCompetitions("upcoming");
+
+  const competitions = [...ongoing, ...upcoming];
 
   const activeCompetition = competitions.find(comp =>
     String(comp.groupId) === GROUP_ID &&
@@ -22,7 +28,7 @@ export async function onRequestGet() {
   if (!activeCompetition) {
     return Response.json({
       active: false,
-      message: "No active Ironkin WOM competition found."
+      message: "No active or upcoming Ironkin WOM competition found."
     });
   }
 
