@@ -6,6 +6,63 @@ function toggleMenu() {
   }
 }
 
+function formatNumber(num) {
+  return Number(num || 0).toLocaleString();
+}
+
+function formatEventType(type) {
+  const labels = {
+    sotw: "SOTW",
+    botw: "BOTW",
+    "clan-goal-boss": "Clan Goal",
+    "clan-goal-skill": "Clan Goal",
+    clan_goal: "Clan Goal"
+  };
+
+  return labels[type] || String(type || "Event").toUpperCase();
+}
+
+function getEventIcon(type) {
+  const icons = {
+    sotw: "🔥",
+    botw: "⚔️",
+    "clan-goal-boss": "♨️",
+    "clan-goal-skill": "♨️",
+    clan_goal: "♨️"
+  };
+
+  return icons[type] || "🔥";
+}
+
+async function fetchCurrentEvents() {
+  const response = await fetch("/api/current-events");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load current events.");
+  }
+
+  return data.events || [];
+}
+
+async function fetchEventStandings(event) {
+  if (!event.womCompetitionId) {
+    return null;
+  }
+
+  const response = await fetch(
+    `/api/event-standings?competitionId=${event.womCompetitionId}`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load WOM standings.");
+  }
+
+  return data;
+}
+
 async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
@@ -40,35 +97,49 @@ async function loadHomeStats() {
 
   if (!homeClanXp) return;
 
-  const formatNumber = (num) =>
-    Number(num || 0).toLocaleString();
-
   try {
-    const eventResponse = await fetch("/api/event-standings");
-    const eventData = await eventResponse.json();
+    const events = await fetchCurrentEvents();
 
-    if (eventResponse.ok && eventData.active) {
-      homeClanXp.textContent =
-        `${formatNumber(eventData.totalGained)} gained`;
+    const featuredEvent =
+      events.find(event => event.featured) ||
+      events.find(event => event.womCompetitionId) ||
+      events[0];
 
-      document.getElementById("homeEventPercent").textContent =
-        eventData.type === "clan_goal"
-          ? "Clan Goal"
-          : eventData.type.toUpperCase();
+    if (!featuredEvent) {
+      homeClanXp.textContent = "No Active Event";
 
-      document.getElementById("homeEventTitle").textContent =
-        eventData.title;
-
+      document.getElementById("homeEventPercent").textContent = "Standby";
+      document.getElementById("homeEventTitle").textContent = "No Active Competition";
       document.getElementById("homeEventMeta").textContent =
-        `${eventData.metric || "Competition"} • Ends ${new Date(eventData.endsAt).toLocaleDateString()}`;
+        "Waiting for the next SOTW, BOTW, or Clan Goal.";
+      document.getElementById("homeTopThree").textContent =
+        "No standings available.";
 
-      const topThree =
-        document.getElementById("homeTopThree");
+      return;
+    }
 
+    const standings = await fetchEventStandings(featuredEvent).catch(() => null);
+
+    document.getElementById("homeEventPercent").textContent =
+      formatEventType(featuredEvent.type);
+
+    document.getElementById("homeEventTitle").textContent =
+      standings?.title || featuredEvent.title;
+
+    document.getElementById("homeEventMeta").textContent =
+      standings?.endsAt
+        ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString()}`
+        : featuredEvent.description || "Event details coming soon.";
+
+    if (standings) {
+      homeClanXp.textContent =
+        `${formatNumber(standings.totalGained)} gained`;
+
+      const topThree = document.getElementById("homeTopThree");
       topThree.innerHTML = "";
 
-      if (eventData.standings?.length) {
-        eventData.standings.slice(0, 3).forEach((player, index) => {
+      if (standings.standings?.length) {
+        standings.standings.slice(0, 3).forEach((player, index) => {
           const div = document.createElement("div");
 
           div.innerHTML =
@@ -77,24 +148,15 @@ async function loadHomeStats() {
           topThree.appendChild(div);
         });
       } else {
-        topThree.textContent =
-          "No standings yet.";
+        topThree.textContent = "No standings yet.";
       }
     } else {
-      homeClanXp.textContent =
-        "No Active Event";
-
-      document.getElementById("homeEventPercent").textContent =
-        "Standby";
-
-      document.getElementById("homeEventTitle").textContent =
-        "No Active Competition";
-
-      document.getElementById("homeEventMeta").textContent =
-        "Waiting for the next SOTW, BOTW, or Clan Goal.";
+      homeClanXp.textContent = featuredEvent.goal
+        ? `${formatNumber(featuredEvent.goal)} goal`
+        : "Coming Soon";
 
       document.getElementById("homeTopThree").textContent =
-        "No standings available.";
+        "No WOM competition linked yet.";
     }
 
     const womResponse =
@@ -110,29 +172,17 @@ async function loadHomeStats() {
         "0";
     }
   } catch (error) {
-    homeClanXp.textContent =
-      "Unavailable";
+    homeClanXp.textContent = "Unavailable";
 
-    document.getElementById("homeEventPercent").textContent =
-      "Unavailable";
+    const eventPercent = document.getElementById("homeEventPercent");
+    const eventTitle = document.getElementById("homeEventTitle");
+    const eventMeta = document.getElementById("homeEventMeta");
+    const topThree = document.getElementById("homeTopThree");
 
-    const eventTitle =
-      document.getElementById("homeEventTitle");
-
-    const eventMeta =
-      document.getElementById("homeEventMeta");
-
-    const topThree =
-      document.getElementById("homeTopThree");
-
-    if (eventTitle) eventTitle.textContent =
-      "Could not load event";
-
-    if (eventMeta) eventMeta.textContent =
-      error.message;
-
-    if (topThree) topThree.textContent =
-      "No competitors loaded.";
+    if (eventPercent) eventPercent.textContent = "Unavailable";
+    if (eventTitle) eventTitle.textContent = "Could not load event";
+    if (eventMeta) eventMeta.textContent = error.message;
+    if (topThree) topThree.textContent = "No competitors loaded.";
   }
 }
 
@@ -177,22 +227,22 @@ async function loadRecentActivity() {
       card.className =
         "achievement-pill";
 
-const player =
-  item.player || "Unknown";
+      const player =
+        item.player || "Unknown";
 
-const achievement =
-  item.name || "Achievement";
+      const achievement =
+        item.name || "Achievement";
 
-const date =
-  item.createdAt
-    ? new Date(item.createdAt).toLocaleDateString()
-    : "Recent";
+      const date =
+        item.createdAt
+          ? new Date(item.createdAt).toLocaleDateString()
+          : "Recent";
 
-card.innerHTML = `
-  <strong>${player}</strong>
-  <span>${achievement}</span>
-  <small>${date}</small>
-`;
+      card.innerHTML = `
+        <strong>${player}</strong>
+        <span>${achievement}</span>
+        <small>${date}</small>
+      `;
 
       track.appendChild(card);
     });
@@ -202,144 +252,193 @@ card.innerHTML = `
   }
 }
 
-async function loadDynamicEventPage() {
-  const eventsGrid = document.getElementById("eventsGrid");
+async function loadEventsHub() {
+  const grid = document.getElementById("eventHubGrid");
 
-  if (!eventsGrid) return;
-
-  const formatNumber = (num) =>
-    Number(num || 0).toLocaleString();
+  if (!grid) return;
 
   try {
-    const response = await fetch("/api/current-events");
-    const data = await response.json();
+    const events = await fetchCurrentEvents();
 
-    if (!response.ok || !data.events || data.events.length === 0) {
-      eventsGrid.textContent =
-        "No active Ironkin events found.";
-
+    if (!events.length) {
+      grid.textContent = "No active Ironkin events found.";
       return;
     }
 
-    eventsGrid.innerHTML = "";
+    grid.innerHTML = "";
 
-    for (const event of data.events) {
-      const card = document.createElement("article");
+    events.forEach(event => {
+      const card = document.createElement("a");
 
-      card.className = "event-card";
-
-      // NON-WOM EVENTS
-      if (!event.womCompetitionId) {
-        card.innerHTML = `
-          <div class="event-card-header">
-            <div>
-              <p class="eyebrow">${event.title}</p>
-              <h2>${event.type.toUpperCase()}</h2>
-              <p>No active WOM competition yet.</p>
-            </div>
-
-            <span class="event-type-badge">
-              ${event.type}
-            </span>
-          </div>
-        `;
-
-        eventsGrid.appendChild(card);
-
-        continue;
-      }
-
-      // WOM EVENTS
-      const standingsResponse = await fetch(
-        `/api/event-standings?competitionId=${event.womCompetitionId}`
-      );
-
-      const standingsData = await standingsResponse.json();
+      card.className = `event-hub-card event-${event.type}`;
+      card.href = `event.html?id=${encodeURIComponent(event.id)}`;
 
       card.innerHTML = `
-        <div class="event-card-header">
-          <div>
-            <p class="eyebrow">${event.title}</p>
-
-            <h2>
-              ${standingsData.title || event.title}
-            </h2>
-
-            <p>
-              ${standingsData.metric || "Competition"}
-            </p>
-          </div>
-
-          <span class="event-type-badge">
-            ${event.type}
-          </span>
-        </div>
-
-        <div class="event-stats">
-
-          <div class="event-stat">
-            <strong>
-              ${formatNumber(standingsData.totalGained)}
-            </strong>
-
-            <span>Total Gained</span>
-          </div>
-
-          <div class="event-stat">
-            <strong>
-              ${standingsData.contributors || 0}
-            </strong>
-
-            <span>Contributors</span>
-          </div>
-
-          <div class="event-stat">
-            <strong>
-              ${standingsData.participantCount || 0}
-            </strong>
-
-            <span>Participants</span>
-          </div>
-
-        </div>
-
-        <h3>Top Competitors</h3>
+        <div class="event-hub-icon">${getEventIcon(event.type)}</div>
 
         <div>
-          ${
-            standingsData.standings
-              ?.slice(0, 10)
-              .map((player, index) => `
-                <div class="leaderboard-row">
-                  <strong>
-                    #${index + 1} ${player.name}
-                  </strong>
+          <p class="eyebrow">${event.label || formatEventType(event.type)}</p>
+          <h2>${event.title}</h2>
+          <p>${event.description || "View the full Ironkin event dashboard."}</p>
+        </div>
 
-                  <span>
-                    ${formatNumber(player.gained)} gained
-                  </span>
-                </div>
-              `)
-              .join("") || "No standings yet."
-          }
+        <div class="event-hub-footer">
+          <span>${event.womCompetitionId ? "Live WOM Tracking" : "Dashboard"}</span>
+          <strong>View Event →</strong>
         </div>
       `;
 
-      eventsGrid.appendChild(card);
-    }
-
+      grid.appendChild(card);
+    });
   } catch (error) {
-    eventsGrid.textContent =
-      `Could not load events: ${error.message}`;
+    grid.textContent = `Could not load events: ${error.message}`;
   }
 }
 
-loadDiscordUser();
-loadHomeStats();
-loadRecentActivity();
-loadDynamicEventPage();
+async function loadSingleEventDashboard() {
+  const dashboard = document.getElementById("singleEventDashboard");
+
+  if (!dashboard) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get("id");
+
+  if (!eventId) {
+    dashboard.textContent = "Missing event ID.";
+    return;
+  }
+
+  try {
+    const events = await fetchCurrentEvents();
+    const event = events.find(item => item.id === eventId);
+
+    if (!event) {
+      dashboard.textContent = "Event not found.";
+      return;
+    }
+
+    const standings = await fetchEventStandings(event).catch(() => null);
+
+    const totalGained = standings?.totalGained || 0;
+    const contributors = standings?.contributors || 0;
+    const participantCount = standings?.participantCount || 0;
+    const goal = event.goal || null;
+    const percent = goal
+      ? Math.min((totalGained / goal) * 100, 100)
+      : 0;
+    const remaining = goal
+      ? Math.max(goal - totalGained, 0)
+      : null;
+
+    const topContributors = standings?.standings
+      ?.filter(player => player.gained > 0)
+      .slice(0, 10) || [];
+
+    dashboard.innerHTML = `
+      <section class="event-detail-card">
+        <div class="event-detail-hero">
+          <div>
+            <p class="eyebrow">${getEventIcon(event.type)} ${event.label || formatEventType(event.type)}</p>
+            <h1>${standings?.title || event.title}</h1>
+            <p>${event.description || standings?.metric || "Ironkin event dashboard."}</p>
+          </div>
+
+          <div class="event-percent-box">
+            <strong>${goal ? `${percent.toFixed(0)}%` : formatEventType(event.type)}</strong>
+            <span>${goal ? "Complete" : "Active"}</span>
+          </div>
+        </div>
+
+        <div class="event-detail-body">
+          <div class="event-kpi-grid">
+            <div class="event-kpi">
+              <span>Current</span>
+              <strong>${formatNumber(totalGained)}</strong>
+            </div>
+
+            <div class="event-kpi">
+              <span>${goal ? "Goal" : "Participants"}</span>
+              <strong>${goal ? formatNumber(goal) : formatNumber(participantCount)}</strong>
+            </div>
+
+            <div class="event-kpi">
+              <span>Contributors</span>
+              <strong>${formatNumber(contributors)}</strong>
+            </div>
+          </div>
+
+          ${
+            goal
+              ? `
+                <div class="event-progress-labels">
+                  <span>Progress</span>
+                  <span>${formatNumber(remaining)} remaining</span>
+                </div>
+
+                <div class="event-progress-bar">
+                  <div style="width:${percent}%"></div>
+                </div>
+              `
+              : ""
+          }
+
+          <div class="event-detail-grid">
+            <section class="event-panel">
+              <h2>Top Contributors</h2>
+
+              <div id="singleEventContributors">
+                ${
+                  topContributors.length
+                    ? topContributors.map((player, index) => `
+                      <div class="event-contributor-row">
+                        <strong>#${index + 1} ${player.name}</strong>
+                        <span>${formatNumber(player.gained)} gained</span>
+                      </div>
+                    `).join("")
+                    : "No gained KC/XP yet."
+                }
+              </div>
+            </section>
+
+            ${
+              event.dropsEnabled
+                ? `
+                  <section class="event-panel">
+                    <h2>Unique Drops Received</h2>
+                    <p>Drops tracked throughout the event.</p>
+                    <div id="dropsList"></div>
+                  </section>
+                `
+                : `
+                  <section class="event-panel">
+                    <h2>Event Info</h2>
+                    <p>${event.womCompetitionId ? "This event is linked to Wise Old Man." : "No WOM competition has been linked yet."}</p>
+                    <p>${standings?.endsAt ? `Ends ${new Date(standings.endsAt).toLocaleDateString()}` : "Dates will appear when tracking is available."}</p>
+                  </section>
+                `
+            }
+          </div>
+
+          ${
+            event.womCompetitionId
+              ? `<a class="btn primary" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">View WOM Leaderboard</a>`
+              : ""
+          }
+        </div>
+      </section>
+    `;
+
+    if (event.dropsEnabled) {
+      loadDrops();
+    }
+  } catch (error) {
+    dashboard.textContent = `Could not load event: ${error.message}`;
+  }
+}
+
 async function loadDrops() {
   const dropsList = document.getElementById("dropsList");
+
   if (!dropsList) return;
 
   try {
@@ -361,6 +460,7 @@ async function loadDrops() {
     dropsList.innerHTML = "";
 
     if (!data.drops || data.drops.length === 0) {
+      dropsList.textContent = "No drops tracked yet.";
       return;
     }
 
@@ -403,4 +503,8 @@ async function changeDrop(name, direction) {
   loadDrops();
 }
 
-loadDrops();
+loadDiscordUser();
+loadHomeStats();
+loadRecentActivity();
+loadEventsHub();
+loadSingleEventDashboard();
