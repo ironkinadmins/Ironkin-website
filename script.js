@@ -432,10 +432,10 @@ const contributorsLabel = isSotw
               <strong>${formatNumber(totalGained)}</strong>
             </div>
 
-            <div class="event-kpi">
-              <span>${contributorsLabel}</span>
-<strong>${formatNumber(participantCount)}</strong>
-            </div>
+<div class="event-kpi">
+  <span>${contributorsLabel}</span>
+  <strong>${formatNumber(participantCount)}</strong>
+</div>
 
             <div class="event-kpi">
               <span>${thirdLabel}</span>
