@@ -434,7 +434,7 @@ const contributorsLabel = isSotw
 
 <div class="event-kpi">
   <span>${contributorsLabel}</span>
-  <strong>${formatNumber(participantCount)}</strong>
+<strong>${formatNumber(contributors)}</strong>
 </div>
 
             <div class="event-kpi">
