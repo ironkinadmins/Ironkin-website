@@ -925,3 +925,28 @@ footer {
     width: 100%;
   }
 }
+.milestone-bar {
+  position: relative;
+  margin-bottom: 4rem;
+}
+
+.milestone-marker {
+  position: absolute;
+  top: 1.4rem;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: #ffb45c;
+}
+
+.milestone-marker strong {
+  display: block;
+  font-size: 0.75rem;
+  color: #fff0d8;
+}
+
+.milestone-marker small {
+  display: block;
+  opacity: 0.85;
+}
