@@ -236,49 +236,36 @@ async function loadDynamicEventPage() {
     const leaderboardTitle =
       document.getElementById("leaderboardTitle");
 
-    if (data.type === "clan_goal") {
-      const GOAL = data.goal || 1;
+if (data.type === "clan_goal") {
+  const GOAL = data.goal || 300;
+  const percent = data.percent || 0;
 
-const percent =
-  data.percent || 0;
+  document.getElementById("eventProgressSection").style.display = "block";
 
-      document.getElementById("eventProgressSection").style.display =
-        "block";
+  document.getElementById("eventName").textContent =
+    data.title;
 
-      document.getElementById("eventName").textContent =
-        data.title;
+  document.getElementById("eventMeta").textContent =
+    "KC gained by the clan";
 
-      document.getElementById("eventMeta").textContent =
-        `${data.metric.toUpperCase()} gained by the clan`;
+  document.getElementById("eventPercent").textContent =
+    `${percent.toFixed(1)}%`;
 
-      document.getElementById("eventPercent").textContent =
-        `${percent.toFixed(1)}%`;
+  document.getElementById("eventProgressFill").style.width =
+    `${percent}%`;
 
-      document.getElementById("eventProgressFill").style.width =
-        `${percent}%`;
+  document.getElementById("eventCurrent").textContent =
+    formatNumber(data.totalGained);
 
-      document.getElementById("eventCurrent").textContent =
-        formatNumber(data.totalGained);
+  document.getElementById("eventGoal").textContent =
+    formatNumber(GOAL);
 
-      document.getElementById("eventGoal").textContent =
-formatNumber(GOAL_XP);
+  document.getElementById("eventUpdated").textContent =
+    "Live";
 
-      document.getElementById("eventUpdated").textContent =
-        "Live";
-
-      leaderboardTitle.textContent =
-        "Top Contributors";
-    } else if (data.type === "botw") {
-      leaderboardTitle.textContent =
-        "Boss Killcount Leaderboard";
-    } else if (data.type === "sotw") {
-      leaderboardTitle.textContent =
-        "Skill XP Leaderboard";
-    } else {
-      leaderboardTitle.textContent =
-        "Competition Leaderboard";
-    }
-
+  leaderboardTitle.textContent =
+    "Clan Leaderboard";
+}
     const leaderboard =
       document.getElementById("eventLeaderboard");
 
@@ -286,7 +273,7 @@ formatNumber(GOAL_XP);
 
     if (!data.standings || data.standings.length === 0) {
       leaderboard.textContent =
-        "No standings found yet.";
+leaderboard.innerHTML = "";
       return;
     }
 
@@ -321,40 +308,48 @@ async function loadDrops() {
   const dropsList = document.getElementById("dropsList");
   if (!dropsList) return;
 
-  const authResponse = await fetch("/api/auth/me");
-  const authData = await authResponse.json();
+  try {
+    const authResponse = await fetch("/api/auth/me");
+    const authData = await authResponse.json();
 
-  const staffRoles = [
-    "1364734283356569620",
-    "1365445491776815104"
-  ];
+    const staffRoles = [
+      "1364734283356569620",
+      "1365445491776815104"
+    ];
 
-  const isStaff =
-    authData.signedIn &&
-    authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
+    const isStaff =
+      authData.signedIn &&
+      authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
 
-  const response = await fetch("/api/drops/list");
-  const data = await response.json();
+    const response = await fetch("/api/drops/list");
+    const data = await response.json();
 
-  dropsList.innerHTML = "";
+    dropsList.innerHTML = "";
 
-  data.drops.forEach(drop => {
-    const row = document.createElement("div");
-    row.className = "drop-row";
+    if (!data.drops || data.drops.length === 0) {
+      return;
+    }
 
-    row.innerHTML = `
-      <span>${drop.name}</span>
-      <strong>${drop.count}</strong>
-      ${
-        isStaff
-          ? `<button onclick="changeDrop('${drop.name}', 1)">+</button>
-             <button onclick="changeDrop('${drop.name}', -1)">−</button>`
-          : ""
-      }
-    `;
+    data.drops.forEach(drop => {
+      const row = document.createElement("div");
+      row.className = "drop-row";
 
-    dropsList.appendChild(row);
-  });
+      row.innerHTML = `
+        <span>${drop.name}</span>
+        <strong>${drop.count}</strong>
+        ${
+          isStaff
+            ? `<button onclick="changeDrop('${drop.name}', 1)">+</button>
+               <button onclick="changeDrop('${drop.name}', -1)">−</button>`
+            : ""
+        }
+      `;
+
+      dropsList.appendChild(row);
+    });
+  } catch {
+    dropsList.innerHTML = "";
+  }
 }
 
 async function changeDrop(name, direction) {
