@@ -357,7 +357,7 @@ async function loadSingleEventDashboard() {
       ? "Active Competitors"
       : isBotw
       ? "Active Killers"
-      : "Contributors";
+      : "Participants";
 
     const thirdLabel = isSotw
       ? "Highest Gain"
@@ -434,7 +434,7 @@ async function loadSingleEventDashboard() {
 
             <div class="event-kpi">
               <span>${contributorsLabel}</span>
-              <strong>${formatNumber(contributors || participantCount)}</strong>
+<strong>${formatNumber(participantCount)}</strong>
             </div>
 
             <div class="event-kpi">
