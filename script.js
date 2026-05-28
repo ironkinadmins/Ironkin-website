@@ -264,7 +264,7 @@ async function loadEventsHub() {
         </div>
 
         <div class="event-hub-footer">
-          <span>${event.womCompetitionId ? "Live WOM Tracking" : "Dashboard"}</span>
+<span>Dashboard</span>
           <strong>View Event →</strong>
         </div>
       `;
