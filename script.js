@@ -353,11 +353,11 @@ async function loadSingleEventDashboard() {
       ? "Total KC"
       : "Current KC";
 
-    const contributorsLabel = isSotw
-      ? "Active Competitors"
-      : isBotw
-      ? "Active Killers"
-      : "Participants";
+const contributorsLabel = isSotw
+  ? "Active Competitors"
+  : isBotw
+  ? "Active Killers"
+  : "Participants";
 
     const thirdLabel = isSotw
       ? "Highest Gain"
