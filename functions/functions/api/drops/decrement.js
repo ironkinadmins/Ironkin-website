@@ -1,3 +1,8 @@
+function normalizeMetric(metric) {
+  return String(metric || "default")
+    .toLowerCase()
+    .replace(/^the_/, "");
+}
 const STAFF_ROLE_IDS = [
   "1364734283356569620",
   "1365445491776815104"
@@ -47,7 +52,7 @@ const eventResponse = await fetch(
 
 const eventData = await eventResponse.json();
 
-const metric = eventData.metric || "default";
+const metric = normalizeMetric(eventData.metric);
 
 const key = `drop-count:${metric}:${name}`;
   const current = Number(await env.DROPS_KV.get(key) || 0);

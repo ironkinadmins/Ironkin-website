@@ -1,3 +1,9 @@
+function normalizeMetric(metric) {
+  return String(metric || "default")
+    .toLowerCase()
+    .replace(/^the_/, "");
+}
+
 export async function onRequestGet({ env }) {
   const eventResponse = await fetch(
     "https://ironkin-website.pages.dev/api/event-standings"
@@ -5,18 +11,14 @@ export async function onRequestGet({ env }) {
 
   const eventData = await eventResponse.json();
 
-  const metric = eventData.metric || "default";
+  const metric = normalizeMetric(eventData.metric);
 
   const dropListValue =
     await env.DROPS_KV.get(`drop-list:${metric}`);
 
-  const defaultDrops = [
-    "No drop list configured for this event."
-  ];
-
   const dropNames = dropListValue
     ? JSON.parse(dropListValue)
-    : defaultDrops;
+    : [];
 
   const drops = [];
 
