@@ -317,3 +317,61 @@ loadDiscordUser();
 loadHomeStats();
 loadRecentActivity();
 loadDynamicEventPage();
+async function loadDrops() {
+  const dropsList = document.getElementById("dropsList");
+  if (!dropsList) return;
+
+  const authResponse = await fetch("/api/auth/me");
+  const authData = await authResponse.json();
+
+  const staffRoles = [
+    "1364734283356569620",
+    "1365445491776815104"
+  ];
+
+  const isStaff =
+    authData.signedIn &&
+    authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
+
+  const response = await fetch("/api/drops/list");
+  const data = await response.json();
+
+  dropsList.innerHTML = "";
+
+  data.drops.forEach(drop => {
+    const row = document.createElement("div");
+    row.className = "drop-row";
+
+    row.innerHTML = `
+      <span>${drop.name}</span>
+      <strong>${drop.count}</strong>
+      ${
+        isStaff
+          ? `<button onclick="changeDrop('${drop.name}', 1)">+</button>
+             <button onclick="changeDrop('${drop.name}', -1)">−</button>`
+          : ""
+      }
+    `;
+
+    dropsList.appendChild(row);
+  });
+}
+
+async function changeDrop(name, direction) {
+  const endpoint =
+    direction > 0
+      ? "/api/drops/increment"
+      : "/api/drops/decrement";
+
+  await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ name })
+  });
+
+  loadDrops();
+}
+
+loadDrops();

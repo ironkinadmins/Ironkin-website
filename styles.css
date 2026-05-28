@@ -617,3 +617,35 @@ footer {
   height: 32px;
   object-fit: contain;
 }
+.drop-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.drop-row:last-child {
+  border-bottom: none;
+}
+
+.drop-row strong {
+  color: var(--ember);
+  font-size: 1.2rem;
+}
+
+.drop-row button {
+  background: rgba(255, 122, 26, 0.14);
+  color: var(--ember);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.drop-row button:hover {
+  background: var(--ember);
+  color: #180a02;
+}
