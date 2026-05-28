@@ -16,7 +16,8 @@ function formatEventType(type) {
     botw: "BOTW",
     "clan-goal-boss": "Clan Goal",
     "clan-goal-skill": "Clan Goal",
-    clan_goal: "Clan Goal"
+    clan_goal: "Clan Goal",
+    "clan-goal": "Clan Goal"
   };
 
   return labels[type] || String(type || "Event").toUpperCase();
@@ -28,7 +29,8 @@ function getEventIcon(type) {
     botw: "☠️",
     "clan-goal-boss": "🔥",
     "clan-goal-skill": "🔥",
-    clan_goal: "🔥"
+    clan_goal: "🔥",
+    "clan-goal": "🔥"
   };
 
   return icons[type] || "🔥";
@@ -46,7 +48,7 @@ async function fetchCurrentEvents() {
 }
 
 async function fetchEventStandings(event) {
-  if (!event.womCompetitionId) {
+  if (!event.womCompetitionId || event.womCompetitionId === "PUT_YOUR_WOM_ID_HERE") {
     return null;
   }
 
@@ -108,11 +110,16 @@ async function loadHomeStats() {
     if (!featuredEvent) {
       homeClanXp.textContent = "No Active Event";
 
-      document.getElementById("homeEventPercent").textContent = "Standby";
-      document.getElementById("homeEventTitle").textContent = "No Active Competition";
-      document.getElementById("homeEventMeta").textContent =
+      const eventPercent = document.getElementById("homeEventPercent");
+      const eventTitle = document.getElementById("homeEventTitle");
+      const eventMeta = document.getElementById("homeEventMeta");
+      const topThree = document.getElementById("homeTopThree");
+
+      if (eventPercent) eventPercent.textContent = "Standby";
+      if (eventTitle) eventTitle.textContent = "No Active Competition";
+      if (eventMeta) eventMeta.textContent =
         "Waiting for the next SOTW, BOTW, or Clan Goal.";
-      document.getElementById("homeTopThree").textContent =
+      if (topThree) topThree.textContent =
         "No standings available.";
 
       return;
@@ -120,43 +127,54 @@ async function loadHomeStats() {
 
     const standings = await fetchEventStandings(featuredEvent).catch(() => null);
 
-    document.getElementById("homeEventPercent").textContent =
-      formatEventType(featuredEvent.type);
+    const eventPercent = document.getElementById("homeEventPercent");
+    const eventTitle = document.getElementById("homeEventTitle");
+    const eventMeta = document.getElementById("homeEventMeta");
+    const topThree = document.getElementById("homeTopThree");
 
-    document.getElementById("homeEventTitle").textContent =
-      standings?.title || featuredEvent.title;
+    if (eventPercent) {
+      eventPercent.textContent = formatEventType(featuredEvent.type);
+    }
 
-    document.getElementById("homeEventMeta").textContent =
-      standings?.endsAt
-        ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString()}`
-        : featuredEvent.description || "Event details coming soon.";
+    if (eventTitle) {
+      eventTitle.textContent = standings?.title || featuredEvent.title;
+    }
+
+    if (eventMeta) {
+      eventMeta.textContent =
+        standings?.endsAt
+          ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString()}`
+          : featuredEvent.description || "Event details coming soon.";
+    }
 
     if (standings) {
       homeClanXp.textContent =
         `${formatNumber(standings.totalGained)} gained`;
 
-      const topThree = document.getElementById("homeTopThree");
-      topThree.innerHTML = "";
+      if (topThree) {
+        topThree.innerHTML = "";
 
-      if (standings.standings?.length) {
-        standings.standings.slice(0, 3).forEach((player, index) => {
-          const div = document.createElement("div");
+        if (standings.standings?.length) {
+          standings.standings.slice(0, 3).forEach((player, index) => {
+            const div = document.createElement("div");
 
-          div.innerHTML =
-            `<strong>#${index + 1} ${player.name}</strong><span>${formatNumber(player.gained)} gained</span>`;
+            div.innerHTML =
+              `<strong>#${index + 1} ${player.name}</strong><span>${formatNumber(player.gained)} gained</span>`;
 
-          topThree.appendChild(div);
-        });
-      } else {
-        topThree.textContent = "No standings yet.";
+            topThree.appendChild(div);
+          });
+        } else {
+          topThree.textContent = "No standings yet.";
+        }
       }
     } else {
-      homeClanXp.textContent = featuredEvent.goal
-        ? `${formatNumber(featuredEvent.goal)} goal`
+      homeClanXp.textContent = featuredEvent.target
+        ? `${formatNumber(featuredEvent.target)} goal`
         : "Coming Soon";
 
-      document.getElementById("homeTopThree").textContent =
-        "No WOM competition linked yet.";
+      if (topThree) {
+        topThree.textContent = "No WOM competition linked yet.";
+      }
     }
 
     const womResponse =
@@ -166,10 +184,14 @@ async function loadHomeStats() {
       await womResponse.json();
 
     if (womResponse.ok) {
-      document.getElementById("homeClanMembers").textContent =
-        womData.memberCount ||
-        womData.members?.length ||
-        "0";
+      const homeClanMembers = document.getElementById("homeClanMembers");
+
+      if (homeClanMembers) {
+        homeClanMembers.textContent =
+          womData.memberCount ||
+          womData.members?.length ||
+          "0";
+      }
     }
   } catch (error) {
     homeClanXp.textContent = "Unavailable";
@@ -242,7 +264,7 @@ async function loadEventsHub() {
     const events = await fetchCurrentEvents();
 
     if (!events.length) {
-      grid.textContent = "No active Ironkin events found.";
+      grid.textContent = "No Ironkin events found.";
       return;
     }
 
@@ -264,7 +286,7 @@ async function loadEventsHub() {
         </div>
 
         <div class="event-hub-footer">
-<span>Dashboard</span>
+          <span>Dashboard</span>
           <strong>View Event →</strong>
         </div>
       `;
@@ -303,49 +325,123 @@ async function loadSingleEventDashboard() {
     const totalGained = standings?.totalGained || 0;
     const contributors = standings?.contributors || 0;
     const participantCount = standings?.participantCount || 0;
-    const goal = event.goal || null;
+
+    const goal = event.target || event.goal || null;
+
     const percent = goal
       ? Math.min((totalGained / goal) * 100, 100)
       : 0;
+
     const remaining = goal
       ? Math.max(goal - totalGained, 0)
       : null;
 
+    const isSotw = event.type === "sotw";
+    const isBotw = event.type === "botw";
+    const isClanGoal =
+      event.type === "clan-goal" ||
+      event.type === "clan-goal-boss" ||
+      event.type === "clan-goal-skill" ||
+      event.type === "clan_goal";
+
+    const highestGain =
+      standings?.standings?.[0]?.gained || 0;
+
+    const totalLabel = isSotw
+      ? "Total XP Gained"
+      : isBotw
+      ? "Total KC"
+      : "Current KC";
+
+    const contributorsLabel = isSotw
+      ? "Active Competitors"
+      : isBotw
+      ? "Active Killers"
+      : "Contributors";
+
+    const thirdLabel = isSotw
+      ? "Highest Gain"
+      : isBotw
+      ? "Highest KC"
+      : "Goal KC";
+
+    const thirdValue =
+      isClanGoal && goal
+        ? formatNumber(goal)
+        : formatNumber(highestGain);
+
     const topContributors = standings?.standings
       ?.filter(player => player.gained > 0)
-      .slice(0, 10) || [];
+      .slice(0, 5) || [];
+
+    const eventDateText =
+      standings?.startsAt && standings?.endsAt
+        ? `${new Date(standings.startsAt).toLocaleDateString()} - ${new Date(standings.endsAt).toLocaleDateString()}`
+        : event.startDate && event.endDate
+        ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+        : "Dates will appear when tracking is available.";
 
     dashboard.innerHTML = `
       <section class="event-detail-card">
+
         <div class="event-detail-hero">
+
           <div>
-            <p class="eyebrow">${getEventIcon(event.type)} ${event.label || formatEventType(event.type)}</p>
-            <h1>${standings?.title || event.title}</h1>
-            <p>${event.description || standings?.metric || "Ironkin event dashboard."}</p>
+            <p class="eyebrow">
+              ${getEventIcon(event.type)}
+              ${event.label || formatEventType(event.type)}
+            </p>
+
+            <h1>
+              ${standings?.title || event.title}
+            </h1>
+
+            <p>
+              ${event.description || standings?.metric || "Ironkin event dashboard."}
+            </p>
+
+            <p>
+              <strong>Event Date:</strong> ${eventDateText}
+            </p>
           </div>
 
           <div class="event-percent-box">
-            <strong>${goal ? `${percent.toFixed(0)}%` : formatEventType(event.type)}</strong>
-            <span>${goal ? "Complete" : "Active"}</span>
+
+            <strong>
+              ${
+                goal
+                  ? `${percent.toFixed(0)}%`
+                  : formatEventType(event.type)
+              }
+            </strong>
+
+            <span>
+              ${goal ? "Complete" : "Active"}
+            </span>
+
           </div>
+
         </div>
 
         <div class="event-detail-body">
+
           <div class="event-kpi-grid">
+
             <div class="event-kpi">
-              <span>Current</span>
+              <span>${totalLabel}</span>
               <strong>${formatNumber(totalGained)}</strong>
             </div>
 
             <div class="event-kpi">
-              <span>${goal ? "Goal" : "Participants"}</span>
-              <strong>${goal ? formatNumber(goal) : formatNumber(participantCount)}</strong>
+              <span>${contributorsLabel}</span>
+              <strong>${formatNumber(contributors || participantCount)}</strong>
             </div>
 
             <div class="event-kpi">
-              <span>Contributors</span>
-              <strong>${formatNumber(contributors)}</strong>
+              <span>${thirdLabel}</span>
+              <strong>${thirdValue}</strong>
             </div>
+
           </div>
 
           ${
@@ -364,56 +460,67 @@ async function loadSingleEventDashboard() {
           }
 
           <div class="event-detail-grid">
+
             <section class="event-panel">
+
               <h2>Top Contributors</h2>
 
               <div id="singleEventContributors">
+
                 ${
                   topContributors.length
                     ? topContributors.map((player, index) => `
-                      <div class="event-contributor-row">
-                        <strong>#${index + 1} ${player.name}</strong>
-                        <span>${formatNumber(player.gained)} gained</span>
-                      </div>
-                    `).join("")
+                        <div class="event-contributor-row">
+                          <strong>#${index + 1} ${player.name}</strong>
+                          <span>${formatNumber(player.gained)} gained</span>
+                        </div>
+                      `).join("")
                     : "No gained KC/XP yet."
                 }
+
               </div>
+
             </section>
 
-            ${
-              event.dropsEnabled
-                ? `
-                  <section class="event-panel">
-                    <h2>Unique Drops Received</h2>
-                    <p>Drops tracked throughout the event.</p>
-                    <div id="dropsList"></div>
-                  </section>
-                `
-                : `
-                  <section class="event-panel">
-                    <h2>Event Info</h2>
-                    <p>${event.womCompetitionId ? "This event is linked to Wise Old Man." : "No WOM competition has been linked yet."}</p>
-                    <p>${standings?.endsAt ? `Ends ${new Date(standings.endsAt).toLocaleDateString()}` : "Dates will appear when tracking is available."}</p>
-                  </section>
-                `
-            }
+            <section class="event-panel">
+
+              <h2>Unique Drops Received</h2>
+
+              <p>
+                Drops tracked throughout this event.
+              </p>
+
+              <div id="dropsList"></div>
+
+            </section>
+
           </div>
 
           ${
-            event.womCompetitionId
-              ? `<a class="btn primary" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">View WOM Leaderboard</a>`
+            event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE"
+              ? `
+                <a
+                  class="btn primary"
+                  href="https://wiseoldman.net/competitions/${event.womCompetitionId}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  View WOM Leaderboard
+                </a>
+              `
               : ""
           }
+
         </div>
+
       </section>
     `;
 
-    if (event.dropsEnabled) {
-      loadDrops();
-    }
+    loadDrops();
+
   } catch (error) {
-    dashboard.textContent = `Could not load event: ${error.message}`;
+    dashboard.textContent =
+      `Could not load event: ${error.message}`;
   }
 }
 
