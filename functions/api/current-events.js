@@ -49,22 +49,22 @@ const EVENTS = [
 
     label: "Clan Goal",
 
-    title: "2,000 Hueycoatl KC",
+    title: "300 Hueycoatl KC",
 
     description:
       "Every kill brings Ironkin closer to the next clan milestone.",
 
-    womCompetitionId: "PUT_YOUR_WOM_ID_HERE",
+    womCompetitionId: "138731",
 
     featured: true,
     active: true,
 
     dropsEnabled: true,
 
-    target: 2000,
+    target: 300,
 
-    startDate: "2026-05-26",
-    endDate: "2026-06-09"
+    startDate: "2026-06-01",
+    endDate: "2026-06-03"
   }
 ];
 
