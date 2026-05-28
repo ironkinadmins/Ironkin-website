@@ -38,10 +38,25 @@ export async function onRequestGet() {
     (sum, player) => sum + player.gained,
     0
   );
+const goal =
+  details.group?.score || // fallback
+  details.score ||
+  details.metricValue ||
+  0;
 
-  return Response.json({
-    ...currentEvent,
-    totalGained,
-    standings
-  });
+const percent =
+  goal > 0
+    ? Math.min((totalGained / goal) * 100, 100)
+    : 0;
+
+const contributors =
+  standings.filter(player => player.gained > 0).length;
+return Response.json({
+  ...currentEvent,
+  goal,
+  totalGained,
+  percent,
+  contributors,
+  standings
+});
 }
