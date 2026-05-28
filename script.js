@@ -109,19 +109,6 @@ async function loadHomeStats() {
 
     if (!featuredEvent) {
       homeClanXp.textContent = "No Active Event";
-
-      const eventPercent = document.getElementById("homeEventPercent");
-      const eventTitle = document.getElementById("homeEventTitle");
-      const eventMeta = document.getElementById("homeEventMeta");
-      const topThree = document.getElementById("homeTopThree");
-
-      if (eventPercent) eventPercent.textContent = "Standby";
-      if (eventTitle) eventTitle.textContent = "No Active Competition";
-      if (eventMeta) eventMeta.textContent =
-        "Waiting for the next SOTW, BOTW, or Clan Goal.";
-      if (topThree) topThree.textContent =
-        "No standings available.";
-
       return;
     }
 
@@ -324,8 +311,6 @@ async function loadSingleEventDashboard() {
 
     const totalGained = standings?.totalGained || 0;
     const contributors = standings?.contributors || 0;
-    const participantCount = standings?.participantCount || 0;
-
     const goal = event.target || event.goal || null;
 
     const percent = goal
@@ -353,11 +338,11 @@ async function loadSingleEventDashboard() {
       ? "Total KC"
       : "Current KC";
 
-const contributorsLabel = isSotw
-  ? "Active Competitors"
-  : isBotw
-  ? "Active Killers"
-  : "Participants";
+    const contributorsLabel = isSotw
+      ? "Active Competitors"
+      : isBotw
+      ? "Active Killers"
+      : "Participants";
 
     const thirdLabel = isSotw
       ? "Highest Gain"
@@ -432,10 +417,10 @@ const contributorsLabel = isSotw
               <strong>${formatNumber(totalGained)}</strong>
             </div>
 
-<div class="event-kpi">
-  <span>${contributorsLabel}</span>
-<strong>${formatNumber(contributors)}</strong>
-</div>
+            <div class="event-kpi">
+              <span>${contributorsLabel}</span>
+              <strong>${formatNumber(contributors)}</strong>
+            </div>
 
             <div class="event-kpi">
               <span>${thirdLabel}</span>
@@ -444,40 +429,40 @@ const contributorsLabel = isSotw
 
           </div>
 
-${
-  goal
-    ? `
-      <div class="event-progress-labels">
-        <span>Progress</span>
-        <span>${formatNumber(remaining)} remaining</span>
-      </div>
+          ${
+            goal
+              ? `
+                <div class="event-progress-labels">
+                  <span>Progress</span>
+                  <span>${formatNumber(remaining)} remaining</span>
+                </div>
 
-      <div class="event-progress-bar milestone-bar">
-        <div style="width:${percent}%"></div>
+                <div class="event-progress-bar milestone-bar">
+                  <div style="width:${percent}%"></div>
 
-        <span class="milestone-marker" style="left:25%">
-          <strong>25%</strong>
-          <small>Clan Mass</small>
-        </span>
+                  <span class="milestone-marker" style="left:25%">
+                    <strong>25%</strong>
+                    <small>Clan Mass</small>
+                  </span>
 
-        <span class="milestone-marker" style="left:50%">
-          <strong>50%</strong>
-          <small>Bond Giveaway</small>
-        </span>
+                  <span class="milestone-marker" style="left:50%">
+                    <strong>50%</strong>
+                    <small>Bond Giveaway</small>
+                  </span>
 
-        <span class="milestone-marker" style="left:75%">
-          <strong>75%</strong>
-          <small>Bonus Embers</small>
-        </span>
+                  <span class="milestone-marker" style="left:75%">
+                    <strong>75%</strong>
+                    <small>Bonus Embers</small>
+                  </span>
 
-        <span class="milestone-marker" style="left:96%">
-          <strong>100%</strong>
-          <small>Bond Giveaway</small>
-        </span>
-      </div>
-    `
-    : ""
-}
+                  <span class="milestone-marker" style="left:97%">
+                    <strong>100%</strong>
+                    <small>Bond Giveaway</small>
+                  </span>
+                </div>
+              `
+              : ""
+          }
 
           <div class="event-detail-grid">
 
@@ -577,35 +562,20 @@ async function loadDrops() {
       row.className = "drop-row";
 
       row.innerHTML = `
-row.innerHTML = `
-  <span>${drop.name}</span>
+        <span>${drop.name}</span>
 
-  <div class="drop-controls">
+        <div class="drop-controls">
+          <strong>${drop.count}</strong>
 
-    <strong>${drop.count}</strong>
-
-    ${
-      isStaff
-        ? `
-          <button onclick="changeDrop('${drop.name}', 1)">
-            +
-          </button>
-
-          <button onclick="changeDrop('${drop.name}', -1)">
-            −
-          </button>
-        `
-        : ""
-    }
-
-  </div>
-`;
-        ${
-          isStaff
-            ? `<button onclick="changeDrop('${drop.name}', 1)">+</button>
-               <button onclick="changeDrop('${drop.name}', -1)">−</button>`
-            : ""
-        }
+          ${
+            isStaff
+              ? `
+                <button onclick="changeDrop('${drop.name}', 1)">+</button>
+                <button onclick="changeDrop('${drop.name}', -1)">−</button>
+              `
+              : ""
+          }
+        </div>
       `;
 
       dropsList.appendChild(row);
