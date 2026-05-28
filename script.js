@@ -237,10 +237,10 @@ async function loadDynamicEventPage() {
       document.getElementById("leaderboardTitle");
 
     if (data.type === "clan_goal") {
-      const GOAL_XP = 1000000000;
+      const GOAL = data.goal || 1;
 
-      const percent =
-        Math.min((data.totalGained / GOAL_XP) * 100, 100);
+const percent =
+  data.percent || 0;
 
       document.getElementById("eventProgressSection").style.display =
         "block";
@@ -261,7 +261,7 @@ async function loadDynamicEventPage() {
         formatNumber(data.totalGained);
 
       document.getElementById("eventGoal").textContent =
-        formatNumber(GOAL_XP);
+formatNumber(GOAL_XP);
 
       document.getElementById("eventUpdated").textContent =
         "Live";
