@@ -444,40 +444,40 @@ const contributorsLabel = isSotw
 
           </div>
 
-          ${
-            goal
-              ? `
-                <div class="event-progress-labels">
-                  <span>Progress</span>
-                  <span>${formatNumber(remaining)} remaining</span>
-                </div>
+${
+  goal
+    ? `
+      <div class="event-progress-labels">
+        <span>Progress</span>
+        <span>${formatNumber(remaining)} remaining</span>
+      </div>
 
-<div class="event-progress-bar milestone-bar">
-  <div style="width:${percent}%"></div>
+      <div class="event-progress-bar milestone-bar">
+        <div style="width:${percent}%"></div>
 
-  <span class="milestone-marker" style="left:25%">
-    <strong>25%</strong>
-    <small>Clan Mass</small>
-  </span>
+        <span class="milestone-marker" style="left:25%">
+          <strong>25%</strong>
+          <small>Clan Mass</small>
+        </span>
 
-  <span class="milestone-marker" style="left:50%">
-    <strong>50%</strong>
-    <small>Bond Giveaway</small>
-  </span>
+        <span class="milestone-marker" style="left:50%">
+          <strong>50%</strong>
+          <small>Bond Giveaway</small>
+        </span>
 
-  <span class="milestone-marker" style="left:75%">
-    <strong>75%</strong>
-    <small>Bonus Embers</small>
-  </span>
+        <span class="milestone-marker" style="left:75%">
+          <strong>75%</strong>
+          <small>Bonus Embers</small>
+        </span>
 
-  <span class="milestone-marker" style="left:100%">
-    <strong>100%</strong>
-    <small>Bond Giveaway</small>
-  </span>
-</div>
-              `
-              : ""
-          }
+        <span class="milestone-marker" style="left:96%">
+          <strong>100%</strong>
+          <small>Bond Giveaway</small>
+        </span>
+      </div>
+    `
+    : ""
+}
 
           <div class="event-detail-grid">
 

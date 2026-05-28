@@ -927,17 +927,19 @@ footer {
 }
 .milestone-bar {
   position: relative;
-  margin-bottom: 4rem;
+  margin-bottom: 4.5rem;
+  overflow: visible;
 }
 
 .milestone-marker {
   position: absolute;
-  top: 1.4rem;
+  top: 1.5rem;
   transform: translateX(-50%);
   text-align: center;
   white-space: nowrap;
   font-size: 0.7rem;
   color: #ffb45c;
+  z-index: 5;
 }
 
 .milestone-marker strong {
