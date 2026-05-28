@@ -33,9 +33,7 @@ const EVENTS = [
 ];
 
 export async function onRequestGet() {
-  const activeEvents = EVENTS.filter(
-    event => event.active
-  );
+const activeEvents = EVENTS;
 
   return Response.json({
     active: activeEvents.length > 0,
