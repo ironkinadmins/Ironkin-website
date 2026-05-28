@@ -1,18 +1,16 @@
-export async function onRequestGet() {
-  const currentResponse = await fetch(
-    "https://ironkin-website.pages.dev/api/current-event"
-  );
+export async function onRequestGet(context) {
+  const url = new URL(context.request.url);
+  const competitionId = url.searchParams.get("competitionId");
 
-  const currentEvent = await currentResponse.json();
-
-  if (!currentResponse.ok || !currentEvent.active) {
-    return Response.json(currentEvent, {
-      status: currentResponse.status || 404
-    });
+  if (!competitionId) {
+    return Response.json(
+      { error: "Missing competitionId" },
+      { status: 400 }
+    );
   }
 
   const detailsResponse = await fetch(
-    `https://api.wiseoldman.net/v2/competitions/${currentEvent.id}`
+    `https://api.wiseoldman.net/v2/competitions/${competitionId}`
   );
 
   const details = await detailsResponse.json();
@@ -39,24 +37,17 @@ export async function onRequestGet() {
     0
   );
 
-  const contributors =
-    standings.filter(player => player.gained > 0).length;
-
-  const goal =
-    currentEvent.type === "clan_goal"
-      ? 300
-      : 0;
-
-  const percent =
-    goal > 0
-      ? Math.min((totalGained / goal) * 100, 100)
-      : 0;
+  const contributors = standings.filter(player => player.gained > 0).length;
 
   return Response.json({
-    ...currentEvent,
-    goal,
+    active: true,
+    id: details.id,
+    title: details.title,
+    metric: details.metric,
+    startsAt: details.startsAt,
+    endsAt: details.endsAt,
+    participantCount: details.participations?.length || 0,
     totalGained,
-    percent,
     contributors,
     standings
   });

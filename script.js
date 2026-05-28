@@ -203,38 +203,109 @@ card.innerHTML = `
 }
 
 async function loadDynamicEventPage() {
-  const title = document.getElementById("eventPageTitle");
+  const eventsGrid = document.getElementById("eventsGrid");
 
-  if (!title) return;
+  if (!eventsGrid) return;
 
   const formatNumber = (num) =>
     Number(num || 0).toLocaleString();
 
   try {
-    const response = await fetch("/api/event-standings");
+    const response = await fetch("/api/current-events");
     const data = await response.json();
 
-    if (!response.ok || !data.active) {
-      title.textContent =
-        "No Active Event";
-
-      document.getElementById("eventPageSubtitle").textContent =
-        data.message || "No active Ironkin WOM competition found.";
-
-      document.getElementById("eventLeaderboard").textContent =
-        "Check back once a SOTW, BOTW, or Clan Goal competition is live.";
+    if (!response.ok || !data.events || data.events.length === 0) {
+      eventsGrid.textContent =
+        "No active Ironkin events found.";
 
       return;
     }
 
-    title.textContent =
-      data.title;
+    eventsGrid.innerHTML = "";
 
-    document.getElementById("eventPageSubtitle").textContent =
-      `${data.type.toUpperCase()} • ${data.metric || "Competition"} • Ends ${new Date(data.endsAt).toLocaleDateString()}`;
+    for (const event of data.events) {
+      const standingsResponse = await fetch(
+        `/api/event-standings?competitionId=${event.womCompetitionId}`
+      );
 
-    const leaderboardTitle =
-      document.getElementById("leaderboardTitle");
+      const standingsData = await standingsResponse.json();
+
+      const card = document.createElement("article");
+      card.className = "event-card";
+
+      if (!standingsResponse.ok) {
+        card.innerHTML = `
+          <div class="event-card-header">
+            <div>
+              <p class="eyebrow">${event.type}</p>
+              <h2>${event.title}</h2>
+              <p>Could not load WOM standings.</p>
+            </div>
+          </div>
+        `;
+
+        eventsGrid.appendChild(card);
+        continue;
+      }
+
+      const topPlayers = standingsData.standings
+        ?.slice(0, 10)
+        .map((player, index) => `
+          <div class="leaderboard-row">
+            <strong>#${index + 1} ${player.name}</strong>
+            <span>${formatNumber(player.gained)} gained</span>
+          </div>
+        `)
+        .join("") || "No standings yet.";
+
+      card.innerHTML = `
+        <div class="event-card-header">
+          <div>
+            <p class="eyebrow">${event.title}</p>
+            <h2>${standingsData.title}</h2>
+            <p>
+              ${standingsData.metric || "Competition"}
+              ${
+                standingsData.endsAt
+                  ? `• Ends ${new Date(standingsData.endsAt).toLocaleDateString()}`
+                  : ""
+              }
+            </p>
+          </div>
+
+          <span class="event-type-badge">${event.type}</span>
+        </div>
+
+        <div class="event-stats">
+          <div class="event-stat">
+            <strong>${formatNumber(standingsData.totalGained)}</strong>
+            <span>Total Gained</span>
+          </div>
+
+          <div class="event-stat">
+            <strong>${standingsData.contributors}</strong>
+            <span>Contributors</span>
+          </div>
+
+          <div class="event-stat">
+            <strong>${standingsData.participantCount}</strong>
+            <span>Participants</span>
+          </div>
+        </div>
+
+        <h3>Top Competitors</h3>
+        <div>
+          ${topPlayers}
+        </div>
+      `;
+
+      eventsGrid.appendChild(card);
+    }
+  } catch (error) {
+    eventsGrid.textContent =
+      `Could not load events: ${error.message}`;
+  }
+}
 
 if (data.type === "clan_goal") {
   const GOAL = data.goal || 300;
