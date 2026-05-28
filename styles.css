@@ -927,28 +927,47 @@ footer {
 }
 .milestone-bar {
   position: relative;
-  margin-bottom: 4.5rem;
+  margin-bottom: 6rem;
   overflow: visible;
+}
+
+.milestone-bar > div {
+  position: relative;
+  z-index: 2;
 }
 
 .milestone-marker {
   position: absolute;
-  top: 1.5rem;
+  top: -0.4rem;
   transform: translateX(-50%);
   text-align: center;
   white-space: nowrap;
-  font-size: 0.7rem;
-  color: #ffb45c;
   z-index: 5;
+}
+
+.milestone-marker::before {
+  content: "";
+  position: absolute;
+  top: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 2.8rem;
+  background: rgba(255, 180, 92, 0.35);
 }
 
 .milestone-marker strong {
   display: block;
-  font-size: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
   color: #fff0d8;
+  line-height: 1.1;
 }
 
 .milestone-marker small {
   display: block;
-  opacity: 0.85;
+  font-size: 0.9rem;
+  opacity: 0.95;
+  color: #ffb45c;
+  margin-top: 0.15rem;
 }
