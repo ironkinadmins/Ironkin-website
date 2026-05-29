@@ -1,132 +1,62 @@
-let selectedEventId = null;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-async function fetchEvents() {
-  const response = await fetch("/api/current-events");
-  const data = await response.json();
-  return data.events || [];
-}
+  <title>Ironkin Admin Dashboard</title>
 
-async function loadAdmin() {
-  const eventSelect = document.getElementById("adminEventSelect");
-  const addDropBtn = document.getElementById("addDropBtn");
+  <link rel="stylesheet" href="styles.css" />
+</head>
 
-  const events = await fetchEvents();
+<body>
+  <main class="admin-page">
+    <section class="admin-hero">
+      <p class="eyebrow">Ironkin Admin</p>
+      <h1>Admin Dashboard</h1>
+      <p>
+        Manage event-specific drops for SOTW, BOTW, and Clan Goals.
+      </p>
+    </section>
 
-  eventSelect.innerHTML = "";
+    <section class="admin-card">
+      <div class="admin-form-grid">
+        <div class="admin-field">
+          <label for="adminEventSelect">Select Event</label>
+          <select id="adminEventSelect"></select>
+        </div>
 
-  events.forEach(event => {
-    const option = document.createElement("option");
-    option.value = event.id;
-    option.textContent = event.title;
-    eventSelect.appendChild(option);
-  });
+        <div class="admin-field">
+          <label for="dropNameInput">Add Drop</label>
+          <div class="admin-add-row">
+            <input
+              id="dropNameInput"
+              type="text"
+              placeholder="Example: Huey Hide"
+            />
 
-  selectedEventId = eventSelect.value;
-
-  eventSelect.addEventListener("change", () => {
-    selectedEventId = eventSelect.value;
-    loadAdminDrops();
-  });
-
-  addDropBtn.addEventListener("click", addDrop);
-
-  loadAdminDrops();
-}
-
-async function loadAdminDrops() {
-  const list = document.getElementById("adminDropsList");
-
-  if (!selectedEventId) {
-    list.textContent = "No event selected.";
-    return;
-  }
-
-  const response = await fetch(
-    `/api/drops/list?eventId=${encodeURIComponent(selectedEventId)}`
-  );
-
-  const data = await response.json();
-
-  list.innerHTML = "";
-
-  if (!data.drops || data.drops.length === 0) {
-    list.textContent = "No drops added yet.";
-    return;
-  }
-
-  data.drops.forEach(drop => {
-    const row = document.createElement("div");
-    row.className = "drop-row";
-
-    row.innerHTML = `
-      <span>${drop.name}</span>
-
-      <div class="drop-controls">
-        <button onclick="changeDrop('${drop.name}', -1)">−</button>
-        <strong>${drop.count}</strong>
-        <button onclick="changeDrop('${drop.name}', 1)">+</button>
-        <button onclick="deleteDrop('${drop.name}')">Delete</button>
+            <button class="btn primary" id="addDropBtn">
+              Add Drop
+            </button>
+          </div>
+        </div>
       </div>
-    `;
 
-    list.appendChild(row);
-  });
-}
+      <div class="admin-divider"></div>
 
-async function addDrop() {
-  const input = document.getElementById("dropNameInput");
-  const name = input.value.trim();
+      <div class="admin-section-header">
+        <div>
+          <h2>Current Drops</h2>
+          <p>These drops are saved only for the selected event.</p>
+        </div>
+      </div>
 
-  if (!name || !selectedEventId) return;
+      <div id="adminDropsList" class="admin-drops-list">
+        Loading...
+      </div>
+    </section>
+  </main>
 
-  await fetch("/api/drops/add", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
-  });
-
-  input.value = "";
-  loadAdminDrops();
-}
-
-async function changeDrop(name, direction) {
-  const endpoint =
-    direction > 0
-      ? "/api/drops/increment"
-      : "/api/drops/decrement";
-
-  await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
-  });
-
-  loadAdminDrops();
-}
-
-async function deleteDrop(name) {
-  await fetch("/api/drops/delete", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
-  });
-
-  loadAdminDrops();
-}
-
-loadAdmin();
+  <script src="admin.js"></script>
+</body>
+</html>
