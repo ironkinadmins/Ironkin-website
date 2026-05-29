@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Ironkin Admin Dashboard</title>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -12,7 +14,7 @@
     <section class="admin-hero">
       <p class="eyebrow">Ironkin Admin</p>
       <h1>Admin Dashboard</h1>
-      <p>Manage event-specific drops for SOTW, BOTW, and Clan Goals.</p>
+      <p>Manage Ironkin events and event-specific drops.</p>
     </section>
 
     <section class="admin-card">
@@ -23,28 +25,76 @@
         </div>
 
         <div class="admin-field">
-          <label for="dropNameInput">Add Drop</label>
+          <label for="eventTitleInput">Event Title</label>
+          <input id="eventTitleInput" type="text" />
+        </div>
 
-          <div class="admin-add-row">
-            <input
-              id="dropNameInput"
-              type="text"
-              placeholder="Example: Huey Hide"
-            />
+        <div class="admin-field">
+          <label for="eventWomInput">WOM Competition ID</label>
+          <input id="eventWomInput" type="text" placeholder="Example: 138731" />
+        </div>
 
-            <button class="btn primary" id="addDropBtn">
-              Add Drop
-            </button>
-          </div>
+        <div class="admin-field">
+          <label for="eventTargetInput">Target KC / XP</label>
+          <input id="eventTargetInput" type="number" placeholder="Example: 2000" />
+        </div>
+
+        <div class="admin-field">
+          <label for="eventStartInput">Start Date</label>
+          <input id="eventStartInput" type="date" />
+        </div>
+
+        <div class="admin-field">
+          <label for="eventEndInput">End Date</label>
+          <input id="eventEndInput" type="date" />
+        </div>
+      </div>
+
+      <div class="admin-toggle-row">
+        <label>
+          <input id="eventActiveInput" type="checkbox" />
+          Active
+        </label>
+
+        <label>
+          <input id="eventFeaturedInput" type="checkbox" />
+          Featured on Homepage
+        </label>
+
+        <label>
+          <input id="eventDropsInput" type="checkbox" />
+          Drops Enabled
+        </label>
+      </div>
+
+      <button class="btn primary" id="saveEventBtn">
+        Save Event
+      </button>
+    </section>
+
+    <section class="admin-card">
+      <div class="admin-section-header">
+        <h2>Event Drops</h2>
+        <p>These drops are saved only for the selected event.</p>
+      </div>
+
+      <div class="admin-field">
+        <label for="dropNameInput">Add Drop</label>
+
+        <div class="admin-add-row">
+          <input
+            id="dropNameInput"
+            type="text"
+            placeholder="Example: Huey Hide"
+          />
+
+          <button class="btn primary" id="addDropBtn">
+            Add Drop
+          </button>
         </div>
       </div>
 
       <div class="admin-divider"></div>
-
-      <div class="admin-section-header">
-        <h2>Current Drops</h2>
-        <p>These drops are saved only for the selected event.</p>
-      </div>
 
       <div id="adminDropsList" class="admin-drops-list">
         Loading...

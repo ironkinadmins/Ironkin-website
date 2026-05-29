@@ -1,4 +1,5 @@
 let selectedEventId = null;
+let allEvents = [];
 
 async function fetchEvents() {
   const response = await fetch("/api/current-events");
@@ -7,33 +8,116 @@ async function fetchEvents() {
   return data.events || [];
 }
 
+function getSelectedEvent() {
+  return allEvents.find(event => event.id === selectedEventId);
+}
+
+function populateEventFields() {
+  const event = getSelectedEvent();
+
+  if (!event) return;
+
+  document.getElementById("eventTitleInput").value =
+    event.title || "";
+
+  document.getElementById("eventWomInput").value =
+    event.womCompetitionId || "";
+
+  document.getElementById("eventTargetInput").value =
+    event.target || "";
+
+  document.getElementById("eventStartInput").value =
+    event.startDate || "";
+
+  document.getElementById("eventEndInput").value =
+    event.endDate || "";
+
+  document.getElementById("eventActiveInput").checked =
+    Boolean(event.active);
+
+  document.getElementById("eventFeaturedInput").checked =
+    Boolean(event.featured);
+
+  document.getElementById("eventDropsInput").checked =
+    Boolean(event.dropsEnabled);
+}
+
 async function loadAdmin() {
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
+  const saveEventBtn = document.getElementById("saveEventBtn");
 
-  if (!eventSelect || !addDropBtn) return;
+  if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
-  const events = await fetchEvents();
+  allEvents = await fetchEvents();
 
   eventSelect.innerHTML = "";
 
-  events.forEach(event => {
+  allEvents.forEach(event => {
     const option = document.createElement("option");
     option.value = event.id;
-    option.textContent = event.title;
+    option.textContent = `${event.label || event.type} — ${event.title}`;
     eventSelect.appendChild(option);
   });
 
   selectedEventId = eventSelect.value;
 
+  populateEventFields();
+  loadAdminDrops();
+
   eventSelect.addEventListener("change", () => {
     selectedEventId = eventSelect.value;
+    populateEventFields();
     loadAdminDrops();
   });
 
   addDropBtn.addEventListener("click", addDrop);
+  saveEventBtn.addEventListener("click", saveSelectedEvent);
+}
 
-  loadAdminDrops();
+async function saveSelectedEvent() {
+  const event = getSelectedEvent();
+
+  if (!event) return;
+
+  event.title = document.getElementById("eventTitleInput").value.trim();
+
+  event.womCompetitionId =
+    document.getElementById("eventWomInput").value.trim() || null;
+
+  const targetValue =
+    document.getElementById("eventTargetInput").value;
+
+  event.target = targetValue
+    ? Number(targetValue)
+    : null;
+
+  event.startDate =
+    document.getElementById("eventStartInput").value || null;
+
+  event.endDate =
+    document.getElementById("eventEndInput").value || null;
+
+  event.active =
+    document.getElementById("eventActiveInput").checked;
+
+  event.featured =
+    document.getElementById("eventFeaturedInput").checked;
+
+  event.dropsEnabled =
+    document.getElementById("eventDropsInput").checked;
+
+  await fetch("/api/admin/events/save", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      events: allEvents
+    })
+  });
+
+  alert("Event saved.");
 }
 
 async function loadAdminDrops() {
