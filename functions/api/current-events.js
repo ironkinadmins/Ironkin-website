@@ -40,6 +40,12 @@ const DEFAULT_EVENTS = [
     target: 300,
     startDate: "2026-06-01",
     endDate: "2026-06-03"
+    milestones: [
+  { percent: 25, title: "Clan Mass" },
+  { percent: 50, title: "Bond Giveaway" },
+  { percent: 75, title: "Bonus Embers" },
+  { percent: 100, title: "Bond Giveaway" }
+]
   }
 ];
 

@@ -12,6 +12,100 @@ function getSelectedEvent() {
   return allEvents.find(event => event.id === selectedEventId);
 }
 
+function renderMilestonesEditor() {
+  const editor = document.getElementById("milestonesEditor");
+  const event = getSelectedEvent();
+
+  if (!editor || !event) return;
+
+  const milestones = event.milestones || [];
+
+  editor.innerHTML = "";
+
+  milestones.forEach((milestone, index) => {
+    const row = document.createElement("div");
+    row.className = "milestone-editor-row";
+
+    row.innerHTML = `
+      <input
+        type="number"
+        min="0"
+        max="100"
+        value="${milestone.percent || ""}"
+        placeholder="%"
+        data-milestone-percent="${index}"
+      />
+
+      <input
+        type="text"
+        value="${milestone.title || ""}"
+        placeholder="Reward"
+        data-milestone-title="${index}"
+      />
+
+      <button type="button" onclick="removeMilestone(${index})">
+        Remove
+      </button>
+    `;
+
+    editor.appendChild(row);
+  });
+}
+
+function collectMilestonesFromEditor() {
+  const event = getSelectedEvent();
+
+  if (!event) return;
+
+  const percentInputs = document.querySelectorAll("[data-milestone-percent]");
+  const titleInputs = document.querySelectorAll("[data-milestone-title]");
+
+  const milestones = [];
+
+  percentInputs.forEach((percentInput, index) => {
+    const percent = Number(percentInput.value);
+    const title = titleInputs[index]?.value.trim();
+
+    if (percent && title) {
+      milestones.push({
+        percent,
+        title
+      });
+    }
+  });
+
+  milestones.sort((a, b) => a.percent - b.percent);
+
+  event.milestones = milestones;
+}
+
+function addMilestone() {
+  const event = getSelectedEvent();
+
+  if (!event) return;
+
+  if (!Array.isArray(event.milestones)) {
+    event.milestones = [];
+  }
+
+  event.milestones.push({
+    percent: 100,
+    title: ""
+  });
+
+  renderMilestonesEditor();
+}
+
+function removeMilestone(index) {
+  const event = getSelectedEvent();
+
+  if (!event || !Array.isArray(event.milestones)) return;
+
+  event.milestones.splice(index, 1);
+
+  renderMilestonesEditor();
+}
+
 function populateEventFields() {
   const event = getSelectedEvent();
 
@@ -19,8 +113,9 @@ function populateEventFields() {
 
   document.getElementById("eventTitleInput").value =
     event.title || "";
-    document.getElementById("eventDescriptionInput").value =
-  event.description || "";
+
+  document.getElementById("eventDescriptionInput").value =
+    event.description || "";
 
   document.getElementById("eventWomInput").value =
     event.womCompetitionId || "";
@@ -42,12 +137,15 @@ function populateEventFields() {
 
   document.getElementById("eventDropsInput").checked =
     Boolean(event.dropsEnabled);
+
+  renderMilestonesEditor();
 }
 
 async function loadAdmin() {
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
   const saveEventBtn = document.getElementById("saveEventBtn");
+  const addMilestoneBtn = document.getElementById("addMilestoneBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -75,6 +173,10 @@ async function loadAdmin() {
 
   addDropBtn.addEventListener("click", addDrop);
   saveEventBtn.addEventListener("click", saveSelectedEvent);
+
+  if (addMilestoneBtn) {
+    addMilestoneBtn.addEventListener("click", addMilestone);
+  }
 }
 
 async function saveSelectedEvent() {
@@ -82,9 +184,12 @@ async function saveSelectedEvent() {
 
   if (!event) return;
 
-  event.title = document.getElementById("eventTitleInput").value.trim();
-event.description =
-  document.getElementById("eventDescriptionInput").value.trim();
+  event.title =
+    document.getElementById("eventTitleInput").value.trim();
+
+  event.description =
+    document.getElementById("eventDescriptionInput").value.trim();
+
   event.womCompetitionId =
     document.getElementById("eventWomInput").value.trim() || null;
 
@@ -109,6 +214,8 @@ event.description =
 
   event.dropsEnabled =
     document.getElementById("eventDropsInput").checked;
+
+  collectMilestonesFromEditor();
 
   await fetch("/api/admin/events/save", {
     method: "POST",
