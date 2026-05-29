@@ -19,6 +19,8 @@ function populateEventFields() {
 
   document.getElementById("eventTitleInput").value =
     event.title || "";
+    document.getElementById("eventDescriptionInput").value =
+  event.description || "";
 
   document.getElementById("eventWomInput").value =
     event.womCompetitionId || "";
@@ -81,7 +83,8 @@ async function saveSelectedEvent() {
   if (!event) return;
 
   event.title = document.getElementById("eventTitleInput").value.trim();
-
+event.description =
+  document.getElementById("eventDescriptionInput").value.trim();
   event.womCompetitionId =
     document.getElementById("eventWomInput").value.trim() || null;
 
