@@ -53,24 +53,13 @@ export async function onRequestPost({ request, env }) {
   const value = await env.DROPS_KV.get(key);
   const drops = value ? JSON.parse(value) : [];
 
-  let drop = drops.find(item => item.name === name);
+  const updatedDrops = drops.filter(drop => drop.name !== name);
 
-  if (!drop) {
-    drop = {
-      name,
-      count: 0
-    };
-
-    drops.push(drop);
-  }
-
-  drop.count += 1;
-
-  await env.DROPS_KV.put(key, JSON.stringify(drops));
+  await env.DROPS_KV.put(key, JSON.stringify(updatedDrops));
 
   return Response.json({
     success: true,
     eventId,
-    drop
+    drops: updatedDrops
   });
 }

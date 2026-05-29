@@ -38,39 +38,34 @@ export async function onRequestPost({ request, env }) {
 
   const body = await request.json();
 
-  const eventId = body.eventId || "global";
+  const eventId = body.eventId;
   const name = body.name?.trim();
 
-  if (!name) {
+  if (!eventId || !name) {
     return Response.json(
-      { error: "Missing drop name." },
+      { error: "Missing eventId or drop name." },
       { status: 400 }
     );
   }
 
   const key = getDropListKey(eventId);
 
-  const value = await env.DROPS_KV.get(key);
-  const drops = value ? JSON.parse(value) : [];
+  const existingValue = await env.DROPS_KV.get(key);
+  const drops = existingValue ? JSON.parse(existingValue) : [];
 
-  let drop = drops.find(item => item.name === name);
+  const exists = drops.some(drop => drop.name === name);
 
-  if (!drop) {
-    drop = {
+  if (!exists) {
+    drops.push({
       name,
       count: 0
-    };
-
-    drops.push(drop);
+    });
   }
-
-  drop.count += 1;
 
   await env.DROPS_KV.put(key, JSON.stringify(drops));
 
   return Response.json({
     success: true,
-    eventId,
-    drop
+    drops
   });
 }

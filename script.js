@@ -547,7 +547,12 @@ async function loadDrops() {
       authData.signedIn &&
       authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
 
-    const response = await fetch("/api/drops/list");
+    const params = new URLSearchParams(window.location.search);
+const eventId = params.get("id") || "global";
+
+const response = await fetch(
+  `/api/drops/list?eventId=${encodeURIComponent(eventId)}`
+);
     const data = await response.json();
 
     dropsList.innerHTML = "";
@@ -597,12 +602,19 @@ async function changeDrop(name, direction) {
       ? "/api/drops/increment"
       : "/api/drops/decrement";
 
+  const eventId =
+    new URLSearchParams(window.location.search).get("id") ||
+    "global";
+
   await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({
+      eventId,
+      name
+    })
   });
 
   loadDrops();

@@ -1,39 +1,21 @@
-function normalizeMetric(metric) {
-  return String(metric || "default")
-    .toLowerCase()
-    .replace(/^the_/, "");
+function getDropListKey(eventId) {
+  return `drops:${eventId}`;
 }
 
-export async function onRequestGet({ env }) {
-  const eventResponse = await fetch(
-    "https://ironkin-website.pages.dev/api/event-standings"
-  );
+export async function onRequestGet({ request, env }) {
+  const url = new URL(request.url);
 
-  const eventData = await eventResponse.json();
+  const eventId =
+    url.searchParams.get("eventId") ||
+    "global";
 
-  const metric = normalizeMetric(eventData.metric);
+  const key = getDropListKey(eventId);
 
-  const dropListValue =
-    await env.DROPS_KV.get(`drop-list:${metric}`);
-
-  const dropNames = dropListValue
-    ? JSON.parse(dropListValue)
-    : [];
-
-  const drops = [];
-
-  for (const name of dropNames) {
-    const key = `drop-count:${metric}:${name}`;
-    const value = await env.DROPS_KV.get(key);
-
-    drops.push({
-      name,
-      count: Number(value || 0)
-    });
-  }
+  const value = await env.DROPS_KV.get(key);
+  const drops = value ? JSON.parse(value) : [];
 
   return Response.json({
-    metric,
+    eventId,
     drops
   });
 }

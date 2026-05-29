@@ -1,8 +1,3 @@
-function normalizeMetric(metric) {
-  return String(metric || "default")
-    .toLowerCase()
-    .replace(/^the_/, "");
-}
 const STAFF_ROLE_IDS = [
   "1364734283356569620",
   "1365445491776815104"
@@ -21,15 +16,20 @@ function getSession(request) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+function isStaff(request) {
   const session = getSession(request);
 
-  const isStaff =
-    session?.roles?.some(roleId =>
-      STAFF_ROLE_IDS.includes(roleId)
-    );
+  return session?.roles?.some(roleId =>
+    STAFF_ROLE_IDS.includes(roleId)
+  );
+}
 
-  if (!isStaff) {
+function getDropListKey(eventId) {
+  return `drops:${eventId}`;
+}
+
+export async function onRequestPost({ request, env }) {
+  if (!isStaff(request)) {
     return Response.json(
       { error: "Staff only." },
       { status: 403 }
@@ -37,7 +37,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   const body = await request.json();
-  const name = body.name;
+
+  const eventId = body.eventId || "global";
+  const name = body.name?.trim();
 
   if (!name) {
     return Response.json(
@@ -46,22 +48,22 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-const eventResponse = await fetch(
-  "https://ironkin-website.pages.dev/api/event-standings"
-);
+  const key = getDropListKey(eventId);
 
-const eventData = await eventResponse.json();
+  const value = await env.DROPS_KV.get(key);
+  const drops = value ? JSON.parse(value) : [];
 
-const metric = normalizeMetric(eventData.metric);
+  const drop = drops.find(item => item.name === name);
 
-const key = `drop-count:${metric}:${name}`;
-  const current = Number(await env.DROPS_KV.get(key) || 0);
-  const next = Math.max(current - 1, 0);
+  if (drop) {
+    drop.count = Math.max(drop.count - 1, 0);
+  }
 
-  await env.DROPS_KV.put(key, String(next));
+  await env.DROPS_KV.put(key, JSON.stringify(drops));
 
   return Response.json({
-    name,
-    count: next
+    success: true,
+    eventId,
+    drop
   });
 }

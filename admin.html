@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ironkin Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="page-shell">
+    <section class="page-title">
+      <h1>Admin Dashboard</h1>
+      <p>Manage event drops for Ironkin dashboards.</p>
+    </section>
+
+    <section class="event-detail-card">
+      <div class="event-detail-body">
+        <label for="adminEventSelect">Select Event</label>
+        <select id="adminEventSelect"></select>
+
+        <br><br>
+
+        <label for="dropNameInput">Add Drop</label>
+        <input id="dropNameInput" type="text" placeholder="Example: Huey Hide" />
+
+        <button class="btn primary" id="addDropBtn">
+          Add Drop
+        </button>
+
+        <hr>
+
+        <h2>Current Drops</h2>
+        <div id="adminDropsList">Loading...</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
