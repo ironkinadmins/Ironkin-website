@@ -559,14 +559,7 @@ const response = await fetch(
 
 let drops = data.drops || [];
 
-if (drops.length === 0) {
-  drops = [
-    { name: "Huey Hide", count: 0 },
-    { name: "Tome of Earth", count: 0 },
-    { name: "Dragon Hunter Wand", count: 0 },
-    { name: "Huberte", count: 0 }
-  ];
-}
+
 
 drops.forEach(drop => {
       const row = document.createElement("div");
