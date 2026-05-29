@@ -1134,3 +1134,40 @@ footer {
   border-color: rgba(255, 180, 92, 0.85);
   box-shadow: 0 0 0 3px rgba(255, 140, 40, 0.18);
 }
+.milestones-editor {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.milestone-editor-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.milestone-editor-row input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 180, 92, 0.35);
+  color: #fff0d8;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font: inherit;
+}
+
+.milestone-editor-row button {
+  background: rgba(120, 20, 20, 0.3);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  color: #ffd0d0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: rgba(255, 140, 40, 0.12);
+  border: 1px solid rgba(255, 180, 92, 0.35);
+  color: #ffb45c;
+}
