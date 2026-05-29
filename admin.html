@@ -3,35 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ironkin Admin</title>
+  <title>Ironkin Admin Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-  <main class="page-shell">
-    <section class="page-title">
+  <main class="admin-page">
+    <section class="admin-hero">
+      <p class="eyebrow">Ironkin Admin</p>
       <h1>Admin Dashboard</h1>
-      <p>Manage event drops for Ironkin dashboards.</p>
+      <p>Manage event-specific drops for SOTW, BOTW, and Clan Goals.</p>
     </section>
 
-    <section class="event-detail-card">
-      <div class="event-detail-body">
-        <label for="adminEventSelect">Select Event</label>
-        <select id="adminEventSelect"></select>
+    <section class="admin-card">
+      <div class="admin-form-grid">
+        <div class="admin-field">
+          <label for="adminEventSelect">Select Event</label>
+          <select id="adminEventSelect"></select>
+        </div>
 
-        <br><br>
+        <div class="admin-field">
+          <label for="dropNameInput">Add Drop</label>
 
-        <label for="dropNameInput">Add Drop</label>
-        <input id="dropNameInput" type="text" placeholder="Example: Huey Hide" />
+          <div class="admin-add-row">
+            <input
+              id="dropNameInput"
+              type="text"
+              placeholder="Example: Huey Hide"
+            />
 
-        <button class="btn primary" id="addDropBtn">
-          Add Drop
-        </button>
+            <button class="btn primary" id="addDropBtn">
+              Add Drop
+            </button>
+          </div>
+        </div>
+      </div>
 
-        <hr>
+      <div class="admin-divider"></div>
 
+      <div class="admin-section-header">
         <h2>Current Drops</h2>
-        <div id="adminDropsList">Loading...</div>
+        <p>These drops are saved only for the selected event.</p>
+      </div>
+
+      <div id="adminDropsList" class="admin-drops-list">
+        Loading...
       </div>
     </section>
   </main>
