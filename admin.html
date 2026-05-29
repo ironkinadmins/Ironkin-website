@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Ironkin Admin Dashboard</title>
-
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -28,15 +26,15 @@
           <label for="eventTitleInput">Event Title</label>
           <input id="eventTitleInput" type="text" />
         </div>
-        <div class="admin-field admin-field-wide">
-  <label for="eventDescriptionInput">Event Description</label>
 
-  <textarea
-    id="eventDescriptionInput"
-    rows="4"
-    placeholder="Event description shown on the dashboard"
-  ></textarea>
-</div>
+        <div class="admin-field admin-field-wide">
+          <label for="eventDescriptionInput">Event Description</label>
+          <textarea
+            id="eventDescriptionInput"
+            rows="4"
+            placeholder="Event description shown on the dashboard"
+          ></textarea>
+        </div>
 
         <div class="admin-field">
           <label for="eventWomInput">WOM Competition ID</label>
@@ -57,16 +55,17 @@
           <label for="eventEndInput">End Date</label>
           <input id="eventEndInput" type="date" />
         </div>
+
+        <div class="admin-field admin-field-wide">
+          <label>Milestones</label>
+
+          <div id="milestonesEditor" class="milestones-editor"></div>
+
+          <button type="button" class="btn secondary" id="addMilestoneBtn">
+            + Add Milestone
+          </button>
+        </div>
       </div>
-      <div class="admin-field admin-field-wide">
-  <label>Milestones</label>
-
-  <div id="milestonesEditor" class="milestones-editor"></div>
-
-  <button type="button" class="btn secondary" id="addMilestoneBtn">
-    + Add Milestone
-  </button>
-</div>
 
       <div class="admin-toggle-row">
         <label>
