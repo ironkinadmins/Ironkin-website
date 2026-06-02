@@ -2319,3 +2319,123 @@ footer {
   line-height:1.6;
   color:var(--text-muted,#d7d7d7);
 }
+
+/* Hall of Flame Discord rendering cleanup */
+.hall-grid {
+  grid-template-columns: 1fr;
+}
+
+.hof-section-wide {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 18px;
+}
+
+.hof-winner-grid,
+.hof-record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.hof-summary-card,
+.hof-record-card {
+  overflow: hidden;
+}
+
+.hof-table {
+  display: grid;
+  gap: 0;
+  margin-top: 14px;
+}
+
+.hof-table-head,
+.hof-table-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) minmax(90px, auto) 32px;
+  gap: 12px;
+  align-items: center;
+}
+
+.hof-table-head {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hof-table-row {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 122, 26, 0.16);
+}
+
+.hof-table-row:last-child {
+  border-bottom: none;
+}
+
+.hof-table-row strong {
+  color: var(--text);
+}
+
+.hof-table-row span {
+  color: var(--muted);
+}
+
+.hof-table-row a,
+.hof-record-row a {
+  color: var(--ember);
+  font-weight: 900;
+  text-align: right;
+}
+
+.hof-record-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.hof-record-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 32px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255, 122, 26, 0.16);
+}
+
+.hof-record-row:last-child {
+  border-bottom: none;
+}
+
+.hof-medal {
+  font-size: 1.05rem;
+}
+
+.hof-record-row strong {
+  color: var(--text);
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .hof-winner-grid,
+  .hof-record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hof-table-head {
+    display: none;
+  }
+
+  .hof-table-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+  }
+
+  .hof-table-row span:nth-child(2),
+  .hof-table-row span:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}

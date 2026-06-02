@@ -962,6 +962,166 @@ async function loadArchivePage() {
 }
 
 
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function cleanDiscordText(value) {
+  return String(value || "")
+    .replace(/\r/g, "")
+    .replace(/\\n/g, "\n")
+    .replace(/\\;/g, ";")
+    .replace(/\\,/g, ",")
+    .trim();
+}
+
+function extractFirstUrl(value) {
+  const match = String(value || "").match(/https?:\/\/[^\s)]+/i);
+  return match ? match[0] : "";
+}
+
+function stripUrls(value) {
+  return String(value || "").replace(/https?:\/\/\S+/gi, "").trim();
+}
+
+function parseMarkdownLink(value) {
+  const text = cleanDiscordText(value);
+  const match = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+
+  if (!match) {
+    return {
+      text: stripUrls(text),
+      url: extractFirstUrl(text)
+    };
+  }
+
+  return {
+    text: match[1].trim(),
+    url: match[2].trim()
+  };
+}
+
+function parseWinnerSummary(description) {
+  return cleanDiscordText(description)
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const separator = line.includes("—") ? "—" : "-";
+      const parts = line.split(separator);
+      const eventName = parts.shift()?.trim() || "Record";
+      const resultText = parts.join(separator).trim();
+      const link = parseMarkdownLink(resultText);
+      const winnerParts = link.text.split(":");
+      const winner = winnerParts.shift()?.trim() || link.text;
+      const score = winnerParts.join(":").trim();
+
+      return {
+        eventName,
+        winner,
+        score,
+        url: link.url
+      };
+    });
+}
+
+function renderWinnerTable(entry) {
+  const rows = parseWinnerSummary(entry.description);
+
+  if (!rows.length) {
+    return `<p class="admin-muted">No records listed yet.</p>`;
+  }
+
+  return `
+    <div class="hof-table">
+      <div class="hof-table-head">
+        <span>Event</span>
+        <span>Winner</span>
+        <span>Score</span>
+        <span></span>
+      </div>
+
+      ${rows.map(row => `
+        <div class="hof-table-row">
+          <strong>${escapeHtml(row.eventName)}</strong>
+          <span>${escapeHtml(row.winner)}</span>
+          <span>${escapeHtml(row.score)}</span>
+          <span>
+            ${row.url ? `<a href="${escapeHtml(row.url)}" target="_blank" rel="noopener" title="View proof">🔗</a>` : ""}
+          </span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function parseSpeedRecordRows(description) {
+  const lines = cleanDiscordText(description)
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const rows = [];
+  const medalRegex = /^(🥇|🥈|🥉|🎖️?)\s*•?\s*(.*)$/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const medalMatch = line.match(medalRegex);
+
+    if (!medalMatch) continue;
+
+    const medal = medalMatch[1];
+    let text = medalMatch[2] || "";
+    let url = extractFirstUrl(text);
+
+    if (!url && lines[i + 1] && /^https?:\/\//i.test(lines[i + 1])) {
+      url = extractFirstUrl(lines[i + 1]);
+      i += 1;
+    }
+
+    text = stripUrls(text)
+      .replace(/\s+-\s*$/g, "")
+      .trim();
+
+    if (!text) continue;
+
+    rows.push({ medal, text, url });
+  }
+
+  return rows;
+}
+
+function renderSpeedRecordCard(entry) {
+  const rows = parseSpeedRecordRows(entry.description);
+
+  return `
+    <article class="card flame-card hof-record-card">
+      <h2>${escapeHtml(entry.title)}</h2>
+
+      ${rows.length
+        ? `
+          <div class="hof-record-list">
+            ${rows.map(row => `
+              <div class="hof-record-row">
+                <span class="hof-medal">${row.medal}</span>
+                <strong>${escapeHtml(row.text)}</strong>
+                ${row.url ? `<a href="${escapeHtml(row.url)}" target="_blank" rel="noopener" title="View proof">🔗</a>` : ""}
+              </div>
+            `).join("")}
+          </div>
+        `
+        : `<p class="admin-muted">No record holders listed yet.</p>`
+      }
+    </article>
+  `;
+}
+
 async function loadHallOfFlamePage() {
   const grid = document.getElementById("hallOfFlameGrid");
   if (!grid) return;
@@ -970,39 +1130,71 @@ async function loadHallOfFlamePage() {
     const response = await fetch("/api/hall-of-flame/discord");
     const data = await response.json();
 
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load Hall of Flame.");
+    }
+
     const entries = data.entries || [];
 
-    const winners = entries.filter(e =>
-      e.title === "Boss of the Week" || e.title === "Skill of the Week"
+    const sotw = entries.find(entry => entry.title === "Skill of the Week");
+    const botw = entries.find(entry => entry.title === "Boss of the Week");
+
+    const records = entries.filter(entry =>
+      entry.title &&
+      ![
+        "Boss of the Week",
+        "Skill of the Week",
+        "Hall Of Flame Quick Links!"
+      ].includes(entry.title)
     );
-
-    const records = entries.filter(e =>
-      e.title &&
-      !["Boss of the Week","Skill of the Week","Hall Of Flame Quick Links!"].includes(e.title)
-    );
-
-    const winnerCards = winners.map(entry => `
-      <article class="card flame-card">
-        <h2>${entry.title}</h2>
-        <div class="flame-description">${entry.description || "No data"}</div>
-      </article>
-    `).join("");
-
-    const recordCards = records.map(entry => `
-      <article class="card flame-card">
-        <h2>${entry.title}</h2>
-        <div class="flame-description">${entry.description || ""}</div>
-      </article>
-    `).join("");
 
     grid.innerHTML = `
-      ${winnerCards}
-      ${recordCards}
+      <section class="hof-section hof-section-wide">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Competition Winners</p>
+            <h2>Event Champions</h2>
+          </div>
+        </div>
+
+        <div class="hof-winner-grid">
+          ${sotw ? `
+            <article class="card flame-card hof-summary-card">
+              <h2>${escapeHtml(sotw.title)}</h2>
+              ${renderWinnerTable(sotw)}
+            </article>
+          ` : ""}
+
+          ${botw ? `
+            <article class="card flame-card hof-summary-card">
+              <h2>${escapeHtml(botw.title)}</h2>
+              ${renderWinnerTable(botw)}
+            </article>
+          ` : ""}
+        </div>
+      </section>
+
+      <section class="hof-section hof-section-wide">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Speed Records</p>
+            <h2>Record Boards</h2>
+          </div>
+        </div>
+
+        <div class="hof-record-grid">
+          ${records.length
+            ? records.map(renderSpeedRecordCard).join("")
+            : `<article class="card"><p>No Discord Hall of Flame records found.</p></article>`
+          }
+        </div>
+      </section>
     `;
   } catch (error) {
-    grid.innerHTML = `<article class="card"><p>Could not load Hall of Flame: ${error.message}</p></article>`;
+    grid.innerHTML = `<article class="card"><p>Could not load Hall of Flame: ${escapeHtml(error.message)}</p></article>`;
   }
 }
+
 
 async function loadDrops() {
   const dropsList = document.getElementById("dropsList");
