@@ -77,14 +77,22 @@ export async function onRequestGet({ env }) {
     );
   }
 
-  const response = await fetch(calendarUrl);
-
-  if (!response.ok) {
-    return Response.json(
-      { error: "Could not load Google Calendar." },
-      { status: 500 }
-    );
+const response = await fetch(`${calendarUrl}?t=${Date.now()}`, {
+  headers: {
+    "User-Agent": "Ironkin-Website-Calendar"
   }
+});
+
+if (!response.ok) {
+  return Response.json(
+    {
+      error: "Could not load Google Calendar.",
+      status: response.status,
+      statusText: response.statusText
+    },
+    { status: 500 }
+  );
+}
 
   const icsText = await response.text();
   const events = parseEvents(icsText);
