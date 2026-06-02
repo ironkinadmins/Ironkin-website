@@ -10,6 +10,23 @@ function formatNumber(num) {
   return Number(num || 0).toLocaleString();
 }
 
+function getTimeRemaining(endDate) {
+  const end = new Date(endDate);
+  const now = new Date();
+  const diff = end - now;
+
+  if (diff <= 0) return "Ended";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  return `${hours}h`;
+}
+
 function formatEventType(type) {
   const labels = {
     sotw: "SOTW",
@@ -97,8 +114,6 @@ async function loadDiscordUser() {
 async function loadHomeStats() {
   const homeClanXp = document.getElementById("homeClanXp");
 
-  if (!homeClanXp) return;
-
   try {
     const events = await fetchCurrentEvents();
 
@@ -108,7 +123,18 @@ async function loadHomeStats() {
       events[0];
 
     if (!featuredEvent) {
-      homeClanXp.textContent = "No Active Event";
+      if (homeClanXp) {
+        homeClanXp.textContent = "No Active Event";
+      }
+
+      const eventTitle = document.getElementById("homeEventTitle");
+      const eventMeta = document.getElementById("homeEventMeta");
+      const topThree = document.getElementById("homeTopThree");
+
+      if (eventTitle) eventTitle.textContent = "No active event";
+      if (eventMeta) eventMeta.textContent = "No event is currently featured.";
+      if (topThree) topThree.textContent = "No competitors loaded.";
+
       return;
     }
 
@@ -118,8 +144,7 @@ async function loadHomeStats() {
     const eventTitle = document.getElementById("homeEventTitle");
     const eventMeta = document.getElementById("homeEventMeta");
     const topThree = document.getElementById("homeTopThree");
-    const featuredStats =
-  document.getElementById("homeFeaturedStats");
+    const featuredStats = document.getElementById("homeFeaturedStats");
 
     if (eventPercent) {
       eventPercent.textContent = formatEventType(featuredEvent.type);
@@ -137,41 +162,45 @@ async function loadHomeStats() {
     }
 
     if (standings) {
-      homeClanXp.textContent =
-        `${formatNumber(standings.totalGained)} gained`;
-if (featuredStats) {
-  const topPlayer = standings.standings?.[0];
+      if (homeClanXp) {
+        homeClanXp.textContent =
+          `${formatNumber(standings.totalGained)} gained`;
+      }
 
-  const timeRemaining = standings.endsAt
-    ? getTimeRemaining(standings.endsAt)
-    : "TBD";
+      if (featuredStats) {
+        const topPlayer = standings.standings?.[0];
 
-  featuredStats.innerHTML = `
-    <div class="featured-stat">
-      <strong>${formatNumber(standings.totalGained)}</strong>
-      <span>Total Gained</span>
-    </div>
+        const timeRemaining = standings.endsAt
+          ? getTimeRemaining(standings.endsAt)
+          : "TBD";
 
-    <div class="featured-stat">
-      <strong>${formatNumber(
-        standings.participantCount ||
-        standings.standings?.length ||
-        0
-      )}</strong>
-      <span>Participants</span>
-    </div>
+        featuredStats.innerHTML = `
+          <div class="featured-stat">
+            <strong>${formatNumber(standings.totalGained)}</strong>
+            <span>Total Gained</span>
+          </div>
 
-    <div class="featured-stat">
-      <strong>${timeRemaining}</strong>
-      <span>Time Remaining</span>
-    </div>
+          <div class="featured-stat">
+            <strong>${formatNumber(
+              standings.participantCount ||
+              standings.standings?.length ||
+              0
+            )}</strong>
+            <span>Participants</span>
+          </div>
 
-    <div class="featured-stat">
-      <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
-      <span>Top Gain</span>
-    </div>
-  `;
-}
+          <div class="featured-stat">
+            <strong>${timeRemaining}</strong>
+            <span>Time Remaining</span>
+          </div>
+
+          <div class="featured-stat">
+            <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
+            <span>Top Gain</span>
+          </div>
+        `;
+      }
+
       if (topThree) {
         topThree.innerHTML = "";
 
@@ -189,9 +218,15 @@ if (featuredStats) {
         }
       }
     } else {
-      homeClanXp.textContent = featuredEvent.target
-        ? `${formatNumber(featuredEvent.target)} goal`
-        : "Coming Soon";
+      if (homeClanXp) {
+        homeClanXp.textContent = featuredEvent.target
+          ? `${formatNumber(featuredEvent.target)} goal`
+          : "Coming Soon";
+      }
+
+      if (featuredStats) {
+        featuredStats.innerHTML = "";
+      }
 
       if (topThree) {
         topThree.textContent = "No WOM competition linked yet.";
@@ -215,7 +250,9 @@ if (featuredStats) {
       }
     }
   } catch (error) {
-    homeClanXp.textContent = "Unavailable";
+    if (homeClanXp) {
+      homeClanXp.textContent = "Unavailable";
+    }
 
     const eventPercent = document.getElementById("homeEventPercent");
     const eventTitle = document.getElementById("homeEventTitle");
@@ -474,14 +511,14 @@ async function loadSingleEventDashboard() {
                 <div class="event-progress-bar milestone-bar">
                   <div style="width:${percent}%"></div>
 
-${(event.milestones || [])
-  .map(milestone => `
-    <span class="milestone-marker" style="left:${Math.min(milestone.percent, 97)}%">
-      <strong>${milestone.percent}%</strong>
-      <small>${milestone.title}</small>
-    </span>
-  `)
-  .join("")}
+                  ${(event.milestones || [])
+                    .map(milestone => `
+                      <span class="milestone-marker" style="left:${Math.min(milestone.percent, 97)}%">
+                        <strong>${milestone.percent}%</strong>
+                        <small>${milestone.title}</small>
+                      </span>
+                    `)
+                    .join("")}
                 </div>
               `
               : ""
@@ -551,7 +588,6 @@ ${(event.milestones || [])
       `Could not load event: ${error.message}`;
   }
 }
-
 
 async function loadHomeEventWidgets() {
   const activeGrid = document.getElementById("homeActiveEventsGrid");
