@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Ironkin Clan</title>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -41,9 +43,9 @@
     </nav>
   </header>
 
-  <main class="home-dashboard">
-    <section class="dashboard-hero">
-      <div>
+  <main class="member-home">
+    <section class="member-home-grid">
+      <div class="member-hero-card">
         <p class="eyebrow">Old School RuneScape Ironman Clan</p>
 
         <h1>
@@ -51,25 +53,36 @@
           Bound as Kin.
         </h1>
 
-        <p class="dashboard-subtitle">
+        <p>
           The Ironkin hub for live clan events, achievements, competition,
           progression, and Hall of Flame glory.
         </p>
 
         <div class="hero-buttons">
           <a class="btn primary" href="events.html">View Events</a>
-          <a class="btn secondary" href="https://discord.gg/YOUR-INVITE-HERE" target="_blank">
+          <a
+            class="btn secondary"
+            href="https://discord.gg/YOUR-INVITE-HERE"
+            target="_blank"
+          >
             Join Discord
           </a>
         </div>
       </div>
 
-      <article class="card dashboard-current">
-        <p class="eyebrow">Current Focus</p>
+      <article class="card member-featured-event">
+        <p class="eyebrow">Featured Event</p>
+
         <h2 id="homeEventTitle">Loading event...</h2>
+
         <p id="homeEventMeta">Checking Wise Old Man...</p>
 
         <div id="homeFeaturedStats" class="featured-stats"></div>
+
+        <div class="featured-big-stat">
+          <span id="homeClanXp">Loading...</span>
+          <small>Current event progress</small>
+        </div>
 
         <div id="homeTopThree" class="home-top-three">
           Loading top competitors...
@@ -77,58 +90,54 @@
 
         <a class="btn primary" href="events.html">View Event</a>
       </article>
-    </section>
 
-    <section class="dashboard-grid">
-      <article class="card dashboard-featured">
-        <p class="eyebrow">Featured Event</p>
-
-        <div class="dashboard-big-stat">
-          <span id="homeClanXp">Loading...</span>
-          <small>Current Event Progress</small>
+      <article class="card member-achievements">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Clan Activity</p>
+            <h2>Recent Achievements</h2>
+          </div>
         </div>
 
-        <p>
-          Check the latest SOTW, BOTW, and Clan Goal dashboards powered by Wise Old Man.
-        </p>
-
-        <a class="text-link" href="events.html">Open Live Events →</a>
-      </article>
-
-      <article class="card dashboard-achievements">
-        <h2>Recent Achievements</h2>
         <p>Fresh milestones and achievements from Ironkin members.</p>
 
         <div id="recentActivity" class="activity-scroll">
           Loading recent achievements...
         </div>
       </article>
-    </section>
 
-    <section class="quick-access-grid">
-      <a class="quick-card" href="events.html">
-        <span>🔥</span>
-        <strong>Events</strong>
-        <small>SOTW, BOTW, clan goals</small>
-      </a>
+      <article class="card member-flame-preview">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Ironkin Records</p>
+            <h2>Hall of Flame</h2>
+          </div>
 
-      <a class="quick-card" href="hall-of-flame.html">
-        <span>🏆</span>
-        <strong>Hall of Flame</strong>
-        <small>Winners and legends</small>
-      </a>
+          <a href="hall-of-flame.html">View all →</a>
+        </div>
 
-      <a class="quick-card" href="ranks.html">
-        <span>⚔️</span>
-        <strong>Ranks</strong>
-        <small>Progression paths</small>
-      </a>
+        <div class="home-flame-list">
+          <div>
+            <strong>Hueycoatl</strong>
+            <span>Iron Jekke · 428 KC</span>
+          </div>
 
-      <a class="quick-card" href="shop.html">
-        <span>💰</span>
-        <strong>Ember Shop</strong>
-        <small>Spend your Embers</small>
-      </a>
+          <div>
+            <strong>Thieving</strong>
+            <span>Lil Ope · 5,005K XP</span>
+          </div>
+
+          <div>
+            <strong>Sarachnis</strong>
+            <span>FlamingoStef · 1,000 KC</span>
+          </div>
+
+          <div>
+            <strong>Hunter</strong>
+            <span>Disney Swish · 6,109K XP</span>
+          </div>
+        </div>
+      </article>
     </section>
   </main>
 
