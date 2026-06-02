@@ -73,20 +73,47 @@
 
     <section class="hero">
 
-      <div class="hero-content">
+      <div class="hero-content hero-layout">
 
-        <p class="eyebrow">
-          Old School RuneScape Ironman Clan
-        </p>
+        <div class="hero-main">
+          <p class="eyebrow">
+            Old School RuneScape Ironman Clan
+          </p>
 
-        <h1>
-          Forged Alone.<br />
-          Bound as Kin.
-        </h1>
+          <h1>
+            Forged Alone.<br />
+            Bound as Kin.
+          </h1>
 
-        <p class="hero-text">
-           Ironman clan built for those who want more than just another Discord
-        </p>
+          <p class="hero-text">
+             Ironman clan built for those who want more than just another Discord
+          </p>
+
+          <div class="hero-buttons">
+
+            <a
+              class="btn primary"
+              href="events.html"
+            >
+              View Live Events
+            </a>
+
+            <a
+              class="btn secondary"
+              href="https://discord.gg/YOUR-INVITE-HERE"
+              target="_blank"
+            >
+              Join Discord
+            </a>
+
+          </div>
+        </div>
+
+        <aside class="card home-clan-goal-widget hero-clan-goal" id="homeClanGoalWidget">
+          <p class="eyebrow">Active Clan Goal</p>
+          <h2>Loading clan goal...</h2>
+          <p>Checking Ironkin progress...</p>
+        </aside>
 
         <div class="hero-stats">
 
@@ -96,7 +123,7 @@
             </span>
 
             <small>
-              Clan Event XP
+              Current Event XP
             </small>
           </div>
 
@@ -106,7 +133,7 @@
             </span>
 
             <small>
-              Current Goal
+              Active Event Type
             </small>
           </div>
 
@@ -121,46 +148,13 @@
           </div>
 
         </div>
-<div class="home-event-card">
-  <p class="eyebrow">Current Event</p>
-  <h2 id="homeEventTitle">Loading event...</h2>
-  <p id="homeEventMeta">Checking Wise Old Man...</p>
-
-  <div id="homeTopThree" class="home-top-three">
-    Loading top competitors...
-  </div>
-</div>
-        <div class="hero-buttons">
-
-          <a
-            class="btn primary"
-            href="events.html"
-          >
-            View Live Event
-          </a>
-
-          <a
-            class="btn secondary"
-            href="https://discord.gg/YOUR-INVITE-HERE"
-            target="_blank"
-          >
-            Join Discord
-          </a>
-
-        </div>
 
       </div>
 
     </section>
 
 
-    <section class="cards home-live-grid">
-      <article class="card home-clan-goal-widget" id="homeClanGoalWidget">
-        <p class="eyebrow">Active Clan Goal</p>
-        <h2>Loading clan goal...</h2>
-        <p>Checking Ironkin progress...</p>
-      </article>
-
+    <section class="cards home-priority-grid">
       <article class="card home-active-events-widget">
         <div class="section-heading-row">
           <div>
@@ -171,6 +165,16 @@
         </div>
         <div id="homeActiveEventsGrid" class="home-active-events-list">
           Loading active events...
+        </div>
+      </article>
+
+      <article class="card home-event-card">
+        <p class="eyebrow">Featured Event</p>
+        <h2 id="homeEventTitle">Loading event...</h2>
+        <p id="homeEventMeta">Checking Wise Old Man...</p>
+
+        <div id="homeTopThree" class="home-top-three">
+          Loading top competitors...
         </div>
       </article>
     </section>
