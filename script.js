@@ -1372,6 +1372,11 @@ function setupCalendarFilters() {
 
       button.classList.add("active");
       loadCalendar();
+loadUpcomingEventsWidget();
+loadHomeEmberLeaders();
+loadEmberLeaderboard();
+loadDiscordStats();
+loadRecordsPage();
     };
   });
 }
@@ -1465,6 +1470,243 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
     };
   }
 }
+
+
+function formatShortDateTime(value) {
+  if (!value) return "TBD";
+
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+async function fetchEmberLeaderboard(limit = 100) {
+  const response = await fetch(`/api/embers/leaderboard?limit=${limit}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load Ember leaderboard.");
+  }
+
+  return data.leaders || [];
+}
+
+function renderEmberRows(leaders, compact = false) {
+  if (!leaders.length) {
+    return `<p class="admin-muted">No Ember balances found yet.</p>`;
+  }
+
+  return leaders.map(player => `
+    <div class="ember-leader-row ${compact ? "compact" : ""}">
+      <strong>#${player.rank} ${player.displayName}</strong>
+      <span>${formatNumber(player.balance)} Embers</span>
+    </div>
+  `).join("");
+}
+
+async function loadEmberLeaderboard() {
+  const container = document.getElementById("emberLeaderboard");
+
+  if (!container) return;
+
+  try {
+    const leaders = await fetchEmberLeaderboard(100);
+    container.innerHTML = renderEmberRows(leaders);
+  } catch (error) {
+    container.textContent = error.message;
+  }
+}
+
+async function loadHomeEmberLeaders() {
+  const container = document.getElementById("homeEmberLeaders");
+
+  if (!container) return;
+
+  try {
+    const leaders = await fetchEmberLeaderboard(3);
+    container.innerHTML = renderEmberRows(leaders.slice(0, 3), true);
+  } catch (error) {
+    container.textContent = "Could not load Embers.";
+  }
+}
+
+async function loadDiscordStats() {
+  const container = document.getElementById("homeDiscordStats");
+
+  if (!container) return;
+
+  try {
+    const response = await fetch("/api/discord/stats");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load Discord stats.");
+    }
+
+    container.innerHTML = `
+      <div class="discord-stat-row">
+        <strong>${formatNumber(data.members || 0)}</strong>
+        <span>Members</span>
+      </div>
+
+      <div class="discord-stat-row">
+        <strong>${formatNumber(data.online || 0)}</strong>
+        <span>Online</span>
+      </div>
+    `;
+  } catch (error) {
+    container.textContent = "Discord stats unavailable.";
+  }
+}
+
+async function loadUpcomingEventsWidget() {
+  const container = document.getElementById("homeUpcomingEvents");
+
+  if (!container) return;
+
+  try {
+    const response = await fetch("/api/calendar/events");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load upcoming events.");
+    }
+
+    const now = Date.now();
+    const upcoming = (data.events || [])
+      .filter(event => event.start && new Date(event.start).getTime() >= now)
+      .sort((a, b) => new Date(a.start) - new Date(b.start))
+      .slice(0, 4);
+
+    if (!upcoming.length) {
+      container.innerHTML = `<p class="admin-muted">No upcoming events found.</p>`;
+      return;
+    }
+
+    container.innerHTML = upcoming.map(event => `
+      <div class="upcoming-event-row">
+        <div>
+          <strong>${event.title}</strong>
+          <span>${formatShortDateTime(event.start)}</span>
+        </div>
+        <small>${getCalendarEventType(event)}</small>
+      </div>
+    `).join("");
+  } catch (error) {
+    container.textContent = "Could not load upcoming events.";
+  }
+}
+
+function incrementRecord(map, name, amount = 1) {
+  if (!name) return;
+  map.set(name, (map.get(name) || 0) + amount);
+}
+
+function renderRecordRows(entries, suffix = "") {
+  if (!entries.length) {
+    return `<p class="admin-muted">No records available yet.</p>`;
+  }
+
+  return entries.slice(0, 10).map(([name, value], index) => `
+    <div class="record-row">
+      <strong>#${index + 1} ${name}</strong>
+      <span>${formatNumber(value)}${suffix}</span>
+    </div>
+  `).join("");
+}
+
+async function loadRecordsPage() {
+  const grid = document.getElementById("recordsGrid");
+
+  if (!grid) return;
+
+  try {
+    const archive = await fetchArchive().catch(() => []);
+    const emberLeaders = await fetchEmberLeaderboard(10).catch(() => []);
+
+    const wins = new Map();
+    const topThreeFinishes = new Map();
+    let highestSotw = null;
+    let highestBotw = null;
+
+    archive.forEach(entry => {
+      if (entry.winner?.name) {
+        incrementRecord(wins, entry.winner.name);
+      }
+
+      (entry.topFive || []).slice(0, 3).forEach(player => {
+        incrementRecord(topThreeFinishes, player.name);
+      });
+
+      const winnerGain = Number(entry.winner?.gained || 0);
+
+      if (entry.type === "sotw" && winnerGain) {
+        if (!highestSotw || winnerGain > highestSotw.value) {
+          highestSotw = { name: entry.winner.name, value: winnerGain, title: entry.title };
+        }
+      }
+
+      if (entry.type === "botw" && winnerGain) {
+        if (!highestBotw || winnerGain > highestBotw.value) {
+          highestBotw = { name: entry.winner.name, value: winnerGain, title: entry.title };
+        }
+      }
+    });
+
+    const winRows = [...wins.entries()].sort((a, b) => b[1] - a[1]);
+    const topThreeRows = [...topThreeFinishes.entries()].sort((a, b) => b[1] - a[1]);
+
+    grid.innerHTML = `
+      <article class="card record-card">
+        <p class="eyebrow">Events</p>
+        <h2>Most Event Wins</h2>
+        ${renderRecordRows(winRows, " wins")}
+      </article>
+
+      <article class="card record-card">
+        <p class="eyebrow">Events</p>
+        <h2>Most Top 3 Finishes</h2>
+        ${renderRecordRows(topThreeRows, " finishes")}
+      </article>
+
+      <article class="card record-card">
+        <p class="eyebrow">SOTW</p>
+        <h2>Highest Single Event XP</h2>
+        ${highestSotw ? `
+          <div class="record-highlight">
+            <strong>${highestSotw.name}</strong>
+            <span>${formatNumber(highestSotw.value)} XP</span>
+            <small>${highestSotw.title}</small>
+          </div>
+        ` : `<p class="admin-muted">No SOTW archive records yet.</p>`}
+      </article>
+
+      <article class="card record-card">
+        <p class="eyebrow">BOTW</p>
+        <h2>Highest Single Event KC</h2>
+        ${highestBotw ? `
+          <div class="record-highlight">
+            <strong>${highestBotw.name}</strong>
+            <span>${formatNumber(highestBotw.value)} KC</span>
+            <small>${highestBotw.title}</small>
+          </div>
+        ` : `<p class="admin-muted">No BOTW archive records yet.</p>`}
+      </article>
+
+      <article class="card record-card records-wide">
+        <p class="eyebrow">Embers</p>
+        <h2>Richest Kin</h2>
+        ${renderEmberRows(emberLeaders.slice(0, 5), true)}
+      </article>
+    `;
+  } catch (error) {
+    grid.innerHTML = `<article class="card"><p>Could not load records: ${error.message}</p></article>`;
+  }
+}
+
 loadSiteNav();
 loadHomeStats();
 loadRecentActivity();
@@ -1475,3 +1717,8 @@ loadArchivePage();
 loadHallOfFlamePage();
 setupCalendarFilters();
 loadCalendar();
+loadUpcomingEventsWidget();
+loadHomeEmberLeaders();
+loadEmberLeaderboard();
+loadDiscordStats();
+loadRecordsPage();
