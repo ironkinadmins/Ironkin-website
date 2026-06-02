@@ -1860,3 +1860,28 @@ footer {
   margin-top: 20px;
   align-self: flex-start;
 }
+.featured-total-gained {
+  margin: 24px 0;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,122,26,.25);
+  background: rgba(255,255,255,.03);
+  text-align: center;
+}
+
+.featured-total-gained strong {
+  display: block;
+  font-size: 2.75rem;
+  color: #ff8a2a;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.featured-total-gained span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255,255,255,.7);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .8rem;
+}
