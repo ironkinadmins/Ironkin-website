@@ -2312,3 +2312,10 @@ footer {
 .calendar-event-challenge {
   border-color: rgba(190, 120, 255, 0.35);
 }
+
+
+.flame-description{
+  white-space:pre-wrap;
+  line-height:1.6;
+  color:var(--text-muted,#d7d7d7);
+}

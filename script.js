@@ -961,53 +961,46 @@ async function loadArchivePage() {
   }
 }
 
+
 async function loadHallOfFlamePage() {
   const grid = document.getElementById("hallOfFlameGrid");
-
   if (!grid) return;
 
   try {
-    const archive = await fetchArchive();
-    const completedWithWinners = archive.filter(entry => entry.winner);
+    const response = await fetch("/api/hall-of-flame/discord");
+    const data = await response.json();
 
-    const botw = completedWithWinners.filter(entry => entry.type === "botw");
-    const sotw = completedWithWinners.filter(entry => entry.type === "sotw");
-    const clanGoals = completedWithWinners.filter(entry =>
-      String(entry.type || "").includes("clan-goal")
+    const entries = data.entries || [];
+
+    const winners = entries.filter(e =>
+      e.title === "Boss of the Week" || e.title === "Skill of the Week"
     );
 
-    function buildFlameCard(title, entries, emptyText) {
-      return `
-        <article class="card flame-card">
-          <h2>${title}</h2>
+    const records = entries.filter(e =>
+      e.title &&
+      !["Boss of the Week","Skill of the Week","Hall Of Flame Quick Links!"].includes(e.title)
+    );
 
-          <div class="flame-list">
-            ${
-              entries.length
-                ? entries.slice(0, 12).map(entry => `
-                    <div>
-                      <strong>${entry.title}</strong>
-                      <span>${getArchiveWinnerText(entry)}</span>
-                    </div>
-                  `).join("")
-                : `<p class="admin-muted">${emptyText}</p>`
-            }
-          </div>
-        </article>
-      `;
-    }
+    const winnerCards = winners.map(entry => `
+      <article class="card flame-card">
+        <h2>${entry.title}</h2>
+        <div class="flame-description">${entry.description || "No data"}</div>
+      </article>
+    `).join("");
+
+    const recordCards = records.map(entry => `
+      <article class="card flame-card">
+        <h2>${entry.title}</h2>
+        <div class="flame-description">${entry.description || ""}</div>
+      </article>
+    `).join("");
 
     grid.innerHTML = `
-      ${buildFlameCard("Boss of the Week", botw, "No BOTW winners archived yet.")}
-      ${buildFlameCard("Skill of the Week", sotw, "No SOTW winners archived yet.")}
-      ${buildFlameCard("Clan Goals", clanGoals, "No clan goal completions archived yet.")}
+      ${winnerCards}
+      ${recordCards}
     `;
   } catch (error) {
-    grid.innerHTML = `
-      <article class="card">
-        <p>Could not load Hall of Flame: ${error.message}</p>
-      </article>
-    `;
+    grid.innerHTML = `<article class="card"><p>Could not load Hall of Flame: ${error.message}</p></article>`;
   }
 }
 
