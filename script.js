@@ -305,6 +305,28 @@ async function loadDiscordUser() {
   }
 }
 
+async function loadSiteNav() {
+  const navMount = document.getElementById("siteNav");
+
+  if (!navMount) {
+    loadDiscordUser();
+    return;
+  }
+
+  try {
+    const response = await fetch("nav.html");
+
+    if (!response.ok) {
+      throw new Error("Could not load navigation.");
+    }
+
+    navMount.innerHTML = await response.text();
+    loadDiscordUser();
+  } catch {
+    navMount.innerHTML = "";
+  }
+}
+
 async function loadHomeStats() {
   const homeClanXp = document.getElementById("homeClanXp");
 
@@ -1443,7 +1465,7 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
     };
   }
 }
-loadDiscordUser();
+loadSiteNav();
 loadHomeStats();
 loadRecentActivity();
 loadHomeEventWidgets();

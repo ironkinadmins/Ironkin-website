@@ -1,0 +1,30 @@
+<header class="site-header">
+  <nav class="nav">
+    <a class="brand" href="index.html">
+      <img src="assets/ironkin-emblem.png" alt="Ironkin" class="brand-logo" />
+      <span>Ironkin</span>
+    </a>
+
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+
+    <div id="navLinks" class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="events.html">Events</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="hall-of-flame.html">Hall of Flame</a>
+      <a href="archive.html">Archive</a>
+
+      <div class="nav-dropdown">
+        <button type="button" class="nav-dropdown-toggle">Clan Info ▾</button>
+        <div class="nav-dropdown-menu">
+          <a href="ranks.html">Ranks</a>
+          <a href="shop.html">Ember Shop</a>
+          <a href="rules.html">Rules</a>
+        </div>
+      </div>
+
+      <a id="discordLoginBtn" class="nav-discord-btn" href="/api/auth/login">Sign in</a>
+      <a id="discordLogoutBtn" class="nav-discord-btn logout" href="/api/auth/logout" style="display:none;">Logout</a>
+    </div>
+  </nav>
+</header>
