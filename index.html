@@ -3,54 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Ironkin Clan</title>
-
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-
   <header class="site-header">
-
     <nav class="nav">
+      <a class="brand" href="index.html">
+        <img src="assets/ironkin-emblem.png" alt="Ironkin" class="brand-logo" />
+        <span>Ironkin</span>
+      </a>
 
-<a class="brand" href="index.html">
-  <img
-    src="assets/ironkin-emblem.png"
-    alt="Ironkin"
-    class="brand-logo"
-  />
-
-  <span>Ironkin</span>
-</a>
-
-      <button
-        class="menu-toggle"
-        onclick="toggleMenu()"
-      >
-        ☰
-      </button>
+      <button class="menu-toggle" onclick="toggleMenu()">☰</button>
 
       <div id="navLinks" class="nav-links">
-
         <a href="index.html">Home</a>
-
         <a href="events.html">Events</a>
-
         <a href="hall-of-flame.html">Hall of Flame</a>
-
         <a href="ranks.html">Ranks</a>
-
         <a href="shop.html">Ember Shop</a>
-
         <a href="rules.html">Rules</a>
 
-        <a
-          id="discordLoginBtn"
-          class="nav-discord-btn"
-          href="/api/auth/login"
-        >
+        <a id="discordLoginBtn" class="nav-discord-btn" href="/api/auth/login">
           Sign in
         </a>
 
@@ -62,192 +37,92 @@
         >
           Logout
         </a>
-
       </div>
-
     </nav>
-
   </header>
 
   <main>
+    <section class="landing-hero">
+      <div class="landing-hero-inner">
+        <p class="eyebrow">Old School RuneScape Ironman Clan</p>
 
-    <section class="hero">
+        <h1>
+          Forged Alone.<br />
+          Bound as Kin.
+        </h1>
 
-      <div class="hero-content hero-layout">
+        <p class="landing-subtitle">
+          An Ironman clan built for players who want more than just another Discord —
+          events, progression, competition, and a community forged around the grind.
+        </p>
 
-        <div class="hero-main">
-          <p class="eyebrow">
-            Old School RuneScape Ironman Clan
-          </p>
-
-          <h1>
-            Forged Alone.<br />
-            Bound as Kin.
-          </h1>
-
-          <p class="hero-text">
-             Ironman clan built for those who want more than just another Discord
-          </p>
-
-          <div class="hero-buttons">
-
-            <a
-              class="btn primary"
-              href="events.html"
-            >
-              View Live Events
-            </a>
-
-            <a
-              class="btn secondary"
-              href="https://discord.gg/YOUR-INVITE-HERE"
-              target="_blank"
-            >
-              Join Discord
-            </a>
-
-          </div>
+        <div class="hero-buttons">
+          <a class="btn primary" href="events.html">View Events</a>
+          <a class="btn secondary" href="https://discord.gg/YOUR-INVITE-HERE" target="_blank">
+            Join Discord
+          </a>
         </div>
-
-        <aside class="card home-clan-goal-widget hero-clan-goal" id="homeClanGoalWidget">
-          <p class="eyebrow">Active Clan Goal</p>
-          <h2>Loading clan goal...</h2>
-          <p>Checking Ironkin progress...</p>
-        </aside>
-
-        <div class="hero-stats">
-
-          <div>
-            <span id="homeClanXp">
-              Loading...
-            </span>
-
-            <small>
-              Current Event XP
-            </small>
-          </div>
-
-          <div>
-            <span id="homeEventPercent">
-              Loading...
-            </span>
-
-            <small>
-              Active Event Type
-            </small>
-          </div>
-
-          <div>
-            <span id="homeClanMembers">
-              Loading...
-            </span>
-
-            <small>
-              Clan Members
-            </small>
-          </div>
-
-        </div>
-
       </div>
-
     </section>
 
+    <section class="landing-section">
+      <article class="card landing-featured">
+        <p class="eyebrow">Current Focus</p>
+        <h2>Clan Events, Goals, and Competition</h2>
 
-    <section class="cards home-priority-grid">
-      <article class="card home-active-events-widget">
-        <div class="section-heading-row">
-          <div>
-            <p class="eyebrow">Live Events</p>
-            <h2>Active Events</h2>
-          </div>
-          <a href="events.html">View all →</a>
-        </div>
-        <div id="homeActiveEventsGrid" class="home-active-events-list">
-          Loading active events...
-        </div>
+        <p>
+          Track active SOTW, BOTW, and clan-wide goals powered by Wise Old Man.
+          Compete with fellow Ironkin members, chase milestones, and help push the
+          clan forward.
+        </p>
+
+        <a class="btn primary" href="events.html">Explore Live Events</a>
+      </article>
+    </section>
+
+    <section class="cards three landing-cards">
+      <article class="card">
+        <h2>Weekly Events</h2>
+        <p>
+          Skill of the Week, Boss of the Week, bounties, secret challenges,
+          and seasonal clan events.
+        </p>
       </article>
 
-      <article class="card home-event-card">
-        <p class="eyebrow">Featured Event</p>
-        <h2 id="homeEventTitle">Loading event...</h2>
-        <p id="homeEventMeta">Checking Wise Old Man...</p>
-<div id="homeFeaturedStats" class="featured-stats"></div>
-        <div id="homeTopThree" class="home-top-three">
-          Loading top competitors...
-        </div>
+      <article class="card">
+        <h2>Hall of Flame</h2>
+        <p>
+          Celebrate the Ironkin members who have earned their place through
+          boss kills, XP gains, and event victories.
+        </p>
+        <a class="text-link" href="hall-of-flame.html">View Hall of Flame →</a>
+      </article>
+
+      <article class="card">
+        <h2>Embers Economy</h2>
+        <p>
+          Earn Embers through participation and redeem them for clan rewards,
+          event perks, and special recognition.
+        </p>
       </article>
     </section>
 
     <section class="cards">
-
       <article class="card activity-card">
-
         <h2>Recent Achievements</h2>
+        <p>Fresh milestones and achievements from Ironkin members.</p>
 
-        <p>
-          Fresh milestones and achievements from Ironkin members.
-        </p>
-
-        <div
-          id="recentActivity"
-          class="activity-scroll"
-        >
+        <div id="recentActivity" class="activity-scroll">
           Loading recent achievements...
         </div>
-
       </article>
-
     </section>
-
-    <section class="cards three">
-
-      <article class="card">
-
-        <h2>Weekly Events</h2>
-
-        <p>
-          SOTW, BOTW, bounties, secret challenges,
-          seasonal events, and clan-wide XP goals.
-        </p>
-
-      </article>
-
-      <article class="card">
-
-        <h2>Embers Economy</h2>
-
-        <p>
-          Earn Embers through participation and redeem
-          them in the Ember Shop for clan rewards.
-        </p>
-
-      </article>
-
-      <article class="card">
-
-        <h2>Ironman Progression</h2>
-
-        <p>
-          Track ranks, milestones, achievements,
-          collection logs, bossing goals, and more.
-        </p>
-
-      </article>
-
-    </section>
-
   </main>
 
   <footer>
-
-    <p>
-      © Ironkin Clan. Not affiliated with Jagex.
-    </p>
-
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
   <script src="script.js"></script>
-
 </body>
 </html>
