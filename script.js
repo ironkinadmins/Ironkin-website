@@ -140,15 +140,16 @@ async function loadHomeStats() {
       homeClanXp.textContent =
         `${formatNumber(standings.totalGained)} gained`;
 if (featuredStats) {
+  const topPlayer = standings.standings?.[0];
+
+  const timeRemaining = standings.endsAt
+    ? getTimeRemaining(standings.endsAt)
+    : "TBD";
+
   featuredStats.innerHTML = `
     <div class="featured-stat">
       <strong>${formatNumber(standings.totalGained)}</strong>
       <span>Total Gained</span>
-    </div>
-
-    <div class="featured-stat">
-      <strong>${formatNumber(standings.contributors || 0)}</strong>
-      <span>Active</span>
     </div>
 
     <div class="featured-stat">
@@ -158,6 +159,16 @@ if (featuredStats) {
         0
       )}</strong>
       <span>Participants</span>
+    </div>
+
+    <div class="featured-stat">
+      <strong>${timeRemaining}</strong>
+      <span>Time Remaining</span>
+    </div>
+
+    <div class="featured-stat">
+      <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
+      <span>Top Gain</span>
     </div>
   `;
 }

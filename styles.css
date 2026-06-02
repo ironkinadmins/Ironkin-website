@@ -1833,3 +1833,30 @@ footer {
     min-height: auto;
   }
 }
+.join-callout {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.join-callout span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.featured-stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.member-flame-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.member-flame-preview .btn {
+  margin-top: 20px;
+  align-self: flex-start;
+}
