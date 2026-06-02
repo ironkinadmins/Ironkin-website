@@ -118,6 +118,8 @@ async function loadHomeStats() {
     const eventTitle = document.getElementById("homeEventTitle");
     const eventMeta = document.getElementById("homeEventMeta");
     const topThree = document.getElementById("homeTopThree");
+    const featuredStats =
+  document.getElementById("homeFeaturedStats");
 
     if (eventPercent) {
       eventPercent.textContent = formatEventType(featuredEvent.type);
@@ -137,7 +139,28 @@ async function loadHomeStats() {
     if (standings) {
       homeClanXp.textContent =
         `${formatNumber(standings.totalGained)} gained`;
+if (featuredStats) {
+  featuredStats.innerHTML = `
+    <div class="featured-stat">
+      <strong>${formatNumber(standings.totalGained)}</strong>
+      <span>Total Gained</span>
+    </div>
 
+    <div class="featured-stat">
+      <strong>${formatNumber(standings.contributors || 0)}</strong>
+      <span>Active</span>
+    </div>
+
+    <div class="featured-stat">
+      <strong>${formatNumber(
+        standings.participantCount ||
+        standings.standings?.length ||
+        0
+      )}</strong>
+      <span>Participants</span>
+    </div>
+  `;
+}
       if (topThree) {
         topThree.innerHTML = "";
 
