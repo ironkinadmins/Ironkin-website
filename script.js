@@ -280,30 +280,28 @@ async function loadRecentActivity() {
       return;
     }
 
-container.innerHTML = "";
+    container.innerHTML = "";
 
-data.achievements.slice(0, 6).forEach(item => {
-  const row = document.createElement("div");
+    data.achievements.slice(0, 6).forEach(item => {
+      const row = document.createElement("div");
+      row.className = "activity-feed-row";
 
-  row.className = "activity-feed-row";
+      const player = item.player || "Unknown";
+      const achievement = item.name || "Achievement";
+      const date = item.createdAt
+        ? new Date(item.createdAt).toLocaleDateString()
+        : "Recent";
 
-  const player = item.player || "Unknown";
-  const achievement = item.name || "Achievement";
-  const date = item.createdAt
-    ? new Date(item.createdAt).toLocaleDateString()
-    : "Recent";
+      row.innerHTML = `
+        <div>
+          <strong>${player}</strong>
+          <span>${achievement}</span>
+        </div>
 
-  row.innerHTML = `
-    <div>
-      <strong>${player}</strong>
-      <span>${achievement}</span>
-    </div>
+        <small>${date}</small>
+      `;
 
-    <small>${date}</small>
-  `;
-
-  container.appendChild(row);
-});
+      container.appendChild(row);
     });
   } catch {
     container.textContent = "Could not load recent achievements.";
