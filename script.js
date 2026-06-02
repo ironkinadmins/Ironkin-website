@@ -1097,6 +1097,78 @@ async function changeDrop(name, direction) {
 
   loadDrops();
 }
+
+let calendarFilter = "all";
+
+function getCalendarEventType(event) {
+  const title = String(event.title || "").toLowerCase();
+  const description = String(event.description || "").toLowerCase();
+  const text = `${title} ${description}`;
+
+  if (
+    text.includes("sotw") ||
+    text.includes("skill of the week")
+  ) {
+    return "sotw";
+  }
+
+  if (
+    text.includes("botw") ||
+    text.includes("boss of the week")
+  ) {
+    return "botw";
+  }
+
+  if (
+    text.includes("mass") ||
+    text.includes("huey") ||
+    text.includes("barbarian assault") ||
+    text.includes("zalcano") ||
+    text.includes("callisto") ||
+    text.includes("vetion") ||
+    text.includes("cox") ||
+    text.includes("toa")
+  ) {
+    return "mass";
+  }
+
+  if (
+    text.includes("giveaway") ||
+    text.includes("bond")
+  ) {
+    return "giveaway";
+  }
+
+  if (
+    text.includes("challenge") ||
+    text.includes("race") ||
+    text.includes("hunt") ||
+    text.includes("gambit") ||
+    text.includes("crucible") ||
+    text.includes("plunder") ||
+    text.includes("prop hunt")
+  ) {
+    return "challenge";
+  }
+
+  return "other";
+}
+
+function setupCalendarFilters() {
+  document.querySelectorAll("[data-filter]").forEach(button => {
+    button.onclick = () => {
+      calendarFilter = button.dataset.filter || "all";
+
+      document.querySelectorAll("[data-filter]").forEach(item => {
+        item.classList.remove("active");
+      });
+
+      button.classList.add("active");
+      loadCalendar();
+    };
+  });
+}
+
 let calendarDate = new Date();
 
 async function loadCalendar() {
@@ -1125,6 +1197,11 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
 
     const events = data.events || [];
 
+    const filteredEvents =
+      calendarFilter === "all"
+        ? events
+        : events.filter(event => getCalendarEventType(event) === calendarFilter);
+
     const firstDay = new Date(year, month, 1);
     const startDay = firstDay.getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1141,9 +1218,9 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
       const cell = document.createElement("div");
       cell.className = "calendar-day";
 
-      const dateKey = new Date(year, month, day).toISOString().slice(0, 10);
+      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-      const dayEvents = events.filter(event =>
+      const dayEvents = filteredEvents.filter(event =>
         event.start && event.start.slice(0, 10) === dateKey
       );
 
@@ -1156,7 +1233,7 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
 
       dayEvents.forEach(event => {
         const eventEl = document.createElement("div");
-        eventEl.className = "calendar-event";
+        eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}`;
         eventEl.textContent = event.title;
         eventBox.appendChild(eventEl);
       });
@@ -1189,4 +1266,5 @@ loadEventsHub();
 loadSingleEventDashboard();
 loadArchivePage();
 loadHallOfFlamePage();
+setupCalendarFilters();
 loadCalendar();
