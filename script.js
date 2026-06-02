@@ -1110,7 +1110,7 @@ async function loadCalendar() {
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
 
-  title.textContent = calendarDate.toLocaleDateString(undefined, {
+  title.textContent = calendarDate.toLocaleDateString(en-US", {
     month: "long",
     year: "numeric"
   });
