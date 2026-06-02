@@ -20,6 +20,69 @@ function isClanGoalEvent(event) {
   return Boolean(event?.type && event.type.includes("clan-goal"));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function getDefaultRewards(event) {
+  if (isClanGoalEvent(event)) {
+    return {
+      placement: [
+        { label: "25%", reward: "Clan Mass" },
+        { label: "50%", reward: "Bond Giveaway" },
+        { label: "75%", reward: "Bonus Embers" },
+        { label: "100%", reward: "Bond Giveaway" }
+      ],
+      participation: []
+    };
+  }
+
+  if (event?.type === "botw") {
+    return {
+      placement: [
+        { label: "🥇 1st Place", reward: "75 Embers + BOTW Rank" },
+        { label: "🥈 2nd Place", reward: "50 Embers" },
+        { label: "🥉 3rd Place", reward: "35 Embers" }
+      ],
+      participation: [
+        { requirement: "High Tier", reward: "Participation Embers vary by boss" },
+        { requirement: "Low Tier", reward: "Participation Embers vary by boss" }
+      ]
+    };
+  }
+
+  return {
+    placement: [
+      { label: "🥇 1st Place", reward: "50 Embers + SOTW Rank" },
+      { label: "🥈 2nd Place", reward: "40 Embers" },
+      { label: "🥉 3rd Place", reward: "35 Embers" }
+    ],
+    participation: [
+      { requirement: "1250K XP", reward: "30 Embers" },
+      { requirement: "750K XP", reward: "20 Embers" },
+      { requirement: "300K XP", reward: "10 Embers" }
+    ]
+  };
+}
+
+function normalizeRewards(event) {
+  if (!event.rewards || typeof event.rewards !== "object") {
+    event.rewards = getDefaultRewards(event);
+  }
+
+  if (!Array.isArray(event.rewards.placement)) {
+    event.rewards.placement = [];
+  }
+
+  if (!Array.isArray(event.rewards.participation)) {
+    event.rewards.participation = [];
+  }
+}
+
 function updateEventFieldVisibility() {
   const event = getSelectedEvent();
   const targetSection = document.getElementById("targetSection");
@@ -60,14 +123,14 @@ function renderMilestonesEditor() {
         type="number"
         min="1"
         max="100"
-        value="${milestone.percent || ""}"
+        value="${escapeHtml(milestone.percent || "")}"
         placeholder="%"
         data-milestone-percent="${index}"
       />
 
       <input
         type="text"
-        value="${milestone.title || ""}"
+        value="${escapeHtml(milestone.title || "")}"
         placeholder="Reward"
         data-milestone-title="${index}"
       />
@@ -125,9 +188,147 @@ function removeMilestone(index) {
   renderMilestonesEditor();
 }
 
+function renderRewardsEditor() {
+  const event = getSelectedEvent();
+  const placementEditor = document.getElementById("placementRewardsEditor");
+  const participationEditor = document.getElementById("participationRewardsEditor");
+
+  if (!event || !placementEditor || !participationEditor) return;
+
+  normalizeRewards(event);
+
+  placementEditor.innerHTML = "";
+  participationEditor.innerHTML = "";
+
+  if (event.rewards.placement.length === 0) {
+    placementEditor.innerHTML = `<p class="admin-muted">No placement rewards added yet.</p>`;
+  }
+
+  if (event.rewards.participation.length === 0) {
+    participationEditor.innerHTML = `<p class="admin-muted">No participation rewards added yet.</p>`;
+  }
+
+  event.rewards.placement.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "reward-editor-row";
+    row.innerHTML = `
+      <input
+        type="text"
+        value="${escapeHtml(item.label || "")}"
+        placeholder="Label, e.g. 🥇 1st Place"
+        data-placement-label="${index}"
+      />
+
+      <input
+        type="text"
+        value="${escapeHtml(item.reward || "")}"
+        placeholder="Reward, e.g. 50 Embers + SOTW Rank"
+        data-placement-reward="${index}"
+      />
+
+      <button type="button" onclick="removePlacementReward(${index})">Remove</button>
+    `;
+    placementEditor.appendChild(row);
+  });
+
+  event.rewards.participation.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "reward-editor-row";
+    row.innerHTML = `
+      <input
+        type="text"
+        value="${escapeHtml(item.requirement || "")}"
+        placeholder="Requirement, e.g. 1250K XP"
+        data-participation-requirement="${index}"
+      />
+
+      <input
+        type="text"
+        value="${escapeHtml(item.reward || "")}"
+        placeholder="Reward, e.g. 30 Embers"
+        data-participation-reward="${index}"
+      />
+
+      <button type="button" onclick="removeParticipationReward(${index})">Remove</button>
+    `;
+    participationEditor.appendChild(row);
+  });
+}
+
+function collectRewardsFromEditor() {
+  const event = getSelectedEvent();
+  if (!event) return;
+
+  const placementLabels = document.querySelectorAll("[data-placement-label]");
+  const placementRewards = document.querySelectorAll("[data-placement-reward]");
+  const participationRequirements = document.querySelectorAll("[data-participation-requirement]");
+  const participationRewards = document.querySelectorAll("[data-participation-reward]");
+
+  const placement = [];
+  const participation = [];
+
+  placementLabels.forEach((labelInput, index) => {
+    const label = labelInput.value.trim();
+    const reward = placementRewards[index]?.value.trim();
+
+    if (label || reward) {
+      placement.push({ label, reward });
+    }
+  });
+
+  participationRequirements.forEach((requirementInput, index) => {
+    const requirement = requirementInput.value.trim();
+    const reward = participationRewards[index]?.value.trim();
+
+    if (requirement || reward) {
+      participation.push({ requirement, reward });
+    }
+  });
+
+  event.rewards = { placement, participation };
+}
+
+function addPlacementReward() {
+  const event = getSelectedEvent();
+  if (!event) return;
+
+  normalizeRewards(event);
+  event.rewards.placement.push({ label: "", reward: "" });
+  renderRewardsEditor();
+}
+
+function removePlacementReward(index) {
+  const event = getSelectedEvent();
+  if (!event) return;
+
+  normalizeRewards(event);
+  event.rewards.placement.splice(index, 1);
+  renderRewardsEditor();
+}
+
+function addParticipationReward() {
+  const event = getSelectedEvent();
+  if (!event) return;
+
+  normalizeRewards(event);
+  event.rewards.participation.push({ requirement: "", reward: "" });
+  renderRewardsEditor();
+}
+
+function removeParticipationReward(index) {
+  const event = getSelectedEvent();
+  if (!event) return;
+
+  normalizeRewards(event);
+  event.rewards.participation.splice(index, 1);
+  renderRewardsEditor();
+}
+
 function populateEventFields() {
   const event = getSelectedEvent();
   if (!event) return;
+
+  normalizeRewards(event);
 
   document.getElementById("eventTitleInput").value = event.title || "";
   document.getElementById("eventDescriptionInput").value = event.description || "";
@@ -141,6 +342,7 @@ function populateEventFields() {
 
   updateEventFieldVisibility();
   renderMilestonesEditor();
+  renderRewardsEditor();
 }
 
 async function loadAdmin() {
@@ -148,6 +350,8 @@ async function loadAdmin() {
   const addDropBtn = document.getElementById("addDropBtn");
   const saveEventBtn = document.getElementById("saveEventBtn");
   const addMilestoneBtn = document.getElementById("addMilestoneBtn");
+  const addPlacementRewardBtn = document.getElementById("addPlacementRewardBtn");
+  const addParticipationRewardBtn = document.getElementById("addParticipationRewardBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -174,7 +378,10 @@ async function loadAdmin() {
 
     addDropBtn.addEventListener("click", addDrop);
     saveEventBtn.addEventListener("click", saveSelectedEvent);
+
     if (addMilestoneBtn) addMilestoneBtn.addEventListener("click", addMilestone);
+    if (addPlacementRewardBtn) addPlacementRewardBtn.addEventListener("click", addPlacementReward);
+    if (addParticipationRewardBtn) addParticipationRewardBtn.addEventListener("click", addParticipationReward);
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }
@@ -197,6 +404,7 @@ async function saveSelectedEvent() {
   event.dropsEnabled = document.getElementById("eventDropsInput").checked;
 
   collectMilestonesFromEditor();
+  collectRewardsFromEditor();
 
   const response = await fetch("/api/admin/events/save", {
     method: "POST",

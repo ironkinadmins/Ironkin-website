@@ -58,6 +58,41 @@
         </div>
       </div>
 
+      <div class="admin-divider"></div>
+
+      <div class="admin-section-header">
+        <h2>Event Rewards</h2>
+        <p>These rewards appear on the selected event dashboard.</p>
+      </div>
+
+      <div class="admin-rewards-grid">
+        <div class="admin-reward-panel">
+          <div class="admin-section-header compact">
+            <h3>Placement Rewards</h3>
+            <p>Example: 🥇 1st Place → 50 Embers + SOTW Rank</p>
+          </div>
+
+          <div id="placementRewardsEditor" class="reward-editor"></div>
+
+          <button type="button" class="btn secondary" id="addPlacementRewardBtn">
+            + Add Placement Reward
+          </button>
+        </div>
+
+        <div class="admin-reward-panel">
+          <div class="admin-section-header compact">
+            <h3>Participation Embers</h3>
+            <p>Example: 1250K XP → 30 Embers</p>
+          </div>
+
+          <div id="participationRewardsEditor" class="reward-editor"></div>
+
+          <button type="button" class="btn secondary" id="addParticipationRewardBtn">
+            + Add Participation Reward
+          </button>
+        </div>
+      </div>
+
       <div class="admin-toggle-row">
         <label><input id="eventActiveInput" type="checkbox" /> Active</label>
         <label><input id="eventFeaturedInput" type="checkbox" /> Featured on Homepage</label>

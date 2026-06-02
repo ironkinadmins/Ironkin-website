@@ -27,6 +27,200 @@ function getTimeRemaining(endDate) {
   return `${hours}h`;
 }
 
+
+function getEventMetricLabel(event) {
+  if (event?.type === "sotw") return "XP";
+  if (event?.type === "botw") return "KC";
+  if (event?.type?.includes("clan-goal")) return "KC";
+  return "Gained";
+}
+
+function getDefaultRewards(event) {
+  if (event?.type?.includes("clan-goal")) {
+    return {
+      placement: [
+        { label: "25%", reward: "Clan Mass" },
+        { label: "50%", reward: "Bond Giveaway" },
+        { label: "75%", reward: "Bonus Embers" },
+        { label: "100%", reward: "Bond Giveaway" }
+      ],
+      participation: []
+    };
+  }
+
+  if (event?.type === "botw") {
+    return {
+      placement: [
+        { label: "🥇 1st Place", reward: "75 Embers + BOTW Rank" },
+        { label: "🥈 2nd Place", reward: "50 Embers" },
+        { label: "🥉 3rd Place", reward: "35 Embers" }
+      ],
+      participation: [
+        { requirement: "High Tier", reward: "Participation Embers vary by boss" },
+        { requirement: "Low Tier", reward: "Participation Embers vary by boss" }
+      ]
+    };
+  }
+
+  return {
+    placement: [
+      { label: "🥇 1st Place", reward: "50 Embers + SOTW Rank" },
+      { label: "🥈 2nd Place", reward: "40 Embers" },
+      { label: "🥉 3rd Place", reward: "35 Embers" }
+    ],
+    participation: [
+      { requirement: "1250K XP", reward: "30 Embers" },
+      { requirement: "750K XP", reward: "20 Embers" },
+      { requirement: "300K XP", reward: "10 Embers" }
+    ]
+  };
+}
+
+function getEventRewards(event) {
+  const fallback = getDefaultRewards(event);
+  const rewards = event?.rewards || {};
+
+  return {
+    placement: Array.isArray(rewards.placement) && rewards.placement.length
+      ? rewards.placement
+      : fallback.placement,
+    participation: Array.isArray(rewards.participation) && rewards.participation.length
+      ? rewards.participation
+      : fallback.participation
+  };
+}
+
+function getCompetitionStats(event, standings) {
+  const rows = standings?.standings || [];
+  const activeRows = rows.filter(player => Number(player.gained || 0) > 0);
+  const activeCount = standings?.contributors || activeRows.length || 0;
+  const totalGained = Number(standings?.totalGained || 0);
+  const topFiveCombined = activeRows
+    .slice(0, 5)
+    .reduce((sum, player) => sum + Number(player.gained || 0), 0);
+  const leader = Number(activeRows[0]?.gained || 0);
+  const second = Number(activeRows[1]?.gained || 0);
+  const leaderAdvantage = Math.max(leader - second, 0);
+  const isSkillEvent = event?.type === "sotw";
+  const densityThreshold = isSkillEvent ? 100000 : 10;
+  const densityCount = activeRows.filter(player => Number(player.gained || 0) >= densityThreshold).length;
+  const density = activeCount ? Math.round((densityCount / activeCount) * 100) : 0;
+  const metricLabel = getEventMetricLabel(event);
+
+  return {
+    average: activeCount ? Math.round(totalGained / activeCount) : 0,
+    topFiveCombined,
+    leaderAdvantage,
+    density,
+    densityLabel: isSkillEvent ? "100K+ XP" : "10+ KC",
+    metricLabel
+  };
+}
+
+function renderCompetitionStats(event, standings) {
+  if (!standings) {
+    return `
+      <section class="event-panel">
+        <h2>Competition Stats</h2>
+        <p>No WOM competition data is available yet.</p>
+      </section>
+    `;
+  }
+
+  const stats = getCompetitionStats(event, standings);
+
+  return `
+    <section class="event-panel">
+      <h2>Competition Stats</h2>
+
+      <div class="competition-stat-list">
+        <div>
+          <span>Average ${stats.metricLabel} per Competitor</span>
+          <strong>${formatNumber(stats.average)}</strong>
+        </div>
+
+        <div>
+          <span>Top 5 Combined ${stats.metricLabel}</span>
+          <strong>${formatNumber(stats.topFiveCombined)}</strong>
+        </div>
+
+        <div>
+          <span>Leader Advantage</span>
+          <strong>${formatNumber(stats.leaderAdvantage)}</strong>
+        </div>
+
+        <div>
+          <span>Competition Density</span>
+          <strong>${stats.density}%</strong>
+          <small>${stats.densityLabel}</small>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderDropsPanel() {
+  return `
+    <section class="event-panel">
+      <h2>Unique Drops Received</h2>
+      <p>Drops tracked throughout this event.</p>
+      <div id="dropsList"></div>
+    </section>
+  `;
+}
+
+function renderRewardsSection(event) {
+  const rewards = getEventRewards(event);
+  const hasPlacement = rewards.placement.length > 0;
+  const hasParticipation = rewards.participation.length > 0;
+
+  if (!hasPlacement && !hasParticipation) {
+    return "";
+  }
+
+  return `
+    <section class="event-rewards-card">
+      <div class="event-rewards-header">
+        <p class="eyebrow">Event Rewards</p>
+        <h2>Rewards</h2>
+      </div>
+
+      <div class="event-rewards-grid">
+        <div class="reward-panel">
+          <h3>Placement Rewards</h3>
+
+          ${
+            hasPlacement
+              ? rewards.placement.map(item => `
+                  <div class="reward-row">
+                    <strong>${item.label || "Placement"}</strong>
+                    <span>${item.reward || ""}</span>
+                  </div>
+                `).join("")
+              : `<p>No placement rewards listed.</p>`
+          }
+        </div>
+
+        <div class="reward-panel">
+          <h3>Participation Embers</h3>
+
+          ${
+            hasParticipation
+              ? rewards.participation.map(item => `
+                  <div class="reward-row">
+                    <strong>${item.requirement || "Requirement"}</strong>
+                    <span>${item.reward || ""}</span>
+                  </div>
+                `).join("")
+              : `<p>No participation rewards listed.</p>`
+          }
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+
 function formatEventType(type) {
   const labels = {
     sotw: "SOTW",
@@ -523,7 +717,7 @@ async function loadSingleEventDashboard() {
 
             <section class="event-panel">
 
-              <h2>Top Contributors</h2>
+              <h2>Leaderboard</h2>
 
               <div id="singleEventContributors">
 
@@ -542,19 +736,15 @@ async function loadSingleEventDashboard() {
 
             </section>
 
-            <section class="event-panel">
-
-              <h2>Unique Drops Received</h2>
-
-              <p>
-                Drops tracked throughout this event.
-              </p>
-
-              <div id="dropsList"></div>
-
-            </section>
+            ${
+              isClanGoal
+                ? renderDropsPanel()
+                : renderCompetitionStats(event, standings)
+            }
 
           </div>
+
+          ${renderRewardsSection(event)}
 
           ${
             event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE"
