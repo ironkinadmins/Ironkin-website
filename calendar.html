@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar | Ironkin Clan</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="index.html">
+        <img src="assets/ironkin-emblem.png" alt="Ironkin" class="brand-logo" />
+        <span>Ironkin</span>
+      </a>
+
+      <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+
+      <div id="navLinks" class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="events.html">Events</a>
+        <a href="calendar.html">Calendar</a>
+        <a href="hall-of-flame.html">Hall of Flame</a>
+        <a href="ranks.html">Ranks</a>
+        <a href="shop.html">Ember Shop</a>
+        <a href="rules.html">Rules</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="page-title">
+      <p class="eyebrow">Ironkin Events</p>
+      <h1>Calendar</h1>
+      <p>Upcoming clan events, masses, giveaways, competitions, and deadlines.</p>
+    </section>
+
+    <section class="calendar-card">
+      <div class="calendar-header">
+        <button id="prevMonthBtn">←</button>
+        <h2 id="calendarMonthTitle">Loading...</h2>
+        <button id="nextMonthBtn">→</button>
+      </div>
+
+      <div class="calendar-weekdays">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+
+      <div id="calendarGrid" class="calendar-grid">
+        Loading calendar...
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -2179,3 +2179,90 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+.calendar-card {
+  background: linear-gradient(180deg, var(--panel-light), var(--panel));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.calendar-header button {
+  background: rgba(255, 122, 26, 0.12);
+  color: var(--ember);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-weekdays span {
+  color: var(--ember);
+  font-weight: 800;
+  text-align: center;
+  padding: 10px;
+}
+
+.calendar-day {
+  min-height: 125px;
+  border: 1px solid rgba(255, 122, 26, 0.16);
+  padding: 10px;
+  background: rgba(0,0,0,0.22);
+}
+
+.calendar-empty {
+  opacity: 0.25;
+}
+
+.calendar-day strong {
+  color: var(--text);
+}
+
+.calendar-events {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.calendar-event {
+  background: rgba(255, 122, 26, 0.16);
+  border: 1px solid rgba(255, 122, 26, 0.28);
+  color: #ffb15a;
+  border-radius: 8px;
+  padding: 5px 7px;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+@media (max-width: 760px) {
+  .calendar-weekdays {
+    display: none;
+  }
+
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-day {
+    min-height: auto;
+  }
+
+  .calendar-empty {
+    display: none;
+  }
+}

@@ -1097,7 +1097,90 @@ async function changeDrop(name, direction) {
 
   loadDrops();
 }
+let calendarDate = new Date();
 
+async function loadCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const title = document.getElementById("calendarMonthTitle");
+  const prevBtn = document.getElementById("prevMonthBtn");
+  const nextBtn = document.getElementById("nextMonthBtn");
+
+  if (!grid || !title) return;
+
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+
+  title.textContent = calendarDate.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric"
+  });
+
+  try {
+    const response = await fetch("/api/calendar/events");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load calendar.");
+    }
+
+    const events = data.events || [];
+
+    const firstDay = new Date(year, month, 1);
+    const startDay = firstDay.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    grid.innerHTML = "";
+
+    for (let i = 0; i < startDay; i++) {
+      const blank = document.createElement("div");
+      blank.className = "calendar-day calendar-empty";
+      grid.appendChild(blank);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cell = document.createElement("div");
+      cell.className = "calendar-day";
+
+      const dateKey = new Date(year, month, day).toISOString().slice(0, 10);
+
+      const dayEvents = events.filter(event =>
+        event.start && event.start.slice(0, 10) === dateKey
+      );
+
+      cell.innerHTML = `
+        <strong>${day}</strong>
+        <div class="calendar-events"></div>
+      `;
+
+      const eventBox = cell.querySelector(".calendar-events");
+
+      dayEvents.forEach(event => {
+        const eventEl = document.createElement("div");
+        eventEl.className = "calendar-event";
+        eventEl.textContent = event.title;
+        eventBox.appendChild(eventEl);
+      });
+
+      grid.appendChild(cell);
+    }
+  } catch (error) {
+    grid.textContent = error.message;
+  }
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      calendarDate = new Date(year, month - 1, 1);
+      loadCalendar();
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      calendarDate = new Date(year, month + 1, 1);
+      loadCalendar();
+    };
+  }
+}
 loadDiscordUser();
 loadHomeStats();
 loadRecentActivity();
@@ -1106,3 +1189,4 @@ loadEventsHub();
 loadSingleEventDashboard();
 loadArchivePage();
 loadHallOfFlamePage();
+loadCalendar();
