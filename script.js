@@ -145,7 +145,8 @@ async function loadHomeStats() {
     const eventMeta = document.getElementById("homeEventMeta");
     const topThree = document.getElementById("homeTopThree");
     const featuredStats = document.getElementById("homeFeaturedStats");
-
+const homeTotalGained =
+  document.getElementById("homeTotalGained");
     if (eventPercent) {
       eventPercent.textContent = formatEventType(featuredEvent.type);
     }
@@ -162,6 +163,10 @@ async function loadHomeStats() {
     }
 
     if (standings) {
+      if (homeTotalGained) {
+  homeTotalGained.textContent =
+    formatNumber(standings.totalGained);
+}
       if (homeClanXp) {
         homeClanXp.textContent =
           `${formatNumber(standings.totalGained)} gained`;
@@ -174,31 +179,22 @@ async function loadHomeStats() {
           ? getTimeRemaining(standings.endsAt)
           : "TBD";
 
-        featuredStats.innerHTML = `
-          <div class="featured-stat">
-            <strong>${formatNumber(standings.totalGained)}</strong>
-            <span>Total Gained</span>
-          </div>
+featuredStats.innerHTML = `
+  <div class="featured-stat">
+    <strong>${formatNumber(standings.contributors || 0)}</strong>
+    <span>Active Participants</span>
+  </div>
 
-          <div class="featured-stat">
-            <strong>${formatNumber(
-              standings.participantCount ||
-              standings.standings?.length ||
-              0
-            )}</strong>
-            <span>Participants</span>
-          </div>
+  <div class="featured-stat">
+    <strong>${timeRemaining}</strong>
+    <span>Time Remaining</span>
+  </div>
 
-          <div class="featured-stat">
-            <strong>${timeRemaining}</strong>
-            <span>Time Remaining</span>
-          </div>
-
-          <div class="featured-stat">
-            <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
-            <span>Top Gain</span>
-          </div>
-        `;
+  <div class="featured-stat">
+    <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
+    <span>Top Gain</span>
+  </div>
+`;
       }
 
       if (topThree) {
