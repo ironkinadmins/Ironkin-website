@@ -5,11 +5,29 @@ async function fetchEvents() {
   const response = await fetch("/api/current-events");
   const data = await response.json();
 
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load events.");
+  }
+
   return data.events || [];
 }
 
 function getSelectedEvent() {
   return allEvents.find(event => event.id === selectedEventId);
+}
+
+function isClanGoalEvent(event) {
+  return Boolean(event?.type && event.type.includes("clan-goal"));
+}
+
+function updateEventFieldVisibility() {
+  const event = getSelectedEvent();
+  const targetSection = document.getElementById("targetSection");
+  const milestonesSection = document.getElementById("milestonesSection");
+  const showGoalFields = isClanGoalEvent(event);
+
+  if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
+  if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
 }
 
 function renderMilestonesEditor() {
@@ -18,9 +36,20 @@ function renderMilestonesEditor() {
 
   if (!editor || !event) return;
 
-  const milestones = event.milestones || [];
+  if (!isClanGoalEvent(event)) {
+    editor.innerHTML = "";
+    return;
+  }
 
+  const milestones = Array.isArray(event.milestones) ? event.milestones : [];
   editor.innerHTML = "";
+
+  if (milestones.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "admin-muted";
+    empty.textContent = "No milestones added yet.";
+    editor.appendChild(empty);
+  }
 
   milestones.forEach((milestone, index) => {
     const row = document.createElement("div");
@@ -29,7 +58,7 @@ function renderMilestonesEditor() {
     row.innerHTML = `
       <input
         type="number"
-        min="0"
+        min="1"
         max="100"
         value="${milestone.percent || ""}"
         placeholder="%"
@@ -43,9 +72,7 @@ function renderMilestonesEditor() {
         data-milestone-title="${index}"
       />
 
-      <button type="button" onclick="removeMilestone(${index})">
-        Remove
-      </button>
+      <button type="button" onclick="removeMilestone(${index})">Remove</button>
     `;
 
     editor.appendChild(row);
@@ -54,90 +81,65 @@ function renderMilestonesEditor() {
 
 function collectMilestonesFromEditor() {
   const event = getSelectedEvent();
-
   if (!event) return;
+
+  if (!isClanGoalEvent(event)) {
+    event.milestones = [];
+    return;
+  }
 
   const percentInputs = document.querySelectorAll("[data-milestone-percent]");
   const titleInputs = document.querySelectorAll("[data-milestone-title]");
-
   const milestones = [];
 
   percentInputs.forEach((percentInput, index) => {
     const percent = Number(percentInput.value);
     const title = titleInputs[index]?.value.trim();
 
-    if (percent && title) {
-      milestones.push({
-        percent,
-        title
-      });
+    if (percent > 0 && percent <= 100 && title) {
+      milestones.push({ percent, title });
     }
   });
 
   milestones.sort((a, b) => a.percent - b.percent);
-
   event.milestones = milestones;
 }
 
 function addMilestone() {
   const event = getSelectedEvent();
-
-  if (!event) return;
+  if (!event || !isClanGoalEvent(event)) return;
 
   if (!Array.isArray(event.milestones)) {
     event.milestones = [];
   }
 
-  event.milestones.push({
-    percent: 100,
-    title: ""
-  });
-
+  event.milestones.push({ percent: 100, title: "" });
   renderMilestonesEditor();
 }
 
 function removeMilestone(index) {
   const event = getSelectedEvent();
-
   if (!event || !Array.isArray(event.milestones)) return;
 
   event.milestones.splice(index, 1);
-
   renderMilestonesEditor();
 }
 
 function populateEventFields() {
   const event = getSelectedEvent();
-
   if (!event) return;
 
-  document.getElementById("eventTitleInput").value =
-    event.title || "";
+  document.getElementById("eventTitleInput").value = event.title || "";
+  document.getElementById("eventDescriptionInput").value = event.description || "";
+  document.getElementById("eventWomInput").value = event.womCompetitionId || "";
+  document.getElementById("eventTargetInput").value = event.target || "";
+  document.getElementById("eventStartInput").value = event.startDate || "";
+  document.getElementById("eventEndInput").value = event.endDate || "";
+  document.getElementById("eventActiveInput").checked = Boolean(event.active);
+  document.getElementById("eventFeaturedInput").checked = Boolean(event.featured);
+  document.getElementById("eventDropsInput").checked = Boolean(event.dropsEnabled);
 
-  document.getElementById("eventDescriptionInput").value =
-    event.description || "";
-
-  document.getElementById("eventWomInput").value =
-    event.womCompetitionId || "";
-
-  document.getElementById("eventTargetInput").value =
-    event.target || "";
-
-  document.getElementById("eventStartInput").value =
-    event.startDate || "";
-
-  document.getElementById("eventEndInput").value =
-    event.endDate || "";
-
-  document.getElementById("eventActiveInput").checked =
-    Boolean(event.active);
-
-  document.getElementById("eventFeaturedInput").checked =
-    Boolean(event.featured);
-
-  document.getElementById("eventDropsInput").checked =
-    Boolean(event.dropsEnabled);
-
+  updateEventFieldVisibility();
   renderMilestonesEditor();
 }
 
@@ -149,90 +151,70 @@ async function loadAdmin() {
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
-  allEvents = await fetchEvents();
+  try {
+    allEvents = await fetchEvents();
+    eventSelect.innerHTML = "";
 
-  eventSelect.innerHTML = "";
+    allEvents.forEach(event => {
+      const option = document.createElement("option");
+      option.value = event.id;
+      option.textContent = `${event.label || event.type} — ${event.title}`;
+      eventSelect.appendChild(option);
+    });
 
-  allEvents.forEach(event => {
-    const option = document.createElement("option");
-    option.value = event.id;
-    option.textContent = `${event.label || event.type} — ${event.title}`;
-    eventSelect.appendChild(option);
-  });
-
-  selectedEventId = eventSelect.value;
-
-  populateEventFields();
-  loadAdminDrops();
-
-  eventSelect.addEventListener("change", () => {
     selectedEventId = eventSelect.value;
     populateEventFields();
     loadAdminDrops();
-  });
 
-  addDropBtn.addEventListener("click", addDrop);
-  saveEventBtn.addEventListener("click", saveSelectedEvent);
+    eventSelect.addEventListener("change", () => {
+      selectedEventId = eventSelect.value;
+      populateEventFields();
+      loadAdminDrops();
+    });
 
-  if (addMilestoneBtn) {
-    addMilestoneBtn.addEventListener("click", addMilestone);
+    addDropBtn.addEventListener("click", addDrop);
+    saveEventBtn.addEventListener("click", saveSelectedEvent);
+    if (addMilestoneBtn) addMilestoneBtn.addEventListener("click", addMilestone);
+  } catch (error) {
+    document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }
 }
 
 async function saveSelectedEvent() {
   const event = getSelectedEvent();
-
   if (!event) return;
 
-  event.title =
-    document.getElementById("eventTitleInput").value.trim();
+  event.title = document.getElementById("eventTitleInput").value.trim();
+  event.description = document.getElementById("eventDescriptionInput").value.trim();
+  event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
 
-  event.description =
-    document.getElementById("eventDescriptionInput").value.trim();
-
-  event.womCompetitionId =
-    document.getElementById("eventWomInput").value.trim() || null;
-
-  const targetValue =
-    document.getElementById("eventTargetInput").value;
-
-  event.target = targetValue
-    ? Number(targetValue)
-    : null;
-
-  event.startDate =
-    document.getElementById("eventStartInput").value || null;
-
-  event.endDate =
-    document.getElementById("eventEndInput").value || null;
-
-  event.active =
-    document.getElementById("eventActiveInput").checked;
-
-  event.featured =
-    document.getElementById("eventFeaturedInput").checked;
-
-  event.dropsEnabled =
-    document.getElementById("eventDropsInput").checked;
+  const targetValue = document.getElementById("eventTargetInput").value;
+  event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
+  event.startDate = document.getElementById("eventStartInput").value || null;
+  event.endDate = document.getElementById("eventEndInput").value || null;
+  event.active = document.getElementById("eventActiveInput").checked;
+  event.featured = document.getElementById("eventFeaturedInput").checked;
+  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
 
   collectMilestonesFromEditor();
 
-  await fetch("/api/admin/events/save", {
+  const response = await fetch("/api/admin/events/save", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      events: allEvents
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events: allEvents })
   });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    alert(data.error || "Could not save event.");
+    return;
+  }
 
   alert("Event saved.");
 }
 
 async function loadAdminDrops() {
   const list = document.getElementById("adminDropsList");
-
   if (!list) return;
 
   if (!selectedEventId) {
@@ -240,10 +222,7 @@ async function loadAdminDrops() {
     return;
   }
 
-  const response = await fetch(
-    `/api/drops/list?eventId=${encodeURIComponent(selectedEventId)}`
-  );
-
+  const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(selectedEventId)}`);
   const data = await response.json();
 
   list.innerHTML = "";
@@ -256,10 +235,8 @@ async function loadAdminDrops() {
   data.drops.forEach(drop => {
     const row = document.createElement("div");
     row.className = "drop-row";
-
     row.innerHTML = `
       <span>${drop.name}</span>
-
       <div class="drop-controls">
         <button onclick="changeDrop('${drop.name}', -1)">−</button>
         <strong>${drop.count}</strong>
@@ -267,7 +244,6 @@ async function loadAdminDrops() {
         <button onclick="deleteDrop('${drop.name}')">Delete</button>
       </div>
     `;
-
     list.appendChild(row);
   });
 }
@@ -275,18 +251,12 @@ async function loadAdminDrops() {
 async function addDrop() {
   const input = document.getElementById("dropNameInput");
   const name = input.value.trim();
-
   if (!name || !selectedEventId) return;
 
   await fetch("/api/drops/add", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, name })
   });
 
   input.value = "";
@@ -294,20 +264,12 @@ async function addDrop() {
 }
 
 async function changeDrop(name, direction) {
-  const endpoint =
-    direction > 0
-      ? "/api/drops/increment"
-      : "/api/drops/decrement";
+  const endpoint = direction > 0 ? "/api/drops/increment" : "/api/drops/decrement";
 
   await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, name })
   });
 
   loadAdminDrops();
@@ -316,13 +278,8 @@ async function changeDrop(name, direction) {
 async function deleteDrop(name) {
   await fetch("/api/drops/delete", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      eventId: selectedEventId,
-      name
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, name })
   });
 
   loadAdminDrops();

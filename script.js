@@ -518,6 +518,85 @@ ${(event.milestones || [])
   }
 }
 
+
+async function loadHomeEventWidgets() {
+  const activeGrid = document.getElementById("homeActiveEventsGrid");
+  const clanGoalWidget = document.getElementById("homeClanGoalWidget");
+
+  if (!activeGrid && !clanGoalWidget) return;
+
+  try {
+    const events = await fetchCurrentEvents();
+    const activeEvents = events.filter(event => event.active !== false);
+
+    if (activeGrid) {
+      activeGrid.innerHTML = "";
+
+      if (activeEvents.length === 0) {
+        activeGrid.textContent = "No active events right now.";
+      } else {
+        activeEvents.slice(0, 3).forEach(event => {
+          const row = document.createElement("a");
+          row.className = "home-active-event-row";
+          row.href = `event.html?id=${encodeURIComponent(event.id)}`;
+          row.innerHTML = `
+            <span>${getEventIcon(event.type)}</span>
+            <div>
+              <strong>${event.title}</strong>
+              <small>${event.label || formatEventType(event.type)}</small>
+            </div>
+            <em>View →</em>
+          `;
+          activeGrid.appendChild(row);
+        });
+      }
+    }
+
+    if (clanGoalWidget) {
+      const clanGoal = activeEvents.find(event => event.type?.includes("clan-goal"));
+
+      if (!clanGoal) {
+        clanGoalWidget.innerHTML = `
+          <p class="eyebrow">Active Clan Goal</p>
+          <h2>No clan goal active</h2>
+          <p>The next clan goal will appear here.</p>
+        `;
+        return;
+      }
+
+      const standings = await fetchEventStandings(clanGoal).catch(() => null);
+      const current = standings?.totalGained || 0;
+      const target = clanGoal.target || 0;
+      const percent = target ? Math.min((current / target) * 100, 100) : 0;
+      const nextMilestone = (clanGoal.milestones || []).find(milestone => milestone.percent > percent);
+
+      clanGoalWidget.innerHTML = `
+        <p class="eyebrow">${getEventIcon(clanGoal.type)} Active Clan Goal</p>
+        <h2>${clanGoal.title}</h2>
+        <p>${clanGoal.description || "Clan-wide progress event."}</p>
+
+        <div class="mini-progress-labels">
+          <span>${formatNumber(current)} / ${formatNumber(target)}</span>
+          <strong>${percent.toFixed(0)}%</strong>
+        </div>
+
+        <div class="mini-progress-bar">
+          <div style="width:${percent}%"></div>
+        </div>
+
+        <p class="next-milestone">
+          Next reward: <strong>${nextMilestone ? `${nextMilestone.percent}% ${nextMilestone.title}` : "All rewards unlocked"}</strong>
+        </p>
+
+        <a class="btn primary" href="event.html?id=${encodeURIComponent(clanGoal.id)}">View Clan Goal</a>
+      `;
+    }
+  } catch (error) {
+    if (activeGrid) activeGrid.textContent = `Could not load active events: ${error.message}`;
+    if (clanGoalWidget) clanGoalWidget.querySelector("p")?.remove();
+  }
+}
+
 async function loadDrops() {
   const dropsList = document.getElementById("dropsList");
 
@@ -537,20 +616,23 @@ async function loadDrops() {
       authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
 
     const params = new URLSearchParams(window.location.search);
-const eventId = params.get("id") || "global";
+    const eventId = params.get("id") || "global";
 
-const response = await fetch(
-  `/api/drops/list?eventId=${encodeURIComponent(eventId)}`
-);
+    const response = await fetch(
+      `/api/drops/list?eventId=${encodeURIComponent(eventId)}`
+    );
     const data = await response.json();
 
     dropsList.innerHTML = "";
 
-let drops = data.drops || [];
+    const drops = data.drops || [];
 
+    if (drops.length === 0) {
+      dropsList.textContent = "No drops tracked yet.";
+      return;
+    }
 
-
-drops.forEach(drop => {
+    drops.forEach(drop => {
       const row = document.createElement("div");
       row.className = "drop-row";
 
@@ -605,5 +687,6 @@ async function changeDrop(name, direction) {
 loadDiscordUser();
 loadHomeStats();
 loadRecentActivity();
+loadHomeEventWidgets();
 loadEventsHub();
 loadSingleEventDashboard();

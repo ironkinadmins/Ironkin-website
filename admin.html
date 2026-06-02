@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,7 +6,6 @@
   <title>Ironkin Admin Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
   <main class="admin-page">
     <section class="admin-hero">
@@ -16,133 +14,78 @@
       <p>Manage Ironkin events and event-specific drops.</p>
     </section>
 
-```
-<section class="admin-card">
-  <div class="admin-form-grid">
+    <section class="admin-card">
+      <div class="admin-form-grid">
+        <div class="admin-field">
+          <label for="adminEventSelect">Select Event</label>
+          <select id="adminEventSelect"></select>
+        </div>
 
-    <div class="admin-field">
-      <label for="adminEventSelect">Select Event</label>
-      <select id="adminEventSelect"></select>
-    </div>
+        <div class="admin-field">
+          <label for="eventTitleInput">Event Title</label>
+          <input id="eventTitleInput" type="text" />
+        </div>
 
-    <div class="admin-field">
-      <label for="eventTitleInput">Event Title</label>
-      <input id="eventTitleInput" type="text" />
-    </div>
+        <div class="admin-field admin-field-wide">
+          <label for="eventDescriptionInput">Event Description</label>
+          <textarea id="eventDescriptionInput" rows="4" placeholder="Event description shown on the dashboard"></textarea>
+        </div>
 
-    <div class="admin-field admin-field-wide">
-      <label for="eventDescriptionInput">Event Description</label>
-      <textarea
-        id="eventDescriptionInput"
-        rows="4"
-        placeholder="Event description shown on the dashboard"
-      ></textarea>
-    </div>
+        <div class="admin-field">
+          <label for="eventWomInput">WOM Competition ID</label>
+          <input id="eventWomInput" type="text" placeholder="Example: 138731" />
+        </div>
 
-    <div class="admin-field">
-      <label for="eventWomInput">WOM Competition ID</label>
-      <input
-        id="eventWomInput"
-        type="text"
-        placeholder="Example: 138731"
-      />
-    </div>
+        <div class="admin-field" id="targetSection">
+          <label for="eventTargetInput">Target KC / XP</label>
+          <input id="eventTargetInput" type="number" placeholder="Example: 2000" />
+        </div>
 
-    <div class="admin-field">
-      <label for="eventTargetInput">Target KC / XP</label>
-      <input
-        id="eventTargetInput"
-        type="number"
-        placeholder="Example: 2000"
-      />
-    </div>
+        <div class="admin-field">
+          <label for="eventStartInput">Start Date</label>
+          <input id="eventStartInput" type="date" />
+        </div>
 
-    <div class="admin-field">
-      <label for="eventStartInput">Start Date</label>
-      <input id="eventStartInput" type="date" />
-    </div>
+        <div class="admin-field">
+          <label for="eventEndInput">End Date</label>
+          <input id="eventEndInput" type="date" />
+        </div>
 
-    <div class="admin-field">
-      <label for="eventEndInput">End Date</label>
-      <input id="eventEndInput" type="date" />
-    </div>
+        <div class="admin-field admin-field-wide" id="milestonesSection">
+          <label>Milestones</label>
+          <div id="milestonesEditor" class="milestones-editor"></div>
+          <button type="button" class="btn secondary" id="addMilestoneBtn">+ Add Milestone</button>
+        </div>
+      </div>
 
-    <div class="admin-field admin-field-wide">
-      <label>Milestones</label>
+      <div class="admin-toggle-row">
+        <label><input id="eventActiveInput" type="checkbox" /> Active</label>
+        <label><input id="eventFeaturedInput" type="checkbox" /> Featured on Homepage</label>
+        <label><input id="eventDropsInput" type="checkbox" /> Drops Enabled</label>
+      </div>
 
-      <div id="milestonesEditor" class="milestones-editor"></div>
+      <button class="btn primary" id="saveEventBtn">Save Event</button>
+    </section>
 
-      <button
-        type="button"
-        class="btn secondary"
-        id="addMilestoneBtn"
-      >
-        + Add Milestone
-      </button>
-    </div>
+    <section class="admin-card">
+      <div class="admin-section-header">
+        <h2>Event Drops</h2>
+        <p>These drops are saved only for the selected event.</p>
+      </div>
 
-  </div>
+      <div class="admin-field">
+        <label for="dropNameInput">Add Drop</label>
+        <div class="admin-add-row">
+          <input id="dropNameInput" type="text" placeholder="Example: Huey Hide" />
+          <button class="btn primary" id="addDropBtn">Add Drop</button>
+        </div>
+      </div>
 
-  <div class="admin-toggle-row">
-    <label>
-      <input id="eventActiveInput" type="checkbox" />
-      Active
-    </label>
-
-    <label>
-      <input id="eventFeaturedInput" type="checkbox" />
-      Featured on Homepage
-    </label>
-
-    <label>
-      <input id="eventDropsInput" type="checkbox" />
-      Drops Enabled
-    </label>
-  </div>
-
-  <button class="btn primary" id="saveEventBtn">
-    Save Event
-  </button>
-</section>
-
-<section class="admin-card">
-  <div class="admin-section-header">
-    <h2>Event Drops</h2>
-    <p>These drops are saved only for the selected event.</p>
-  </div>
-
-  <div class="admin-field">
-    <label for="dropNameInput">Add Drop</label>
-
-    <div class="admin-add-row">
-      <input
-        id="dropNameInput"
-        type="text"
-        placeholder="Example: Huey Hide"
-      />
-
-      <button class="btn primary" id="addDropBtn">
-        Add Drop
-      </button>
-    </div>
-  </div>
-
-  <div class="admin-divider"></div>
-
-  <div id="adminDropsList" class="admin-drops-list">
-    Loading...
-  </div>
-</section>
-```
-
+      <div class="admin-divider"></div>
+      <div id="adminDropsList" class="admin-drops-list">Loading...</div>
+    </section>
   </main>
 
   <script src="admin.js"></script>
-<script>
-  document.body.insertAdjacentHTML(
-    "beforeend",
-    "<div style='position:fixed;bottom:10px;right:10px;background:red;color:white;padding:10px;z-index:9999;'>UPDATED ADMIN.HTML</div>"
-  );
-</script>
 </body>
 </html>
