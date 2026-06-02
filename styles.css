@@ -1885,3 +1885,35 @@ footer {
   letter-spacing: .08em;
   font-size: .8rem;
 }
+.member-achievements .activity-scroll {
+  overflow: visible;
+  margin-top: 18px;
+}
+
+.activity-feed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-feed-row:last-child {
+  border-bottom: none;
+}
+
+.activity-feed-row strong {
+  display: block;
+  color: var(--ember);
+  margin-bottom: 3px;
+}
+
+.activity-feed-row span {
+  color: var(--text);
+}
+
+.activity-feed-row small {
+  color: var(--muted);
+  white-space: nowrap;
+}

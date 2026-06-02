@@ -280,29 +280,30 @@ async function loadRecentActivity() {
       return;
     }
 
-    container.innerHTML = `<div class="activity-track"></div>`;
+container.innerHTML = "";
 
-    const track = container.querySelector(".activity-track");
-    const doubled = [...data.achievements, ...data.achievements];
+data.achievements.slice(0, 6).forEach(item => {
+  const row = document.createElement("div");
 
-    doubled.forEach(item => {
-      const card = document.createElement("div");
+  row.className = "activity-feed-row";
 
-      card.className = "achievement-pill";
+  const player = item.player || "Unknown";
+  const achievement = item.name || "Achievement";
+  const date = item.createdAt
+    ? new Date(item.createdAt).toLocaleDateString()
+    : "Recent";
 
-      const player = item.player || "Unknown";
-      const achievement = item.name || "Achievement";
-      const date = item.createdAt
-        ? new Date(item.createdAt).toLocaleDateString()
-        : "Recent";
+  row.innerHTML = `
+    <div>
+      <strong>${player}</strong>
+      <span>${achievement}</span>
+    </div>
 
-      card.innerHTML = `
-        <strong>${player}</strong>
-        <span>${achievement}</span>
-        <small>${date}</small>
-      `;
+    <small>${date}</small>
+  `;
 
-      track.appendChild(card);
+  container.appendChild(row);
+});
     });
   } catch {
     container.textContent = "Could not load recent achievements.";
