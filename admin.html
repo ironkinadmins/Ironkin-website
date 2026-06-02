@@ -11,7 +11,7 @@
     <section class="admin-hero">
       <p class="eyebrow">Ironkin Admin</p>
       <h1>Admin Dashboard</h1>
-      <p>Manage Ironkin events and event-specific drops.</p>
+      <p>Manage Ironkin events, WOM tracking, rewards, and event-specific drops.</p>
     </section>
 
     <section class="admin-card">
@@ -22,37 +22,33 @@
         </div>
 
         <div class="admin-field">
-          <label for="eventTitleInput">Event Title</label>
-          <input id="eventTitleInput" type="text" />
+          <label for="eventWomInput">WOM Competition ID</label>
+          <div class="admin-inline-row">
+            <input id="eventWomInput" type="text" placeholder="Example: 138731" />
+            <button type="button" class="btn secondary" id="previewWomBtn">Preview</button>
+          </div>
         </div>
 
         <div class="admin-field admin-field-wide">
-          <label for="eventDescriptionInput">Event Description</label>
-          <textarea id="eventDescriptionInput" rows="4" placeholder="Event description shown on the dashboard"></textarea>
+          <label>Detected WOM Event</label>
+          <div class="admin-detected-event" id="womDetectedBox">
+            <strong id="detectedEventTitle">No WOM competition loaded yet.</strong>
+            <span id="detectedEventMeta">Enter a WOM competition ID and click Preview, or save and reload.</span>
+          </div>
         </div>
 
-        <div class="admin-field">
-          <label for="eventWomInput">WOM Competition ID</label>
-          <input id="eventWomInput" type="text" placeholder="Example: 138731" />
+        <div class="admin-field admin-field-wide">
+          <label for="eventDescriptionInput">Ironkin Description</label>
+          <textarea id="eventDescriptionInput" rows="4" placeholder="Optional custom text shown on the dashboard"></textarea>
         </div>
 
         <div class="admin-field" id="targetSection">
-          <label for="eventTargetInput">Target KC / XP</label>
+          <label for="eventTargetInput">Clan Goal Target KC / XP</label>
           <input id="eventTargetInput" type="number" placeholder="Example: 2000" />
         </div>
 
-        <div class="admin-field">
-          <label for="eventStartInput">Start Date</label>
-          <input id="eventStartInput" type="date" />
-        </div>
-
-        <div class="admin-field">
-          <label for="eventEndInput">End Date</label>
-          <input id="eventEndInput" type="date" />
-        </div>
-
         <div class="admin-field admin-field-wide" id="milestonesSection">
-          <label>Milestones</label>
+          <label>Clan Goal Milestones</label>
           <div id="milestonesEditor" class="milestones-editor"></div>
           <button type="button" class="btn secondary" id="addMilestoneBtn">+ Add Milestone</button>
         </div>
@@ -99,7 +95,17 @@
         <label><input id="eventDropsInput" type="checkbox" /> Drops Enabled</label>
       </div>
 
-      <button class="btn primary" id="saveEventBtn">Save Event</button>
+      <div class="admin-action-row">
+        <button class="btn primary" id="saveEventBtn">Save Event</button>
+
+        <button class="btn secondary danger" id="archiveEventBtn" type="button">
+          End Event + Send to Archive
+        </button>
+      </div>
+
+      <p class="admin-muted admin-action-note">
+        Event title, metric, start date, and end date are pulled automatically from the WOM competition ID.
+      </p>
     </section>
 
     <section class="admin-card">

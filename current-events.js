@@ -10,8 +10,6 @@ const DEFAULT_EVENTS = [
     active: true,
     dropsEnabled: true,
     target: null,
-    startDate: null,
-    endDate: null,
     rewards: {
       placement: [
         { label: "🥇 1st Place", reward: "50 Embers + SOTW Rank" },
@@ -36,8 +34,6 @@ const DEFAULT_EVENTS = [
     active: true,
     dropsEnabled: true,
     target: null,
-    startDate: null,
-    endDate: null,
     rewards: {
       placement: [
         { label: "🥇 1st Place", reward: "75 Embers + BOTW Rank" },
@@ -54,15 +50,13 @@ const DEFAULT_EVENTS = [
     id: "clan-goal-hueycoatl",
     type: "clan-goal-boss",
     label: "Clan Goal",
-    title: "Clan Goal - Hueycoatl",
+    title: "Clan Goal",
     description: "Every kill brings Ironkin closer to the next clan milestone.",
     womCompetitionId: "138731",
     featured: true,
     active: true,
     dropsEnabled: true,
     target: 300,
-    startDate: "2026-06-01",
-    endDate: "2026-06-03",
     milestones: [
       { percent: 25, title: "Clan Mass" },
       { percent: 50, title: "Bond Giveaway" },
@@ -81,12 +75,56 @@ const DEFAULT_EVENTS = [
   }
 ];
 
+async function fetchWomCompetitionDetails(competitionId) {
+  if (!competitionId || competitionId === "PUT_YOUR_WOM_ID_HERE") {
+    return null;
+  }
+
+  const response = await fetch(
+    `https://api.wiseoldman.net/v2/competitions/${competitionId}`
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json();
+}
+
+async function hydrateEventFromWom(event) {
+  const details = await fetchWomCompetitionDetails(event.womCompetitionId)
+    .catch(() => null);
+
+  if (!details) {
+    return event;
+  }
+
+  return {
+    ...event,
+    title: details.title || event.title,
+    metric: details.metric || event.metric || null,
+    startDate: details.startsAt || event.startDate || null,
+    endDate: details.endsAt || event.endDate || null,
+    wom: {
+      id: details.id,
+      title: details.title || null,
+      metric: details.metric || null,
+      startsAt: details.startsAt || null,
+      endsAt: details.endsAt || null
+    }
+  };
+}
+
 export async function onRequestGet({ env }) {
   const saved = await env.DROPS_KV.get("events:active");
 
-  const events = saved
+  const storedEvents = saved
     ? JSON.parse(saved)
     : DEFAULT_EVENTS;
+
+  const events = await Promise.all(
+    storedEvents.map(event => hydrateEventFromWom(event))
+  );
 
   return Response.json({
     active: events.length > 0,

@@ -487,6 +487,8 @@ async function loadRecentActivity() {
         : "Recent";
 
       row.innerHTML = `
+        <span class="activity-feed-icon">✦</span>
+
         <div>
           <strong>${player}</strong>
           <span>${achievement}</span>
@@ -852,6 +854,163 @@ async function loadHomeEventWidgets() {
   }
 }
 
+
+function getArchiveWinnerText(entry) {
+  if (!entry?.winner) return "No winner recorded";
+
+  const metric = getEventMetricLabel(entry);
+  return `${entry.winner.name} · ${formatNumber(entry.winner.gained)} ${metric}`;
+}
+
+function renderArchivedTopFive(entry) {
+  const topFive = entry.topFive || [];
+
+  if (!topFive.length) {
+    return `<p class="admin-muted">No leaderboard snapshot available.</p>`;
+  }
+
+  const metric = getEventMetricLabel(entry);
+
+  return topFive
+    .map((player, index) => `
+      <div class="archive-result-row">
+        <strong>#${index + 1} ${player.name}</strong>
+        <span>${formatNumber(player.gained)} ${metric}</span>
+      </div>
+    `)
+    .join("");
+}
+
+async function fetchArchive() {
+  const response = await fetch("/api/archive/list");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load archive.");
+  }
+
+  return data.archive || [];
+}
+
+async function loadArchivePage() {
+  const grid = document.getElementById("archiveGrid");
+
+  if (!grid) return;
+
+  try {
+    const archive = await fetchArchive();
+
+    grid.innerHTML = "";
+
+    if (!archive.length) {
+      grid.innerHTML = `
+        <article class="card archive-card">
+          <p class="eyebrow">No Results Yet</p>
+          <h2>Archive is empty</h2>
+          <p>Use the admin dashboard's End Event button to save completed events here.</p>
+        </article>
+      `;
+      return;
+    }
+
+    archive.forEach(entry => {
+      const card = document.createElement("article");
+      card.className = "card archive-card";
+
+      const dateText = entry.endedAt
+        ? new Date(entry.endedAt).toLocaleDateString()
+        : "Archived";
+
+      card.innerHTML = `
+        <p class="eyebrow">${entry.label || formatEventType(entry.type)} · ${dateText}</p>
+
+        <h2>${entry.title}</h2>
+
+        <p>
+          <strong>Winner:</strong> ${getArchiveWinnerText(entry)}
+        </p>
+
+        <div class="archive-results-list">
+          ${renderArchivedTopFive(entry)}
+        </div>
+
+        ${
+          entry.womCompetitionId
+            ? `
+              <a
+                class="text-link"
+                href="https://wiseoldman.net/competitions/${entry.womCompetitionId}"
+                target="_blank"
+                rel="noopener"
+              >
+                View WOM →
+              </a>
+            `
+            : ""
+        }
+      `;
+
+      grid.appendChild(card);
+    });
+  } catch (error) {
+    grid.innerHTML = `
+      <article class="card archive-card">
+        <p>Could not load archive: ${error.message}</p>
+      </article>
+    `;
+  }
+}
+
+async function loadHallOfFlamePage() {
+  const grid = document.getElementById("hallOfFlameGrid");
+
+  if (!grid) return;
+
+  try {
+    const archive = await fetchArchive();
+    const completedWithWinners = archive.filter(entry => entry.winner);
+
+    const botw = completedWithWinners.filter(entry => entry.type === "botw");
+    const sotw = completedWithWinners.filter(entry => entry.type === "sotw");
+    const clanGoals = completedWithWinners.filter(entry =>
+      String(entry.type || "").includes("clan-goal")
+    );
+
+    function buildFlameCard(title, entries, emptyText) {
+      return `
+        <article class="card flame-card">
+          <h2>${title}</h2>
+
+          <div class="flame-list">
+            ${
+              entries.length
+                ? entries.slice(0, 12).map(entry => `
+                    <div>
+                      <strong>${entry.title}</strong>
+                      <span>${getArchiveWinnerText(entry)}</span>
+                    </div>
+                  `).join("")
+                : `<p class="admin-muted">${emptyText}</p>`
+            }
+          </div>
+        </article>
+      `;
+    }
+
+    grid.innerHTML = `
+      ${buildFlameCard("Boss of the Week", botw, "No BOTW winners archived yet.")}
+      ${buildFlameCard("Skill of the Week", sotw, "No SOTW winners archived yet.")}
+      ${buildFlameCard("Clan Goals", clanGoals, "No clan goal completions archived yet.")}
+    `;
+  } catch (error) {
+    grid.innerHTML = `
+      <article class="card">
+        <p>Could not load Hall of Flame: ${error.message}</p>
+      </article>
+    `;
+  }
+}
+
 async function loadDrops() {
   const dropsList = document.getElementById("dropsList");
 
@@ -945,3 +1104,5 @@ loadRecentActivity();
 loadHomeEventWidgets();
 loadEventsHub();
 loadSingleEventDashboard();
+loadArchivePage();
+loadHallOfFlamePage();

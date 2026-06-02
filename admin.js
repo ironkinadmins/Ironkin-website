@@ -16,6 +16,66 @@ function getSelectedEvent() {
   return allEvents.find(event => event.id === selectedEventId);
 }
 
+function formatAdminDate(value) {
+  if (!value) return "Dates not loaded yet.";
+
+  return new Date(value).toLocaleDateString();
+}
+
+function updateDetectedWomBox(event, details = null) {
+  const titleEl = document.getElementById("detectedEventTitle");
+  const metaEl = document.getElementById("detectedEventMeta");
+
+  if (!titleEl || !metaEl) return;
+
+  const source = details || event || {};
+  const title = source.title || "No WOM competition loaded yet.";
+  const metric = source.metric || "Metric not loaded";
+  const startsAt = source.startsAt || source.startDate || null;
+  const endsAt = source.endsAt || source.endDate || null;
+
+  titleEl.textContent = title;
+
+  if (startsAt || endsAt || source.metric) {
+    metaEl.textContent = `${metric} • ${formatAdminDate(startsAt)} - ${formatAdminDate(endsAt)}`;
+  } else {
+    metaEl.textContent = "Enter a WOM competition ID and click Preview, or save and reload.";
+  }
+}
+
+async function previewWomDetails() {
+  const input = document.getElementById("eventWomInput");
+  const event = getSelectedEvent();
+  const competitionId = input?.value.trim();
+
+  if (!competitionId) {
+    updateDetectedWomBox(event, null);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/event-standings?competitionId=${encodeURIComponent(competitionId)}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not preview WOM competition.");
+    }
+
+    updateDetectedWomBox(event, {
+      title: data.title,
+      metric: data.metric,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt
+    });
+  } catch (error) {
+    const titleEl = document.getElementById("detectedEventTitle");
+    const metaEl = document.getElementById("detectedEventMeta");
+
+    if (titleEl) titleEl.textContent = "Could not load WOM competition.";
+    if (metaEl) metaEl.textContent = error.message;
+  }
+}
+
 function isClanGoalEvent(event) {
   return Boolean(event?.type && event.type.includes("clan-goal"));
 }
@@ -330,12 +390,10 @@ function populateEventFields() {
 
   normalizeRewards(event);
 
-  document.getElementById("eventTitleInput").value = event.title || "";
   document.getElementById("eventDescriptionInput").value = event.description || "";
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";
   document.getElementById("eventTargetInput").value = event.target || "";
-  document.getElementById("eventStartInput").value = event.startDate || "";
-  document.getElementById("eventEndInput").value = event.endDate || "";
+  updateDetectedWomBox(event);
   document.getElementById("eventActiveInput").checked = Boolean(event.active);
   document.getElementById("eventFeaturedInput").checked = Boolean(event.featured);
   document.getElementById("eventDropsInput").checked = Boolean(event.dropsEnabled);
@@ -352,6 +410,8 @@ async function loadAdmin() {
   const addMilestoneBtn = document.getElementById("addMilestoneBtn");
   const addPlacementRewardBtn = document.getElementById("addPlacementRewardBtn");
   const addParticipationRewardBtn = document.getElementById("addParticipationRewardBtn");
+  const archiveEventBtn = document.getElementById("archiveEventBtn");
+  const previewWomBtn = document.getElementById("previewWomBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -382,6 +442,8 @@ async function loadAdmin() {
     if (addMilestoneBtn) addMilestoneBtn.addEventListener("click", addMilestone);
     if (addPlacementRewardBtn) addPlacementRewardBtn.addEventListener("click", addPlacementReward);
     if (addParticipationRewardBtn) addParticipationRewardBtn.addEventListener("click", addParticipationReward);
+    if (archiveEventBtn) archiveEventBtn.addEventListener("click", archiveSelectedEvent);
+    if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }
@@ -391,14 +453,11 @@ async function saveSelectedEvent() {
   const event = getSelectedEvent();
   if (!event) return;
 
-  event.title = document.getElementById("eventTitleInput").value.trim();
   event.description = document.getElementById("eventDescriptionInput").value.trim();
   event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
 
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
-  event.startDate = document.getElementById("eventStartInput").value || null;
-  event.endDate = document.getElementById("eventEndInput").value || null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
   event.dropsEnabled = document.getElementById("eventDropsInput").checked;
@@ -419,6 +478,54 @@ async function saveSelectedEvent() {
   }
 
   alert("Event saved.");
+}
+
+async function archiveSelectedEvent() {
+  const event = getSelectedEvent();
+
+  if (!event) return;
+
+  const confirmed = confirm(
+    `End and archive "${event.title}"?\n\nThis will save the current standings snapshot and mark the event inactive.`
+  );
+
+  if (!confirmed) return;
+
+  // Capture any unsaved edits before archiving.
+  event.description = document.getElementById("eventDescriptionInput").value.trim();
+  event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
+
+  const targetValue = document.getElementById("eventTargetInput").value;
+  event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
+  event.active = document.getElementById("eventActiveInput").checked;
+  event.featured = document.getElementById("eventFeaturedInput").checked;
+  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
+
+  collectMilestonesFromEditor();
+  collectRewardsFromEditor();
+
+  const response = await fetch("/api/admin/events/archive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event,
+      events: allEvents
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    alert(data.error || "Could not archive event.");
+    return;
+  }
+
+  event.active = false;
+  event.featured = false;
+
+  populateEventFields();
+
+  alert("Event archived and marked inactive.");
 }
 
 async function loadAdminDrops() {
