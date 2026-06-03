@@ -52,3 +52,9 @@ export async function onRequestGet({ request }) {
     );
   }
 }
+const results = (Array.isArray(data) ? data : data.results || [])
+  .filter(item =>
+    item.name &&
+    item.image
+  );
+  

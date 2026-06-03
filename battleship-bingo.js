@@ -134,7 +134,19 @@ async function searchWiki(query) {
   try {
     const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(query)}`);
     const data = await response.json();
-const results = Array.isArray(data) ? data : data.results || [];
+const results = (Array.isArray(data) ? data : data.results || [])
+  .filter(item => {
+    if (!item.name || !item.image) return false;
+
+    const name = item.name.toLowerCase();
+
+    return (
+      !name.includes("category:") &&
+      !name.includes("template:") &&
+      !name.includes("module:") &&
+      !name.includes("user:")
+    );
+  });
     if (!results.length) {
       resultsEl.innerHTML = `<div class="wiki-loading">No results found.</div>`;
       return;
