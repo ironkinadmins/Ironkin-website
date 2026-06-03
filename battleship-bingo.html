@@ -17,15 +17,11 @@
         <p>A 10×10 board where teams collect drops, submit proof, and fire attacks at hidden Battleship fleets.</p>
       </div>
 
-      <div class="bingo-hero-buttons">
-        <button class="btn secondary" id="bingoHelpBtn" type="button">Help</button>
-        <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
-          <button class="btn secondary" id="bingoResetProgressBtn" type="button">Reset Progress</button>
-          <button class="btn secondary danger" id="bingoClearBoardBtn" type="button">Clear Board</button>
-          <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
-          <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
-          <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
-        </div>
+      <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
+        <button class="btn secondary" id="bingoResetProgressBtn" type="button">Reset Progress</button>
+        <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
+        <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
+        <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
       </div>
     </section>
 
@@ -127,63 +123,15 @@
     <section class="bingo-tab-panel" id="bingoTab-help">
       <div class="bingo-card how-to-card">
         <h2>How to Play — Battleship Bingo</h2>
-        <h3>Screenshot Proofs</h3>
-        <p>Upload screenshot(s) as evidence for completing a tile or getting a drop. You can drag and drop, paste from clipboard, or click to browse — up to 10 images per submission. Images are automatically compressed before upload.</p>
-        <p>An admin reviews each proof and approves or rejects it. Check the Proofs tab for all submissions.</p>
-        <h3>Teams</h3>
-        <p>All game types support solo or team play. When joining a team game, you pick your team. Admins can move players between teams and rename teams.</p>
-        <h3>Admin System</h3>
-        <p>The room creator is the default admin. Admins can promote or demote other players, lock or unlock the room, edit tiles, and manage gameplay.</p>
-        <h3>Game Buttons</h3>
-        <p><strong>Generate Board / Import List</strong> creates the board from a Google Sheet or pasted item list. <strong>Reset</strong> resets progress without changing the board. <strong>Reroll Board</strong> can create new items/positions or shuffle positions. <strong>Admin Panel</strong> handles tile edits, undo actions, ownership, players, and room settings.</p>
-        <h3>How to Play — Battleship Bingo</h3>
-        <p>A strategic 10×10 bingo board where two teams secretly place classic Battleship ships, then race to get drops and attack the opponent's fleet.</p>
-        <p><strong>Setup:</strong> Staff build the 10×10 board with drops/items, then assign one captain per team. Each captain secretly places six ships on the board: Carrier (5 tiles), Battleship (4), Cruiser (3), Submarine (3), Destroyer (3), and Patrol Boat (2). Ships must be placed in straight lines and cannot overlap.</p>
-        <p><strong>Gameplay:</strong> Once both captains confirm their ship placements, the game begins. Players submit proof of obtaining a drop for any tile on the board. An admin or captain approves the proof, and the tile is automatically attacked on the opponent's board.</p>
-        <p><strong>Attacks:</strong> Each tile attack results in a Hit or Miss. When all cells of a ship are hit, it is sunk and announced to both teams.</p>
-        <p><strong>Board Views:</strong> Toggle between Attack Board and Your Waters to view attacks, misses, hits, and your own fleet.</p>
-        <p><strong>Winning:</strong> Sink all enemy ships for an instant win. If the deadline passes, the team with the most ships sunk wins.</p>
+        <h3>Setup</h3>
+        <p>Staff create a 10×10 board of drops/items. Each team gets one captain. Captains secretly place six ships: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (3), and Patrol Boat (2).</p>
+        <h3>Gameplay</h3>
+        <p>Players submit proof for a tile. When staff approve it, the tile fires an attack against the opposing fleet. Attacks are marked as hit or miss.</p>
+        <h3>Winning</h3>
+        <p>Sink all five enemy ships to win. If the event deadline arrives first, the team with the most ships sunk wins.</p>
       </div>
     </section>
   </main>
-
-  <div id="bingoHelpModal" class="bingo-modal" aria-hidden="true">
-    <div class="bingo-modal-card bingo-help-modal-card">
-      <div class="bingo-modal-header">
-        <h2>How to Play — Battleship Bingo</h2>
-        <button id="closeBingoHelpModal" type="button" class="bingo-icon-btn">×</button>
-      </div>
-
-      <div class="bingo-help-content">
-        <h3>Screenshot Proofs</h3>
-        <p>Upload screenshot(s) as evidence for completing a tile or getting a drop. You can drag and drop, paste from clipboard, or click to browse — up to 10 images per submission. Images are automatically compressed before upload.</p>
-        <p>An admin reviews each proof and approves or rejects it. Check the Proofs tab in the sidebar for all submissions.</p>
-
-        <h3>Teams</h3>
-        <p>All game types support solo or team play. When joining a team game, you pick your team. Admins can move players between teams using the ↔ button in the Players panel, and rename teams from the Teams button.</p>
-
-        <h3>Admin System</h3>
-        <p>The room creator is the default admin. Optionally, set an admin password when creating the room — anyone who enters it via the 🔑 button gains admin powers. Admins can promote or demote other players from the Admin Panel. The password is stored securely and cannot be seen in browser dev tools.</p>
-
-        <h3>Game Buttons</h3>
-        <p><strong>Generate Board / Import List</strong> — Admin only. Creates the board from a Google Sheet or pasted list of items.</p>
-        <p><strong>Reset</strong> — Admin only. Resets all progress without changing the board.</p>
-        <p><strong>Reroll Board</strong> — Admin only. Choose Full Reroll or Shuffle Positions. Both reset progress.</p>
-        <p><strong>Admin Panel</strong> — Admin only. Edit or replace tiles, undo rolls, move pieces, change territory owners, manage players, lock/unlock the room, and set an admin password.</p>
-        <p><strong>Teams</strong> — Admin only. Rename teams.</p>
-        <p><strong>🔑 Claim Admin</strong> — Enter the admin password to gain admin rights.</p>
-        <p><strong>Room Code</strong> — Click to copy. Share with friends to join.</p>
-
-        <h3>How to Play — Battleship Bingo</h3>
-        <p>A strategic 10×10 bingo board where two teams secretly place classic Battleship ships, then race to get drops and attack the opponent's fleet.</p>
-        <p><strong>Setup:</strong> The room creator builds the 10×10 board with drops/items, then assigns one captain per team. Each captain secretly places six ships on the board: Carrier (5 tiles), Battleship (4), Cruiser (3), Submarine (3), Destroyer (3), and Patrol Boat (2). Ships must be placed in straight lines and cannot overlap.</p>
-        <p><strong>Gameplay:</strong> Once both captains confirm their ship placements, the game begins. Players submit proof of obtaining a drop for any tile on the board. An admin or captain approves the proof, and the tile is automatically attacked on the opponent's board.</p>
-        <p><strong>Attacks:</strong> Each tile attack results in a Hit or Miss. When all cells of a ship are hit, it is sunk and announced to both teams.</p>
-        <p><strong>Board Views:</strong> Toggle between Attack Board and Your Waters to view attacks, misses, hits, and your own fleet.</p>
-        <p><strong>Winning:</strong> Sink all enemy ships for an instant win. If the deadline passes, the team with the most ships sunk wins.</p>
-      </div>
-    </div>
-  </div>
 
   <div id="tileModal" class="bingo-modal" aria-hidden="true">
     <div class="bingo-modal-card">
@@ -197,11 +145,6 @@
         <div class="admin-field">
           <label for="tileNameInput">Item Name</label>
           <input id="tileNameInput" type="text" placeholder="Example: Abyssal whip" />
-        </div>
-
-        <div class="admin-field">
-          <label for="tileQuantityInput">Qty Needed</label>
-          <input id="tileQuantityInput" type="number" min="1" step="1" value="1" />
         </div>
 
         <div class="admin-field">

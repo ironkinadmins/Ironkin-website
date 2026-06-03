@@ -213,13 +213,18 @@ function getOpponent(team) {
   return team === "ember" ? "ash" : "ember";
 }
 
+function getTileQuantity(tile) {
+  const raw = tile?.quantity ?? tile?.qty ?? tile?.quantityNeeded ?? 1;
+  return Math.max(1, Number.parseInt(raw, 10) || 1);
+}
+
 function renderBingoBoard() {
   const boardEl = document.getElementById("bingoBoard");
   if (!boardEl) return;
   boardEl.innerHTML = bingoState.tiles.map((tile, index) => `
     <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
       ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
-      ${Number(tile.quantity || 1) > 1 ? `<strong class="bingo-qty-badge">x${escapeHtml(tile.quantity)}</strong>` : ""}
+      ${getTileQuantity(tile) > 1 ? `<strong class="bingo-qty-badge">x${escapeHtml(getTileQuantity(tile))}</strong>` : ""}
       <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
       ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
     </button>
@@ -235,7 +240,7 @@ function openTileModal(index) {
   const tile = bingoState.tiles[index] || {};
   document.getElementById("tileModalTitle").textContent = tile.name || `Tile ${index + 1}`;
   document.getElementById("tileNameInput").value = tile.name || "";
-  document.getElementById("tileQuantityInput").value = Math.max(1, Number(tile.quantity || 1));
+  document.getElementById("tileQuantityInput").value = getTileQuantity(tile);
   document.getElementById("tileImageInput").value = tile.image || "";
   document.getElementById("wikiSearchInput").value = tile.name || "";
   document.getElementById("wikiSearchResults").innerHTML = "";
@@ -533,20 +538,25 @@ function bindBingoControls() {
   });
 
   document.getElementById("bingoRerollBtn")?.addEventListener("click", async () => {
-    bingoState.tiles = emptyBingoBoard().map((tile, index) => {
+    const demoTiles = emptyBingoBoard();
+    bingoState.tiles = demoTiles.map((tile, index) => {
       const demoItem = DEFAULT_ITEMS[index % DEFAULT_ITEMS.length];
       return {
         ...tile,
-        name: demoItem.name,
+        id: index,
+        name: `${demoItem.name} ${Math.floor(index / DEFAULT_ITEMS.length) + 1}`,
         image: demoItem.image,
-        quantity: 1,
+        quantity: (index % 5) + 1,
         status: "open",
         completedBy: "",
         completedTeam: "",
         proofId: ""
       };
     });
-    addLog("Demo board was filled by staff.");
+    bingoState.size = BINGO_SIZE;
+    bingoState.phase = "setup";
+    bingoState.locked = false;
+    addLog(`Demo board was filled by staff (${bingoState.tiles.length} tiles).`);
     await saveBingoState();
   });
   document.getElementById("bingoLockBtn")?.addEventListener("click", async () => {
