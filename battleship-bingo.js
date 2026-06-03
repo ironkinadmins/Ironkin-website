@@ -584,7 +584,7 @@ function renderShipPlacementToolbar() {
       <div class="ship-toolbar-section ship-actions">
         <span class="ship-toolbar-label">Fleet Actions</span>
         <div class="ship-action-stack">
-          <button type="button" class="btn secondary danger" id="removeSelectedShipBtn">Remove Selected Ship</button>
+          <button type="button" class="btn secondary danger" id="removeSelectedShipBtn">Remove Ship</button>
           <button type="button" class="btn primary" id="confirmFleetLayoutBtn" ${placedCount === SHIPS.length ? "" : "disabled"}>
             ${currentConfirmed ? "Fleet Confirmed" : "Confirm Fleet Layout"}
           </button>
