@@ -1,31 +1,25 @@
-export async function onRequestGet({ env, request }) {
+export async function onRequestGet({ env }) {
   const supabaseUrl = env.SUPABASE_URL;
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
-  const guildId = env.DISCORD_GUILD_ID;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !serviceKey) {
     return Response.json(
       { error: "Missing Supabase credentials." },
       { status: 500 }
     );
   }
 
-  const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") || 100), 100);
+  const url =
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/balances` +
+    `?select=display_name,balance,user_id,guild_id` +
+    `&order=balance.desc` +
+    `&limit=100`;
 
-  const query = new URL(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/balances`);
-  query.searchParams.set("select", "user_id,display_name,balance,updated_at");
-  query.searchParams.set("order", "balance.desc");
-  query.searchParams.set("limit", String(limit));
-
-  if (guildId) {
-    query.searchParams.set("guild_id", `eq.${guildId}`);
-  }
-
-  const response = await fetch(query.toString(), {
+  const response = await fetch(url, {
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      Accept: "application/json"
     }
   });
 
@@ -42,13 +36,13 @@ export async function onRequestGet({ env, request }) {
     );
   }
 
-  const leaders = data.map((row, index) => ({
+  const leaderboard = data.map((row, index) => ({
     rank: index + 1,
-    userId: row.user_id,
-    displayName: row.display_name || "Unknown",
-    balance: Number(row.balance || 0),
-    updatedAt: row.updated_at || null
+    user_id: row.user_id,
+    guild_id: row.guild_id,
+    display_name: row.display_name || "Unknown",
+    balance: row.balance || 0
   }));
 
-  return Response.json({ leaders });
+  return Response.json({ leaderboard });
 }
