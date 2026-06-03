@@ -4270,3 +4270,214 @@ body.bingo-setup .bingo-tabs {
   display: grid;
   gap: 14px;
 }
+
+
+/* Battleship Bingo ship placement upgrades */
+.ship-placement-toolbar-card.upgraded {
+  grid-template-columns: minmax(170px, 0.7fr) minmax(190px, 0.7fr) minmax(440px, 1.7fr) minmax(170px, 0.6fr);
+}
+
+.ship-action-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.ship-action-stack .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.ship-action-stack .btn:disabled,
+.ship-action-stack .btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.ship-rotate-btn {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(255, 180, 92, 0.24);
+  background: rgba(255, 180, 92, 0.08);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.ship-rotate-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 180, 92, 0.54);
+  background: rgba(255, 122, 26, 0.12);
+}
+
+.ship-rotate-btn > span {
+  grid-row: span 2;
+  font-size: 1.35rem;
+  color: #ffb15a;
+}
+
+.ship-rotate-btn strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.ship-rotate-btn small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ship-tab.unplaced {
+  border-style: dashed;
+}
+
+.ship-tab.placed {
+  border-color: rgba(80, 220, 145, 0.55);
+  background: rgba(80, 220, 145, 0.08);
+  opacity: 1;
+}
+
+.ship-tab.placed:not(.active) {
+  opacity: 0.86;
+}
+
+.ship-tab.placed::after {
+  content: "✓";
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(80, 220, 145, 0.18);
+  color: #72f0a7;
+  font-size: 0.78rem;
+  font-weight: 1000;
+  border: 1px solid rgba(80, 220, 145, 0.4);
+}
+
+.ship-tab {
+  position: relative;
+}
+
+.ship-team-tab.confirmed {
+  border-color: rgba(80, 220, 145, 0.48);
+  background: rgba(80, 220, 145, 0.07);
+}
+
+.ship-placement-help {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.ship-placement-help kbd {
+  border: 1px solid rgba(255, 180, 92, 0.28);
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 1px 6px;
+  color: var(--text);
+  font-weight: 900;
+}
+
+.preview-dot {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 999px;
+  margin-right: 5px;
+}
+
+.preview-dot.valid {
+  background: #ffd361;
+  box-shadow: 0 0 10px rgba(255, 211, 97, 0.35);
+}
+
+.preview-dot.invalid {
+  background: #ff4848;
+  box-shadow: 0 0 10px rgba(255, 72, 72, 0.35);
+}
+
+.fleet-cell .fleet-ship-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 1000;
+  color: #ffca88;
+}
+
+.fleet-cell.ship-carrier { background: rgba(255, 122, 26, 0.18); }
+.fleet-cell.ship-battleship { background: rgba(255, 170, 64, 0.20); }
+.fleet-cell.ship-cruiser { background: rgba(255, 205, 105, 0.18); }
+.fleet-cell.ship-submarine { background: rgba(126, 211, 255, 0.15); border-color: rgba(126, 211, 255, 0.42); }
+.fleet-cell.ship-destroyer { background: rgba(255, 132, 94, 0.17); }
+.fleet-cell.ship-patrol { background: rgba(142, 255, 180, 0.13); border-color: rgba(142, 255, 180, 0.35); }
+
+.ship-icon-carrier {
+  color: #ffb15a;
+}
+
+.ship-icon-battleship {
+  color: #ffc46f;
+}
+
+.ship-icon-cruiser {
+  color: #ffd985;
+}
+
+.ship-icon-submarine {
+  color: #8ed8ff;
+}
+
+.ship-icon-destroyer {
+  color: #ff9a78;
+}
+
+.ship-icon-patrol {
+  color: #9af0b6;
+}
+
+@media (max-width: 1150px) {
+  .ship-placement-toolbar-card.upgraded {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ship-toolbar-section + .ship-toolbar-section {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid rgba(255, 180, 92, 0.12);
+    padding-top: 14px;
+  }
+
+  .ship-tab-row {
+    grid-template-columns: repeat(3, minmax(86px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .ship-placement-toolbar-card.upgraded {
+    grid-template-columns: 1fr;
+  }
+
+  .ship-tab-row {
+    grid-template-columns: repeat(2, minmax(86px, 1fr));
+  }
+
+  .ship-placement-help {
+    justify-content: flex-start;
+  }
+}

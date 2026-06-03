@@ -55,7 +55,8 @@ function createTeam(teamKey) {
     name: TEAMS[teamKey].name,
     captain: "",
     ships: SHIPS.map(ship => ({ ...ship, cells: [], sunk: false })),
-    attacks: []
+    attacks: [],
+    fleetConfirmed: false
   };
 }
 
@@ -399,15 +400,105 @@ function getNextUnplacedShipIndex(team) {
 }
 
 function getShipIcon(ship) {
-  const key = typeof ship === "string" ? ship : ship?.key;
-  const wide = key === "carrier" || key === "battleship";
-  const small = key === "patrol";
+  const key = typeof ship === "string" ? ship : ship?.key || "ship";
+  const paths = {
+    carrier: `
+      <rect x="14" y="23" width="82" height="8" rx="3"></rect>
+      <path d="M20 31h68l12-8h9l-12 12H28z"></path>
+      <rect x="30" y="12" width="26" height="8" rx="2"></rect>
+      <rect x="60" y="8" width="12" height="15" rx="2"></rect>
+      <path d="M74 14h20"></path>
+    `,
+    battleship: `
+      <path d="M10 27h82l17-11 4 11h5l-13 9H22z"></path>
+      <rect x="31" y="15" width="18" height="11" rx="2"></rect>
+      <rect x="52" y="9" width="20" height="17" rx="2"></rect>
+      <rect x="77" y="16" width="18" height="10" rx="2"></rect>
+      <path d="M23 18h18M74 12h22"></path>
+    `,
+    cruiser: `
+      <path d="M14 27h72l14-9 4 9h8l-12 8H25z"></path>
+      <rect x="39" y="15" width="20" height="11" rx="2"></rect>
+      <rect x="64" y="12" width="15" height="14" rx="2"></rect>
+      <path d="M24 18h20M80 17h19"></path>
+    `,
+    submarine: `
+      <path d="M17 25c8-9 75-9 86 0 2 2 2 5 0 7-11 8-78 8-86 0-3-2-3-5 0-7z"></path>
+      <rect x="53" y="12" width="16" height="10" rx="2"></rect>
+      <path d="M61 12V7h13"></path>
+    `,
+    destroyer: `
+      <path d="M13 28h78l15-10 6 10h5l-13 8H25z"></path>
+      <rect x="45" y="16" width="16" height="11" rx="2"></rect>
+      <rect x="66" y="13" width="13" height="14" rx="2"></rect>
+      <path d="M24 19h21M79 17h21"></path>
+    `,
+    patrol: `
+      <path d="M21 28h57l13-9 7 9h8l-12 8H32z"></path>
+      <rect x="43" y="17" width="17" height="10" rx="2"></rect>
+      <path d="M61 20h18"></path>
+    `
+  };
+
   return `
-    <svg class="ship-icon ship-icon-${escapeAttr(key || "ship")}" viewBox="0 0 120 38" aria-hidden="true" focusable="false">
-      <path d="M10 25h84l14-11 3 11h5l-12 9H22z" />
-      ${wide ? `<path d="M35 12h28v13H29z" /><path d="M66 8h18v17H61z" />` : `<path d="M42 14h23v11H36z" />`}
-      ${small ? `<path d="M70 16h12v9H65z" />` : `<path d="M86 16h14v9H81z" />`}
+    <svg class="ship-icon ship-icon-${escapeAttr(key)}" viewBox="0 0 120 42" aria-hidden="true" focusable="false">
+      <g fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        ${paths[key] || paths.cruiser}
+      </g>
     </svg>`;
+}
+
+function getShipPlacementStatus(ship) {
+  return ship?.cells?.length === ship?.size ? "placed" : "not placed";
+}
+
+function getNextUnplacedShipIndexFrom(team, currentIndex = -1) {
+  const ships = bingoState.teams?.[team]?.ships || [];
+  for (let offset = 1; offset <= ships.length; offset++) {
+    const index = (currentIndex + offset + ships.length) % ships.length;
+    if (ships[index]?.cells?.length !== ships[index]?.size) return index;
+  }
+  return Math.max(0, Math.min(currentIndex, ships.length - 1));
+}
+
+function toggleShipOrientation() {
+  placingOrientation = placingOrientation === "horizontal" ? "vertical" : "horizontal";
+  renderFleets();
+}
+
+function removeSelectedShip() {
+  if (!isBingoStaff || bingoState.phase !== "ships" || !placingTeam) return;
+  const ship = bingoState.teams[placingTeam]?.ships?.[placingShipIndex];
+  if (!ship) return;
+  if (!ship.cells.length) {
+    alert(`${ship.name} has not been placed yet.`);
+    return;
+  }
+  ship.cells = [];
+  ship.sunk = false;
+  bingoState.teams[placingTeam].fleetConfirmed = false;
+  addLog(`${bingoState.teams[placingTeam].name} removed ${ship.name}.`);
+  saveBingoState();
+}
+
+async function confirmCurrentFleet() {
+  if (!isBingoStaff || bingoState.phase !== "ships" || !placingTeam) return;
+  const team = bingoState.teams[placingTeam];
+  if (!team.ships.every(ship => ship.cells.length === ship.size)) {
+    alert("Place all ships for this fleet before confirming.");
+    return;
+  }
+  team.fleetConfirmed = true;
+  addLog(`${team.name} confirmed their fleet layout.`);
+  await saveBingoState();
+}
+
+function allFleetsPlaced() {
+  return Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size));
+}
+
+function allFleetsConfirmed() {
+  return Object.values(bingoState.teams).every(team => team.fleetConfirmed);
 }
 
 function renderShipPlacementToolbar() {
@@ -429,20 +520,26 @@ function renderShipPlacementToolbar() {
     placingShipIndex = getNextUnplacedShipIndex(placingTeam);
   }
 
-  const activeShip = bingoState.teams[placingTeam]?.ships?.[placingShipIndex] || bingoState.teams[placingTeam]?.ships?.[0];
+  const ships = bingoState.teams[placingTeam]?.ships || [];
+  if (!ships[placingShipIndex]) placingShipIndex = getNextUnplacedShipIndex(placingTeam);
+  const activeShip = ships[placingShipIndex] || ships[0];
+  const placedCount = ships.filter(ship => ship.cells.length === ship.size).length;
+  const currentTeam = bingoState.teams[placingTeam];
+  const currentConfirmed = Boolean(currentTeam?.fleetConfirmed);
 
   toolbar.innerHTML = `
-    <div class="ship-placement-toolbar-card">
+    <div class="ship-placement-toolbar-card upgraded">
       <div class="ship-toolbar-section team-picker">
         <span class="ship-toolbar-label">Fleet</span>
         <div class="ship-toolbar-buttons">
           ${Object.keys(TEAMS).map(team => {
-            const placed = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
+            const teamPlaced = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
+            const confirmed = Boolean(bingoState.teams[team].fleetConfirmed);
             return `
-              <button type="button" class="ship-team-tab ${placingTeam === team ? "active" : ""}" data-team="${escapeAttr(team)}">
+              <button type="button" class="ship-team-tab ${placingTeam === team ? "active" : ""} ${confirmed ? "confirmed" : ""}" data-team="${escapeAttr(team)}">
                 <span>${TEAMS[team].emoji}</span>
                 <strong>${escapeHtml(bingoState.teams[team].name)}</strong>
-                <small>${placed}/${SHIPS.length} placed</small>
+                <small>${teamPlaced}/${SHIPS.length} placed${confirmed ? " • confirmed" : ""}</small>
               </button>
             `;
           }).join("")}
@@ -460,29 +557,57 @@ function renderShipPlacementToolbar() {
             ${getShipIcon("carrier")}
             <span>Vertical</span>
           </button>
+          <button type="button" class="ship-rotate-btn" id="shipRotateBtn" title="Shortcut: R">
+            <span>↻</span>
+            <strong>Rotate Ship</strong>
+            <small>Shortcut: R</small>
+          </button>
         </div>
       </div>
 
       <div class="ship-toolbar-section ship-picker">
         <span class="ship-toolbar-label">Select Ship to Place</span>
         <div class="ship-tab-row">
-          ${bingoState.teams[placingTeam].ships.map((ship, index) => `
-            <button type="button" class="ship-tab ${ship.cells.length === ship.size ? "placed" : ""} ${placingShipIndex === index ? "active" : ""}" data-team="${escapeAttr(placingTeam)}" data-ship-index="${index}">
-              ${getShipIcon(ship)}
-              <strong>${escapeHtml(ship.name)}</strong>
-              <small>${ship.size} tiles${ship.cells.length === ship.size ? " • placed" : ""}</small>
-            </button>
-          `).join("")}
+          ${ships.map((ship, index) => {
+            const status = getShipPlacementStatus(ship);
+            return `
+              <button type="button" class="ship-tab ${status === "placed" ? "placed" : "unplaced"} ${placingShipIndex === index ? "active" : ""}" data-team="${escapeAttr(placingTeam)}" data-ship-index="${index}">
+                ${getShipIcon(ship)}
+                <strong>${escapeHtml(ship.name)}</strong>
+                <small>${ship.size} tiles • ${status}</small>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="ship-toolbar-section ship-actions">
+        <span class="ship-toolbar-label">Fleet Actions</span>
+        <div class="ship-action-stack">
+          <button type="button" class="btn secondary danger" id="removeSelectedShipBtn">Remove Selected Ship</button>
+          <button type="button" class="btn primary" id="confirmFleetLayoutBtn" ${placedCount === SHIPS.length ? "" : "disabled"}>
+            ${currentConfirmed ? "Fleet Confirmed" : "Confirm Fleet Layout"}
+          </button>
         </div>
       </div>
     </div>
+
     <div class="ship-placement-current">
       <strong>Placing:</strong>
-      <span>${TEAMS[placingTeam].emoji} ${escapeHtml(bingoState.teams[placingTeam].name)}</span>
+      <span>${TEAMS[placingTeam].emoji} ${escapeHtml(currentTeam?.name || TEAMS[placingTeam].name)}</span>
       <span>•</span>
       <span>${escapeHtml(activeShip?.name || "Select a ship")} (${activeShip?.size || "?"})</span>
       <span>•</span>
       <span>${escapeHtml(placingOrientation)}</span>
+      <span>•</span>
+      <span>${placedCount}/${SHIPS.length} ships placed${currentConfirmed ? " • confirmed" : ""}</span>
+    </div>
+
+    <div class="ship-placement-help">
+      <span><strong>Tip:</strong> hover over the fleet grid to preview the full ship.</span>
+      <span><b class="preview-dot valid"></b> Amber = valid</span>
+      <span><b class="preview-dot invalid"></b> Red = invalid</span>
+      <span>Press <kbd>R</kbd> to rotate.</span>
     </div>
   `;
 
@@ -500,6 +625,10 @@ function renderShipPlacementToolbar() {
       renderFleets();
     });
   });
+
+  toolbar.querySelector("#shipRotateBtn")?.addEventListener("click", toggleShipOrientation);
+  toolbar.querySelector("#removeSelectedShipBtn")?.addEventListener("click", removeSelectedShip);
+  toolbar.querySelector("#confirmFleetLayoutBtn")?.addEventListener("click", confirmCurrentFleet);
 
   toolbar.querySelectorAll(".ship-tab").forEach(button => {
     button.addEventListener("click", () => {
@@ -524,16 +653,16 @@ function renderFleets() {
     const currentShip = placingTeam === team ? bingoState.teams[team].ships[placingShipIndex] : null;
 
     if (captainLabel) captainLabel.textContent = bingoState.teams[team].captain || "Not set";
-    if (placedTotal) placedTotal.textContent = `${placedCount}/${SHIPS.length} placed`;
+    if (placedTotal) placedTotal.textContent = `${placedCount}/${SHIPS.length} placed${bingoState.teams[team].fleetConfirmed ? " • confirmed" : ""}`;
 
     board.innerHTML = Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => {
       const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
       const attacked = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
       const classes = ["fleet-cell"];
-      if (ship) classes.push("ship");
+      if (ship) classes.push("ship", `ship-${ship.key}`);
       if (attacked) classes.push(attacked.result);
-      if (placingTeam === team) classes.push("placing");
-      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}">${ship ? "■" : ""}${attacked ? (attacked.result === "hit" ? "✹" : "•") : ""}</button>`;
+      if (placingTeam === team && !bingoState.teams[team].fleetConfirmed) classes.push("placing");
+      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}">${ship ? `<span class="fleet-ship-mark">${escapeHtml(ship.name.charAt(0))}</span>` : ""}${attacked ? (attacked.result === "hit" ? "✹" : "•") : ""}</button>`;
     }).join("");
 
     board.querySelectorAll(".fleet-cell").forEach(cell => {
@@ -565,7 +694,7 @@ function clearShipPreview(team) {
 
 function showShipPreview(team, startIndex) {
   clearShipPreview(team);
-  if (bingoState.phase !== "ships" || placingTeam !== team) return;
+  if (bingoState.phase !== "ships" || placingTeam !== team || bingoState.teams[team].fleetConfirmed) return;
   const ship = bingoState.teams[team].ships[placingShipIndex];
   if (!ship) return;
   const cells = getShipCells(startIndex, ship.size, placingOrientation);
@@ -580,17 +709,28 @@ function showShipPreview(team, startIndex) {
 
 function handleFleetCellClick(team, startIndex) {
   if (!isBingoStaff || bingoState.phase !== "ships" || placingTeam !== team) return;
+  if (bingoState.teams[team].fleetConfirmed) {
+    alert("This fleet layout is already confirmed. Remove confirmation by unlocking/resetting ship placement before editing.");
+    return;
+  }
+
   const ship = bingoState.teams[team].ships[placingShipIndex];
   if (!ship) return;
+
   const cells = getShipCells(startIndex, ship.size, placingOrientation);
   if (!isValidShipPlacement(team, ship, cells)) {
     alert("That ship does not fit there.");
     return;
   }
+
   ship.cells = cells;
+  ship.sunk = false;
+  bingoState.teams[team].fleetConfirmed = false;
   addLog(`${bingoState.teams[team].name} placed ${ship.name}.`);
-  placingShipIndex = Math.min(placingShipIndex + 1, SHIPS.length - 1);
-  if (bingoState.teams[team].ships.every(s => s.cells.length === s.size)) placingTeam = null;
+
+  const nextIndex = getNextUnplacedShipIndexFrom(team, placingShipIndex);
+  placingShipIndex = nextIndex;
+
   saveBingoState();
 }
 
@@ -730,7 +870,7 @@ function updateAdminButtons() {
     phaseBtn.style.display = isBingoStaff ? "inline-flex" : "none";
     if (isSetup) phaseBtn.textContent = "Lock Board";
     else if (isCaptains) phaseBtn.textContent = "Continue to Ship Placement";
-    else if (isShips) phaseBtn.textContent = "Start Game";
+    else if (isShips) phaseBtn.textContent = allFleetsConfirmed() ? "Start Game" : "Confirm Fleets Before Start";
     else if (isActive) phaseBtn.textContent = "End Game";
     else if (isComplete) phaseBtn.textContent = "Reopen Game";
     else phaseBtn.textContent = "Start Game";
@@ -854,6 +994,7 @@ async function importBingoList() {
   Object.keys(TEAMS).forEach(team => {
     bingoState.teams[team].ships = normaliseShips([]);
     bingoState.teams[team].attacks = [];
+    bingoState.teams[team].fleetConfirmed = false;
   });
 
   addLog(`Imported ${parsed.length} Battleship Bingo tile${parsed.length === 1 ? "" : "s"}.`);
@@ -885,6 +1026,9 @@ async function continueToShipPlacement() {
   if (!captainsAreValid(true)) return;
   bingoState.phase = "ships";
   bingoState.locked = true;
+  Object.keys(TEAMS).forEach(team => { bingoState.teams[team].fleetConfirmed = false; });
+  placingTeam = "ember";
+  placingShipIndex = getNextUnplacedShipIndex("ember");
   addLog("Captain assignment complete. Ship placement started.");
   await saveBingoState();
   setBingoTab("fleets");
@@ -1076,8 +1220,12 @@ function bindBingoControls() {
     }
 
     if (bingoState.phase === "ships") {
-      if (!Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size))) {
+      if (!allFleetsPlaced()) {
         alert("Both fleets need all ships placed before starting the game.");
+        return;
+      }
+      if (!allFleetsConfirmed()) {
+        alert("Both fleets need to confirm their layouts before starting the game.");
         return;
       }
       bingoState.phase = "active";
@@ -1093,6 +1241,16 @@ function bindBingoControls() {
     }
     await saveBingoState();
   });
+
+  document.addEventListener("keydown", event => {
+    if (event.key?.toLowerCase() !== "r") return;
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (bingoState.phase !== "ships") return;
+    event.preventDefault();
+    toggleShipOrientation();
+  });
+
   document.querySelectorAll(".bingo-place-btn").forEach(button => {
     button.addEventListener("click", () => {
       if (!isBingoStaff) return alert("Staff only.");
