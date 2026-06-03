@@ -64,6 +64,7 @@ function emptyBingoBoard() {
     id: index,
     name: "",
     image: "",
+    quantity: 1,
     status: "open",
     completedBy: "",
     completedTeam: "",
@@ -218,6 +219,7 @@ function renderBingoBoard() {
   boardEl.innerHTML = bingoState.tiles.map((tile, index) => `
     <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
       ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
+      ${Number(tile.quantity || 1) > 1 ? `<strong class="bingo-qty-badge">x${escapeHtml(tile.quantity)}</strong>` : ""}
       <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
       ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
     </button>
@@ -233,6 +235,7 @@ function openTileModal(index) {
   const tile = bingoState.tiles[index] || {};
   document.getElementById("tileModalTitle").textContent = tile.name || `Tile ${index + 1}`;
   document.getElementById("tileNameInput").value = tile.name || "";
+  document.getElementById("tileQuantityInput").value = Math.max(1, Number(tile.quantity || 1));
   document.getElementById("tileImageInput").value = tile.image || "";
   document.getElementById("wikiSearchInput").value = tile.name || "";
   document.getElementById("wikiSearchResults").innerHTML = "";
@@ -254,6 +257,16 @@ function closeTileEditor() {
   document.getElementById("tileModal").classList.remove("show");
   document.getElementById("tileModal").setAttribute("aria-hidden", "true");
   activeTileIndex = null;
+}
+
+function openBingoHelpModal() {
+  document.getElementById("bingoHelpModal")?.classList.add("show");
+  document.getElementById("bingoHelpModal")?.setAttribute("aria-hidden", "false");
+}
+
+function closeBingoHelpModal() {
+  document.getElementById("bingoHelpModal")?.classList.remove("show");
+  document.getElementById("bingoHelpModal")?.setAttribute("aria-hidden", "true");
 }
 
 async function searchWiki(query) {
@@ -462,6 +475,11 @@ function bindBingoControls() {
       setBingoTab(button.dataset.bingoTab);
     });
   });
+  document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
+  document.getElementById("closeBingoHelpModal")?.addEventListener("click", closeBingoHelpModal);
+  document.getElementById("bingoHelpModal")?.addEventListener("click", event => {
+    if (event.target.id === "bingoHelpModal") closeBingoHelpModal();
+  });
   document.getElementById("closeTileModal")?.addEventListener("click", closeTileEditor);
   document.getElementById("tileModal")?.addEventListener("click", event => {
     if (event.target.id === "tileModal") closeTileEditor();
@@ -472,7 +490,13 @@ function bindBingoControls() {
   });
   document.getElementById("saveTileBtn")?.addEventListener("click", async () => {
     if (activeTileIndex === null) return;
-    bingoState.tiles[activeTileIndex] = { ...bingoState.tiles[activeTileIndex], name: document.getElementById("tileNameInput").value.trim(), image: document.getElementById("tileImageInput").value.trim() };
+    const quantity = Math.max(1, Number.parseInt(document.getElementById("tileQuantityInput").value, 10) || 1);
+    bingoState.tiles[activeTileIndex] = {
+      ...bingoState.tiles[activeTileIndex],
+      name: document.getElementById("tileNameInput").value.trim(),
+      image: document.getElementById("tileImageInput").value.trim(),
+      quantity
+    };
     await saveBingoState();
     closeTileEditor();
   });
@@ -493,6 +517,21 @@ function bindBingoControls() {
     addLog("Progress was reset by staff.");
     await saveBingoState();
   });
+  document.getElementById("bingoClearBoardBtn")?.addEventListener("click", async () => {
+    if (!confirm("Clear the entire board? This removes all tile names, images, quantities, and tile progress.")) return;
+    bingoState.tiles = emptyBingoBoard();
+    bingoState.proofs = [];
+    bingoState.attacks = [];
+    bingoState.phase = "setup";
+    bingoState.locked = false;
+    Object.keys(TEAMS).forEach(team => {
+      bingoState.teams[team].ships = normaliseShips([]);
+      bingoState.teams[team].attacks = [];
+    });
+    addLog("Board was cleared by staff.");
+    await saveBingoState();
+  });
+
   document.getElementById("bingoRerollBtn")?.addEventListener("click", async () => {
     bingoState.tiles = emptyBingoBoard().map((tile, index) => {
       const demoItem = DEFAULT_ITEMS[index % DEFAULT_ITEMS.length];
@@ -500,6 +539,7 @@ function bindBingoControls() {
         ...tile,
         name: demoItem.name,
         image: demoItem.image,
+        quantity: 1,
         status: "open",
         completedBy: "",
         completedTeam: "",

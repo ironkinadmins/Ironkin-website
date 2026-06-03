@@ -2893,6 +2893,14 @@ footer {
   max-width: 720px;
 }
 
+.bingo-hero-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .bingo-actions {
   display: flex;
   gap: 10px;
@@ -2976,7 +2984,23 @@ footer {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  position: relative;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bingo-qty-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 26px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+  color: #180a02;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.2;
+  box-shadow: 0 6px 16px rgba(255, 122, 26, 0.22);
 }
 
 .bingo-tile:hover:not(:disabled) {
@@ -3075,6 +3099,26 @@ footer {
   border-radius: 24px;
   padding: 24px;
   box-shadow: 0 30px 100px rgba(0,0,0,0.55);
+}
+
+.bingo-help-modal-card {
+  width: min(760px, 100%);
+}
+
+.bingo-help-content {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.bingo-help-content h3 {
+  color: var(--text);
+  margin: 18px 0 0;
+}
+
+.bingo-help-content p {
+  margin: 0;
 }
 
 .bingo-modal-header {
