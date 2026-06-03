@@ -2990,17 +2990,16 @@ footer {
 
 .bingo-qty-badge {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  min-width: 26px;
+  top: 6px;
+  right: 6px;
+  background: #ff8c2a;
+  color: #080808;
+  font-size: 11px;
+  font-weight: 900;
   padding: 2px 6px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--ember), #ffb15a);
-  color: #180a02;
-  font-size: 0.68rem;
-  font-weight: 900;
-  line-height: 1.2;
-  box-shadow: 0 6px 16px rgba(255, 122, 26, 0.22);
+  box-shadow: 0 0 8px rgba(255, 140, 42, 0.35);
+  z-index: 2;
 }
 
 .bingo-tile:hover:not(:disabled) {

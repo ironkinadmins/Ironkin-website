@@ -221,17 +221,22 @@ function getTileQuantity(tile) {
 function renderBingoBoard() {
   const boardEl = document.getElementById("bingoBoard");
   if (!boardEl) return;
-  boardEl.innerHTML = bingoState.tiles.map((tile, index) => `
-    <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
-      ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
-      ${getTileQuantity(tile) > 1 ? `<strong class="bingo-qty-badge">x${escapeHtml(getTileQuantity(tile))}</strong>` : ""}
-      <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
-      ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
-    </button>
-  `).join("");
+
+  boardEl.innerHTML = bingoState.tiles.map((tile, index) => {
+    const qty = Number(getTileQuantity(tile) || 1);
+
+    return `
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
+        ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
+        <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
+        ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
+      </button>
+    `;
+  }).join("");
 
   boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
-    tile.addEventListener("click", () => openTileModal(Number(tile.dataset.index)));
+    tile.addEventListener("click", () => openTileEditor(Number(tile.dataset.index)));
   });
 }
 
@@ -537,28 +542,22 @@ function bindBingoControls() {
     await saveBingoState();
   });
 
-  document.getElementById("bingoRerollBtn")?.addEventListener("click", async () => {
-    const demoTiles = emptyBingoBoard();
-    bingoState.tiles = demoTiles.map((tile, index) => {
-      const demoItem = DEFAULT_ITEMS[index % DEFAULT_ITEMS.length];
-      return {
-        ...tile,
-        id: index,
-        name: `${demoItem.name} ${Math.floor(index / DEFAULT_ITEMS.length) + 1}`,
-        image: demoItem.image,
-        quantity: (index % 5) + 1,
-        status: "open",
-        completedBy: "",
-        completedTeam: "",
-        proofId: ""
-      };
-    });
-    bingoState.size = BINGO_SIZE;
-    bingoState.phase = "setup";
-    bingoState.locked = false;
-    addLog(`Demo board was filled by staff (${bingoState.tiles.length} tiles).`);
-    await saveBingoState();
+document.getElementById("bingoRerollBtn")?.addEventListener("click", async () => {
+  bingoState.tiles = emptyBingoBoard().map((tile, index) => {
+    const item = DEFAULT_ITEMS[index % DEFAULT_ITEMS.length];
+
+    return {
+      ...tile,
+      name: item.name,
+      image: item.image,
+      quantity: Math.floor(index / DEFAULT_ITEMS.length) + 1,
+      status: "open"
+    };
   });
+
+  bingoState.locked = false;
+  await saveBingoBoard();
+});
   document.getElementById("bingoLockBtn")?.addEventListener("click", async () => {
     bingoState.locked = !bingoState.locked;
     addLog(`Board was ${bingoState.locked ? "locked" : "unlocked"} by staff.`);
