@@ -3544,3 +3544,92 @@ body.bingo-setup .bingo-board-toolbar div {
   margin-top: 12px;
   font-weight: 700;
 }
+
+
+/* Battleship Bingo captain assignment step */
+.bingo-captains-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.bingo-captains-intro {
+  background: rgba(24, 34, 48, 0.88);
+  border: 1px solid rgba(92, 190, 230, 0.28);
+  border-radius: 22px;
+  padding: 22px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.bingo-captains-intro h2 {
+  margin: 0 0 8px;
+}
+
+.bingo-captains-intro p {
+  margin: 0;
+  color: #9fc7dd;
+}
+
+.bingo-captain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.bingo-captain-card {
+  background: rgba(24, 19, 17, 0.88);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 22px;
+}
+
+.bingo-captain-card h3 {
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.bingo-captain-card label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.bingo-captain-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.bingo-captain-row input {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 180, 92, 0.28);
+  background: rgba(0,0,0,0.32);
+  color: var(--text);
+  padding: 10px 12px;
+  font-weight: 800;
+}
+
+.bingo-captain-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+body.bingo-captains .bingo-score-grid,
+body.bingo-captains .bingo-view-controls {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .bingo-captain-grid,
+  .bingo-captain-row {
+    grid-template-columns: 1fr;
+  }
+}

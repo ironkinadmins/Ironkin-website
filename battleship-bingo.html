@@ -40,6 +40,7 @@
 
     <section class="bingo-tabs" aria-label="Battleship Bingo views">
       <button type="button" class="active" data-bingo-tab="board">Board</button>
+      <button type="button" data-bingo-tab="captains">Captains</button>
       <button type="button" data-bingo-tab="fleets">Fleets</button>
       <button type="button" data-bingo-tab="proofs">Proofs</button>
       <button type="button" data-bingo-tab="log">Match Log</button>
@@ -76,6 +77,39 @@
           </div>
         </aside>
       </section>
+    </section>
+
+    <section class="bingo-tab-panel" id="bingoTab-captains">
+      <div class="bingo-captains-wrap">
+        <div class="bingo-captains-intro">
+          <h2>Assign Captains</h2>
+          <p>Each team needs a captain to secretly place their ships on the board.</p>
+        </div>
+
+        <div class="bingo-captain-grid">
+          <div class="bingo-captain-card">
+            <h3>Team 1</h3>
+            <label for="emberCaptainInput">Captain</label>
+            <div class="bingo-captain-row">
+              <input id="emberCaptainInput" type="text" placeholder="Enter captain name" />
+              <button class="btn secondary bingo-assign-captain-btn" type="button" data-team="ember">Assign Captain</button>
+            </div>
+          </div>
+
+          <div class="bingo-captain-card">
+            <h3>Team 2</h3>
+            <label for="ashCaptainInput">Captain</label>
+            <div class="bingo-captain-row">
+              <input id="ashCaptainInput" type="text" placeholder="Enter captain name" />
+              <button class="btn secondary bingo-assign-captain-btn" type="button" data-team="ash">Assign Captain</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bingo-captain-actions">
+          <button class="btn primary" id="bingoContinueToFleetsBtn" type="button">Continue to Ship Placement</button>
+        </div>
+      </div>
     </section>
 
     <section class="bingo-tab-panel" id="bingoTab-fleets">

@@ -150,29 +150,34 @@ function addLog(text) {
 function renderAll() {
   renderStatus();
   if (bingoState.phase === "setup") setBingoTab("board");
+  if (bingoState.phase === "captains") setBingoTab("captains");
   renderScore();
   renderBingoBoard();
   renderFleets();
   renderProofs();
   renderLog();
+  renderCaptains();
   updateAdminButtons();
 }
 
 function renderStatus() {
   document.body.classList.toggle("bingo-setup", bingoState.phase === "setup");
-  document.body.classList.toggle("bingo-active", bingoState.phase !== "setup");
+  document.body.classList.toggle("bingo-captains", bingoState.phase === "captains");
+  document.body.classList.toggle("bingo-active", bingoState.phase !== "setup" && bingoState.phase !== "captains");
   const title = document.getElementById("bingoStatusTitle");
   const text = document.getElementById("bingoStatusText");
   const state = document.getElementById("bingoBoardState");
   const summary = document.getElementById("bingoGameSummary");
-  const phaseLabel = bingoState.phase === "active" ? "Active" : bingoState.phase === "complete" ? "Complete" : bingoState.locked ? "Locked Setup" : "Draft Setup";
+  const phaseLabel = bingoState.phase === "active" ? "Active" : bingoState.phase === "complete" ? "Complete" : bingoState.phase === "captains" ? "Assign Captains" : bingoState.locked ? "Locked Setup" : "Draft Setup";
   if (title) title.textContent = phaseLabel;
   if (text) {
     text.textContent = bingoState.phase === "setup"
       ? "Click a tile to edit it. When done, lock the board and assign captains."
-      : bingoState.phase === "active"
-        ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
-        : "Battleship Bingo is complete.";
+      : bingoState.phase === "captains"
+        ? "Assign one captain to each team before ship placement begins."
+        : bingoState.phase === "active"
+          ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
+          : "Battleship Bingo is complete.";
   }
   if (state) {
     state.textContent = phaseLabel;
@@ -467,11 +472,19 @@ function renderLog() {
   `).join("");
 }
 
+function renderCaptains() {
+  const emberInput = document.getElementById("emberCaptainInput");
+  const ashInput = document.getElementById("ashCaptainInput");
+  if (emberInput && document.activeElement !== emberInput) emberInput.value = bingoState.teams?.ember?.captain || "";
+  if (ashInput && document.activeElement !== ashInput) ashInput.value = bingoState.teams?.ash?.captain || "";
+}
+
 function updateAdminButtons() {
   const lockBtn = document.getElementById("bingoLockBtn");
   const startBtn = document.getElementById("bingoStartBtn");
-  if (lockBtn) lockBtn.textContent = bingoState.locked ? "Unlock Board" : "Lock Board";
-  if (startBtn) startBtn.textContent = bingoState.phase === "active" ? "End Game" : bingoState.phase === "complete" ? "Reopen Game" : "Start Game";
+  if (lockBtn) lockBtn.textContent = bingoState.phase === "captains" || bingoState.locked ? "Unlock Board" : "Lock Board";
+  if (startBtn) startBtn.textContent = bingoState.phase === "active" ? "End Game" : bingoState.phase === "complete" ? "Reopen Game" : bingoState.phase === "captains" ? "Start Game" : "Start Game";
+  if (startBtn) startBtn.style.display = bingoState.phase === "setup" ? "none" : "inline-flex";
 }
 
 function setBingoTab(tabName) {
@@ -604,6 +617,7 @@ function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
       if (bingoState.phase === "setup" && button.dataset.bingoTab !== "board") return;
+      if (bingoState.phase === "captains" && !["captains", "help"].includes(button.dataset.bingoTab)) return;
       setBingoTab(button.dataset.bingoTab);
     });
   });
@@ -709,13 +723,43 @@ function bindBingoControls() {
     await saveBingoState();
   });
 
+
+  document.querySelectorAll(".bingo-assign-captain-btn").forEach(button => {
+    button.addEventListener("click", async () => {
+      if (!isBingoStaff) return alert("Staff only.");
+      const team = button.dataset.team;
+      const input = document.getElementById(`${team}CaptainInput`);
+      bingoState.teams[team].captain = (input?.value || "").trim();
+      addLog(`${bingoState.teams[team].name} captain set to ${bingoState.teams[team].captain || "Not set"}.`);
+      await saveBingoState();
+    });
+  });
+
+  document.getElementById("bingoContinueToFleetsBtn")?.addEventListener("click", () => {
+    if (!bingoState.teams.ember.captain || !bingoState.teams.ash.captain) {
+      if (!confirm("One or both captains are blank. Continue anyway?")) return;
+    }
+    setBingoTab("fleets");
+  });
+
   document.getElementById("bingoLockBtn")?.addEventListener("click", async () => {
-    bingoState.locked = !bingoState.locked;
-    addLog(`Board was ${bingoState.locked ? "locked" : "unlocked"} by staff.`);
+    if (bingoState.phase === "setup" && !bingoState.locked) {
+      bingoState.locked = true;
+      bingoState.phase = "captains";
+      addLog("Board was locked. Captain assignment started.");
+      await saveBingoState();
+      setBingoTab("captains");
+      return;
+    }
+
+    bingoState.locked = false;
+    bingoState.phase = "setup";
+    addLog("Board was unlocked and returned to setup.");
     await saveBingoState();
+    setBingoTab("board");
   });
   document.getElementById("bingoStartBtn")?.addEventListener("click", async () => {
-    if (bingoState.phase === "setup") {
+    if (bingoState.phase === "setup" || bingoState.phase === "captains") {
       if (!Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size))) {
         if (!confirm("Not all ships are placed. Start anyway?")) return;
       }
