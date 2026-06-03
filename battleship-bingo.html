@@ -196,8 +196,10 @@
         <h3>Staff Tile Editor</h3>
         <div class="admin-field">
           <label for="tileNameInput">Item Name</label>
-          <input id="tileNameInput" type="text" placeholder="Example: Abyssal whip" />
+          <input id="tileNameInput" type="text" placeholder="Type an item name to search OSRS Wiki..." autocomplete="off" />
         </div>
+
+        <div id="wikiSearchResults" class="wiki-results"></div>
 
         <div class="admin-field">
           <label for="tileQuantityInput">Qty Needed</label>
@@ -205,16 +207,9 @@
         </div>
 
         <div class="admin-field">
-          <label for="tileImageInput">Image URL</label>
-          <input id="tileImageInput" type="text" placeholder="Paste image URL or use Wiki search below" />
+          <label for="tileImageInput">Manual Image URL</label>
+          <input id="tileImageInput" type="text" placeholder="Optional: paste image URL to override Wiki image" />
         </div>
-
-        <div class="admin-field">
-          <label for="wikiSearchInput">Search OSRS Wiki</label>
-          <input id="wikiSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
-        </div>
-
-        <div id="wikiSearchResults" class="wiki-results"></div>
       </div>
 
       <div class="bingo-modal-section" id="proofSubmitSection" style="display:none;">
@@ -246,6 +241,6 @@
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js"></script>
+  <script src="battleship-bingo.js?v=20260603-10x10-editor"></script>
 </body>
 </html>
