@@ -11,7 +11,7 @@ export async function onRequestGet({ request }) {
         action: "query",
         format: "json",
         generator: "search",
-gsrsearch: `${q} "infobox item"`,
+gsrsearch: q,
         gsrlimit: "12",
         prop: "pageimages|info",
         piprop: "thumbnail|original",
@@ -33,11 +33,27 @@ gsrsearch: `${q} "infobox item"`,
         image: page.thumbnail?.source || page.original?.source || "",
         url: page.fullurl || ""
       }))
-      .filter(item => {
-        if (!item.name || !item.image) return false;
-        const name = item.name.toLowerCase();
-        return !name.includes("category:") && !name.includes("template:") && !name.includes("module:") && !name.includes("user:");
-      });
+.filter(item => {
+  if (!item.name || !item.image) return false;
+
+  const name = item.name.toLowerCase();
+  const image = item.image.toLowerCase();
+
+  return (
+    !name.includes("category:") &&
+    !name.includes("template:") &&
+    !name.includes("module:") &&
+    !name.includes("user:") &&
+    !name.includes("league") &&
+    !name.includes("quest") &&
+    !name.includes("ranged") &&
+    (
+      image.includes("_detail") ||
+      image.includes("_icon") ||
+      image.includes("/images/thumb/")
+    )
+  );
+});
 
     return Response.json(results, { headers: { "Cache-Control": "public, max-age=300" } });
   } catch (error) {
