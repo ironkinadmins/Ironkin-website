@@ -2,9 +2,7 @@ export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
 
-  if (!q) {
-    return Response.json([]);
-  }
+  if (!q) return Response.json([]);
 
   try {
     const wikiUrl =
@@ -23,9 +21,7 @@ export async function onRequestGet({ request }) {
       });
 
     const response = await fetch(wikiUrl, {
-      headers: {
-        "User-Agent": "Ironkin Clan Website - OSRS Wiki search"
-      }
+      headers: { "User-Agent": "Ironkin Clan Website - OSRS Wiki search" }
     });
 
     const data = await response.json();
@@ -39,26 +35,12 @@ export async function onRequestGet({ request }) {
       }))
       .filter(item => {
         if (!item.name || !item.image) return false;
-
         const name = item.name.toLowerCase();
-
-        return (
-          !name.includes("category:") &&
-          !name.includes("template:") &&
-          !name.includes("module:") &&
-          !name.includes("user:")
-        );
+        return !name.includes("category:") && !name.includes("template:") && !name.includes("module:") && !name.includes("user:");
       });
 
-    return Response.json(results, {
-      headers: {
-        "Cache-Control": "public, max-age=300"
-      }
-    });
+    return Response.json(results, { headers: { "Cache-Control": "public, max-age=300" } });
   } catch (error) {
-    return Response.json(
-      { error: "Could not search OSRS Wiki" },
-      { status: 500 }
-    );
+    return Response.json({ error: "Could not search OSRS Wiki" }, { status: 500 });
   }
 }
