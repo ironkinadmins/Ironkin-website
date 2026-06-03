@@ -1,9 +1,10 @@
 const STAFF_ROLE_IDS = ["1364734283356569620", "1365445491776815104"];
-const BINGO_SIZE = 7;
+const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
   { key: "carrier", name: "Carrier", size: 5 },
   { key: "battleship", name: "Battleship", size: 4 },
+  { key: "cruiser", name: "Cruiser", size: 3 },
   { key: "submarine", name: "Submarine", size: 3 },
   { key: "destroyer", name: "Destroyer", size: 3 },
   { key: "patrol", name: "Patrol Boat", size: 2 }
@@ -26,6 +27,7 @@ function emptyTiles() {
     id: index,
     name: "",
     image: "",
+    quantity: 1,
     status: "open",
     completedBy: "",
     completedTeam: "",
@@ -84,6 +86,7 @@ function sanitiseState(body) {
       ...baseTile,
       name: clampString(tile.name, 120),
       image: clampString(tile.image, 700),
+      quantity: Math.max(1, Number.parseInt(tile.quantity ?? tile.qty ?? tile.quantityNeeded ?? 1, 10) || 1),
       status: ["open", "submitted", "approved", "rejected"].includes(tile.status) ? tile.status : "open",
       completedBy: clampString(tile.completedBy, 100),
       completedTeam: ["ember", "ash"].includes(tile.completedTeam) ? tile.completedTeam : "",
