@@ -41,7 +41,8 @@ function defaultTeam(key, name) {
     name,
     captain: "",
     ships: SHIP_TEMPLATES.map(ship => ({ ...ship, cells: [], sunk: false })),
-    attacks: []
+    attacks: [],
+    fleetConfirmed: false
   };
 }
 
@@ -110,7 +111,8 @@ function sanitiseState(body) {
         name: clampString(body.teams?.ember?.name || "Ember Fleet", 80),
         captain: clampString(body.teams?.ember?.captain, 80),
         ships: cleanShips(body.teams?.ember?.ships),
-        attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : []
+        attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : [],
+        fleetConfirmed: Boolean(body.teams?.ember?.fleetConfirmed)
       },
       ash: {
         ...base.teams.ash,
@@ -119,7 +121,8 @@ function sanitiseState(body) {
         name: clampString(body.teams?.ash?.name || "Ash Fleet", 80),
         captain: clampString(body.teams?.ash?.captain, 80),
         ships: cleanShips(body.teams?.ash?.ships),
-        attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : []
+        attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : [],
+        fleetConfirmed: Boolean(body.teams?.ash?.fleetConfirmed)
       }
     },
     proofs: Array.isArray(body.proofs) ? body.proofs.slice(0, 300).map(proof => ({
