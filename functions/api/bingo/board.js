@@ -98,7 +98,7 @@ function sanitiseState(body) {
     ...base,
     version: 2,
     size: BINGO_SIZE,
-    phase: ["setup", "captains", "active", "complete"].includes(body.phase) ? body.phase : "setup",
+    phase: ["setup", "captains", "ships", "active", "complete"].includes(body.phase) ? body.phase : "setup",
     locked: Boolean(body.locked),
     updatedAt: clampString(body.updatedAt, 80) || new Date().toISOString(),
     tiles: cleanTiles,
