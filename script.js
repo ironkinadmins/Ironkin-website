@@ -1491,7 +1491,7 @@ async function fetchEmberLeaderboard(limit = 100) {
     throw new Error(data.error || "Could not load Ember leaderboard.");
   }
 
-  return data.leaders || [];
+  return data.leaderboard || [];
 }
 
 function renderEmberRows(leaders, compact = false) {
@@ -1501,7 +1501,7 @@ function renderEmberRows(leaders, compact = false) {
 
   return leaders.map(player => `
     <div class="ember-leader-row ${compact ? "compact" : ""}">
-      <strong>#${player.rank} ${player.displayName}</strong>
+<strong>#${player.rank} ${player.display_name}</strong>
       <span>${formatNumber(player.balance)} Embers</span>
     </div>
   `).join("");
