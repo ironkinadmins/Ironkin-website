@@ -12,70 +12,174 @@
   <main class="bingo-page">
     <section class="bingo-hero">
       <div>
-        <p class="eyebrow">Ironkin Event</p>
+        <p class="eyebrow">Ironkin Summer Event</p>
         <h1>Battleship Bingo</h1>
-        <p>Build a summer bingo board, assign tiles, and prepare it for team play.</p>
+        <p>A 10×10 board where teams collect drops, submit proof, and fire attacks at hidden Battleship fleets.</p>
       </div>
 
       <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
-        <button class="btn secondary" id="bingoResetBtn" type="button">Reset Board</button>
-        <button class="btn secondary" id="bingoRerollBtn" type="button">Reroll Empty Board</button>
-        <button class="btn primary" id="bingoLockBtn" type="button">Lock Board</button>
+        <button class="btn secondary" id="bingoResetProgressBtn" type="button">Reset Progress</button>
+        <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
+        <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
+        <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
       </div>
     </section>
 
     <section class="bingo-status-card">
       <div>
-        <strong id="bingoStatusTitle">Board Setup</strong>
+        <strong id="bingoStatusTitle">Loading Battleship Bingo</strong>
         <span id="bingoStatusText">Loading board...</span>
       </div>
       <span id="bingoBoardState" class="bingo-pill">Draft</span>
     </section>
 
-    <section class="bingo-layout">
-      <div class="bingo-board-wrap">
-        <div id="bingoBoard" class="bingo-board">Loading...</div>
-      </div>
+    <section class="bingo-tabs" aria-label="Battleship Bingo views">
+      <button type="button" class="active" data-bingo-tab="board">Board</button>
+      <button type="button" data-bingo-tab="fleets">Fleets</button>
+      <button type="button" data-bingo-tab="proofs">Proofs</button>
+      <button type="button" data-bingo-tab="log">Match Log</button>
+      <button type="button" data-bingo-tab="help">How to Play</button>
+    </section>
 
-      <aside class="bingo-side-panel">
-        <h2>How this works</h2>
-        <p>Staff can click any tile to set the item name and image. Use OSRS Wiki search or paste an image URL manually.</p>
-        <div class="bingo-side-list">
-          <div><strong>1</strong><span>Build the board</span></div>
-          <div><strong>2</strong><span>Lock it when ready</span></div>
-          <div><strong>3</strong><span>Teams claim tiles during the event</span></div>
+    <section class="bingo-score-grid" id="bingoScoreGrid"></section>
+
+    <section class="bingo-tab-panel active" id="bingoTab-board">
+      <section class="bingo-layout">
+        <div class="bingo-board-wrap">
+          <div class="bingo-board-toolbar">
+            <div>
+              <strong>Drop Board</strong>
+              <span>Click a tile to submit proof. Staff can edit tiles during setup.</span>
+            </div>
+            <div class="bingo-view-controls">
+              <select id="proofTeamSelect" aria-label="Submitting team">
+                <option value="ember">Ember Fleet</option>
+                <option value="ash">Ash Fleet</option>
+              </select>
+            </div>
+          </div>
+          <div id="bingoBoard" class="bingo-board">Loading...</div>
         </div>
-      </aside>
+
+        <aside class="bingo-side-panel">
+          <h2>Game Status</h2>
+          <p id="bingoGameSummary">Build the board, place ships, then start the game.</p>
+          <div class="bingo-side-list">
+            <div><strong>1</strong><span>Staff builds and locks the board</span></div>
+            <div><strong>2</strong><span>Captains place hidden ships</span></div>
+            <div><strong>3</strong><span>Teams submit proofs to attack</span></div>
+          </div>
+        </aside>
+      </section>
+    </section>
+
+    <section class="bingo-tab-panel" id="bingoTab-fleets">
+      <div class="bingo-two-column">
+        <div class="bingo-card">
+          <div class="bingo-section-heading">
+            <div>
+              <h2>Ember Fleet</h2>
+              <p>Place ships for Ember Fleet during setup.</p>
+            </div>
+            <button class="btn secondary bingo-place-btn" type="button" data-team="ember">Place Ember Ships</button>
+          </div>
+          <div class="fleet-board" id="emberFleetBoard"></div>
+          <div class="ship-list" id="emberShipList"></div>
+        </div>
+
+        <div class="bingo-card">
+          <div class="bingo-section-heading">
+            <div>
+              <h2>Ash Fleet</h2>
+              <p>Place ships for Ash Fleet during setup.</p>
+            </div>
+            <button class="btn secondary bingo-place-btn" type="button" data-team="ash">Place Ash Ships</button>
+          </div>
+          <div class="fleet-board" id="ashFleetBoard"></div>
+          <div class="ship-list" id="ashShipList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bingo-tab-panel" id="bingoTab-proofs">
+      <div class="bingo-card">
+        <div class="bingo-section-heading">
+          <div>
+            <h2>Proof Submissions</h2>
+            <p>Staff approve/reject proofs. Approved proofs attack the opposing fleet.</p>
+          </div>
+        </div>
+        <div id="proofList" class="proof-list"></div>
+      </div>
+    </section>
+
+    <section class="bingo-tab-panel" id="bingoTab-log">
+      <div class="bingo-card">
+        <h2>Match Log</h2>
+        <div id="bingoLog" class="bingo-log"></div>
+      </div>
+    </section>
+
+    <section class="bingo-tab-panel" id="bingoTab-help">
+      <div class="bingo-card how-to-card">
+        <h2>How to Play — Battleship Bingo</h2>
+        <h3>Setup</h3>
+        <p>Staff create a 10×10 board of drops/items. Each team gets one captain. Captains secretly place six ships: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (3), and Patrol Boat (2).</p>
+        <h3>Gameplay</h3>
+        <p>Players submit proof for a tile. When staff approve it, the tile fires an attack against the opposing fleet. Attacks are marked as hit or miss.</p>
+        <h3>Winning</h3>
+        <p>Sink all six enemy ships to win. If the event deadline arrives first, the team with the most ships sunk wins.</p>
+      </div>
     </section>
   </main>
 
   <div id="tileModal" class="bingo-modal" aria-hidden="true">
     <div class="bingo-modal-card">
       <div class="bingo-modal-header">
-        <h2>Set Tile</h2>
+        <h2 id="tileModalTitle">Tile</h2>
         <button id="closeTileModal" type="button" class="bingo-icon-btn">×</button>
       </div>
 
-      <div class="admin-field">
-        <label for="tileNameInput">Item Name</label>
-        <input id="tileNameInput" type="text" placeholder="Example: Abyssal whip" />
+      <div class="bingo-modal-section" id="staffTileEditor" style="display:none;">
+        <h3>Staff Tile Editor</h3>
+        <div class="admin-field">
+          <label for="tileNameInput">Item Name</label>
+          <input id="tileNameInput" type="text" placeholder="Example: Abyssal whip" />
+        </div>
+
+        <div class="admin-field">
+          <label for="tileImageInput">Image URL</label>
+          <input id="tileImageInput" type="text" placeholder="Paste image URL or use Wiki search below" />
+        </div>
+
+        <div class="admin-field">
+          <label for="wikiSearchInput">Search OSRS Wiki</label>
+          <input id="wikiSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
+        </div>
+
+        <div id="wikiSearchResults" class="wiki-results"></div>
       </div>
 
-      <div class="admin-field">
-        <label for="tileImageInput">Image URL</label>
-        <input id="tileImageInput" type="text" placeholder="Paste image URL or use Wiki search below" />
+      <div class="bingo-modal-section">
+        <h3>Submit Proof</h3>
+        <div class="admin-field">
+          <label for="proofPlayerInput">Player Name</label>
+          <input id="proofPlayerInput" type="text" placeholder="Your RSN or Discord name" />
+        </div>
+        <div class="admin-field">
+          <label for="proofUrlInput">Screenshot / Proof Link</label>
+          <input id="proofUrlInput" type="text" placeholder="Paste Discord image link, Imgur link, etc." />
+        </div>
+        <div class="admin-field">
+          <label for="proofNoteInput">Note</label>
+          <input id="proofNoteInput" type="text" placeholder="Optional note for staff" />
+        </div>
       </div>
-
-      <div class="admin-field">
-        <label for="wikiSearchInput">Search OSRS Wiki</label>
-        <input id="wikiSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
-      </div>
-
-      <div id="wikiSearchResults" class="wiki-results"></div>
 
       <div class="bingo-modal-actions">
-        <button id="clearTileBtn" type="button" class="btn secondary danger">Clear Tile</button>
-        <button id="saveTileBtn" type="button" class="btn primary">Save Tile</button>
+        <button id="clearTileBtn" type="button" class="btn secondary danger" style="display:none;">Clear Tile</button>
+        <button id="saveTileBtn" type="button" class="btn secondary" style="display:none;">Save Tile</button>
+        <button id="submitProofBtn" type="button" class="btn primary">Submit Proof</button>
       </div>
     </div>
   </div>
