@@ -7,54 +7,58 @@ export async function onRequestGet({ request }) {
   }
 
   try {
-    const apiUrl =
+    const wikiUrl =
       "https://oldschool.runescape.wiki/api.php?" +
       new URLSearchParams({
         action: "query",
         format: "json",
         generator: "search",
         gsrsearch: q,
-        gsrlimit: "10",
+        gsrlimit: "12",
         prop: "pageimages|info",
         piprop: "thumbnail|original",
         pithumbsize: "64",
         inprop: "url",
-        origin: "*",
+        origin: "*"
       });
 
-    const res = await fetch(apiUrl, {
+    const response = await fetch(wikiUrl, {
       headers: {
-        "User-Agent": "Ironkin Clan Website - OSRS Wiki item search",
-      },
+        "User-Agent": "Ironkin Clan Website - OSRS Wiki search"
+      }
     });
 
-    const data = await res.json();
+    const data = await response.json();
     const pages = data?.query?.pages || {};
 
-    const results = Object.values(pages).map((page) => ({
-      name: page.title,
-      image:
-        page.thumbnail?.source ||
-        page.original?.source ||
-        "",
-      url: page.fullurl || "",
-    }));
+    const results = Object.values(pages)
+      .map(page => ({
+        name: page.title || "",
+        image: page.thumbnail?.source || page.original?.source || "",
+        url: page.fullurl || ""
+      }))
+      .filter(item => {
+        if (!item.name || !item.image) return false;
+
+        const name = item.name.toLowerCase();
+
+        return (
+          !name.includes("category:") &&
+          !name.includes("template:") &&
+          !name.includes("module:") &&
+          !name.includes("user:")
+        );
+      });
 
     return Response.json(results, {
       headers: {
-        "Cache-Control": "public, max-age=300",
-      },
+        "Cache-Control": "public, max-age=300"
+      }
     });
-  } catch (err) {
+  } catch (error) {
     return Response.json(
       { error: "Could not search OSRS Wiki" },
       { status: 500 }
     );
   }
 }
-const results = (Array.isArray(data) ? data : data.results || [])
-  .filter(item =>
-    item.name &&
-    item.image
-  );
-  
