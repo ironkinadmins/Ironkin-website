@@ -140,10 +140,10 @@ const results = Array.isArray(data) ? data : data.results || [];
       return;
     }
 
-    resultsEl.innerHTML = results.map(item => `
+resultsEl.innerHTML = results.map(item => `
   <div class="wiki-result">
     <img src="${item.image || ""}" alt="${escapeHtml(item.name)}" />
-    <span>${escapeHtml(item.name)}</span>
+    <span class="wiki-result-name">${escapeHtml(item.name)}</span>
     <button
       type="button"
       data-name="${escapeAttr(item.name)}"

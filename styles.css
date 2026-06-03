@@ -3097,32 +3097,28 @@ footer {
   cursor: pointer;
 }
 
-.wiki-results {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  max-height: 310px;
-  overflow: auto;
-  padding-right: 6px;
-}
-
 .wiki-result {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 40px 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
 .wiki-result img {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
-.wiki-result span {
-  font-weight: 800;
+.wiki-result span,
+.wiki-result-name {
+  display: block;
+  color: #f7efe7;
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 0;
 }
 
 .wiki-result button {
