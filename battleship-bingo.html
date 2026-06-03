@@ -86,12 +86,12 @@
         </div>
 
         <aside class="bingo-side-panel">
-          <h2>Game Status</h2>
+          <h2>Battleship Bingo Progress</h2>
           <p id="bingoGameSummary">Build the board, place ships, then start the game.</p>
-          <div class="bingo-side-list">
-            <div><strong>1</strong><span>Staff builds and locks the board</span></div>
-            <div><strong>2</strong><span>Captains place hidden ships</span></div>
-            <div><strong>3</strong><span>Teams submit proofs to attack</span></div>
+          <div class="bingo-side-list bingo-progress-steps" id="bingoPhaseSteps">
+            <div class="active"><strong>●</strong><span>Board Setup</span></div>
+            <div><strong>○</strong><span>Captains place hidden ships</span></div>
+            <div><strong>○</strong><span>Teams submit proofs to attack</span></div>
           </div>
         </aside>
       </section>
@@ -99,11 +99,6 @@
 
     <section class="bingo-tab-panel" id="bingoTab-captains">
       <div class="bingo-captains-wrap">
-        <div class="bingo-captains-intro">
-          <h2>Assign Captains</h2>
-          <p>Each team needs a captain to secretly place their ships on the board.</p>
-        </div>
-
         <div class="bingo-captain-grid">
           <div class="bingo-captain-card">
             <h3>Team 1</h3>
@@ -124,9 +119,6 @@
           </div>
         </div>
 
-        <div class="bingo-captain-actions">
-          <button class="btn primary" id="bingoContinueToFleetsBtn" type="button">Continue to Ship Placement</button>
-        </div>
       </div>
     </section>
 

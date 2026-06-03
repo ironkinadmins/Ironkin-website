@@ -149,6 +149,7 @@ function addLog(text) {
 
 function renderAll() {
   renderStatus();
+  renderPhaseProgress();
   if (bingoState.phase === "setup") setBingoTab("board");
   if (bingoState.phase === "captains") setBingoTab("captains");
   renderScore();
@@ -164,30 +165,68 @@ function renderStatus() {
   document.body.classList.toggle("bingo-setup", bingoState.phase === "setup");
   document.body.classList.toggle("bingo-captains", bingoState.phase === "captains");
   document.body.classList.toggle("bingo-active", bingoState.phase !== "setup" && bingoState.phase !== "captains");
+
   const title = document.getElementById("bingoStatusTitle");
   const text = document.getElementById("bingoStatusText");
   const state = document.getElementById("bingoBoardState");
-  const summary = document.getElementById("bingoGameSummary");
-  const phaseLabel = bingoState.phase === "active" ? "Active" : bingoState.phase === "complete" ? "Complete" : bingoState.phase === "captains" ? "Assign Captains" : bingoState.locked ? "Locked Setup" : "Draft Setup";
-  if (title) title.textContent = phaseLabel;
+
+  const phaseLabel = getPhaseLabel();
+
+  if (title) title.textContent = `Current Phase: ${phaseLabel}`;
+
   if (text) {
     text.textContent = bingoState.phase === "setup"
-      ? "Click a tile to edit it. When done, lock the board and assign captains."
+      ? "Build the 10×10 board, then lock it to assign captains."
       : bingoState.phase === "captains"
-        ? "Assign one captain to each team before ship placement begins."
+        ? "Assign one captain to each team, then continue to ship placement."
         : bingoState.phase === "active"
           ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
           : "Battleship Bingo is complete.";
   }
+
   if (state) {
     state.textContent = phaseLabel;
     state.classList.toggle("locked", bingoState.locked || bingoState.phase !== "setup");
   }
+}
+
+function getPhaseLabel() {
+  if (bingoState.phase === "active") return "Active Game";
+  if (bingoState.phase === "complete") return "Complete";
+  if (bingoState.phase === "captains") return captainsAreValid(false) ? "Ship Placement" : "Assign Captains";
+  return bingoState.locked ? "Locked Setup" : "Board Setup";
+}
+
+function renderPhaseProgress() {
+  const summary = document.getElementById("bingoGameSummary");
+  const steps = document.getElementById("bingoPhaseSteps");
+  if (!summary && !steps) return;
+
+  const emberSunk = getSunkCount("ember");
+  const ashSunk = getSunkCount("ash");
   if (summary) {
-    const emberSunk = getSunkCount("ember");
-    const ashSunk = getSunkCount("ash");
     summary.textContent = `${TEAMS.ember.name}: ${emberSunk}/${SHIPS.length} enemy ships sunk. ${TEAMS.ash.name}: ${ashSunk}/${SHIPS.length} enemy ships sunk.`;
   }
+
+  if (!steps) return;
+
+  const boardDone = bingoState.locked || bingoState.phase !== "setup";
+  const captainsDone = captainsAreValid(false) && Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size));
+  const activeGame = bingoState.phase === "active" || bingoState.phase === "complete";
+
+  const currentStep = !boardDone ? 0 : !activeGame ? 1 : 2;
+
+  const items = [
+    { label: "Board setup locked", done: boardDone },
+    { label: "Captains place hidden ships", done: captainsDone },
+    { label: "Teams submit proofs to attack", done: activeGame && bingoState.phase === "complete" }
+  ];
+
+  steps.innerHTML = items.map((item, index) => {
+    const stateClass = item.done ? "complete" : index === currentStep ? "active" : "upcoming";
+    const icon = item.done ? "✓" : index === currentStep ? "●" : "○";
+    return `<div class="${stateClass}"><strong>${icon}</strong><span>${escapeHtml(item.label)}</span></div>`;
+  }).join("");
 }
 
 function renderScore() {
@@ -675,10 +714,7 @@ async function handlePhaseAction() {
 function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
-      const tab = button.dataset.bingoTab;
-      if (bingoState.phase === "setup" && !bingoState.locked && !["board", "help"].includes(tab)) return;
-      if (bingoState.phase === "captains" && !["board", "captains", "help"].includes(tab)) return;
-      setBingoTab(tab);
+      setBingoTab(button.dataset.bingoTab);
     });
   });
   document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);

@@ -3425,7 +3425,6 @@ footer {
 }
 
 /* Battleship Bingo setup mode cleanup */
-body.bingo-setup .bingo-tabs,
 body.bingo-setup .bingo-score-grid,
 body.bingo-setup .bingo-side-panel,
 body.bingo-setup .bingo-view-controls {
@@ -3774,4 +3773,54 @@ body.bingo-captains .bingo-view-controls {
     width: 100%;
     justify-content: center;
   }
+}
+
+
+/* Battleship Bingo queued cleanup: progress card + captain screen */
+.bingo-progress-steps div {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.bingo-progress-steps div.complete {
+  border-color: rgba(255, 122, 26, 0.36);
+  background: rgba(255, 122, 26, 0.08);
+}
+
+.bingo-progress-steps div.active {
+  border-color: rgba(255, 122, 26, 0.62);
+  background: rgba(255, 122, 26, 0.14);
+  box-shadow: inset 0 0 22px rgba(255, 122, 26, 0.05), 0 0 18px rgba(255, 122, 26, 0.08);
+}
+
+.bingo-progress-steps div.upcoming {
+  opacity: 0.72;
+}
+
+.bingo-progress-steps strong {
+  color: #180a02;
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+}
+
+.bingo-progress-steps div.complete strong {
+  background: rgba(255, 122, 26, 0.22);
+  color: var(--ember);
+  border: 1px solid rgba(255, 122, 26, 0.36);
+}
+
+.bingo-progress-steps div.upcoming strong {
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.bingo-captains-wrap {
+  padding-top: 0;
+}
+
+.bingo-captain-grid {
+  margin-top: 0;
+}
+
+body.bingo-setup .bingo-tabs {
+  display: flex !important;
 }
