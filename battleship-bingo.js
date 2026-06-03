@@ -543,16 +543,9 @@ function renderFleets() {
       cell.addEventListener("mouseleave", () => clearShipPreview(team));
     });
 
-    list.innerHTML = `
-      <div class="ship-placement-summary">${placedCount}/${SHIPS.length} ships placed</div>
-      ${bingoState.teams[team].ships.map((ship, index) => `
-        <div class="ship-row ${ship.sunk ? "sunk" : ""} ${placingTeam === team && placingShipIndex === index ? "active" : ""}">
-          <strong><span class="ship-checkmark">${ship.cells.length === ship.size ? "✓" : "□"}</span>${getShipIcon(ship)} ${escapeHtml(ship.name)}</strong>
-          <span>${ship.cells.length}/${ship.size}</span>
-          <em>${ship.sunk ? "Sunk" : ship.cells.length === ship.size ? "Placed" : "Not placed"}</em>
-        </div>
-      `).join("")}
-    `;
+    // Ship placement status now lives in the top fleet cards and ship tabs.
+    // Keep this container empty so the board area stays clean.
+    list.innerHTML = "";
   });
 }
 
@@ -745,6 +738,7 @@ function updateAdminButtons() {
 }
 
 function setBingoTab(tabName) {
+  document.body.dataset.bingoTab = tabName;
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.classList.toggle("active", button.dataset.bingoTab === tabName);
   });
