@@ -239,14 +239,39 @@ function renderPhaseProgress() {
 function renderScore() {
   const score = document.getElementById("bingoScoreGrid");
   if (!score) return;
+
+  const showPlacement = bingoState.phase === "ships" || bingoState.phase === "captains";
+
   score.innerHTML = Object.keys(TEAMS).map(team => {
+    const teamState = bingoState.teams[team];
+    const placed = teamState.ships.filter(ship => ship.cells.length === ship.size).length;
+
+    if (showPlacement) {
+      return `
+        <div class="bingo-score-card placement ${team}">
+          <span>${TEAMS[team].emoji}</span>
+          <div class="bingo-team-title">
+            <strong>${escapeHtml(teamState.name)}</strong>
+            <small>Captain: ${escapeHtml(teamState.captain || "Not set")}</small>
+          </div>
+          <div class="ship-placement-count"><b>${placed}/${SHIPS.length}</b><small>ships placed</small></div>
+          <div class="ship-mini-checklist">
+            ${teamState.ships.map(ship => `
+              <span class="${ship.cells.length === ship.size ? "placed" : "pending"}">
+                <b>${ship.cells.length === ship.size ? "✓" : "□"}</b>${escapeHtml(ship.name)}
+              </span>
+            `).join("")}
+          </div>
+        </div>`;
+    }
+
     const attackHits = bingoState.attacks.filter(a => a.attackingTeam === team && a.result === "hit").length;
     const attackMisses = bingoState.attacks.filter(a => a.attackingTeam === team && a.result === "miss").length;
     const approved = bingoState.tiles.filter(t => t.completedTeam === team && t.status === "approved").length;
     return `
       <div class="bingo-score-card ${team}">
         <span>${TEAMS[team].emoji}</span>
-        <div><strong>${escapeHtml(bingoState.teams[team].name)}</strong><small>Captain: ${escapeHtml(bingoState.teams[team].captain || "Not set")}</small></div>
+        <div><strong>${escapeHtml(teamState.name)}</strong><small>Captain: ${escapeHtml(teamState.captain || "Not set")}</small></div>
         <div class="bingo-score-stats"><b>${getSunkCount(team)}/${SHIPS.length}</b><small>Ships sunk</small></div>
         <div class="bingo-score-stats"><b>${attackHits}</b><small>Hits</small></div>
         <div class="bingo-score-stats"><b>${attackMisses}</b><small>Misses</small></div>
@@ -389,35 +414,104 @@ function renderFleets() {
     }).join("");
 
     board.querySelectorAll(".fleet-cell").forEach(cell => {
-      cell.addEventListener("click", () => handleFleetCellClick(team, Number(cell.dataset.index)));
+      const index = Number(cell.dataset.index);
+      cell.addEventListener("click", () => handleFleetCellClick(team, index));
+      cell.addEventListener("mouseenter", () => showShipPreview(team, index));
+      cell.addEventListener("mouseleave", () => clearShipPreview(team));
     });
 
     const placedCount = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
     const activeNotice = currentShip
       ? `<div class="ship-placement-notice"><strong>Placing:</strong> ${escapeHtml(currentShip.name)} (${currentShip.size}) • ${escapeHtml(placingOrientation)}</div>`
       : bingoState.phase === "ships"
-        ? `<div class="ship-placement-notice muted">Select “Place ${escapeHtml(bingoState.teams[team].name)} Ships” to continue placement.</div>`
+        ? `<div class="ship-placement-notice muted">Select a team, ship, and orientation before placing ships.</div>`
         : `<div class="ship-placement-notice muted">Ship placement unlocks after captains are assigned.</div>`;
+
+    const placementControls = bingoState.phase === "ships" ? `
+      <div class="ship-placement-controls">
+        <div class="ship-control-row">
+          <span>Orientation</span>
+          <button type="button" class="ship-orientation-btn ${placingTeam === team && placingOrientation === "horizontal" ? "active" : ""}" data-team="${team}" data-orientation="horizontal">Horizontal</button>
+          <button type="button" class="ship-orientation-btn ${placingTeam === team && placingOrientation === "vertical" ? "active" : ""}" data-team="${team}" data-orientation="vertical">Vertical</button>
+        </div>
+        <div class="ship-select-grid">
+          ${bingoState.teams[team].ships.map((ship, index) => `
+            <button type="button" class="ship-select-btn ${ship.cells.length === ship.size ? "placed" : ""} ${placingTeam === team && placingShipIndex === index ? "active" : ""}" data-team="${team}" data-ship-index="${index}">
+              <strong>${escapeHtml(ship.name)}</strong>
+              <small>${ship.size} tiles ${ship.cells.length === ship.size ? "• placed" : ""}</small>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
 
     list.innerHTML = `
       <div class="ship-placement-summary">${placedCount}/${SHIPS.length} ships placed</div>
       ${activeNotice}
+      ${placementControls}
       ${bingoState.teams[team].ships.map((ship, index) => `
         <div class="ship-row ${ship.sunk ? "sunk" : ""} ${placingTeam === team && placingShipIndex === index ? "active" : ""}">
-          <strong>${escapeHtml(ship.name)}</strong>
+          <strong>${ship.cells.length === ship.size ? "✓" : "□"} ${escapeHtml(ship.name)}</strong>
           <span>${ship.cells.length}/${ship.size} placed</span>
           <em>${ship.sunk ? "Sunk" : ship.cells.length === ship.size ? "Placed" : "Not placed"}</em>
         </div>
       `).join("")}
     `;
+
+    list.querySelectorAll(".ship-orientation-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        placingTeam = button.dataset.team;
+        placingOrientation = button.dataset.orientation;
+        if (placingShipIndex < 0 || !bingoState.teams[placingTeam].ships[placingShipIndex]) placingShipIndex = 0;
+        renderFleets();
+      });
+    });
+
+    list.querySelectorAll(".ship-select-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        placingTeam = button.dataset.team;
+        placingShipIndex = Number(button.dataset.shipIndex);
+        renderFleets();
+      });
+    });
   });
 }
+
+function isValidShipPlacement(team, ship, cells) {
+  return Boolean(
+    cells &&
+    ship &&
+    !cells.some(cell => bingoState.teams[team].ships.some(existing => existing.key !== ship.key && existing.cells.includes(cell)))
+  );
+}
+
+function clearShipPreview(team) {
+  document.querySelectorAll(`#${team}FleetBoard .fleet-cell.preview-valid, #${team}FleetBoard .fleet-cell.preview-invalid`).forEach(cell => {
+    cell.classList.remove("preview-valid", "preview-invalid");
+  });
+}
+
+function showShipPreview(team, startIndex) {
+  clearShipPreview(team);
+  if (bingoState.phase !== "ships" || placingTeam !== team) return;
+  const ship = bingoState.teams[team].ships[placingShipIndex];
+  if (!ship) return;
+  const cells = getShipCells(startIndex, ship.size, placingOrientation);
+  const valid = isValidShipPlacement(team, ship, cells);
+  const previewCells = cells || [startIndex];
+
+  previewCells.forEach(cellIndex => {
+    const cell = document.querySelector(`#${team}FleetBoard .fleet-cell[data-index="${cellIndex}"]`);
+    if (cell) cell.classList.add(valid ? "preview-valid" : "preview-invalid");
+  });
+}
+
 function handleFleetCellClick(team, startIndex) {
   if (!isBingoStaff || bingoState.phase !== "ships" || placingTeam !== team) return;
   const ship = bingoState.teams[team].ships[placingShipIndex];
   if (!ship) return;
   const cells = getShipCells(startIndex, ship.size, placingOrientation);
-  if (!cells || cells.some(cell => bingoState.teams[team].ships.some(s => s.key !== ship.key && s.cells.includes(cell)))) {
+  if (!isValidShipPlacement(team, ship, cells)) {
     alert("That ship does not fit there.");
     return;
   }
@@ -938,8 +1032,6 @@ function bindBingoControls() {
         renderFleets();
         return;
       }
-      placingOrientation = prompt("Ship orientation: horizontal or vertical?", placingOrientation)?.toLowerCase().startsWith("v") ? "vertical" : "horizontal";
-      alert(`Click the starting square for ${bingoState.teams[placingTeam].ships[placingShipIndex].name} (${bingoState.teams[placingTeam].ships[placingShipIndex].size} tiles).`);
       renderFleets();
     });
   });

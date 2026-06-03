@@ -3861,3 +3861,157 @@ body.bingo-setup .bingo-tabs {
   background: rgba(255, 122, 26, 0.24);
   border-color: rgba(255, 180, 92, 0.85);
 }
+
+/* Battleship Bingo ship placement controls */
+.bingo-score-card.placement {
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+}
+
+.bingo-team-title strong { display: block; }
+
+.ship-placement-count {
+  text-align: right;
+  min-width: 90px;
+}
+
+.ship-placement-count b {
+  display: block;
+  color: #ffb15a;
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.ship-placement-count small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ship-mini-checklist {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ship-mini-checklist span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.ship-mini-checklist span.placed {
+  color: #ffdfb5;
+  border-color: rgba(255, 180, 92, 0.38);
+  background: rgba(255, 122, 26, 0.09);
+}
+
+.ship-mini-checklist b {
+  color: #ff8c2a;
+}
+
+.ship-placement-controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ship-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ship-control-row span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+.ship-orientation-btn,
+.ship-select-btn {
+  border: 1px solid rgba(255, 180, 92, 0.26);
+  background: rgba(8, 10, 13, 0.55);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ship-orientation-btn.active,
+.ship-select-btn.active {
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+  color: #130b06;
+  border-color: transparent;
+  box-shadow: 0 0 18px rgba(255, 122, 26, 0.24);
+}
+
+.ship-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ship-select-btn {
+  border-radius: 14px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.ship-select-btn strong,
+.ship-select-btn small {
+  display: block;
+}
+
+.ship-select-btn small {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.75rem;
+}
+
+.ship-select-btn.placed:not(.active) {
+  opacity: 0.7;
+  border-color: rgba(255, 180, 92, 0.42);
+}
+
+.fleet-cell.preview-valid {
+  background: rgba(255, 211, 97, 0.28) !important;
+  border-color: rgba(255, 211, 97, 0.95) !important;
+  box-shadow: 0 0 12px rgba(255, 211, 97, 0.25);
+}
+
+.fleet-cell.preview-invalid {
+  background: rgba(255, 72, 72, 0.26) !important;
+  border-color: rgba(255, 72, 72, 0.9) !important;
+  box-shadow: 0 0 12px rgba(255, 72, 72, 0.22);
+}
+
+@media (max-width: 900px) {
+  .bingo-score-card.placement {
+    grid-template-columns: auto 1fr;
+  }
+  .ship-placement-count {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .ship-mini-checklist,
+  .ship-select-grid {
+    grid-template-columns: 1fr;
+  }
+}
