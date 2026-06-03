@@ -526,6 +526,41 @@ async function loadRecentActivity() {
   }
 }
 
+function createEventHubCard({ type, href, icon, label, title, description }) {
+  const card = document.createElement("a");
+
+  card.className = `event-hub-card event-${type}`;
+  card.href = href;
+
+  card.innerHTML = `
+    <div class="event-hub-icon">${icon}</div>
+
+    <div>
+      <p class="eyebrow">${label}</p>
+      <h2>${title}</h2>
+      <p>${description}</p>
+    </div>
+
+    <div class="event-hub-footer">
+      <span>Dashboard</span>
+      <strong>View Event →</strong>
+    </div>
+  `;
+
+  return card;
+}
+
+function appendBattleshipBingoCard(grid) {
+  grid.appendChild(createEventHubCard({
+    type: "bingo",
+    href: "battleship-bingo.html",
+    icon: "🚢",
+    label: "BINGO",
+    title: "Battleship Bingo",
+    description: "Build a board, split into teams, claim tiles, and track summer progress."
+  }));
+}
+
 async function loadEventsHub() {
   const grid = document.getElementById("eventHubGrid");
 
@@ -534,36 +569,29 @@ async function loadEventsHub() {
   try {
     const events = await fetchCurrentEvents();
 
+    grid.innerHTML = "";
+
     if (!events.length) {
-      grid.textContent = "No Ironkin events found.";
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "No Ironkin events found.";
+      grid.appendChild(empty);
+      appendBattleshipBingoCard(grid);
       return;
     }
 
-    grid.innerHTML = "";
-
     events.forEach(event => {
-      const card = document.createElement("a");
-
-      card.className = `event-hub-card event-${event.type}`;
-      card.href = `event.html?id=${encodeURIComponent(event.id)}`;
-
-      card.innerHTML = `
-        <div class="event-hub-icon">${getEventIcon(event.type)}</div>
-
-        <div>
-          <p class="eyebrow">${event.label || formatEventType(event.type)}</p>
-          <h2>${event.title}</h2>
-          <p>${event.description || "View the full Ironkin event dashboard."}</p>
-        </div>
-
-        <div class="event-hub-footer">
-          <span>Dashboard</span>
-          <strong>View Event →</strong>
-        </div>
-      `;
-
-      grid.appendChild(card);
+      grid.appendChild(createEventHubCard({
+        type: event.type,
+        href: `event.html?id=${encodeURIComponent(event.id)}`,
+        icon: getEventIcon(event.type),
+        label: event.label || formatEventType(event.type),
+        title: event.title,
+        description: event.description || "View the full Ironkin event dashboard."
+      }));
     });
+
+    appendBattleshipBingoCard(grid);
   } catch (error) {
     grid.textContent = `Could not load events: ${error.message}`;
   }

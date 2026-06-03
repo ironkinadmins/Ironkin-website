@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battleship Bingo | Ironkin Clan</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="bingo-page">
+    <section class="bingo-hero">
+      <div>
+        <p class="eyebrow">Ironkin Event</p>
+        <h1>Battleship Bingo</h1>
+        <p>Build a summer bingo board, assign tiles, and prepare it for team play.</p>
+      </div>
+
+      <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
+        <button class="btn secondary" id="bingoResetBtn" type="button">Reset Board</button>
+        <button class="btn secondary" id="bingoRerollBtn" type="button">Reroll Empty Board</button>
+        <button class="btn primary" id="bingoLockBtn" type="button">Lock Board</button>
+      </div>
+    </section>
+
+    <section class="bingo-status-card">
+      <div>
+        <strong id="bingoStatusTitle">Board Setup</strong>
+        <span id="bingoStatusText">Loading board...</span>
+      </div>
+      <span id="bingoBoardState" class="bingo-pill">Draft</span>
+    </section>
+
+    <section class="bingo-layout">
+      <div class="bingo-board-wrap">
+        <div id="bingoBoard" class="bingo-board">Loading...</div>
+      </div>
+
+      <aside class="bingo-side-panel">
+        <h2>How this works</h2>
+        <p>Staff can click any tile to set the item name and image. Use OSRS Wiki search or paste an image URL manually.</p>
+        <div class="bingo-side-list">
+          <div><strong>1</strong><span>Build the board</span></div>
+          <div><strong>2</strong><span>Lock it when ready</span></div>
+          <div><strong>3</strong><span>Teams claim tiles during the event</span></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div id="tileModal" class="bingo-modal" aria-hidden="true">
+    <div class="bingo-modal-card">
+      <div class="bingo-modal-header">
+        <h2>Set Tile</h2>
+        <button id="closeTileModal" type="button" class="bingo-icon-btn">×</button>
+      </div>
+
+      <div class="admin-field">
+        <label for="tileNameInput">Item Name</label>
+        <input id="tileNameInput" type="text" placeholder="Example: Abyssal whip" />
+      </div>
+
+      <div class="admin-field">
+        <label for="tileImageInput">Image URL</label>
+        <input id="tileImageInput" type="text" placeholder="Paste image URL or use Wiki search below" />
+      </div>
+
+      <div class="admin-field">
+        <label for="wikiSearchInput">Search OSRS Wiki</label>
+        <input id="wikiSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
+      </div>
+
+      <div id="wikiSearchResults" class="wiki-results"></div>
+
+      <div class="bingo-modal-actions">
+        <button id="clearTileBtn" type="button" class="btn secondary danger">Clear Tile</button>
+        <button id="saveTileBtn" type="button" class="btn primary">Save Tile</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="battleship-bingo.js"></script>
+</body>
+</html>
