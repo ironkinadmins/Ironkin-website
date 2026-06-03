@@ -22,6 +22,7 @@
         <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
           <button class="btn secondary" id="bingoResetProgressBtn" type="button">Reset Progress</button>
           <button class="btn secondary danger" id="bingoClearBoardBtn" type="button">Clear Board</button>
+          <button class="btn secondary" id="bingoImportBtn" type="button">Import List</button>
           <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
           <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
           <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
@@ -147,6 +148,37 @@
     </section>
   </main>
 
+  <div id="bingoImportModal" class="bingo-modal" aria-hidden="true">
+    <div class="bingo-modal-card bingo-import-modal-card">
+      <div class="bingo-modal-header">
+        <h2>Import Battleship Bingo List</h2>
+        <button id="closeBingoImportModal" type="button" class="bingo-icon-btn">×</button>
+      </div>
+
+      <div class="bingo-help-content">
+        <p>Paste one item per line. Quantities are optional. The importer will fill the 10×10 board from top-left to bottom-right and try to pull item images from the OSRS Wiki.</p>
+        <p><strong>Examples:</strong></p>
+        <pre class="bingo-import-example">Zenyte shard x3
+Abyssal whip x2
+Dragon warhammer
+Blood shard, 5
+Enhanced crystal weapon seed - 1</pre>
+      </div>
+
+      <div class="admin-field">
+        <label for="bingoImportInput">Item List</label>
+        <textarea id="bingoImportInput" rows="12" placeholder="Paste up to 100 items here..."></textarea>
+      </div>
+
+      <div id="bingoImportStatus" class="bingo-import-status" aria-live="polite"></div>
+
+      <div class="bingo-modal-actions">
+        <button id="clearBingoImportBtn" type="button" class="btn secondary">Clear Text</button>
+        <button id="runBingoImportBtn" type="button" class="btn primary">Import Board</button>
+      </div>
+    </div>
+  </div>
+
   <div id="bingoHelpModal" class="bingo-modal" aria-hidden="true">
     <div class="bingo-modal-card bingo-help-modal-card">
       <div class="bingo-modal-header">
@@ -241,6 +273,6 @@
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js?v=20260603-10x10-editor"></script>
+  <script src="battleship-bingo.js?v=20260603-import-list"></script>
 </body>
 </html>

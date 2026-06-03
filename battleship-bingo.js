@@ -482,6 +482,124 @@ function setBingoTab(tabName) {
   document.getElementById(`bingoTab-${tabName}`)?.classList.add("active");
 }
 
+
+function openBingoImportModal() {
+  if (!isBingoStaff) return alert("Staff only.");
+  document.getElementById("bingoImportStatus").textContent = "";
+  document.getElementById("bingoImportModal")?.classList.add("show");
+  document.getElementById("bingoImportModal")?.setAttribute("aria-hidden", "false");
+  document.getElementById("bingoImportInput")?.focus();
+}
+
+function closeBingoImportModal() {
+  document.getElementById("bingoImportModal")?.classList.remove("show");
+  document.getElementById("bingoImportModal")?.setAttribute("aria-hidden", "true");
+}
+
+function parseBingoImportLine(line) {
+  let text = String(line || "").trim();
+  if (!text) return null;
+
+  text = text.replace(/^[-*•\d.)\s]+/, "").trim();
+
+  let quantity = 1;
+  const patterns = [
+    /\s+x\s*(\d+)$/i,
+    /\s*\(\s*x?\s*(\d+)\s*\)$/i,
+    /\s*[,|;]\s*x?\s*(\d+)$/i,
+    /\s+-\s*x?\s*(\d+)$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      quantity = Math.max(1, Number.parseInt(match[1], 10) || 1);
+      text = text.replace(pattern, "").trim();
+      break;
+    }
+  }
+
+  return text ? { name: text, quantity } : null;
+}
+
+async function findWikiImageForImport(name) {
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(name)}`);
+    if (!response.ok) return "";
+    const data = await response.json();
+    const results = Array.isArray(data) ? data : data.results || [];
+    const exact = results.find(item => item?.name?.toLowerCase() === name.toLowerCase() && item.image);
+    const first = results.find(item => item?.image);
+    return (exact || first)?.image || "";
+  } catch {
+    return "";
+  }
+}
+
+async function importBingoList() {
+  if (!isBingoStaff) return alert("Staff only.");
+
+  const input = document.getElementById("bingoImportInput");
+  const status = document.getElementById("bingoImportStatus");
+  const importBtn = document.getElementById("runBingoImportBtn");
+
+  const parsed = String(input?.value || "")
+    .split(/\r?\n/)
+    .map(parseBingoImportLine)
+    .filter(Boolean)
+    .slice(0, BINGO_SIZE * BINGO_SIZE);
+
+  if (!parsed.length) {
+    if (status) status.textContent = "Paste at least one item before importing.";
+    return;
+  }
+
+  const ok = confirm(`Import ${parsed.length} item${parsed.length === 1 ? "" : "s"} into the board? This will replace the current board and clear progress.`);
+  if (!ok) return;
+
+  if (importBtn) importBtn.disabled = true;
+  if (status) status.textContent = `Importing 0/${parsed.length} items...`;
+
+  const importedTiles = emptyBingoBoard();
+
+  for (let index = 0; index < parsed.length; index++) {
+    const item = parsed[index];
+    if (status) status.textContent = `Importing ${index + 1}/${parsed.length}: ${item.name}`;
+    const image = await findWikiImageForImport(item.name);
+
+    importedTiles[index] = {
+      ...importedTiles[index],
+      id: index,
+      name: item.name,
+      image,
+      quantity: item.quantity,
+      status: "open",
+      completedBy: "",
+      completedTeam: "",
+      proofId: ""
+    };
+  }
+
+  bingoState.tiles = importedTiles;
+  bingoState.size = BINGO_SIZE;
+  bingoState.phase = "setup";
+  bingoState.locked = false;
+  bingoState.proofs = [];
+  bingoState.attacks = [];
+
+  Object.keys(TEAMS).forEach(team => {
+    bingoState.teams[team].ships = normaliseShips([]);
+    bingoState.teams[team].attacks = [];
+  });
+
+  addLog(`Imported ${parsed.length} Battleship Bingo tile${parsed.length === 1 ? "" : "s"}.`);
+  await saveBingoState();
+
+  if (status) status.textContent = `Imported ${parsed.length} item${parsed.length === 1 ? "" : "s"}.`;
+  if (importBtn) importBtn.disabled = false;
+  closeBingoImportModal();
+}
+
 function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
@@ -494,6 +612,17 @@ function bindBingoControls() {
   document.getElementById("bingoHelpModal")?.addEventListener("click", event => {
     if (event.target.id === "bingoHelpModal") closeBingoHelpModal();
   });
+  document.getElementById("bingoImportBtn")?.addEventListener("click", openBingoImportModal);
+  document.getElementById("closeBingoImportModal")?.addEventListener("click", closeBingoImportModal);
+  document.getElementById("bingoImportModal")?.addEventListener("click", event => {
+    if (event.target.id === "bingoImportModal") closeBingoImportModal();
+  });
+  document.getElementById("clearBingoImportBtn")?.addEventListener("click", () => {
+    const input = document.getElementById("bingoImportInput");
+    if (input) input.value = "";
+    document.getElementById("bingoImportStatus").textContent = "";
+  });
+  document.getElementById("runBingoImportBtn")?.addEventListener("click", importBingoList);
   document.getElementById("closeTileModal")?.addEventListener("click", closeTileEditor);
   document.getElementById("tileModal")?.addEventListener("click", event => {
     if (event.target.id === "tileModal") closeTileEditor();
