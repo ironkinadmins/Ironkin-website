@@ -30,6 +30,7 @@ let wikiSearchTimer = null;
 let placingTeam = null;
 let placingShipIndex = 0;
 let placingOrientation = "horizontal";
+let activeBoardMode = "attack";
 
 function createDefaultState() {
   return {
@@ -299,6 +300,13 @@ function renderBingoBoard() {
   const boardEl = document.getElementById("bingoBoard");
   if (!boardEl) return;
 
+  renderBoardToolbar();
+
+  if (bingoState.phase === "active" || bingoState.phase === "complete") {
+    renderActiveGameBoard(boardEl);
+    return;
+  }
+
   const tiles = Array.isArray(bingoState.tiles) && bingoState.tiles.length === BINGO_SIZE * BINGO_SIZE
     ? bingoState.tiles
     : emptyBingoBoard();
@@ -309,6 +317,81 @@ function renderBingoBoard() {
     return `
       <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
+        <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
+        ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
+      </button>
+    `;
+  }).join("");
+
+  boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
+    tile.addEventListener("click", () => openTileModal(Number(tile.dataset.index)));
+  });
+}
+
+function renderBoardToolbar() {
+  const activeControls = document.getElementById("activeBoardControls");
+  const boardToolbarText = document.querySelector(".bingo-board-toolbar div:first-child");
+  const attackBtn = document.getElementById("attackBoardBtn");
+  const watersBtn = document.getElementById("yourWatersBtn");
+  const isActive = bingoState.phase === "active" || bingoState.phase === "complete";
+
+  if (activeControls) activeControls.style.display = isActive ? "flex" : "none";
+  if (attackBtn) attackBtn.classList.toggle("active", activeBoardMode === "attack");
+  if (watersBtn) watersBtn.classList.toggle("active", activeBoardMode === "waters");
+
+  if (!boardToolbarText) return;
+
+  if (isActive) {
+    const team = getSelectedProofTeam();
+    const opponent = getOpponent(team);
+    boardToolbarText.innerHTML = activeBoardMode === "attack"
+      ? `<strong>Attacking ${escapeHtml(bingoState.teams[opponent]?.name || TEAMS[opponent].name)}'s Waters</strong><span>Submit proof for drops to fire attacks at the opposing fleet.</span>`
+      : `<strong>${escapeHtml(bingoState.teams[team]?.name || TEAMS[team].name)}'s Waters</strong><span>View your hidden ship placement and incoming enemy attacks.</span>`;
+  } else {
+    boardToolbarText.innerHTML = `<strong>Board Setup</strong><span>Click a tile to edit it. When done, lock the board and assign captains.</span>`;
+  }
+}
+
+function getSelectedProofTeam() {
+  const selected = document.getElementById("proofTeamSelect")?.value;
+  return selected === "ash" ? "ash" : "ember";
+}
+
+function renderActiveGameBoard(boardEl) {
+  const team = getSelectedProofTeam();
+  const opponent = getOpponent(team);
+
+  boardEl.classList.toggle("active-attack-board", activeBoardMode === "attack");
+  boardEl.classList.toggle("active-waters-board", activeBoardMode === "waters");
+
+  if (activeBoardMode === "waters") {
+    boardEl.innerHTML = Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => {
+      const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
+      const attack = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
+      const classes = ["bingo-tile", "water-tile"];
+      if (ship) classes.push("ship", `ship-${ship.key}`);
+      if (attack) classes.push(`attack-${attack.result}`);
+      return `
+        <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}" disabled>
+          ${ship ? `<span class="water-ship-cell">${escapeHtml(ship.name.charAt(0))}</span>` : ""}
+          ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "✹" : "•"}</strong>` : ""}
+        </button>
+      `;
+    }).join("");
+    return;
+  }
+
+  boardEl.innerHTML = bingoState.tiles.map((tile, index) => {
+    const qty = getTileQuantity(tile);
+    const attack = bingoState.attacks.find(a => a.attackingTeam === team && a.targetIndex === index);
+    const classes = ["bingo-tile", tile.name ? "filled" : "empty", "attack-tile"];
+    if (attack) classes.push(`attack-${attack.result}`);
+    if (tile.status && tile.status !== "open") classes.push(`status-${tile.status}`);
+    return `
+      <button class="${classes.join(" ")}" type="button" data-index="${index}" ${tile.name ? "" : "disabled"}>
+        ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "HIT" : "MISS"}</strong>` : ""}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
         <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
         ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
@@ -747,6 +830,42 @@ function getShipCells(startIndex, size, orientation) {
   return cells;
 }
 
+function openProofTileSelector() {
+  if (bingoState.phase !== "active") return alert("Proofs can be submitted after the game starts.");
+  renderProofTileGrid();
+  document.getElementById("proofTileModal")?.classList.add("show");
+  document.getElementById("proofTileModal")?.setAttribute("aria-hidden", "false");
+}
+
+function closeProofTileSelector() {
+  document.getElementById("proofTileModal")?.classList.remove("show");
+  document.getElementById("proofTileModal")?.setAttribute("aria-hidden", "true");
+}
+
+function renderProofTileGrid() {
+  const grid = document.getElementById("proofTileGrid");
+  if (!grid) return;
+  grid.innerHTML = bingoState.tiles.map((tile, index) => {
+    const qty = getTileQuantity(tile);
+    return `
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"}" type="button" data-index="${index}" ${tile.name ? "" : "disabled"}>
+        ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
+        <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
+      </button>
+    `;
+  }).join("");
+
+  grid.querySelectorAll(".bingo-tile").forEach(tile => {
+    tile.addEventListener("click", () => {
+      const index = Number(tile.dataset.index);
+      closeProofTileSelector();
+      openTileModal(index);
+    });
+  });
+}
+
+
 function renderProofs() {
   const list = document.getElementById("proofList");
   if (!list) return;
@@ -1060,6 +1179,14 @@ function bindBingoControls() {
   });
   document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
   document.getElementById("bingoPhaseActionBtn")?.addEventListener("click", handlePhaseAction);
+  document.getElementById("attackBoardBtn")?.addEventListener("click", () => { activeBoardMode = "attack"; renderBingoBoard(); });
+  document.getElementById("yourWatersBtn")?.addEventListener("click", () => { activeBoardMode = "waters"; renderBingoBoard(); });
+  document.getElementById("openProofTileSelectorBtn")?.addEventListener("click", openProofTileSelector);
+  document.getElementById("proofTeamSelect")?.addEventListener("change", () => renderBingoBoard());
+  document.getElementById("closeProofTileModal")?.addEventListener("click", closeProofTileSelector);
+  document.getElementById("proofTileModal")?.addEventListener("click", event => {
+    if (event.target.id === "proofTileModal") closeProofTileSelector();
+  });
   document.getElementById("closeBingoHelpModal")?.addEventListener("click", closeBingoHelpModal);
   document.getElementById("bingoHelpModal")?.addEventListener("click", event => {
     if (event.target.id === "bingoHelpModal") closeBingoHelpModal();
@@ -1231,7 +1358,9 @@ function bindBingoControls() {
       bingoState.phase = "active";
       bingoState.locked = true;
       placingTeam = null;
+      activeBoardMode = "attack";
       addLog("Battleship Bingo has started.");
+      setBingoTab("board");
     } else if (bingoState.phase === "active") {
       bingoState.phase = "complete";
       addLog("Battleship Bingo was ended by staff.");

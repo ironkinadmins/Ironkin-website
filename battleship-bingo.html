@@ -78,6 +78,13 @@
                 <option value="ember">Ember Fleet</option>
                 <option value="ash">Ash Fleet</option>
               </select>
+              <div class="active-board-controls" id="activeBoardControls" style="display:none;">
+                <div class="active-board-toggle" role="group" aria-label="Active game board view">
+                  <button id="attackBoardBtn" class="active" type="button">Attack Board</button>
+                  <button id="yourWatersBtn" type="button">Your Waters</button>
+                </div>
+                <button id="openProofTileSelectorBtn" class="btn primary" type="button">Submit Proof</button>
+              </div>
             </div>
           </div>
           <div id="bingoBoard" class="bingo-board">Loading...</div>
@@ -262,6 +269,19 @@ Enhanced crystal weapon seed - 1</pre>
     </div>
   </div>
 
+  <div id="proofTileModal" class="bingo-modal" aria-hidden="true">
+    <div class="bingo-modal-card bingo-proof-select-card">
+      <div class="bingo-modal-header">
+        <h2>Select Tile</h2>
+        <button id="closeProofTileModal" type="button" class="bingo-icon-btn">×</button>
+      </div>
+      <div class="bingo-help-content">
+        <p>Select the tile you got the drop for. After selecting a tile, add your player name and proof link.</p>
+      </div>
+      <div id="proofTileGrid" class="bingo-board proof-tile-grid"></div>
+    </div>
+  </div>
+
   <div id="tileModal" class="bingo-modal" aria-hidden="true">
     <div class="bingo-modal-card">
       <div class="bingo-modal-header">
@@ -318,6 +338,6 @@ Enhanced crystal weapon seed - 1</pre>
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js?v=20260603-queued-polish"></script>
+  <script src="battleship-bingo.js?v=20260603-active-game"></script>
 </body>
 </html>
