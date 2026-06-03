@@ -1518,14 +1518,6 @@ function renderEmberRows(leaders, compact = false) {
   }).join("");
 }
 
-  return leaders.map(player => `
-    <div class="ember-leader-row ${compact ? "compact" : ""}">
-<strong>#${player.rank} ${player.display_name}</strong>
-      <span>${formatNumber(player.balance)} Embers</span>
-    </div>
-  `).join("");
-}
-
 async function loadEmberLeaderboard() {
   const container = document.getElementById("emberLeaderboard");
 
@@ -1609,12 +1601,9 @@ async function loadHomeEmberLeaders() {
 }
 
 async function loadDiscordStats() {
-  const containers = [
-    document.getElementById("homeDiscordStats"),
-    document.getElementById("navDiscordStats")
-  ].filter(Boolean);
+  const pill = document.getElementById("navDiscordStats");
 
-  if (!containers.length) return;
+  if (!pill) return;
 
   try {
     const response = await fetch("/api/discord/stats");
@@ -1624,16 +1613,13 @@ async function loadDiscordStats() {
       throw new Error(data.error || "Could not load Discord stats.");
     }
 
-    containers.forEach(container => {
-      container.innerHTML = `
-        <strong>${formatNumber(data.members || 0)}</strong> Members
-        <span>${formatNumber(data.online || 0)} Online</span>
-      `;
-    });
+    pill.innerHTML = `
+      <strong>${formatNumber(data.members || 0)}</strong>
+      Members
+      <span>${formatNumber(data.online || 0)} Online</span>
+    `;
   } catch {
-    containers.forEach(container => {
-      container.textContent = "";
-    });
+    pill.textContent = "";
   }
 }
 

@@ -2759,3 +2759,25 @@ footer {
     width: fit-content;
   }
 }
+.nav-discord-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 26, 0.25);
+  background: rgba(255, 122, 26, 0.08);
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.nav-discord-stats strong {
+  color: var(--ember);
+}
+
+.nav-discord-stats span {
+  opacity: 0.75;
+}
