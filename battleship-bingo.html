@@ -18,15 +18,30 @@
       </div>
 
       <div class="bingo-hero-buttons">
-        <button class="btn secondary" id="bingoHelpBtn" type="button">Help</button>
-        <div class="bingo-actions" id="bingoAdminActions" style="display:none;">
-          <button class="btn secondary" id="bingoResetProgressBtn" type="button">Reset Progress</button>
-          <button class="btn secondary danger" id="bingoClearBoardBtn" type="button">Clear Board</button>
-          <button class="btn secondary" id="bingoImportBtn" type="button">Import List</button>
-          <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
-          <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
-          <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
-        </div>
+        <button class="btn secondary bingo-help-top" id="bingoHelpBtn" type="button">Help</button>
+
+        <details class="bingo-admin-dropdown" id="bingoAdminActions" style="display:none;">
+          <summary class="btn secondary">Admin Controls</summary>
+          <div class="bingo-admin-menu">
+            <div class="bingo-admin-group">
+              <strong>Board Setup</strong>
+              <button class="btn secondary" id="bingoImportBtn" type="button">Import List</button>
+              <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
+              <button class="btn secondary danger" id="bingoClearBoardBtn" type="button">Clear Board</button>
+            </div>
+
+            <div class="bingo-admin-group">
+              <strong>Game Control</strong>
+              <button class="btn secondary" id="bingoLockBtn" type="button">Lock Board</button>
+              <button class="btn primary" id="bingoStartBtn" type="button">Start Game</button>
+            </div>
+
+            <div class="bingo-admin-group">
+              <strong>Maintenance</strong>
+              <button class="btn secondary danger" id="bingoResetProgressBtn" type="button">Reset Progress</button>
+            </div>
+          </div>
+        </details>
       </div>
     </section>
 
@@ -35,7 +50,10 @@
         <strong id="bingoStatusTitle">Loading Battleship Bingo</strong>
         <span id="bingoStatusText">Loading board...</span>
       </div>
-      <span id="bingoBoardState" class="bingo-pill">Draft</span>
+      <div class="bingo-status-actions">
+        <span id="bingoBoardState" class="bingo-pill">Draft</span>
+        <button id="bingoPhaseActionBtn" class="btn primary" type="button" style="display:none;">Lock Board</button>
+      </div>
     </section>
 
     <section class="bingo-tabs" aria-label="Battleship Bingo views">
@@ -307,6 +325,6 @@ Enhanced crystal weapon seed - 1</pre>
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js?v=20260603-import-list"></script>
+  <script src="battleship-bingo.js?v=20260603-queued-polish"></script>
 </body>
 </html>

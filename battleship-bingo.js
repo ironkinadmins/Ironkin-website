@@ -112,7 +112,7 @@ async function checkBingoStaff() {
   } catch {
     isBingoStaff = false;
   }
-  document.getElementById("bingoAdminActions")?.style.setProperty("display", isBingoStaff ? "flex" : "none");
+  document.getElementById("bingoAdminActions")?.style.setProperty("display", isBingoStaff ? "block" : "none");
 }
 
 async function loadBingoState() {
@@ -482,9 +482,27 @@ function renderCaptains() {
 function updateAdminButtons() {
   const lockBtn = document.getElementById("bingoLockBtn");
   const startBtn = document.getElementById("bingoStartBtn");
-  if (lockBtn) lockBtn.textContent = bingoState.phase === "captains" || bingoState.locked ? "Unlock Board" : "Lock Board";
-  if (startBtn) startBtn.textContent = bingoState.phase === "active" ? "End Game" : bingoState.phase === "complete" ? "Reopen Game" : bingoState.phase === "captains" ? "Start Game" : "Start Game";
-  if (startBtn) startBtn.style.display = bingoState.phase === "setup" ? "none" : "inline-flex";
+  const phaseBtn = document.getElementById("bingoPhaseActionBtn");
+
+  const isSetup = bingoState.phase === "setup";
+  const isCaptains = bingoState.phase === "captains";
+  const isActive = bingoState.phase === "active";
+  const isComplete = bingoState.phase === "complete";
+
+  if (lockBtn) lockBtn.textContent = isCaptains || bingoState.locked ? "Unlock Board" : "Lock Board";
+  if (startBtn) {
+    startBtn.textContent = isActive ? "End Game" : isComplete ? "Reopen Game" : "Start Game";
+    startBtn.style.display = isSetup ? "none" : "inline-flex";
+  }
+
+  if (phaseBtn) {
+    phaseBtn.style.display = isBingoStaff ? "inline-flex" : "none";
+    if (isSetup) phaseBtn.textContent = "Lock Board";
+    else if (isCaptains) phaseBtn.textContent = "Continue to Ship Placement";
+    else if (isActive) phaseBtn.textContent = "End Game";
+    else if (isComplete) phaseBtn.textContent = "Reopen Game";
+    else phaseBtn.textContent = "Start Game";
+  }
 }
 
 function setBingoTab(tabName) {
@@ -613,15 +631,58 @@ async function importBingoList() {
   closeBingoImportModal();
 }
 
+function captainsAreValid(showAlerts = false) {
+  const emberCaptain = (bingoState.teams.ember.captain || "").trim();
+  const ashCaptain = (bingoState.teams.ash.captain || "").trim();
+
+  if (!emberCaptain || !ashCaptain) {
+    if (showAlerts) alert("Assign a captain to both teams first.");
+    return false;
+  }
+
+  if (emberCaptain.toLowerCase() === ashCaptain.toLowerCase()) {
+    if (showAlerts) alert("The same captain cannot be assigned to both teams.");
+    return false;
+  }
+
+  return true;
+}
+
+function continueToShipPlacement() {
+  if (!captainsAreValid(true)) return;
+  addLog("Captain assignment complete. Ship placement started.");
+  setBingoTab("fleets");
+}
+
+async function handlePhaseAction() {
+  if (!isBingoStaff) return alert("Staff only.");
+
+  if (bingoState.phase === "setup") {
+    const lockBtn = document.getElementById("bingoLockBtn");
+    lockBtn?.click();
+    return;
+  }
+
+  if (bingoState.phase === "captains") {
+    continueToShipPlacement();
+    return;
+  }
+
+  const startBtn = document.getElementById("bingoStartBtn");
+  startBtn?.click();
+}
+
 function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
-      if (bingoState.phase === "setup" && button.dataset.bingoTab !== "board") return;
-      if (bingoState.phase === "captains" && !["captains", "help"].includes(button.dataset.bingoTab)) return;
-      setBingoTab(button.dataset.bingoTab);
+      const tab = button.dataset.bingoTab;
+      if (bingoState.phase === "setup" && !bingoState.locked && !["board", "help"].includes(tab)) return;
+      if (bingoState.phase === "captains" && !["board", "captains", "help"].includes(tab)) return;
+      setBingoTab(tab);
     });
   });
   document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
+  document.getElementById("bingoPhaseActionBtn")?.addEventListener("click", handlePhaseAction);
   document.getElementById("closeBingoHelpModal")?.addEventListener("click", closeBingoHelpModal);
   document.getElementById("bingoHelpModal")?.addEventListener("click", event => {
     if (event.target.id === "bingoHelpModal") closeBingoHelpModal();
@@ -728,18 +789,28 @@ function bindBingoControls() {
     button.addEventListener("click", async () => {
       if (!isBingoStaff) return alert("Staff only.");
       const team = button.dataset.team;
+      const opponent = getOpponent(team);
       const input = document.getElementById(`${team}CaptainInput`);
-      bingoState.teams[team].captain = (input?.value || "").trim();
-      addLog(`${bingoState.teams[team].name} captain set to ${bingoState.teams[team].captain || "Not set"}.`);
+      const captain = (input?.value || "").trim();
+
+      if (!captain) {
+        alert("Enter a captain name first.");
+        return;
+      }
+
+      if (bingoState.teams[opponent]?.captain?.trim().toLowerCase() === captain.toLowerCase()) {
+        alert("The same captain cannot be assigned to both teams.");
+        return;
+      }
+
+      bingoState.teams[team].captain = captain;
+      addLog(`${bingoState.teams[team].name} captain assigned: ${captain}.`);
       await saveBingoState();
     });
   });
 
   document.getElementById("bingoContinueToFleetsBtn")?.addEventListener("click", () => {
-    if (!bingoState.teams.ember.captain || !bingoState.teams.ash.captain) {
-      if (!confirm("One or both captains are blank. Continue anyway?")) return;
-    }
-    setBingoTab("fleets");
+    continueToShipPlacement();
   });
 
   document.getElementById("bingoLockBtn")?.addEventListener("click", async () => {
@@ -759,7 +830,18 @@ function bindBingoControls() {
     setBingoTab("board");
   });
   document.getElementById("bingoStartBtn")?.addEventListener("click", async () => {
-    if (bingoState.phase === "setup" || bingoState.phase === "captains") {
+    if (bingoState.phase === "setup") {
+      alert("Lock the board and assign captains before starting the game.");
+      return;
+    }
+
+    if (bingoState.phase === "captains") {
+      if (!captainsAreValid(true)) return;
+      setBingoTab("fleets");
+      return;
+    }
+
+    if (bingoState.phase !== "active" && bingoState.phase !== "complete") {
       if (!Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size))) {
         if (!confirm("Not all ships are placed. Start anyway?")) return;
       }

@@ -3633,3 +3633,145 @@ body.bingo-captains .bingo-view-controls {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Battleship Bingo queued polish: admin controls + Ironkin captain theme */
+.bingo-hero-buttons {
+  align-items: flex-start;
+}
+
+.bingo-admin-dropdown {
+  position: relative;
+}
+
+.bingo-admin-dropdown > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bingo-admin-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bingo-admin-dropdown > summary::after {
+  content: " ▾";
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.bingo-admin-dropdown[open] > summary::after {
+  content: " ▴";
+}
+
+.bingo-admin-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 30;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid rgba(255, 122, 26, 0.38);
+  border-radius: 18px;
+  background: rgba(18, 12, 9, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5), 0 0 28px rgba(255, 122, 26, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.bingo-admin-group {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 180, 92, 0.14);
+}
+
+.bingo-admin-group:first-child {
+  padding-top: 0;
+}
+
+.bingo-admin-group:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.bingo-admin-group strong {
+  color: var(--ember);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bingo-admin-group .btn {
+  justify-content: center;
+  width: 100%;
+}
+
+.bingo-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bingo-status-actions .btn {
+  white-space: nowrap;
+}
+
+.bingo-captains-intro {
+  background: rgba(24, 19, 17, 0.90) !important;
+  border: 1px solid rgba(255, 122, 26, 0.38) !important;
+  box-shadow: 0 22px 60px rgba(0,0,0,0.30), inset 0 0 34px rgba(255, 122, 26, 0.035);
+}
+
+.bingo-captains-intro h2 {
+  color: var(--text);
+}
+
+.bingo-captains-intro p {
+  color: var(--muted) !important;
+}
+
+.bingo-captain-card {
+  border-color: rgba(255, 122, 26, 0.26) !important;
+  box-shadow: 0 18px 46px rgba(0,0,0,0.24);
+}
+
+.bingo-captain-card h3 {
+  color: var(--text);
+}
+
+.bingo-captain-row input:focus {
+  outline: none;
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.16);
+}
+
+.bingo-tabs button {
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.bingo-tabs button:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .bingo-admin-menu {
+    position: fixed;
+    top: 92px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+
+  .bingo-status-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .bingo-status-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
