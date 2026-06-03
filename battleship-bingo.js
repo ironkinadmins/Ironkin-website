@@ -134,8 +134,7 @@ async function searchWiki(query) {
   try {
     const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(query)}`);
     const data = await response.json();
-    const results = data.results || [];
-
+const results = Array.isArray(data) ? data : data.results || [];
     if (!results.length) {
       resultsEl.innerHTML = `<div class="wiki-loading">No results found.</div>`;
       return;
