@@ -11,7 +11,7 @@ export async function onRequestGet({ request }) {
         action: "query",
         format: "json",
         generator: "search",
-        gsrsearch: q,
+gsrsearch: `${q} "infobox item"`,
         gsrlimit: "12",
         prop: "pageimages|info",
         piprop: "thumbnail|original",
