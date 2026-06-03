@@ -235,9 +235,9 @@ function renderBingoBoard() {
     `;
   }).join("");
 
-  boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
-    tile.addEventListener("click", () => openTileEditor(Number(tile.dataset.index)));
-  });
+boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
+  tile.addEventListener("click", () => openTileModal(Number(tile.dataset.index)));
+});
 }
 
 function openTileModal(index) {
@@ -550,13 +550,15 @@ document.getElementById("bingoRerollBtn")?.addEventListener("click", async () =>
       ...tile,
       name: item.name,
       image: item.image,
-      quantity: Math.floor(index / DEFAULT_ITEMS.length) + 1,
+      quantity: (index % 4) + 1,
       status: "open"
     };
   });
 
   bingoState.locked = false;
-  await saveBingoBoard();
+
+  addLog("Demo board generated.");
+  await saveBingoState();
 });
   document.getElementById("bingoLockBtn")?.addEventListener("click", async () => {
     bingoState.locked = !bingoState.locked;
