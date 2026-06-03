@@ -141,12 +141,18 @@ const results = Array.isArray(data) ? data : data.results || [];
     }
 
     resultsEl.innerHTML = results.map(item => `
-      <div class="wiki-result">
-        <img src="${item.image || "assets/favicon-32x32.png"}" alt="" />
-        <span>${escapeHtml(item.title)}</span>
-        <button type="button" data-name="${escapeAttr(item.title)}" data-image="${escapeAttr(item.image || "")}">Select</button>
-      </div>
-    `).join("");
+  <div class="wiki-result">
+    <img src="${item.image || ""}" alt="${escapeHtml(item.name)}" />
+    <span>${escapeHtml(item.name)}</span>
+    <button
+      type="button"
+      data-name="${escapeAttr(item.name)}"
+      data-image="${escapeAttr(item.image || "")}"
+    >
+      Select
+    </button>
+  </div>
+`).join("");
 
     resultsEl.querySelectorAll("button").forEach(button => {
       button.addEventListener("click", () => {
