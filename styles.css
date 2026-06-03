@@ -4015,3 +4015,244 @@ body.bingo-setup .bingo-tabs {
     grid-template-columns: 1fr;
   }
 }
+
+/* Battleship Bingo ship placement top toolbar */
+.ship-placement-topbar {
+  margin: 0 0 22px;
+}
+
+.ship-placement-toolbar-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.75fr) minmax(180px, 0.65fr) minmax(360px, 1.8fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px;
+  border: 1px solid rgba(255, 122, 26, 0.28);
+  border-radius: 22px;
+  background: rgba(24, 19, 17, 0.90);
+  box-shadow: 0 22px 60px rgba(0,0,0,0.28), inset 0 0 34px rgba(255, 122, 26, 0.025);
+}
+
+.ship-placement-toolbar-card.muted {
+  display: block;
+  color: var(--muted);
+}
+
+.ship-placement-toolbar-card.muted strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.ship-toolbar-section {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.ship-toolbar-section + .ship-toolbar-section {
+  border-left: 1px solid rgba(255, 180, 92, 0.12);
+  padding-left: 18px;
+}
+
+.ship-toolbar-label {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ship-toolbar-buttons {
+  display: grid;
+  gap: 8px;
+}
+
+.ship-toolbar-buttons.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ship-team-tab,
+.ship-orientation-btn,
+.ship-tab {
+  border: 1px solid rgba(255, 180, 92, 0.24);
+  background: rgba(8, 10, 13, 0.58);
+  color: var(--text);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ship-team-tab:hover,
+.ship-orientation-btn:hover,
+.ship-tab:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 180, 92, 0.54);
+}
+
+.ship-team-tab.active,
+.ship-orientation-btn.active,
+.ship-tab.active {
+  border-color: rgba(255, 122, 26, 0.9);
+  background: rgba(255, 122, 26, 0.14);
+  box-shadow: 0 0 18px rgba(255, 122, 26, 0.15), inset 0 0 18px rgba(255, 122, 26, 0.05);
+}
+
+.ship-team-tab {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.ship-team-tab > span {
+  grid-row: span 2;
+  font-size: 1.35rem;
+}
+
+.ship-team-tab strong,
+.ship-team-tab small {
+  display: block;
+}
+
+.ship-team-tab small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ship-orientation-btn {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  font-weight: 900;
+}
+
+.ship-orientation-btn[data-orientation="vertical"] .ship-icon {
+  transform: rotate(90deg);
+}
+
+.ship-tab-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(86px, 1fr));
+  gap: 8px;
+}
+
+.ship-tab {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  min-height: 96px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.ship-tab strong,
+.ship-tab small {
+  display: block;
+}
+
+.ship-tab small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.ship-tab.placed:not(.active) {
+  opacity: 0.58;
+}
+
+.ship-tab.placed:not(.active) .ship-icon {
+  opacity: 0.72;
+}
+
+.ship-icon {
+  width: 54px;
+  height: 22px;
+  display: block;
+  fill: currentColor;
+  color: rgba(255, 239, 220, 0.76);
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+}
+
+.ship-tab.active .ship-icon,
+.ship-orientation-btn.active .ship-icon,
+.ship-team-tab.active .ship-icon {
+  color: #ffb15a;
+}
+
+.ship-placement-current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ship-placement-current strong {
+  color: var(--ember);
+}
+
+.fleet-placement-grid {
+  align-items: start;
+}
+
+.fleet-placement-card .bingo-section-heading {
+  align-items: flex-start;
+}
+
+.fleet-placement-total {
+  color: #ffb15a;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.ship-row strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ship-row .ship-icon {
+  width: 42px;
+  height: 18px;
+  color: rgba(255, 239, 220, 0.7);
+}
+
+.ship-checkmark {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  color: #ffb15a;
+}
+
+@media (max-width: 1200px) {
+  .ship-placement-toolbar-card {
+    grid-template-columns: 1fr;
+  }
+  .ship-toolbar-section + .ship-toolbar-section {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 180, 92, 0.12);
+    padding-left: 0;
+    padding-top: 14px;
+  }
+  .ship-tab-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .ship-tab-row,
+  .ship-toolbar-buttons.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ship-tab {
+    min-height: 88px;
+  }
+}

@@ -123,26 +123,28 @@
     </section>
 
     <section class="bingo-tab-panel" id="bingoTab-fleets">
-      <div class="bingo-two-column">
-        <div class="bingo-card">
+      <div class="ship-placement-topbar" id="shipPlacementToolbar"></div>
+
+      <div class="bingo-two-column fleet-placement-grid">
+        <div class="bingo-card fleet-placement-card">
           <div class="bingo-section-heading">
             <div>
               <h2>Ember Fleet</h2>
-              <p>Place ships for Ember Fleet during setup.</p>
+              <p>Captain: <span id="emberFleetCaptainLabel">Not set</span></p>
             </div>
-            <button class="btn secondary bingo-place-btn" type="button" data-team="ember">Place Ember Ships</button>
+            <div class="fleet-placement-total" id="emberFleetPlacedTotal">0/6 placed</div>
           </div>
           <div class="fleet-board" id="emberFleetBoard"></div>
           <div class="ship-list" id="emberShipList"></div>
         </div>
 
-        <div class="bingo-card">
+        <div class="bingo-card fleet-placement-card">
           <div class="bingo-section-heading">
             <div>
               <h2>Ash Fleet</h2>
-              <p>Place ships for Ash Fleet during setup.</p>
+              <p>Captain: <span id="ashFleetCaptainLabel">Not set</span></p>
             </div>
-            <button class="btn secondary bingo-place-btn" type="button" data-team="ash">Place Ash Ships</button>
+            <div class="fleet-placement-total" id="ashFleetPlacedTotal">0/6 placed</div>
           </div>
           <div class="fleet-board" id="ashFleetBoard"></div>
           <div class="ship-list" id="ashShipList"></div>
