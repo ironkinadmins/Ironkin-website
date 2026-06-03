@@ -48,8 +48,8 @@
         <div class="bingo-board-wrap">
           <div class="bingo-board-toolbar">
             <div>
-              <strong>Drop Board</strong>
-              <span>Click a tile to submit proof. Staff can edit tiles during setup.</span>
+              <strong>Board Setup</strong>
+              <span>Click a tile to edit it. When done, lock the board and assign captains.</span>
             </div>
             <div class="bingo-view-controls">
               <select id="proofTeamSelect" aria-label="Submitting team">
@@ -128,7 +128,7 @@
         <h3>Gameplay</h3>
         <p>Players submit proof for a tile. When staff approve it, the tile fires an attack against the opposing fleet. Attacks are marked as hit or miss.</p>
         <h3>Winning</h3>
-        <p>Sink all six enemy ships to win. If the event deadline arrives first, the team with the most ships sunk wins.</p>
+        <p>Sink all five enemy ships to win. If the event deadline arrives first, the team with the most ships sunk wins.</p>
       </div>
     </section>
   </main>
@@ -160,7 +160,7 @@
         <div id="wikiSearchResults" class="wiki-results"></div>
       </div>
 
-      <div class="bingo-modal-section">
+      <div class="bingo-modal-section" id="proofSubmitSection" style="display:none;">
         <h3>Submit Proof</h3>
         <div class="admin-field">
           <label for="proofPlayerInput">Player Name</label>

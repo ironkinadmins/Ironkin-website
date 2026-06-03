@@ -148,6 +148,7 @@ function addLog(text) {
 
 function renderAll() {
   renderStatus();
+  if (bingoState.phase === "setup") setBingoTab("board");
   renderScore();
   renderBingoBoard();
   renderFleets();
@@ -157,6 +158,8 @@ function renderAll() {
 }
 
 function renderStatus() {
+  document.body.classList.toggle("bingo-setup", bingoState.phase === "setup");
+  document.body.classList.toggle("bingo-active", bingoState.phase !== "setup");
   const title = document.getElementById("bingoStatusTitle");
   const text = document.getElementById("bingoStatusText");
   const state = document.getElementById("bingoBoardState");
@@ -164,9 +167,11 @@ function renderStatus() {
   const phaseLabel = bingoState.phase === "active" ? "Active" : bingoState.phase === "complete" ? "Complete" : bingoState.locked ? "Locked Setup" : "Draft Setup";
   if (title) title.textContent = phaseLabel;
   if (text) {
-    text.textContent = bingoState.phase === "active"
-      ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
-      : "Staff can edit tiles and captains can place ships before the game starts.";
+    text.textContent = bingoState.phase === "setup"
+      ? "Click a tile to edit it. When done, lock the board and assign captains."
+      : bingoState.phase === "active"
+        ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
+        : "Battleship Bingo is complete.";
   }
   if (state) {
     state.textContent = phaseLabel;
@@ -235,10 +240,12 @@ function openTileModal(index) {
   document.getElementById("proofUrlInput").value = "";
   document.getElementById("proofNoteInput").value = "";
   const canEdit = isBingoStaff && bingoState.phase === "setup" && !bingoState.locked;
+  const canSubmitProof = bingoState.phase === "active" && tile.name;
   document.getElementById("staffTileEditor").style.display = canEdit ? "block" : "none";
+  document.getElementById("proofSubmitSection").style.display = canSubmitProof ? "block" : "none";
   document.getElementById("saveTileBtn").style.display = canEdit ? "inline-flex" : "none";
   document.getElementById("clearTileBtn").style.display = canEdit ? "inline-flex" : "none";
-  document.getElementById("submitProofBtn").style.display = tile.name ? "inline-flex" : "none";
+  document.getElementById("submitProofBtn").style.display = canSubmitProof ? "inline-flex" : "none";
   document.getElementById("tileModal").classList.add("show");
   document.getElementById("tileModal").setAttribute("aria-hidden", "false");
 }
@@ -440,13 +447,19 @@ function updateAdminButtons() {
   if (startBtn) startBtn.textContent = bingoState.phase === "active" ? "End Game" : bingoState.phase === "complete" ? "Reopen Game" : "Start Game";
 }
 
+function setBingoTab(tabName) {
+  document.querySelectorAll("[data-bingo-tab]").forEach(button => {
+    button.classList.toggle("active", button.dataset.bingoTab === tabName);
+  });
+  document.querySelectorAll(".bingo-tab-panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById(`bingoTab-${tabName}`)?.classList.add("active");
+}
+
 function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
-      document.querySelectorAll("[data-bingo-tab]").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".bingo-tab-panel").forEach(panel => panel.classList.remove("active"));
-      button.classList.add("active");
-      document.getElementById(`bingoTab-${button.dataset.bingoTab}`)?.classList.add("active");
+      if (bingoState.phase === "setup" && button.dataset.bingoTab !== "board") return;
+      setBingoTab(button.dataset.bingoTab);
     });
   });
   document.getElementById("closeTileModal")?.addEventListener("click", closeTileEditor);
@@ -481,7 +494,18 @@ function bindBingoControls() {
     await saveBingoState();
   });
   document.getElementById("bingoRerollBtn")?.addEventListener("click", async () => {
-    bingoState.tiles = emptyBingoBoard().map((tile, index) => ({ ...tile, ...DEFAULT_ITEMS[index % DEFAULT_ITEMS.length] }));
+    bingoState.tiles = emptyBingoBoard().map((tile, index) => {
+      const demoItem = DEFAULT_ITEMS[index % DEFAULT_ITEMS.length];
+      return {
+        ...tile,
+        name: demoItem.name,
+        image: demoItem.image,
+        status: "open",
+        completedBy: "",
+        completedTeam: "",
+        proofId: ""
+      };
+    });
     addLog("Demo board was filled by staff.");
     await saveBingoState();
   });

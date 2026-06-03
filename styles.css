@@ -3379,3 +3379,31 @@ footer {
   .bingo-section-heading { flex-direction: column; }
   .log-row { grid-template-columns: 1fr; }
 }
+
+/* Battleship Bingo setup mode cleanup */
+body.bingo-setup .bingo-tabs,
+body.bingo-setup .bingo-score-grid,
+body.bingo-setup .bingo-side-panel,
+body.bingo-setup .bingo-view-controls {
+  display: none !important;
+}
+
+body.bingo-setup .bingo-layout {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+body.bingo-setup .bingo-board-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+body.bingo-setup .bingo-board-toolbar {
+  justify-content: center;
+  text-align: center;
+}
+
+body.bingo-setup .bingo-board-toolbar div {
+  width: 100%;
+}
