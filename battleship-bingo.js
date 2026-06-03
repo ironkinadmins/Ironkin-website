@@ -152,6 +152,7 @@ function renderAll() {
   renderPhaseProgress();
   if (bingoState.phase === "setup") setBingoTab("board");
   if (bingoState.phase === "captains") setBingoTab("captains");
+  if (bingoState.phase === "ships") setBingoTab("fleets");
   renderScore();
   renderBingoBoard();
   renderFleets();
@@ -164,7 +165,8 @@ function renderAll() {
 function renderStatus() {
   document.body.classList.toggle("bingo-setup", bingoState.phase === "setup");
   document.body.classList.toggle("bingo-captains", bingoState.phase === "captains");
-  document.body.classList.toggle("bingo-active", bingoState.phase !== "setup" && bingoState.phase !== "captains");
+  document.body.classList.toggle("bingo-ships", bingoState.phase === "ships");
+  document.body.classList.toggle("bingo-active", bingoState.phase === "active" || bingoState.phase === "complete");
 
   const title = document.getElementById("bingoStatusTitle");
   const text = document.getElementById("bingoStatusText");
@@ -179,9 +181,11 @@ function renderStatus() {
       ? "Build the 10×10 board, then lock it to assign captains."
       : bingoState.phase === "captains"
         ? "Assign one captain to each team, then continue to ship placement."
-        : bingoState.phase === "active"
-          ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
-          : "Battleship Bingo is complete.";
+        : bingoState.phase === "ships"
+          ? "Captains place their hidden ships. Start the game once both fleets are complete."
+          : bingoState.phase === "active"
+            ? "Teams can submit proofs. Approved proofs fire attacks against the opposing fleet."
+            : "Battleship Bingo is complete.";
   }
 
   if (state) {
@@ -193,7 +197,8 @@ function renderStatus() {
 function getPhaseLabel() {
   if (bingoState.phase === "active") return "Active Game";
   if (bingoState.phase === "complete") return "Complete";
-  if (bingoState.phase === "captains") return captainsAreValid(false) ? "Ship Placement" : "Assign Captains";
+  if (bingoState.phase === "ships") return "Ship Placement";
+  if (bingoState.phase === "captains") return "Assign Captains";
   return bingoState.locked ? "Locked Setup" : "Board Setup";
 }
 
@@ -211,14 +216,16 @@ function renderPhaseProgress() {
   if (!steps) return;
 
   const boardDone = bingoState.locked || bingoState.phase !== "setup";
-  const captainsDone = captainsAreValid(false) && Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size));
+  const captainsDone = captainsAreValid(false) && ["ships", "active", "complete"].includes(bingoState.phase);
+  const shipsDone = Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size));
   const activeGame = bingoState.phase === "active" || bingoState.phase === "complete";
 
-  const currentStep = !boardDone ? 0 : !activeGame ? 1 : 2;
+  const currentStep = !boardDone ? 0 : !captainsDone ? 1 : !shipsDone || bingoState.phase === "ships" ? 2 : 3;
 
   const items = [
     { label: "Board setup locked", done: boardDone },
-    { label: "Captains place hidden ships", done: captainsDone },
+    { label: "Captains assigned", done: captainsDone },
+    { label: "Captains place hidden ships", done: shipsDone && activeGame },
     { label: "Teams submit proofs to attack", done: activeGame && bingoState.phase === "complete" }
   ];
 
@@ -365,30 +372,48 @@ function renderFleets() {
     const board = document.getElementById(`${team}FleetBoard`);
     const list = document.getElementById(`${team}ShipList`);
     if (!board || !list) return;
+
+    const currentShip = placingTeam === team ? bingoState.teams[team].ships[placingShipIndex] : null;
+
     board.innerHTML = Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => {
       const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
       const attacked = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
+      const previewCells = currentShip ? getShipCells(index, currentShip.size, placingOrientation) : null;
+      const canPreview = currentShip && previewCells && !previewCells.some(cell => bingoState.teams[team].ships.some(s => s.key !== currentShip.key && s.cells.includes(cell)));
       const classes = ["fleet-cell"];
       if (ship) classes.push("ship");
       if (attacked) classes.push(attacked.result);
       if (placingTeam === team) classes.push("placing");
-      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}">${ship ? "■" : ""}${attacked ? (attacked.result === "hit" ? "✹" : "•") : ""}</button>`;
+      if (canPreview) classes.push("can-place");
+      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}">${ship ? "■" : ""}${attacked ? (attacked.result === "hit" ? "✹" : "•") : ""}</button>`;
     }).join("");
+
     board.querySelectorAll(".fleet-cell").forEach(cell => {
       cell.addEventListener("click", () => handleFleetCellClick(team, Number(cell.dataset.index)));
     });
-    list.innerHTML = bingoState.teams[team].ships.map(ship => `
-      <div class="ship-row ${ship.sunk ? "sunk" : ""}">
-        <strong>${escapeHtml(ship.name)}</strong>
-        <span>${ship.cells.length}/${ship.size} placed</span>
-        <em>${ship.sunk ? "Sunk" : ship.cells.length === ship.size ? "Afloat" : "Not placed"}</em>
-      </div>
-    `).join("");
+
+    const placedCount = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
+    const activeNotice = currentShip
+      ? `<div class="ship-placement-notice"><strong>Placing:</strong> ${escapeHtml(currentShip.name)} (${currentShip.size}) • ${escapeHtml(placingOrientation)}</div>`
+      : bingoState.phase === "ships"
+        ? `<div class="ship-placement-notice muted">Select “Place ${escapeHtml(bingoState.teams[team].name)} Ships” to continue placement.</div>`
+        : `<div class="ship-placement-notice muted">Ship placement unlocks after captains are assigned.</div>`;
+
+    list.innerHTML = `
+      <div class="ship-placement-summary">${placedCount}/${SHIPS.length} ships placed</div>
+      ${activeNotice}
+      ${bingoState.teams[team].ships.map((ship, index) => `
+        <div class="ship-row ${ship.sunk ? "sunk" : ""} ${placingTeam === team && placingShipIndex === index ? "active" : ""}">
+          <strong>${escapeHtml(ship.name)}</strong>
+          <span>${ship.cells.length}/${ship.size} placed</span>
+          <em>${ship.sunk ? "Sunk" : ship.cells.length === ship.size ? "Placed" : "Not placed"}</em>
+        </div>
+      `).join("")}
+    `;
   });
 }
-
 function handleFleetCellClick(team, startIndex) {
-  if (!isBingoStaff || bingoState.phase !== "setup" || placingTeam !== team) return;
+  if (!isBingoStaff || bingoState.phase !== "ships" || placingTeam !== team) return;
   const ship = bingoState.teams[team].ships[placingShipIndex];
   if (!ship) return;
   const cells = getShipCells(startIndex, ship.size, placingOrientation);
@@ -525,19 +550,21 @@ function updateAdminButtons() {
 
   const isSetup = bingoState.phase === "setup";
   const isCaptains = bingoState.phase === "captains";
+  const isShips = bingoState.phase === "ships";
   const isActive = bingoState.phase === "active";
   const isComplete = bingoState.phase === "complete";
 
-  if (lockBtn) lockBtn.textContent = isCaptains || bingoState.locked ? "Unlock Board" : "Lock Board";
+  if (lockBtn) lockBtn.textContent = isSetup && !bingoState.locked ? "Lock Board" : "Unlock Board";
   if (startBtn) {
     startBtn.textContent = isActive ? "End Game" : isComplete ? "Reopen Game" : "Start Game";
-    startBtn.style.display = isSetup ? "none" : "inline-flex";
+    startBtn.style.display = isSetup || isCaptains ? "none" : "inline-flex";
   }
 
   if (phaseBtn) {
     phaseBtn.style.display = isBingoStaff ? "inline-flex" : "none";
     if (isSetup) phaseBtn.textContent = "Lock Board";
     else if (isCaptains) phaseBtn.textContent = "Continue to Ship Placement";
+    else if (isShips) phaseBtn.textContent = "Start Game";
     else if (isActive) phaseBtn.textContent = "End Game";
     else if (isComplete) phaseBtn.textContent = "Reopen Game";
     else phaseBtn.textContent = "Start Game";
@@ -687,9 +714,12 @@ function captainsAreValid(showAlerts = false) {
   return true;
 }
 
-function continueToShipPlacement() {
+async function continueToShipPlacement() {
   if (!captainsAreValid(true)) return;
+  bingoState.phase = "ships";
+  bingoState.locked = true;
   addLog("Captain assignment complete. Ship placement started.");
+  await saveBingoState();
   setBingoTab("fleets");
 }
 
@@ -703,7 +733,7 @@ async function handlePhaseAction() {
   }
 
   if (bingoState.phase === "captains") {
-    continueToShipPlacement();
+    await continueToShipPlacement();
     return;
   }
 
@@ -859,8 +889,10 @@ function bindBingoControls() {
       return;
     }
 
+    if (!confirm("Unlocking returns the event to board setup. Continue?")) return;
     bingoState.locked = false;
     bingoState.phase = "setup";
+    placingTeam = null;
     addLog("Board was unlocked and returned to setup.");
     await saveBingoState();
     setBingoTab("board");
@@ -872,17 +904,18 @@ function bindBingoControls() {
     }
 
     if (bingoState.phase === "captains") {
-      if (!captainsAreValid(true)) return;
-      setBingoTab("fleets");
+      await continueToShipPlacement();
       return;
     }
 
-    if (bingoState.phase !== "active" && bingoState.phase !== "complete") {
+    if (bingoState.phase === "ships") {
       if (!Object.values(bingoState.teams).every(team => team.ships.every(ship => ship.cells.length === ship.size))) {
-        if (!confirm("Not all ships are placed. Start anyway?")) return;
+        alert("Both fleets need all ships placed before starting the game.");
+        return;
       }
       bingoState.phase = "active";
       bingoState.locked = true;
+      placingTeam = null;
       addLog("Battleship Bingo has started.");
     } else if (bingoState.phase === "active") {
       bingoState.phase = "complete";
@@ -896,11 +929,17 @@ function bindBingoControls() {
   document.querySelectorAll(".bingo-place-btn").forEach(button => {
     button.addEventListener("click", () => {
       if (!isBingoStaff) return alert("Staff only.");
+      if (bingoState.phase !== "ships") return alert("Continue to Ship Placement before placing ships.");
       placingTeam = button.dataset.team;
       placingShipIndex = bingoState.teams[placingTeam].ships.findIndex(ship => ship.cells.length !== ship.size);
-      if (placingShipIndex < 0) placingShipIndex = 0;
+      if (placingShipIndex < 0) {
+        alert(`${bingoState.teams[placingTeam].name} already has all ships placed.`);
+        placingTeam = null;
+        renderFleets();
+        return;
+      }
       placingOrientation = prompt("Ship orientation: horizontal or vertical?", placingOrientation)?.toLowerCase().startsWith("v") ? "vertical" : "horizontal";
-      alert(`Click the starting square for ${bingoState.teams[placingTeam].ships[placingShipIndex].name}.`);
+      alert(`Click the starting square for ${bingoState.teams[placingTeam].ships[placingShipIndex].name} (${bingoState.teams[placingTeam].ships[placingShipIndex].size} tiles).`);
       renderFleets();
     });
   });
