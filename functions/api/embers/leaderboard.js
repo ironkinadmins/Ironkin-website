@@ -13,7 +13,7 @@ export async function onRequestGet({ env }) {
     `${supabaseUrl.replace(/\/$/, "")}/rest/v1/balances` +
     `?select=display_name,balance,user_id,guild_id` +
     `&order=balance.desc` +
-    `&limit=100`;
+
 
   const response = await fetch(url, {
     headers: {

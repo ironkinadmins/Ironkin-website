@@ -1483,8 +1483,8 @@ function formatShortDateTime(value) {
   });
 }
 
-async function fetchEmberLeaderboard(limit = 100) {
-  const response = await fetch(`/api/embers/leaderboard?limit=${limit}`);
+async function fetchEmberLeaderboard() {
+  const response = await fetch(`/api/embers/leaderboard`);
   const data = await response.json();
 
   if (!response.ok) {
