@@ -37,7 +37,6 @@ gsrsearch: q,
   if (!item.name || !item.image) return false;
 
   const name = item.name.toLowerCase();
-  const image = item.image.toLowerCase();
 
   return (
     !name.includes("category:") &&
@@ -46,12 +45,9 @@ gsrsearch: q,
     !name.includes("user:") &&
     !name.includes("league") &&
     !name.includes("quest") &&
-    !name.includes("ranged") &&
-    (
-      image.includes("_detail") ||
-      image.includes("_icon") ||
-      image.includes("/images/thumb/")
-    )
+    !name.includes("area") &&
+    !name.includes("music") &&
+    !name.includes("transcript")
   );
 });
 
