@@ -5731,3 +5731,25 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
     overflow: hidden !important;
   }
 }
+
+
+/* Battleship queued changes: one fleet board at a time on the Fleets placement screen */
+#bingoTab-fleets .fleet-placement-grid.single-visible-fleet {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#bingoTab-fleets .fleet-placement-card[hidden] {
+  display: none !important;
+}
+
+/* Battleship queued changes: sunk ships only show red/strikethrough; no life counters */
+.active-fleet-ships span.sunk {
+  border-color: rgba(255, 90, 110, 0.55);
+  background: rgba(140, 20, 35, 0.28);
+  color: #ff7777;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}

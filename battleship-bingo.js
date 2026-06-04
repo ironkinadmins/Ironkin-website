@@ -264,13 +264,6 @@ function renderScore() {
             <small>Captain: ${escapeHtml(teamState.captain || "Not set")}</small>
           </div>
           <div class="ship-placement-count"><b>${placed}/${SHIPS.length}</b><small>ships placed</small></div>
-          <div class="ship-mini-checklist">
-            ${teamState.ships.map(ship => `
-              <span class="${ship.cells.length === ship.size ? "placed" : "pending"}">
-                <b>${ship.cells.length === ship.size ? "✓" : "□"}</b>${escapeHtml(ship.name)}
-              </span>
-            `).join("")}
-          </div>
         </div>`;
     }
 
@@ -338,9 +331,7 @@ function renderActiveTeamCard(team) {
       </div>
       <div class="active-fleet-ships">
         ${teamState.ships.map(ship => {
-          const hitCount = getShipHitCount(team, ship);
-          const label = ship.sunk ? "SUNK" : `${hitCount}/${ship.size}`;
-          return `<span class="${ship.sunk ? "sunk" : hitCount ? "damaged" : "afloat"}">${escapeHtml(ship.name)} <b>${escapeHtml(label)}</b></span>`;
+          return `<span class="${ship.sunk ? "sunk" : "afloat"}">${escapeHtml(ship.name)}</span>`;
         }).join("")}
       </div>
     </article>`;
@@ -988,7 +979,12 @@ function renderFleets() {
     const list = document.getElementById(`${team}ShipList`);
     const captainLabel = document.getElementById(`${team}FleetCaptainLabel`);
     const placedTotal = document.getElementById(`${team}FleetPlacedTotal`);
+    const card = board?.closest(".fleet-placement-card");
+    const grid = board?.closest(".fleet-placement-grid");
     if (!board || !list) return;
+
+    if (card) card.hidden = team !== placingTeam;
+    if (grid) grid.classList.add("single-visible-fleet");
 
     const placedCount = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
     const currentShip = placingTeam === team ? bingoState.teams[team].ships[placingShipIndex] : null;
