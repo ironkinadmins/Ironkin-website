@@ -156,6 +156,7 @@ function renderAll() {
   if (bingoState.phase === "captains") setBingoTab("captains");
   if (bingoState.phase === "ships") setBingoTab("fleets");
   renderScore();
+  renderActiveGameHeader();
   renderBingoBoard();
   renderFleets();
   renderProofs();
@@ -282,6 +283,38 @@ function renderScore() {
   }).join("");
 }
 
+
+function renderActiveGameHeader() {
+  const header = document.getElementById("activeGameHeader");
+  if (!header) return;
+
+  const isActiveGame = bingoState.phase === "active" || bingoState.phase === "complete";
+  header.style.display = isActiveGame ? "grid" : "none";
+  if (!isActiveGame) {
+    header.innerHTML = "";
+    return;
+  }
+
+  header.innerHTML = Object.keys(TEAMS).map(team => {
+    const teamState = bingoState.teams[team];
+    const hitsTaken = bingoState.attacks.filter(a => a.defendingTeam === team && a.result === "hit").length;
+    const lost = teamState.ships.filter(ship => ship.sunk).length;
+    const afloat = Math.max(0, SHIPS.length - lost);
+    return `
+      <article class="active-fleet-card ${escapeAttr(team)}">
+        <h3>${escapeHtml(teamState.name)}</h3>
+        <div class="active-fleet-stats">
+          <span class="afloat">🛡 ${afloat} afloat</span>
+          <span class="lost">🔥 ${lost} lost</span>
+          <span class="hits">💥 ${hitsTaken} hits taken</span>
+        </div>
+        <div class="active-fleet-ships">
+          ${teamState.ships.map(ship => `<span class="${ship.sunk ? "sunk" : "afloat"}">${escapeHtml(ship.name)}</span>`).join("")}
+        </div>
+      </article>`;
+  }).join("");
+}
+
 function getSunkCount(team) {
   const opponent = getOpponent(team);
   return bingoState.teams[opponent].ships.filter(ship => ship.sunk).length;
@@ -346,8 +379,8 @@ function renderBoardToolbar() {
     const team = getSelectedProofTeam();
     const opponent = getOpponent(team);
     boardToolbarText.innerHTML = activeBoardMode === "attack"
-      ? `<strong>Attacking ${escapeHtml(bingoState.teams[opponent]?.name || TEAMS[opponent].name)}'s Waters</strong><span>Submit proof for drops to fire attacks at the opposing fleet.</span>`
-      : `<strong>${escapeHtml(bingoState.teams[team]?.name || TEAMS[team].name)}'s Waters</strong><span>View your hidden ship placement and incoming enemy attacks.</span>`;
+      ? `<strong>Attacking ${escapeHtml(bingoState.teams[opponent]?.name || TEAMS[opponent].name)}'s Waters</strong>`
+      : `<strong>${escapeHtml(bingoState.teams[team]?.name || TEAMS[team].name)}'s Waters</strong>`;
   } else {
     boardToolbarText.innerHTML = `<strong>Board Setup</strong><span>Click a tile to edit it. When done, lock the board and assign captains.</span>`;
   }
@@ -367,13 +400,19 @@ function renderActiveGameBoard(boardEl) {
 
   if (activeBoardMode === "waters") {
     boardEl.innerHTML = Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => {
+      const tile = bingoState.tiles[index] || {};
       const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
       const attack = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
       const classes = ["bingo-tile", "water-tile"];
+      if (tile.name) classes.push("filled");
       if (ship) classes.push("ship", `ship-${ship.key}`);
       if (attack) classes.push(`attack-${attack.result}`);
       return `
-        <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}" disabled>
+        <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${ship ? escapeAttr(ship.name) : escapeAttr(tile.name || "Empty water")}" disabled>
+          <span class="water-drop-bg">
+            ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
+            ${tile.name ? `<small>${escapeHtml(tile.name)}</small>` : ""}
+          </span>
           ${ship ? `<span class="water-ship-cell">${escapeHtml(ship.name.charAt(0))}</span>` : ""}
           ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "✹" : "•"}</strong>` : ""}
         </button>

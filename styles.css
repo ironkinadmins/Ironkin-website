@@ -4593,3 +4593,193 @@ body.bingo-setup .bingo-tabs {
     grid-template-columns: repeat(5, minmax(44px, 1fr));
   }
 }
+
+
+/* Active Battleship game cleanup */
+body.bingo-active .bingo-hero,
+body.bingo-active .bingo-status-card,
+body.bingo-active .bingo-tabs,
+body.bingo-active .bingo-side-panel,
+body.bingo-active .bingo-score-grid,
+body.bingo-active .ship-placement-topbar {
+  display: none !important;
+}
+
+body.bingo-active .bingo-page {
+  max-width: 980px;
+  padding-top: 36px;
+}
+
+body.bingo-active #bingoTab-board {
+  display: block;
+}
+
+body.bingo-active .bingo-layout {
+  display: block;
+}
+
+body.bingo-active .bingo-board-wrap {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+body.bingo-active .bingo-board-toolbar {
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 12px;
+  border: 0;
+  padding: 0;
+}
+
+body.bingo-active .bingo-board-toolbar > div:first-child {
+  order: 2;
+  width: 100%;
+}
+
+body.bingo-active .bingo-board-toolbar > div:first-child strong {
+  display: block;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1rem;
+  margin-top: 14px;
+}
+
+body.bingo-active .bingo-view-controls {
+  order: 1;
+  width: 100%;
+  justify-content: center;
+}
+
+body.bingo-active #proofTeamSelect {
+  display: none;
+}
+
+body.bingo-active .active-board-controls {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+}
+
+body.bingo-active .active-board-toggle {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 4px;
+}
+
+body.bingo-active .active-board-toggle button {
+  min-width: 150px;
+  padding: 12px 20px;
+  border-radius: 10px;
+}
+
+body.bingo-active #openProofTileSelectorBtn {
+  order: 3;
+  margin-top: 22px;
+  min-width: 230px;
+  text-align: center;
+  font-size: 1rem;
+  box-shadow: 0 16px 38px rgba(255, 122, 26, 0.2);
+}
+
+body.bingo-active .bingo-board {
+  margin: 0 auto;
+  max-width: 760px;
+}
+
+.active-game-header {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 760px;
+  margin: 0 auto 26px;
+}
+
+.active-fleet-card {
+  text-align: center;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(12, 18, 24, 0.78);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.22);
+}
+
+.active-fleet-card h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+.active-fleet-stats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.active-fleet-stats .afloat { color: #5ee083; }
+.active-fleet-stats .lost { color: #ff9f45; }
+.active-fleet-stats .hits { color: #ff667a; }
+
+.active-fleet-ships {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.active-fleet-ships span {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(80, 170, 255, 0.38);
+  background: rgba(30, 115, 190, 0.16);
+  color: #7fc8ff;
+  font-weight: 800;
+  font-size: 0.84rem;
+}
+
+.active-fleet-ships span.sunk {
+  border-color: rgba(255, 90, 110, 0.42);
+  background: rgba(140, 20, 35, 0.22);
+  color: #ff9aaa;
+  text-decoration: line-through;
+}
+
+.active-waters-board .water-tile .water-drop-bg {
+  display: contents;
+}
+
+.active-waters-board .water-tile .water-drop-bg img,
+.active-waters-board .water-tile .water-drop-bg small {
+  opacity: 0.28;
+  filter: saturate(0.65);
+}
+
+.active-waters-board .water-tile.ship {
+  border-color: rgba(80, 170, 255, 0.72);
+  background: rgba(80, 170, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(80, 170, 255, 0.45);
+}
+
+.active-waters-board .water-ship-cell,
+.active-waters-board .attack-marker {
+  position: absolute;
+  z-index: 3;
+}
+
+@media (max-width: 760px) {
+  .active-game-header {
+    grid-template-columns: 1fr;
+  }
+
+  body.bingo-active .active-board-toggle button {
+    min-width: auto;
+  }
+}
