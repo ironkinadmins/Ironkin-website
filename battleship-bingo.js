@@ -32,6 +32,7 @@ let placingShipIndex = 0;
 let placingOrientation = "horizontal";
 let activeBoardMode = "attack";
 let activeSidebarTab = "players";
+let activeSidebarCollapsed = false;
 
 function createDefaultState() {
   return {
@@ -362,7 +363,16 @@ function renderActiveGameSidebar() {
   const content = document.getElementById("activeSidebarContent");
   const isActiveGame = bingoState.phase === "active" || bingoState.phase === "complete";
 
-  if (sidebar) sidebar.style.display = isActiveGame ? "block" : "none";
+  if (sidebar) {
+    sidebar.style.display = isActiveGame ? "block" : "none";
+    sidebar.classList.toggle("collapsed", activeSidebarCollapsed);
+    const collapseBtn = document.getElementById("activeSidebarCollapseBtn");
+    if (collapseBtn) {
+      collapseBtn.textContent = activeSidebarCollapsed ? "‹" : "›";
+      collapseBtn.setAttribute("aria-label", activeSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
+      collapseBtn.title = activeSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
+    }
+  }
   if (!sidebar || !content || !isActiveGame) return;
 
   sidebar.querySelectorAll("[data-active-sidebar-tab]").forEach(button => {
@@ -497,8 +507,16 @@ function getTileRemainingQuantity(tile) {
 function getTileProgressMarkup(tile) {
   const required = getTileQuantity(tile);
   const completed = Math.min(getTileCompletedQuantity(tile), required);
-  if (!tile?.name || required <= 1) return "";
-  return `<span class="bingo-progress-badge">${escapeHtml(completed)}/${escapeHtml(required)}</span>`;
+  if (!tile?.name || required <= 1 || completed <= 0) return "";
+  const percent = Math.max(0, Math.min(100, Math.round((completed / required) * 100)));
+  return `<span class="bingo-progress-line" aria-label="${escapeAttr(completed)} of ${escapeAttr(required)} complete"><i style="width:${escapeAttr(percent)}%"></i></span>`;
+}
+
+function getTileProgressTitle(tile) {
+  const required = getTileQuantity(tile);
+  const completed = Math.min(getTileCompletedQuantity(tile), required);
+  if (!tile?.name || required <= 1) return tile?.name || "Empty";
+  return `${tile.name} — ${completed}/${required} complete`;
 }
 
 function getTileStatus(tile) {
@@ -528,7 +546,7 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}">
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}">
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
@@ -623,7 +641,7 @@ function renderActiveGameBoard(boardEl) {
     const tileStatus = getTileStatus(tile);
     if (tileStatus && tileStatus !== "open") classes.push(`status-${tileStatus}`);
     return `
-      <button class="${classes.join(" ")}" type="button" data-index="${index}" ${tile.name ? "" : "disabled"}>
+      <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${tile.name ? "" : "disabled"}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "HIT" : "MISS"}</strong>` : ""}
@@ -1504,8 +1522,13 @@ function bindBingoControls() {
   document.querySelectorAll("[data-active-sidebar-tab]").forEach(button => {
     button.addEventListener("click", () => {
       activeSidebarTab = button.dataset.activeSidebarTab;
+      activeSidebarCollapsed = false;
       renderActiveGameSidebar();
     });
+  });
+  document.getElementById("activeSidebarCollapseBtn")?.addEventListener("click", () => {
+    activeSidebarCollapsed = !activeSidebarCollapsed;
+    renderActiveGameSidebar();
   });
   document.getElementById("activeEndGameBtn")?.addEventListener("click", endActiveGameFromMenu);
   document.getElementById("activeReturnSetupBtn")?.addEventListener("click", returnToSetupModeFromMenu);
