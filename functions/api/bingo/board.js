@@ -28,6 +28,7 @@ function emptyTiles() {
     name: "",
     image: "",
     quantity: 1,
+    completedQuantity: 0,
     status: "open",
     completedBy: "",
     completedTeam: "",
@@ -88,7 +89,8 @@ function sanitiseState(body) {
       name: clampString(tile.name, 120),
       image: clampString(tile.image, 700),
       quantity: Math.max(1, Number.parseInt(tile.quantity ?? tile.qty ?? tile.quantityNeeded ?? 1, 10) || 1),
-      status: ["open", "submitted", "approved", "rejected"].includes(tile.status) ? tile.status : "open",
+      completedQuantity: Math.max(0, Number.parseInt(tile.completedQuantity ?? tile.completedQty ?? tile.progress ?? 0, 10) || 0),
+      status: ["open", "submitted", "partial", "approved", "rejected"].includes(tile.status) ? tile.status : "open",
       completedBy: clampString(tile.completedBy, 100),
       completedTeam: ["ember", "ash"].includes(tile.completedTeam) ? tile.completedTeam : "",
       proofId: clampString(tile.proofId, 80)
@@ -132,6 +134,7 @@ function sanitiseState(body) {
       player: clampString(proof.player, 100),
       url: clampString(proof.url, 700),
       note: clampString(proof.note, 300),
+      quantity: Math.max(1, Number.parseInt(proof.quantity ?? proof.qty ?? 1, 10) || 1),
       status: ["pending", "approved", "rejected"].includes(proof.status) ? proof.status : "pending",
       createdAt: clampString(proof.createdAt, 80) || new Date().toISOString()
     })) : [],
