@@ -4925,3 +4925,414 @@ body.bingo-active #openProofTileSelectorBtn {
   font-size: 0.78rem;
   margin-left: 6px;
 }
+
+/* Active game final layout cleanup: board left, sidebar right */
+body.bingo-active .bingo-page {
+  max-width: 1320px;
+  padding: 24px 24px 70px;
+}
+
+body.bingo-active .bingo-layout {
+  display: grid !important;
+  grid-template-columns: minmax(680px, 1fr) minmax(300px, 360px);
+  gap: 24px;
+  align-items: start;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+body.bingo-active .bingo-board-wrap {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+body.bingo-active .bingo-board-toolbar {
+  width: min(100%, 920px);
+  max-width: 920px;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 12px;
+  margin: 0 auto 14px;
+  border: 0;
+  padding: 0;
+  text-align: center;
+}
+
+body.bingo-active .bingo-board-toolbar > div:first-child {
+  order: 2;
+  width: 100%;
+}
+
+body.bingo-active .bingo-board-toolbar > div:first-child strong {
+  display: block;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1rem;
+  margin-top: 2px;
+}
+
+body.bingo-active .bingo-view-controls {
+  order: 1;
+  width: 100%;
+  justify-content: center;
+}
+
+body.bingo-active .active-board-controls {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+body.bingo-active .active-game-top-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+body.bingo-active .active-board-toggle {
+  justify-self: center;
+  background: rgba(24, 19, 17, 0.86);
+  border: 1px solid rgba(255, 180, 92, 0.22);
+  border-radius: 14px;
+  padding: 4px;
+}
+
+body.bingo-active .active-board-toggle button {
+  min-width: 150px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+body.bingo-active .active-board-toggle button.active,
+body.bingo-active .active-board-toggle button:hover {
+  background: rgba(255, 122, 26, 0.22);
+  color: #ffb15a;
+}
+
+body.bingo-active #openProofTileSelectorBtn {
+  justify-self: center;
+  order: initial;
+  margin: 4px 0 0;
+  min-width: 230px;
+  text-align: center;
+  font-size: 1rem;
+  box-shadow: 0 16px 38px rgba(255, 122, 26, 0.2);
+}
+
+body.bingo-active .bingo-board {
+  width: min(100%, 920px);
+  max-width: 920px;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+/* Active game sidebar */
+body.bingo-active .active-game-sidebar {
+  display: block !important;
+  position: sticky;
+  top: 88px;
+  align-self: start;
+  max-height: calc(100vh - 110px);
+  overflow: hidden;
+  background: rgba(15, 12, 11, 0.92);
+  border: 1px solid rgba(255, 122, 26, 0.22);
+  border-radius: 18px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+}
+
+.active-sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 122, 26, 0.18);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.active-sidebar-tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 12px 8px;
+  font-weight: 900;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.active-sidebar-tabs button.active,
+.active-sidebar-tabs button:hover {
+  color: #ffb15a;
+  background: rgba(255, 122, 26, 0.12);
+}
+
+.active-sidebar-content {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: calc(100vh - 170px);
+}
+
+.active-sidebar-section {
+  margin-bottom: 18px;
+}
+
+.active-sidebar-section h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.active-sidebar-section h3 small {
+  color: var(--ember);
+}
+
+.active-player-list,
+.active-proof-list,
+.active-log-list {
+  display: grid;
+  gap: 8px;
+}
+
+.active-player-row,
+.active-proof-row,
+.active-log-row {
+  border: 1px solid rgba(255, 180, 92, 0.13);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.active-player-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #62df86;
+  box-shadow: 0 0 10px rgba(98, 223, 134, 0.35);
+}
+
+.active-player-row strong,
+.active-proof-row strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.active-player-row em,
+.active-proof-row span,
+.active-log-row time {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.active-log-row {
+  display: grid;
+  gap: 5px;
+}
+
+.active-log-row span {
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.proof-actions.compact {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.proof-actions.compact button {
+  flex: 1;
+  border: 1px solid rgba(255, 180, 92, 0.22);
+  background: rgba(255, 122, 26, 0.10);
+  color: #ffb15a;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* Active fleet cards: Ironkin theme */
+.active-game-header {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 760px;
+  margin: 0 auto 24px;
+}
+
+.active-result-banner {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(255, 180, 92, 0.35);
+  background: rgba(255, 122, 26, 0.10);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+}
+
+.active-result-banner strong {
+  color: #ffb15a;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.active-result-banner span {
+  color: var(--muted);
+}
+
+.active-fleet-card {
+  text-align: center;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 122, 26, 0.28);
+  background: rgba(20, 13, 10, 0.88);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.24);
+}
+
+.active-fleet-card h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+}
+
+.active-fleet-card small {
+  color: var(--muted);
+}
+
+.active-fleet-card-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.active-fleet-card-head > span {
+  font-size: 1.6rem;
+}
+
+.active-fleet-card-head > strong {
+  color: #ffb15a;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.active-fleet-stats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+
+.active-fleet-stats .afloat { color: #7ee59d; }
+.active-fleet-stats .lost { color: #ffb15a; }
+.active-fleet-stats .hits { color: #ff8392; }
+
+.active-fleet-ships {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.active-fleet-ships span {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 180, 92, 0.22);
+  background: rgba(255, 122, 26, 0.08);
+  color: #ffcf9c;
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.active-fleet-ships span.sunk {
+  border-color: rgba(255, 90, 110, 0.42);
+  background: rgba(140, 20, 35, 0.22);
+  color: #ff9aaa;
+  text-decoration: line-through;
+}
+
+/* Active-game tile progress badge readability */
+body.bingo-active .bingo-progress-badge {
+  left: 50%;
+  right: auto;
+  bottom: 4px;
+  transform: translateX(-50%);
+  background: rgba(8, 8, 8, 0.86);
+  border: 1px solid rgba(255, 180, 92, 0.52);
+  color: #ffcf9c;
+  z-index: 4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+body.bingo-active .bingo-tile img {
+  width: 32px;
+  height: 32px;
+}
+
+body.bingo-active .bingo-tile span:not(.bingo-qty-badge):not(.bingo-progress-badge) {
+  font-size: 0.68rem;
+  line-height: 1.05;
+  max-width: 92%;
+}
+
+@media (max-width: 1080px) {
+  body.bingo-active .bingo-layout {
+    grid-template-columns: 1fr;
+  }
+
+  body.bingo-active .active-game-sidebar {
+    position: static;
+    max-height: none;
+    width: min(100%, 920px);
+    margin: 0 auto;
+  }
+
+  .active-sidebar-content {
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .active-game-header {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  body.bingo-active .bingo-page {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  body.bingo-active .active-board-toggle button {
+    min-width: auto;
+  }
+}

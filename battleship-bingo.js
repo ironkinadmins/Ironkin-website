@@ -158,6 +158,7 @@ function renderAll() {
   if (bingoState.phase === "setup") setBingoTab("board");
   if (bingoState.phase === "captains") setBingoTab("captains");
   if (bingoState.phase === "ships") setBingoTab("fleets");
+  if (bingoState.phase === "active" || bingoState.phase === "complete") setBingoTab("board");
   renderScore();
   renderActiveGameHeader();
   renderActiveGameSidebar();
