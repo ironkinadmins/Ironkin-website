@@ -31,6 +31,7 @@ let placingTeam = null;
 let placingShipIndex = 0;
 let placingOrientation = "horizontal";
 let activeBoardMode = "attack";
+let activeSidebarTab = "players";
 
 function createDefaultState() {
   return {
@@ -159,6 +160,7 @@ function renderAll() {
   if (bingoState.phase === "ships") setBingoTab("fleets");
   renderScore();
   renderActiveGameHeader();
+  renderActiveGameSidebar();
   renderBingoBoard();
   renderFleets();
   renderProofs();
@@ -297,24 +299,175 @@ function renderActiveGameHeader() {
     return;
   }
 
-  header.innerHTML = Object.keys(TEAMS).map(team => {
-    const teamState = bingoState.teams[team];
-    const hitsTaken = bingoState.attacks.filter(a => a.defendingTeam === team && a.result === "hit").length;
-    const lost = teamState.ships.filter(ship => ship.sunk).length;
-    const afloat = Math.max(0, SHIPS.length - lost);
+  const winner = getWinningTeam();
+  const completeBanner = bingoState.phase === "complete"
+    ? `<article class="active-result-banner">
+        <strong>${winner ? `${TEAMS[winner].emoji} ${escapeHtml(bingoState.teams[winner]?.name || TEAMS[winner].name)} wins!` : "Game Complete"}</strong>
+        <span>Final results are locked. Staff can reopen the game from Admin Controls.</span>
+      </article>`
+    : "";
+
+  header.innerHTML = `
+    ${completeBanner}
+    ${Object.keys(TEAMS).map(team => renderActiveTeamCard(team)).join("")}
+  `;
+}
+
+function renderActiveTeamCard(team) {
+  const teamState = bingoState.teams[team];
+  const hitsTaken = bingoState.attacks.filter(a => a.defendingTeam === team && a.result === "hit").length;
+  const lost = teamState.ships.filter(ship => ship.sunk).length;
+  const afloat = Math.max(0, SHIPS.length - lost);
+  const shipsSunkByTeam = getSunkCount(team);
+  return `
+    <article class="active-fleet-card ${escapeAttr(team)}">
+      <div class="active-fleet-card-head">
+        <span>${TEAMS[team].emoji}</span>
+        <div>
+          <h3>${escapeHtml(teamState.name)}</h3>
+          <small>Captain: ${escapeHtml(teamState.captain || "Not set")}</small>
+        </div>
+        <strong>${shipsSunkByTeam}/${SHIPS.length} sunk</strong>
+      </div>
+      <div class="active-fleet-stats">
+        <span class="afloat">🛡 ${afloat} afloat</span>
+        <span class="lost">🔥 ${lost} lost</span>
+        <span class="hits">💥 ${hitsTaken} hits taken</span>
+      </div>
+      <div class="active-fleet-ships">
+        ${teamState.ships.map(ship => {
+          const hitCount = getShipHitCount(team, ship);
+          const label = ship.sunk ? "SUNK" : `${hitCount}/${ship.size}`;
+          return `<span class="${ship.sunk ? "sunk" : hitCount ? "damaged" : "afloat"}">${escapeHtml(ship.name)} <b>${escapeHtml(label)}</b></span>`;
+        }).join("")}
+      </div>
+    </article>`;
+}
+
+function getShipHitCount(defendingTeam, ship) {
+  if (!ship || !Array.isArray(ship.cells)) return 0;
+  return ship.cells.filter(cell => bingoState.attacks.some(a => a.defendingTeam === defendingTeam && a.targetIndex === cell && a.result === "hit")).length;
+}
+
+function getWinningTeam() {
+  if (!bingoState?.teams) return "";
+  if (bingoState.teams.ember?.ships?.length && bingoState.teams.ember.ships.every(ship => ship.sunk)) return "ash";
+  if (bingoState.teams.ash?.ships?.length && bingoState.teams.ash.ships.every(ship => ship.sunk)) return "ember";
+  return "";
+}
+
+function renderActiveGameSidebar() {
+  const sidebar = document.getElementById("activeGameSidebar");
+  const content = document.getElementById("activeSidebarContent");
+  const isActiveGame = bingoState.phase === "active" || bingoState.phase === "complete";
+
+  if (sidebar) sidebar.style.display = isActiveGame ? "block" : "none";
+  if (!sidebar || !content || !isActiveGame) return;
+
+  sidebar.querySelectorAll("[data-active-sidebar-tab]").forEach(button => {
+    button.classList.toggle("active", button.dataset.activeSidebarTab === activeSidebarTab);
+  });
+
+  if (activeSidebarTab === "proofs") {
+    content.innerHTML = renderActiveProofsPanel();
+  } else if (activeSidebarTab === "log") {
+    content.innerHTML = renderActiveLogPanel();
+  } else {
+    content.innerHTML = renderActivePlayersPanel();
+  }
+
+  content.querySelectorAll("[data-proof-action]").forEach(button => {
+    button.addEventListener("click", () => reviewProof(button.dataset.proofId, button.dataset.proofAction));
+  });
+}
+
+function renderActivePlayersPanel() {
+  return Object.keys(TEAMS).map(team => {
+    const players = getTeamPlayers(team);
     return `
-      <article class="active-fleet-card ${escapeAttr(team)}">
-        <h3>${escapeHtml(teamState.name)}</h3>
-        <div class="active-fleet-stats">
-          <span class="afloat">🛡 ${afloat} afloat</span>
-          <span class="lost">🔥 ${lost} lost</span>
-          <span class="hits">💥 ${hitsTaken} hits taken</span>
+      <section class="active-sidebar-section">
+        <h3>${TEAMS[team].emoji} ${escapeHtml(bingoState.teams[team]?.name || TEAMS[team].name)} <small>${players.length}</small></h3>
+        <div class="active-player-list">
+          ${players.length ? players.map(player => `
+            <div class="active-player-row">
+              <span class="player-dot"></span>
+              <strong>${escapeHtml(player.name)}</strong>
+              ${player.captain ? `<em>Captain</em>` : ""}
+            </div>
+          `).join("") : `<p class="muted-text">No players submitted proofs yet.</p>`}
         </div>
-        <div class="active-fleet-ships">
-          ${teamState.ships.map(ship => `<span class="${ship.sunk ? "sunk" : "afloat"}">${escapeHtml(ship.name)}</span>`).join("")}
-        </div>
-      </article>`;
+      </section>`;
   }).join("");
+}
+
+function getTeamPlayers(team) {
+  const seen = new Set();
+  const players = [];
+  const captain = (bingoState.teams[team]?.captain || "").trim();
+  if (captain) {
+    seen.add(captain.toLowerCase());
+    players.push({ name: captain, captain: true });
+  }
+  bingoState.proofs
+    .filter(proof => proof.team === team && proof.player)
+    .forEach(proof => {
+      const key = proof.player.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        players.push({ name: proof.player.trim(), captain: false });
+      }
+    });
+  return players;
+}
+
+function renderActiveProofsPanel() {
+  const pending = bingoState.proofs.filter(p => p.status === "pending");
+  const approved = bingoState.proofs.filter(p => p.status === "approved").slice(0, 8);
+  const rejected = bingoState.proofs.filter(p => p.status === "rejected").slice(0, 5);
+  return `
+    ${renderProofGroup("Pending", pending, true)}
+    ${renderProofGroup("Approved", approved, false)}
+    ${renderProofGroup("Rejected", rejected, false)}
+  `;
+}
+
+function renderProofGroup(title, proofs, allowActions) {
+  return `
+    <section class="active-sidebar-section">
+      <h3>${escapeHtml(title)} <small>${proofs.length}</small></h3>
+      <div class="active-proof-list">
+        ${proofs.length ? proofs.map(proof => renderCompactProof(proof, allowActions)).join("") : `<p class="muted-text">None</p>`}
+      </div>
+    </section>`;
+}
+
+function renderCompactProof(proof, allowActions) {
+  const tile = bingoState.tiles[proof.tileIndex] || {};
+  return `
+    <div class="active-proof-row status-${escapeAttr(proof.status)}">
+      <strong>${escapeHtml(tile.name || `Tile ${proof.tileIndex + 1}`)} ${proof.quantity > 1 ? `<small>x${escapeHtml(proof.quantity)}</small>` : ""}</strong>
+      <span>${escapeHtml(proof.player || "Unknown")} • ${escapeHtml(TEAMS[proof.team]?.name || proof.team)}</span>
+      ${allowActions && isBingoStaff ? `
+        <div class="proof-actions compact">
+          <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
+          <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
+        </div>` : ""}
+    </div>`;
+}
+
+function renderActiveLogPanel() {
+  return `
+    <section class="active-sidebar-section">
+      <h3>Match Log <small>${bingoState.log.length}</small></h3>
+      <div class="active-log-list">
+        ${bingoState.log.slice(0, 18).map(entry => `
+          <div class="active-log-row">
+            <time>${formatDateTime(entry.at)}</time>
+            <span>${escapeHtml(entry.text)}</span>
+          </div>
+        `).join("")}
+      </div>
+    </section>`;
 }
 
 function getSunkCount(team) {
@@ -418,6 +571,12 @@ function getSelectedProofTeam() {
   return selected === "ash" ? "ash" : "ember";
 }
 
+
+function isLatestAttack(attack) {
+  const latest = bingoState.attacks[bingoState.attacks.length - 1];
+  return Boolean(attack && latest && attack.id === latest.id);
+}
+
 function renderActiveGameBoard(boardEl) {
   const team = getSelectedProofTeam();
   const opponent = getOpponent(team);
@@ -433,7 +592,10 @@ function renderActiveGameBoard(boardEl) {
       const classes = ["bingo-tile", "water-tile"];
       if (tile.name) classes.push("filled");
       if (ship) classes.push("ship", `ship-${ship.key}`);
-      if (attack) classes.push(`attack-${attack.result}`);
+      if (attack) {
+      classes.push(`attack-${attack.result}`);
+      if (isLatestAttack(attack)) classes.push("recent-attack");
+    }
       return `
         <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${ship ? escapeAttr(ship.name) : escapeAttr(tile.name || "Empty water")}" disabled>
           <span class="water-drop-bg">
@@ -453,7 +615,10 @@ function renderActiveGameBoard(boardEl) {
     const qty = getTileQuantity(tile);
     const attack = bingoState.attacks.find(a => a.attackingTeam === team && a.targetIndex === index);
     const classes = ["bingo-tile", tile.name ? "filled" : "empty", "attack-tile"];
-    if (attack) classes.push(`attack-${attack.result}`);
+    if (attack) {
+      classes.push(`attack-${attack.result}`);
+      if (isLatestAttack(attack)) classes.push("recent-attack");
+    }
     const tileStatus = getTileStatus(tile);
     if (tileStatus && tileStatus !== "open") classes.push(`status-${tileStatus}`);
     return `
@@ -1045,15 +1210,15 @@ function resolveAttack(proof) {
   const attack = { id: crypto.randomUUID(), attackingTeam: proof.team, defendingTeam, targetIndex, result, shipKey: ship?.key || "", at: new Date().toISOString() };
   bingoState.attacks.push(attack);
   bingoState.teams[proof.team].attacks.push(attack);
-  addLog(`${TEAMS[proof.team].name} fired at ${TEAMS[defendingTeam].name}: ${result.toUpperCase()}.`);
+  addLog(`${TEAMS[proof.team].name} fired at ${TEAMS[defendingTeam].name}: ${result === "hit" ? "💥 HIT" : "🌊 MISS"}.`);
   if (ship) {
     const allHit = ship.cells.every(cell => bingoState.attacks.some(a => a.defendingTeam === defendingTeam && a.targetIndex === cell && a.result === "hit"));
     if (allHit && !ship.sunk) {
       ship.sunk = true;
-      addLog(`${TEAMS[proof.team].name} sunk ${TEAMS[defendingTeam].name}'s ${ship.name}!`);
+      addLog(`🚢 ${TEAMS[proof.team].name} sunk ${TEAMS[defendingTeam].name}'s ${ship.name}!`);
       if (bingoState.teams[defendingTeam].ships.every(s => s.sunk)) {
         bingoState.phase = "complete";
-        addLog(`${TEAMS[proof.team].name} wins Battleship Bingo!`);
+        addLog(`🏆 ${TEAMS[proof.team].name} wins Battleship Bingo!`);
       }
     }
   }
@@ -1335,6 +1500,12 @@ function bindBingoControls() {
   });
   document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
   document.getElementById("activeBingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
+  document.querySelectorAll("[data-active-sidebar-tab]").forEach(button => {
+    button.addEventListener("click", () => {
+      activeSidebarTab = button.dataset.activeSidebarTab;
+      renderActiveGameSidebar();
+    });
+  });
   document.getElementById("activeEndGameBtn")?.addEventListener("click", endActiveGameFromMenu);
   document.getElementById("activeReturnSetupBtn")?.addEventListener("click", returnToSetupModeFromMenu);
   document.getElementById("activeUnlockFleetsBtn")?.addEventListener("click", unlockFleetsFromMenu);
