@@ -4880,3 +4880,48 @@ body.bingo-active #openProofTileSelectorBtn {
     height: 38px;
   }
 }
+
+/* Battleship proof progress upgrades */
+.bingo-progress-badge {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  min-width: 32px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(92, 190, 230, 0.18);
+  border: 1px solid rgba(92, 190, 230, 0.45);
+  color: #bceeff;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1.2;
+  z-index: 3;
+}
+
+.bingo-tile.status-partial {
+  border-color: rgba(92, 190, 230, 0.58);
+  background: rgba(92, 190, 230, 0.08);
+}
+
+.bingo-tile.status-approved .bingo-progress-badge,
+.bingo-tile.status-approved {
+  border-color: rgba(82, 220, 130, 0.55);
+}
+
+.bingo-tile.status-approved .bingo-progress-badge {
+  background: rgba(82, 220, 130, 0.15);
+  color: #b8ffd3;
+  border-color: rgba(82, 220, 130, 0.45);
+}
+
+.proof-card.status-partial,
+.proof-card.status-submitted,
+.proof-card.status-pending {
+  border-color: rgba(92, 190, 230, 0.35);
+}
+
+.proof-card strong small {
+  color: var(--ember);
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
