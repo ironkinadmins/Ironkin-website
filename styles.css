@@ -5550,3 +5550,136 @@ body.bingo-active .active-game-sidebar {
   .active-game-sidebar.collapsed .active-sidebar-tabs,
   .active-game-sidebar.collapsed .active-sidebar-content { display: grid; }
 }
+
+/* 2026-06-04 final active-game alignment fix: center board area + true full-height sidebar */
+body.bingo-active {
+  overflow-x: hidden;
+}
+
+body.bingo-active .bingo-page {
+  max-width: none !important;
+  width: 100%;
+  padding: 16px 0 50px !important;
+}
+
+body.bingo-active #bingoTab-board {
+  --active-sidebar-w: 330px;
+  position: relative;
+  box-sizing: border-box;
+  padding-right: var(--active-sidebar-w);
+  width: 100%;
+}
+
+body.bingo-active #bingoTab-board:has(.active-game-sidebar.collapsed) {
+  --active-sidebar-w: 54px;
+}
+
+body.bingo-active .active-game-header {
+  width: min(760px, calc(100vw - var(--active-sidebar-w) - 56px));
+  max-width: none !important;
+  margin: 0 auto 28px !important;
+  padding: 0 !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: center;
+}
+
+body.bingo-active .bingo-layout,
+body.bingo-active .bingo-layout:has(.active-game-sidebar.collapsed) {
+  display: block !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+body.bingo-active .bingo-board-wrap {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 24px 48px !important;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+}
+
+body.bingo-active .bingo-board-toolbar {
+  width: min(700px, calc(100vw - var(--active-sidebar-w) - 56px)) !important;
+  max-width: none !important;
+  margin: 0 auto 12px !important;
+}
+
+body.bingo-active .active-game-top-actions {
+  width: 100%;
+  justify-content: center !important;
+}
+
+body.bingo-active .active-board-toggle {
+  margin: 0 auto;
+}
+
+body.bingo-active .bingo-board {
+  width: min(760px, calc(100vw - var(--active-sidebar-w) - 64px), calc(100vh - 280px)) !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 auto !important;
+  box-sizing: border-box;
+}
+
+body.bingo-active .bingo-tile {
+  aspect-ratio: 1 / 1 !important;
+}
+
+body.bingo-active .active-game-sidebar {
+  display: block !important;
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 330px !important;
+  min-width: 0 !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  z-index: 60;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+body.bingo-active .active-game-sidebar.collapsed {
+  width: 54px !important;
+}
+
+body.bingo-active .active-sidebar-content {
+  height: calc(100dvh - 43px) !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+body.bingo-active .active-sidebar-collapse {
+  left: -17px;
+  top: 290px;
+}
+
+body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
+  left: 10px;
+}
+
+@media (max-width: 1080px) {
+  body.bingo-active #bingoTab-board,
+  body.bingo-active #bingoTab-board:has(.active-game-sidebar.collapsed) {
+    padding-right: 0;
+  }
+
+  body.bingo-active .active-game-header,
+  body.bingo-active .bingo-board-toolbar,
+  body.bingo-active .bingo-board {
+    width: min(720px, calc(100vw - 28px)) !important;
+  }
+
+  body.bingo-active .active-game-sidebar,
+  body.bingo-active .active-game-sidebar.collapsed {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 14px 24px !important;
+  }
+}
