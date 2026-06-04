@@ -5753,3 +5753,73 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   text-decoration: line-through;
   text-decoration-thickness: 2px;
 }
+
+/* Battleship setup cleanup - queued changes */
+#bingoTab-fleets .ship-placement-current {
+  display: none !important;
+}
+
+#bingoTab-fleets .ship-placement-toolbar-card.upgraded {
+  grid-template-columns:
+    minmax(180px, 0.75fr)
+    minmax(190px, 0.75fr)
+    minmax(0, 1.6fr)
+    230px;
+  align-items: stretch;
+}
+
+#bingoTab-fleets .ship-picker {
+  min-width: 0;
+  overflow: hidden;
+}
+
+#bingoTab-fleets .ship-tab-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 8px 6px 0;
+  scrollbar-width: thin;
+}
+
+#bingoTab-fleets .ship-tab {
+  flex: 0 0 86px;
+  min-width: 86px;
+}
+
+#bingoTab-fleets .ship-actions {
+  min-width: 230px;
+  width: 230px;
+  flex-shrink: 0;
+}
+
+#bingoTab-fleets .ship-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#bingoTab-fleets .ship-action-stack .btn {
+  width: 100%;
+  min-height: 56px;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+@media (max-width: 1180px) {
+  #bingoTab-fleets .ship-placement-toolbar-card.upgraded {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #bingoTab-fleets .ship-actions {
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  #bingoTab-fleets .ship-placement-toolbar-card.upgraded {
+    grid-template-columns: 1fr;
+  }
+}
+

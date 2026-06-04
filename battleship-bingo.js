@@ -557,9 +557,11 @@ function renderBoardToolbar() {
   const boardToolbarText = document.querySelector(".bingo-board-toolbar div:first-child");
   const attackBtn = document.getElementById("attackBoardBtn");
   const watersBtn = document.getElementById("yourWatersBtn");
+  const proofTeamSelect = document.getElementById("proofTeamSelect");
   const isActive = bingoState.phase === "active" || bingoState.phase === "complete";
 
   if (activeControls) activeControls.style.display = isActive ? "flex" : "none";
+  if (proofTeamSelect) proofTeamSelect.style.display = isActive ? "" : "none";
   if (attackBtn) attackBtn.classList.toggle("active", activeBoardMode === "attack");
   if (watersBtn) watersBtn.classList.toggle("active", activeBoardMode === "waters");
 
@@ -922,17 +924,6 @@ function renderShipPlacementToolbar() {
           </button>
         </div>
       </div>
-    </div>
-
-    <div class="ship-placement-current">
-      <strong>Placing:</strong>
-      <span>${TEAMS[placingTeam].emoji} ${escapeHtml(currentTeam?.name || TEAMS[placingTeam].name)}</span>
-      <span>•</span>
-      <span>${escapeHtml(activeShip?.name || "Select a ship")} (${activeShip?.size || "?"})</span>
-      <span>•</span>
-      <span>${escapeHtml(placingOrientation)}</span>
-      <span>•</span>
-      <span>${placedCount}/${SHIPS.length} ships placed${currentConfirmed ? " • confirmed" : ""}</span>
     </div>
 
     <div class="ship-placement-help">
