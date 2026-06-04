@@ -4783,3 +4783,100 @@ body.bingo-active .bingo-board {
     min-width: auto;
   }
 }
+
+/* Battleship Bingo active-game controls + square board polish */
+.bingo-icon-help {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 180, 92, 0.35);
+  background: rgba(255, 122, 26, 0.10);
+  color: #ffb15a;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.bingo-icon-help:hover {
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+  color: #180a02;
+  transform: translateY(-1px);
+}
+
+.bingo-tile {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+}
+
+.bingo-board {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+body.bingo-active .bingo-page {
+  max-width: 1120px;
+  padding-top: 28px;
+}
+
+body.bingo-active .bingo-board {
+  width: min(92vw, 920px);
+  max-width: 920px;
+  min-width: 0;
+}
+
+body.bingo-active .bingo-board-wrap {
+  display: grid;
+  justify-items: center;
+}
+
+body.bingo-active .bingo-board-toolbar {
+  width: min(92vw, 920px);
+  max-width: 920px;
+}
+
+.active-game-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+body.bingo-active .active-admin-dropdown {
+  position: relative;
+}
+
+body.bingo-active .active-admin-dropdown > summary {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+}
+
+body.bingo-active .active-admin-dropdown .bingo-admin-menu {
+  right: 50%;
+  transform: translateX(50%);
+  top: calc(100% + 10px);
+  z-index: 40;
+}
+
+body.bingo-active .active-board-controls {
+  gap: 14px;
+}
+
+body.bingo-active #openProofTileSelectorBtn {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  body.bingo-active .bingo-board,
+  body.bingo-active .bingo-board-toolbar {
+    width: calc(100vw - 28px);
+  }
+
+  .bingo-icon-help {
+    width: 38px;
+    height: 38px;
+  }
+}

@@ -18,7 +18,7 @@
       </div>
 
       <div class="bingo-hero-buttons">
-        <button class="btn secondary bingo-help-top" id="bingoHelpBtn" type="button">Help</button>
+        <button class="bingo-icon-help" id="bingoHelpBtn" type="button" aria-label="How to Play" title="How to Play">?</button>
 
         <details class="bingo-admin-dropdown" id="bingoAdminActions" style="display:none;">
           <summary class="btn secondary">Admin Controls</summary>
@@ -80,6 +80,26 @@
                 <option value="ash">Ash Fleet</option>
               </select>
               <div class="active-board-controls" id="activeBoardControls" style="display:none;">
+                <div class="active-game-top-actions">
+                  <button class="bingo-icon-help" id="activeBingoHelpBtn" type="button" aria-label="How to Play" title="How to Play">?</button>
+                  <details class="bingo-admin-dropdown active-admin-dropdown" id="activeGameAdminActions" style="display:none;">
+                    <summary class="btn secondary">Admin Controls</summary>
+                    <div class="bingo-admin-menu">
+                      <div class="bingo-admin-group">
+                        <strong>Game Control</strong>
+                        <button class="btn secondary danger" id="activeEndGameBtn" type="button">End Game</button>
+                        <button class="btn secondary" id="activeReturnSetupBtn" type="button">Return to Setup Mode</button>
+                        <button class="btn secondary" id="activeUnlockFleetsBtn" type="button">Unlock Fleets</button>
+                      </div>
+                      <div class="bingo-admin-group">
+                        <strong>Maintenance</strong>
+                        <button class="btn secondary danger" id="activeResetProgressBtn" type="button">Reset Progress</button>
+                        <button class="btn secondary danger" id="activeResetBoardBtn" type="button">Reset Entire Board</button>
+                        <button class="btn secondary" id="activeViewSettingsBtn" type="button">View Match Settings</button>
+                      </div>
+                    </div>
+                  </details>
+                </div>
                 <div class="active-board-toggle" role="group" aria-label="Active game board view">
                   <button id="attackBoardBtn" class="active" type="button">Attack Board</button>
                   <button id="yourWatersBtn" type="button">Your Waters</button>

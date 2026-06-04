@@ -115,6 +115,7 @@ async function checkBingoStaff() {
     isBingoStaff = false;
   }
   document.getElementById("bingoAdminActions")?.style.setProperty("display", isBingoStaff ? "block" : "none");
+  document.getElementById("activeGameAdminActions")?.style.setProperty("display", isBingoStaff ? "block" : "none");
 }
 
 async function loadBingoState() {
@@ -1210,6 +1211,56 @@ async function handlePhaseAction() {
   startBtn?.click();
 }
 
+
+async function endActiveGameFromMenu() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (!confirm("End the active Battleship Bingo game? Submissions will stop until the game is reopened.")) return;
+  bingoState.phase = "complete";
+  addLog("Battleship Bingo was ended by staff.");
+  await saveBingoState();
+}
+
+async function returnToSetupModeFromMenu() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (!confirm("Return to setup mode? This unlocks the board for editing.")) return;
+  bingoState.phase = "setup";
+  bingoState.locked = false;
+  placingTeam = null;
+  addLog("Battleship Bingo was returned to setup mode by staff.");
+  await saveBingoState();
+  setBingoTab("board");
+}
+
+async function unlockFleetsFromMenu() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (!confirm("Return to fleet placement and unlock confirmed fleets?")) return;
+  bingoState.phase = "ships";
+  bingoState.locked = true;
+  Object.keys(TEAMS).forEach(team => {
+    bingoState.teams[team].fleetConfirmed = false;
+  });
+  placingTeam = "ember";
+  placingShipIndex = getNextUnplacedShipIndex("ember");
+  addLog("Fleet placement was unlocked by staff.");
+  await saveBingoState();
+  setBingoTab("fleets");
+}
+
+async function resetProgressFromMenu() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (!confirm("Reset all proofs, attacks, ship hits, and tile progress?")) return;
+  bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedBy: "", completedTeam: "", proofId: "" }));
+  bingoState.proofs = [];
+  bingoState.attacks = [];
+  Object.keys(TEAMS).forEach(team => {
+    bingoState.teams[team].ships.forEach(ship => ship.sunk = false);
+  });
+  bingoState.phase = "ships";
+  bingoState.locked = true;
+  addLog("Progress was reset by staff.");
+  await saveBingoState();
+}
+
 function bindBingoControls() {
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.addEventListener("click", () => {
@@ -1217,6 +1268,13 @@ function bindBingoControls() {
     });
   });
   document.getElementById("bingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
+  document.getElementById("activeBingoHelpBtn")?.addEventListener("click", openBingoHelpModal);
+  document.getElementById("activeEndGameBtn")?.addEventListener("click", endActiveGameFromMenu);
+  document.getElementById("activeReturnSetupBtn")?.addEventListener("click", returnToSetupModeFromMenu);
+  document.getElementById("activeUnlockFleetsBtn")?.addEventListener("click", unlockFleetsFromMenu);
+  document.getElementById("activeResetProgressBtn")?.addEventListener("click", resetProgressFromMenu);
+  document.getElementById("activeResetBoardBtn")?.addEventListener("click", () => document.getElementById("bingoClearBoardBtn")?.click());
+  document.getElementById("activeViewSettingsBtn")?.addEventListener("click", openBingoHelpModal);
   document.getElementById("bingoPhaseActionBtn")?.addEventListener("click", handlePhaseAction);
   document.getElementById("attackBoardBtn")?.addEventListener("click", () => { activeBoardMode = "attack"; renderBingoBoard(); });
   document.getElementById("yourWatersBtn")?.addEventListener("click", () => { activeBoardMode = "waters"; renderBingoBoard(); });
