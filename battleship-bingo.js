@@ -67,6 +67,7 @@ function emptyBingoBoard() {
     name: "",
     image: "",
     quantity: 1,
+    completedQuantity: 0,
     status: "open",
     completedBy: "",
     completedTeam: "",
@@ -330,6 +331,30 @@ function getTileQuantity(tile) {
   return Math.max(1, Number.parseInt(raw, 10) || 1);
 }
 
+function getTileCompletedQuantity(tile) {
+  const raw = tile?.completedQuantity ?? tile?.completedQty ?? tile?.progress ?? 0;
+  return Math.max(0, Number.parseInt(raw, 10) || 0);
+}
+
+function getTileRemainingQuantity(tile) {
+  return Math.max(0, getTileQuantity(tile) - getTileCompletedQuantity(tile));
+}
+
+function getTileProgressMarkup(tile) {
+  const required = getTileQuantity(tile);
+  const completed = Math.min(getTileCompletedQuantity(tile), required);
+  if (!tile?.name || required <= 1) return "";
+  return `<span class="bingo-progress-badge">${escapeHtml(completed)}/${escapeHtml(required)}</span>`;
+}
+
+function getTileStatus(tile) {
+  const required = getTileQuantity(tile);
+  const completed = getTileCompletedQuantity(tile);
+  if (completed >= required && tile?.name) return "approved";
+  if (completed > 0) return "partial";
+  return tile?.status || "open";
+}
+
 function renderBingoBoard() {
   const boardEl = document.getElementById("bingoBoard");
   if (!boardEl) return;
@@ -349,11 +374,12 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(tile.status || "open")}" type="button" data-index="${index}">
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}">
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
         <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
-        ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
+        ${getTileStatus(tile) !== "open" ? `<em>${escapeHtml(getTileStatus(tile))}</em>` : ""}
       </button>
     `;
   }).join("");
@@ -413,6 +439,7 @@ function renderActiveGameBoard(boardEl) {
           <span class="water-drop-bg">
             ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
             ${tile.name ? `<small>${escapeHtml(tile.name)}</small>` : ""}
+            ${getTileProgressMarkup(tile)}
           </span>
           ${ship ? `<span class="water-ship-cell">${escapeHtml(ship.name.charAt(0))}</span>` : ""}
           ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "✹" : "•"}</strong>` : ""}
@@ -427,14 +454,16 @@ function renderActiveGameBoard(boardEl) {
     const attack = bingoState.attacks.find(a => a.attackingTeam === team && a.targetIndex === index);
     const classes = ["bingo-tile", tile.name ? "filled" : "empty", "attack-tile"];
     if (attack) classes.push(`attack-${attack.result}`);
-    if (tile.status && tile.status !== "open") classes.push(`status-${tile.status}`);
+    const tileStatus = getTileStatus(tile);
+    if (tileStatus && tileStatus !== "open") classes.push(`status-${tileStatus}`);
     return `
       <button class="${classes.join(" ")}" type="button" data-index="${index}" ${tile.name ? "" : "disabled"}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${getTileProgressMarkup(tile)}
         ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "HIT" : "MISS"}</strong>` : ""}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
         <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
-        ${tile.status && tile.status !== "open" ? `<em>${escapeHtml(tile.status)}</em>` : ""}
+        ${tileStatus && tileStatus !== "open" ? `<em>${escapeHtml(tileStatus)}</em>` : ""}
       </button>
     `;
   }).join("");
@@ -455,6 +484,11 @@ function openTileModal(index) {
   document.getElementById("proofPlayerInput").value = "";
   document.getElementById("proofUrlInput").value = "";
   document.getElementById("proofNoteInput").value = "";
+  const proofQtyInput = document.getElementById("proofQuantityInput");
+  if (proofQtyInput) {
+    proofQtyInput.value = Math.max(1, Math.min(1, getTileRemainingQuantity(tile) || 1));
+    proofQtyInput.max = String(Math.max(1, getTileRemainingQuantity(tile) || 1));
+  }
   const canEdit = isBingoStaff && bingoState.phase === "setup" && !bingoState.locked;
   const canSubmitProof = bingoState.phase === "active" && tile.name;
   document.getElementById("staffTileEditor").style.display = canEdit ? "block" : "none";
@@ -888,8 +922,9 @@ function renderProofTileGrid() {
   grid.innerHTML = bingoState.tiles.map((tile, index) => {
     const qty = getTileQuantity(tile);
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"}" type="button" data-index="${index}" ${tile.name ? "" : "disabled"}>
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" ${tile.name && getTileStatus(tile) !== "approved" ? "" : "disabled"}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+        ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
         <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
       </button>
@@ -915,12 +950,18 @@ function renderProofs() {
   }
   list.innerHTML = bingoState.proofs.map(proof => {
     const tile = bingoState.tiles[proof.tileIndex] || {};
+    const qty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
+    const required = getTileQuantity(tile);
+    const completed = Math.min(getTileCompletedQuantity(tile), required);
+    const remaining = Math.max(0, required - completed);
+    const progressText = required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile";
     return `
       <div class="proof-card status-${escapeAttr(proof.status)}">
         <div>
-          <strong>${escapeHtml(tile.name || `Tile ${proof.tileIndex + 1}`)}</strong>
+          <strong>${escapeHtml(tile.name || `Tile ${proof.tileIndex + 1}`)} ${qty > 1 ? `<small>x${escapeHtml(qty)}</small>` : ""}</strong>
           <span>${escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
-          <p>${escapeHtml(proof.note || "No note")}</p>
+          <p>${escapeHtml(progressText)}</p>
+          ${proof.note ? `<p>${escapeHtml(proof.note)}</p>` : ""}
           ${proof.url ? `<a href="${escapeAttr(proof.url)}" target="_blank" rel="noopener">Open proof</a>` : ""}
         </div>
         <em>${escapeHtml(proof.status)}</em>
@@ -942,31 +983,56 @@ async function submitProof() {
   const player = document.getElementById("proofPlayerInput").value.trim();
   const url = document.getElementById("proofUrlInput").value.trim();
   const note = document.getElementById("proofNoteInput").value.trim();
+  const tile = bingoState.tiles[activeTileIndex] || {};
+  const remaining = Math.max(1, getTileRemainingQuantity(tile) || 1);
+  const quantity = Math.max(1, Math.min(remaining, Number.parseInt(document.getElementById("proofQuantityInput")?.value || "1", 10) || 1));
   if (!player || !url) {
     alert("Add your player name and a proof link.");
     return;
   }
-  const proof = { id: crypto.randomUUID(), tileIndex: activeTileIndex, team, player, url, note, status: "pending", createdAt: new Date().toISOString() };
+  const proof = { id: crypto.randomUUID(), tileIndex: activeTileIndex, team, player, url, note, quantity, status: "pending", createdAt: new Date().toISOString() };
   bingoState.proofs.unshift(proof);
-  bingoState.tiles[activeTileIndex].status = "submitted";
+  bingoState.tiles[activeTileIndex].status = getTileCompletedQuantity(bingoState.tiles[activeTileIndex]) > 0 ? "partial" : "submitted";
   bingoState.tiles[activeTileIndex].proofId = proof.id;
-  addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} (${TEAMS[team].name}).`);
+  addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} x${quantity} (${TEAMS[team].name}).`);
   await saveBingoState();
   closeTileEditor();
 }
 
 async function reviewProof(proofId, action) {
   const proof = bingoState.proofs.find(p => p.id === proofId);
-  if (!proof) return;
-  proof.status = action === "approve" ? "approved" : "rejected";
+  if (!proof || proof.status !== "pending") return;
   const tile = bingoState.tiles[proof.tileIndex];
-  if (tile) {
-    tile.status = proof.status;
-    tile.completedBy = proof.status === "approved" ? proof.player : "";
-    tile.completedTeam = proof.status === "approved" ? proof.team : "";
+  if (!tile) return;
+
+  if (action === "reject") {
+    proof.status = "rejected";
+    const completed = getTileCompletedQuantity(tile);
+    tile.status = completed > 0 ? "partial" : "open";
+    addLog(`Rejected proof for ${tile.name || "a tile"} by ${proof.player}.`);
+    await saveBingoState();
+    return;
   }
-  if (action === "approve") resolveAttack(proof);
-  addLog(`${proof.status === "approved" ? "Approved" : "Rejected"} proof for ${tile?.name || "a tile"} by ${proof.player}.`);
+
+  proof.status = "approved";
+  const required = getTileQuantity(tile);
+  const before = getTileCompletedQuantity(tile);
+  const approvedQty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
+  const after = Math.min(required, before + approvedQty);
+  tile.completedQuantity = after;
+  tile.completedBy = proof.player;
+  tile.completedTeam = proof.team;
+  tile.proofId = proof.id;
+
+  if (after >= required) {
+    tile.status = "approved";
+    addLog(`Approved proof for ${tile.name} by ${proof.player}. Tile complete (${after}/${required}).`);
+    resolveAttack(proof);
+  } else {
+    tile.status = "partial";
+    addLog(`Approved proof for ${tile.name} by ${proof.player}. Progress ${after}/${required}.`);
+  }
+
   await saveBingoState();
 }
 
@@ -1314,7 +1380,12 @@ function bindBingoControls() {
       ...bingoState.tiles[activeTileIndex],
       name: document.getElementById("tileNameInput").value.trim(),
       image: document.getElementById("tileImageInput").value.trim(),
-      quantity
+      quantity,
+      completedQuantity: 0,
+      status: "open",
+      completedBy: "",
+      completedTeam: "",
+      proofId: ""
     };
     await saveBingoState();
     closeTileEditor();
@@ -1328,7 +1399,7 @@ function bindBingoControls() {
   document.getElementById("submitProofBtn")?.addEventListener("click", submitProof);
   document.getElementById("bingoResetProgressBtn")?.addEventListener("click", async () => {
     if (!confirm("Reset all proofs, attacks, ship hits, and tile progress?")) return;
-    bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedBy: "", completedTeam: "", proofId: "" }));
+    bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedQuantity: 0, completedBy: "", completedTeam: "", proofId: "" }));
     bingoState.proofs = [];
     bingoState.attacks = [];
     Object.keys(TEAMS).forEach(team => bingoState.teams[team].ships.forEach(ship => ship.sunk = false));
