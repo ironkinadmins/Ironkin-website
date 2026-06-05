@@ -6,14 +6,14 @@ function toggleMenu() {
   }
 }
 
-const STAFF_ROLE_IDS = [
+const NAV_STAFF_ROLE_IDS = [
   "1364734283356569620",
   "1365445491776815104"
 ];
 
 function isStaffUser(user) {
   return Boolean(
-    user?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId))
+    user?.roles?.some(roleId => NAV_STAFF_ROLE_IDS.includes(roleId))
   );
 }
 
