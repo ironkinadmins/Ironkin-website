@@ -915,15 +915,21 @@ async function loadHomeEventWidgets() {
 }
 
 
+function getArchiveWinner(entry) {
+  return entry?.winner || entry?.topFive?.[0] || entry?.leaderboard?.[0] || null;
+}
+
 function getArchiveWinnerText(entry) {
-  if (!entry?.winner) return "No winner recorded";
+  const winner = getArchiveWinner(entry);
+
+  if (!winner) return "No winner recorded";
 
   const metric = getEventMetricLabel(entry);
-  return `${entry.winner.name} · ${formatNumber(entry.winner.gained)} ${metric}`;
+  return `${winner.name} · ${formatNumber(winner.gained)} ${metric}`;
 }
 
 function renderArchivedTopFive(entry) {
-  const topFive = entry.topFive || [];
+  const topFive = entry.topFive?.length ? entry.topFive : entry.leaderboard || [];
 
   if (!topFive.length) {
     return `<p class="admin-muted">No leaderboard snapshot available.</p>`;
@@ -984,7 +990,7 @@ async function loadArchivePage() {
       card.innerHTML = `
         <p class="eyebrow">${entry.label || formatEventType(entry.type)} · ${dateText}</p>
 
-        <h2>${entry.title}</h2>
+        <h2>${displayEventTitle(entry.title, entry.type)}</h2>
 
         <p>
           <strong>Winner:</strong> ${getArchiveWinnerText(entry)}
