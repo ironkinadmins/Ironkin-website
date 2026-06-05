@@ -127,6 +127,42 @@
       <div class="admin-divider"></div>
       <div id="adminDropsList" class="admin-drops-list">Loading...</div>
     </section>
+
+    <section class="admin-card admin-bingo-card">
+      <div class="admin-section-header">
+        <p class="eyebrow">Battleship Bingo</p>
+        <h2>Bingo Event Controls</h2>
+        <p class="admin-muted">Controls whether Battleship Bingo appears active on the Events page. This does not reset the board, proofs, or fleet placements.</p>
+      </div>
+
+      <div class="admin-form-grid">
+        <div class="admin-field">
+          <label for="bingoTitleInput">Display Title</label>
+          <input id="bingoTitleInput" type="text" placeholder="Battleship Bingo" />
+        </div>
+
+        <div class="admin-field">
+          <label for="bingoActiveInput">Show as Active</label>
+          <label class="admin-check-row">
+            <input id="bingoActiveInput" type="checkbox" />
+            <span>Show ACTIVE badge and enable View Event</span>
+          </label>
+        </div>
+
+        <div class="admin-field admin-field-wide">
+          <label for="bingoDescriptionInput">Description</label>
+          <textarea id="bingoDescriptionInput" rows="3" placeholder="Optional text shown on the Events page"></textarea>
+        </div>
+      </div>
+
+      <div class="admin-action-row">
+        <button type="button" class="btn primary" id="saveBingoSettingsBtn">Save Bingo Settings</button>
+        <a class="btn secondary" href="battleship-bingo.html">Open Bingo Board</a>
+      </div>
+
+      <p class="admin-muted" id="bingoSettingsStatus"></p>
+    </section>
+
   </main>
 
   <script src="admin.js"></script>

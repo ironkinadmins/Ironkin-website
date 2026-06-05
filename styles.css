@@ -5883,3 +5883,17 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 .archive-delete-btn {
   cursor: pointer;
 }
+
+/* Event/admin controls */
+
+.admin-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  color: var(--muted);
+}
+
+.admin-check-row input {
+  width: auto;
+}

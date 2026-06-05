@@ -426,6 +426,66 @@ function populateEventFields() {
   renderRewardsEditor();
 }
 
+
+
+async function fetchBingoSettings() {
+  const response = await fetch("/api/bingo/settings");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load Bingo settings.");
+  }
+
+  return data.settings || {};
+}
+
+async function loadBingoSettings() {
+  const titleInput = document.getElementById("bingoTitleInput");
+  const descriptionInput = document.getElementById("bingoDescriptionInput");
+  const activeInput = document.getElementById("bingoActiveInput");
+
+  if (!titleInput || !descriptionInput || !activeInput) return;
+
+  try {
+    const settings = await fetchBingoSettings();
+    titleInput.value = settings.title || "Battleship Bingo";
+    descriptionInput.value = settings.description || "";
+    activeInput.checked = settings.active === true;
+  } catch (error) {
+    const status = document.getElementById("bingoSettingsStatus");
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function saveBingoSettings() {
+  const titleInput = document.getElementById("bingoTitleInput");
+  const descriptionInput = document.getElementById("bingoDescriptionInput");
+  const activeInput = document.getElementById("bingoActiveInput");
+  const status = document.getElementById("bingoSettingsStatus");
+
+  if (!titleInput || !descriptionInput || !activeInput) return;
+
+  const response = await fetch("/api/admin/bingo/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: titleInput.value.trim() || "Battleship Bingo",
+      description: descriptionInput.value.trim(),
+      active: activeInput.checked
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (status) status.textContent = data.error || "Could not save Bingo settings.";
+    return;
+  }
+
+  if (status) status.textContent = "Bingo settings saved.";
+}
+
+
 async function loadAdmin() {
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
@@ -435,6 +495,7 @@ async function loadAdmin() {
   const addParticipationRewardBtn = document.getElementById("addParticipationRewardBtn");
   const archiveEventBtn = document.getElementById("archiveEventBtn");
   const previewWomBtn = document.getElementById("previewWomBtn");
+  const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -467,6 +528,8 @@ async function loadAdmin() {
     if (addParticipationRewardBtn) addParticipationRewardBtn.addEventListener("click", addParticipationReward);
     if (archiveEventBtn) archiveEventBtn.addEventListener("click", archiveSelectedEvent);
     if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
+    if (saveBingoSettingsBtn) saveBingoSettingsBtn.addEventListener("click", saveBingoSettings);
+    loadBingoSettings();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }

@@ -331,6 +331,7 @@ async function fetchEventStandings(event) {
 async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
+  const adminNavLink = document.getElementById("adminNavLink");
 
   if (!loginBtn) return;
 
@@ -347,6 +348,10 @@ async function loadDiscordUser() {
 
     if (data.user.inGuild) {
       loginBtn.title = "Verified Ironkin Discord member";
+    }
+
+    if (isStaffUser(data.user) && adminNavLink) {
+      adminNavLink.style.display = "inline-block";
     }
 
     if (logoutBtn) {
@@ -630,15 +635,35 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
   return card;
 }
 
-function appendBattleshipBingoCard(grid) {
+async function fetchBingoSettings() {
+  try {
+    const response = await fetch("/api/bingo/settings");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load Bingo settings.");
+    }
+
+    return data.settings || { active: false };
+  } catch {
+    return { active: false };
+  }
+}
+
+async function appendBattleshipBingoCard(grid) {
+  const settings = await fetchBingoSettings();
+  const active = settings.active === true;
+
   grid.appendChild(createEventHubCard({
     type: "bingo",
-    href: "battleship-bingo.html",
+    href: active ? "battleship-bingo.html" : "",
     icon: "🚢",
     label: "BINGO",
-    title: "Battleship Bingo",
-    description: "Build a board, split into teams, claim tiles, and track summer progress.",
-    active: true
+    title: active ? (settings.title || "Battleship Bingo") : "Battleship Bingo",
+    description: active
+      ? (settings.description || "Build a board, split into teams, claim tiles, and track summer progress.")
+      : "",
+    active
   }));
 }
 
@@ -657,7 +682,7 @@ async function loadEventsHub() {
       empty.className = "muted";
       empty.textContent = "No Ironkin events found.";
       grid.appendChild(empty);
-      appendBattleshipBingoCard(grid);
+      await appendBattleshipBingoCard(grid);
       return;
     }
 
@@ -677,7 +702,7 @@ async function loadEventsHub() {
       }));
     });
 
-    appendBattleshipBingoCard(grid);
+    await appendBattleshipBingoCard(grid);
   } catch (error) {
     grid.textContent = `Could not load events: ${error.message}`;
   }
