@@ -2,6 +2,9 @@ export async function onRequestGet({ request, env }) {
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const redirectUri =
+    env.DISCORD_REDIRECT_URI ||
+    `${url.origin}/api/auth/callback`;
 
   if (!code) {
     return new Response("Missing Discord code", {
@@ -22,7 +25,7 @@ export async function onRequestGet({ request, env }) {
         client_secret: env.DISCORD_CLIENT_SECRET,
         grant_type: "authorization_code",
         code,
-        redirect_uri: env.DISCORD_REDIRECT_URI
+        redirect_uri: redirectUri
       })
     }
   );
