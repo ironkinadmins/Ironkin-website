@@ -6,7 +6,8 @@ const STAFF_ROLE_IDS = [
 const DEFAULT_SETTINGS = {
   title: "Battleship Bingo",
   description: "Build a board, split into teams, claim tiles, and track summer progress.",
-  active: false
+  active: false,
+  enableViewEvent: false
 };
 
 function getSession(request) {
