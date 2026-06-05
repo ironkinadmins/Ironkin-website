@@ -49,7 +49,8 @@ export async function onRequestPost({ request, env }) {
   const settings = {
     title: cleanString(body.title, DEFAULT_SETTINGS.title, 80),
     description: cleanString(body.description, "", 300),
-    active: body.active === true
+    active: body.active === true,
+    enableViewEvent: body.enableViewEvent === true
   };
 
   await env.DROPS_KV.put("bingo:settings", JSON.stringify(settings));
