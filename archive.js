@@ -62,28 +62,6 @@ function normalizeStandingsRows(rows) {
     .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
 }
 
-
-function getResetTitle(event) {
-  if (event?.type === "sotw") return "Skill of the Week";
-  if (event?.type === "botw") return "Boss of the Week";
-  if (String(event?.type || "").includes("clan-goal")) return "Clan Goal";
-  return event?.label || event?.title || "Event";
-}
-
-function resetEventAfterArchive(event) {
-  return {
-    ...event,
-    title: getResetTitle(event),
-    description: "",
-    womCompetitionId: null,
-    active: false,
-    featured: false,
-    target: null,
-    startDate: null,
-    endDate: null
-  };
-}
-
 async function fetchJson(url) {
   const response = await fetch(url);
   const data = await response.json().catch(() => null);
@@ -219,9 +197,27 @@ export async function onRequestPost({ request, env }) {
   );
 
   if (events) {
+    const getResetEventTitle = item => {
+      if (item?.type === "sotw") return "Skill of the Week";
+      if (item?.type === "botw") return "Boss of the Week";
+      if (String(item?.type || "").includes("clan-goal")) return "Clan Goal";
+      return item?.label || item?.title || "Event";
+    };
+
     const updatedEvents = events.map(item =>
       item.id === event.id
-        ? resetEventAfterArchive(item)
+        ? {
+            ...item,
+            title: getResetEventTitle(item),
+            description: "",
+            womCompetitionId: null,
+            target: null,
+            startDate: null,
+            endDate: null,
+            active: false,
+            featured: false,
+            dropsEnabled: false
+          }
         : item
     );
 
