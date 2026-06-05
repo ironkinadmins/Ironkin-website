@@ -24,10 +24,6 @@ function isStaff(request) {
   );
 }
 
-function getDropListKey(eventId) {
-  return `drops:${eventId}`;
-}
-
 export async function onRequestPost({ request, env }) {
   if (!isStaff(request)) {
     return Response.json(
@@ -36,30 +32,34 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
+  const archiveId = String(body.id || "").trim();
 
-  const eventId = body.eventId || "global";
-  const name = body.name?.trim();
-
-  if (!name) {
+  if (!archiveId) {
     return Response.json(
-      { error: "Missing drop name." },
+      { error: "Missing archive ID." },
       { status: 400 }
     );
   }
 
-  const key = getDropListKey(eventId);
+  const archiveValue = await env.DROPS_KV.get("events:archive");
+  const archive = archiveValue ? JSON.parse(archiveValue) : [];
+  const updatedArchive = archive.filter(entry => entry.id !== archiveId);
 
-  const value = await env.DROPS_KV.get(key);
-  const drops = value ? JSON.parse(value) : [];
+  if (updatedArchive.length === archive.length) {
+    return Response.json(
+      { error: "Archive entry not found." },
+      { status: 404 }
+    );
+  }
 
-  const updatedDrops = drops.filter(drop => drop.name !== name);
-
-  await env.DROPS_KV.put(key, JSON.stringify(updatedDrops));
+  await env.DROPS_KV.put(
+    "events:archive",
+    JSON.stringify(updatedArchive)
+  );
 
   return Response.json({
     success: true,
-    eventId,
-    drops: updatedDrops
+    deletedId: archiveId
   });
 }

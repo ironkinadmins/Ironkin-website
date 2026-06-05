@@ -6,6 +6,48 @@ function toggleMenu() {
   }
 }
 
+const STAFF_ROLE_IDS = [
+  "1364734283356569620",
+  "1365445491776815104"
+];
+
+function isStaffUser(user) {
+  return Boolean(
+    user?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId))
+  );
+}
+
+async function getCurrentAuthUser() {
+  try {
+    const response = await fetch("/api/auth/me");
+    const data = await response.json();
+
+    return data.signedIn ? data.user : null;
+  } catch {
+    return null;
+  }
+}
+
+function isEventActive(event) {
+  return event?.active === true;
+}
+
+function formatInactiveEventTitle(event) {
+  if (String(event?.type || "").includes("clan-goal")) {
+    return "";
+  }
+
+  return displayEventTitle(event?.title, event?.type);
+}
+
+function formatInactiveEventDescription(event) {
+  if (String(event?.type || "").includes("clan-goal")) {
+    return "";
+  }
+
+  return event?.description || "";
+}
+
 function formatNumber(num) {
   return Number(num || 0).toLocaleString();
 }
@@ -536,25 +578,53 @@ async function loadRecentActivity() {
   }
 }
 
-function createEventHubCard({ type, href, icon, label, title, description }) {
-  const card = document.createElement("a");
+function createEventHubCard({ type, href, icon, label, title, description, active = false }) {
+  const card = document.createElement(active && href ? "a" : "article");
 
-  card.className = `event-hub-card event-${type}`;
-  card.href = href;
+  card.className = `event-hub-card event-${type}${active ? " is-active" : " is-inactive"}`;
+
+  if (active && href) {
+    card.href = href;
+  }
+
+  const activeBadge = active
+    ? `<span class="event-active-badge">🟢 ACTIVE</span>`
+    : "";
+
+  const titleHtml = title
+    ? `<h2>${title}</h2>`
+    : "";
+
+  const descriptionHtml = description
+    ? `<p>${description}</p>`
+    : "";
+
+  const footerHtml = active && href
+    ? `
+      <div class="event-hub-footer">
+        <span>Dashboard</span>
+        <strong>View Event →</strong>
+      </div>
+    `
+    : `
+      <div class="event-hub-footer event-hub-footer-inactive">
+        <span>Not active</span>
+      </div>
+    `;
 
   card.innerHTML = `
-    <div class="event-hub-icon">${icon}</div>
+    <div class="event-hub-topline">
+      <div class="event-hub-icon">${icon}</div>
+      ${activeBadge}
+    </div>
 
     <div>
       <p class="eyebrow">${label}</p>
-      <h2>${title}</h2>
-      <p>${description}</p>
+      ${titleHtml}
+      ${descriptionHtml}
     </div>
 
-    <div class="event-hub-footer">
-      <span>Dashboard</span>
-      <strong>View Event →</strong>
-    </div>
+    ${footerHtml}
   `;
 
   return card;
@@ -567,7 +637,8 @@ function appendBattleshipBingoCard(grid) {
     icon: "🚢",
     label: "BINGO",
     title: "Battleship Bingo",
-    description: "Build a board, split into teams, claim tiles, and track summer progress."
+    description: "Build a board, split into teams, claim tiles, and track summer progress.",
+    active: true
   }));
 }
 
@@ -591,13 +662,18 @@ async function loadEventsHub() {
     }
 
     events.forEach(event => {
+      const active = isEventActive(event);
+
       grid.appendChild(createEventHubCard({
         type: event.type,
-        href: `event.html?id=${encodeURIComponent(event.id)}`,
+        href: active ? `event.html?id=${encodeURIComponent(event.id)}` : "",
         icon: getEventIcon(event.type),
         label: event.label || formatEventType(event.type),
-        title: displayEventTitle(event.title, event.type),
-        description: event.description || "View the full Ironkin event dashboard."
+        title: active ? displayEventTitle(event.title, event.type) : formatInactiveEventTitle(event),
+        description: active
+          ? (event.description || "View the full Ironkin event dashboard.")
+          : formatInactiveEventDescription(event),
+        active
       }));
     });
 
@@ -844,7 +920,7 @@ async function loadHomeEventWidgets() {
 
   try {
     const events = await fetchCurrentEvents();
-    const activeEvents = events.filter(event => event.active !== false);
+    const activeEvents = events.filter(event => isEventActive(event));
 
     if (activeGrid) {
       activeGrid.innerHTML = "";
@@ -958,13 +1034,41 @@ async function fetchArchive() {
   return data.archive || [];
 }
 
+async function deleteArchiveEntry(archiveId) {
+  if (!archiveId) return;
+
+  const confirmed = confirm("Delete this archived event? This cannot be undone.");
+
+  if (!confirmed) return;
+
+  const response = await fetch("/api/admin/archive/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: archiveId })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    alert(data.error || "Could not delete archive entry.");
+    return;
+  }
+
+  await loadArchivePage();
+}
+
 async function loadArchivePage() {
   const grid = document.getElementById("archiveGrid");
 
   if (!grid) return;
 
   try {
-    const archive = await fetchArchive();
+    const [archive, currentUser] = await Promise.all([
+      fetchArchive(),
+      getCurrentAuthUser()
+    ]);
+
+    const canDeleteArchive = isStaffUser(currentUser);
 
     grid.innerHTML = "";
 
@@ -1000,23 +1104,37 @@ async function loadArchivePage() {
           ${renderArchivedTopFive(entry)}
         </div>
 
-        ${
-          entry.womCompetitionId
-            ? `
-              <a
-                class="text-link"
-                href="https://wiseoldman.net/competitions/${entry.womCompetitionId}"
-                target="_blank"
-                rel="noopener"
-              >
-                View WOM →
-              </a>
-            `
-            : ""
-        }
+        <div class="archive-card-actions">
+          ${
+            entry.womCompetitionId
+              ? `
+                <a
+                  class="text-link"
+                  href="https://wiseoldman.net/competitions/${entry.womCompetitionId}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  View WOM →
+                </a>
+              `
+              : ""
+          }
+
+          ${
+            canDeleteArchive
+              ? `<button class="btn secondary danger archive-delete-btn" type="button" data-archive-id="${entry.id}">Delete Archive</button>`
+              : ""
+          }
+        </div>
       `;
 
       grid.appendChild(card);
+    });
+
+    grid.querySelectorAll(".archive-delete-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        deleteArchiveEntry(button.dataset.archiveId);
+      });
     });
   } catch (error) {
     grid.innerHTML = `

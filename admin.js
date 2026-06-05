@@ -16,6 +16,29 @@ function getSelectedEvent() {
   return allEvents.find(event => event.id === selectedEventId);
 }
 
+function getResetEventTitle(event) {
+  if (event?.type === "sotw") return "Skill of the Week";
+  if (event?.type === "botw") return "Boss of the Week";
+  if (String(event?.type || "").includes("clan-goal")) return "Clan Goal";
+  return event?.label || event?.title || "Event";
+}
+
+function resetEventAfterArchive(event) {
+  event.title = getResetEventTitle(event);
+  event.description = "";
+  event.womCompetitionId = null;
+  event.target = null;
+  event.startDate = null;
+  event.endDate = null;
+  event.active = false;
+  event.featured = false;
+}
+
+function getAdminEventOptionText(event) {
+  const title = event.title || getResetEventTitle(event);
+  return `${event.label || event.type} — ${title}${event.active ? " (Active)" : ""}`;
+}
+
 function formatAdminDate(value) {
   if (!value) return "Dates not loaded yet.";
 
@@ -422,7 +445,7 @@ async function loadAdmin() {
     allEvents.forEach(event => {
       const option = document.createElement("option");
       option.value = event.id;
-      option.textContent = `${event.label || event.type} — ${event.title}`;
+      option.textContent = getAdminEventOptionText(event);
       eventSelect.appendChild(option);
     });
 
@@ -520,8 +543,13 @@ async function archiveSelectedEvent() {
     return;
   }
 
-  event.active = false;
-  event.featured = false;
+  resetEventAfterArchive(event);
+
+  const eventSelect = document.getElementById("adminEventSelect");
+  const selectedOption = eventSelect?.querySelector(`option[value="${CSS.escape(event.id)}"]`);
+  if (selectedOption) {
+    selectedOption.textContent = getAdminEventOptionText(event);
+  }
 
   populateEventFields();
 
