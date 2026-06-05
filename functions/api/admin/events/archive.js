@@ -24,75 +24,105 @@ function isStaff(request) {
   );
 }
 
+function normalizePlayerName(player) {
+  return (
+    player?.displayName ||
+    player?.username ||
+    player?.name ||
+    player?.player?.displayName ||
+    player?.player?.username ||
+    player?.player?.name ||
+    player?.rsn ||
+    player?.user ||
+    "Unknown"
+  );
+}
+
+function normalizeGained(row) {
+  const raw =
+    row?.progress?.gained ??
+    row?.gained ??
+    row?.score ??
+    row?.value ??
+    0;
+
+  return Number(raw || 0);
+}
+
+function normalizeStandingsRows(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map(row => ({
+      name: normalizePlayerName(row),
+      gained: normalizeGained(row),
+      start: Number(row?.progress?.start ?? row?.start ?? 0),
+      end: Number(row?.progress?.end ?? row?.end ?? 0),
+      updatedAt: row?.updatedAt || null
+    }))
+    .filter(player => player.name && player.name !== "Unknown")
+    .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `Request failed: ${response.status}`);
+  }
+
+  return data;
+}
+
 async function fetchStandingsSnapshot(event) {
   if (!event?.womCompetitionId || event.womCompetitionId === "PUT_YOUR_WOM_ID_HERE") {
     return null;
   }
 
-  const detailsResponse = await fetch(
-    `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}`
-  );
+  try {
+    const details = await fetchJson(
+      `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}`
+    );
 
-  const details = await detailsResponse.json();
+    // Wise Old Man competition details already include participations. This is the
+    // most reliable source and matches the live dashboard endpoint.
+    let normalized = normalizeStandingsRows(details.participations || []);
 
-  if (!detailsResponse.ok) {
+    // Fallback for older/different WOM responses where standings are separate.
+    if (!normalized.length) {
+      try {
+        const standings = await fetchJson(
+          `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}/standings`
+        );
+
+        const rows = Array.isArray(standings)
+          ? standings
+          : standings?.standings || standings?.results || [];
+
+        normalized = normalizeStandingsRows(rows);
+      } catch (error) {
+        // Keep the archive working even if the fallback endpoint is unavailable.
+      }
+    }
+
+    const totalGained = normalized.reduce(
+      (sum, player) => sum + Number(player.gained || 0),
+      0
+    );
+
+    const contributors = normalized.filter(player => Number(player.gained || 0) > 0).length;
+
+    return {
+      title: details.title || event.title,
+      metric: details.metric || event.metric || null,
+      startsAt: details.startsAt || event.startDate || null,
+      endsAt: details.endsAt || event.endDate || null,
+      totalGained,
+      contributors,
+      standings: normalized
+    };
+  } catch (error) {
     return null;
   }
-
-  const standingsResponse = await fetch(
-    `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}/standings`
-  );
-
-  const standings = await standingsResponse.json();
-
-  if (!standingsResponse.ok) {
-    return null;
-  }
-
-  const rows = Array.isArray(standings)
-    ? standings
-    : standings.standings || [];
-
-  const normalized = rows
-    .map(row => {
-      const player =
-        row.player?.displayName ||
-        row.player?.username ||
-        row.player?.name ||
-        row.username ||
-        row.name ||
-        "Unknown";
-
-      const gained =
-        row.progress?.gained ||
-        row.gained ||
-        row.score ||
-        0;
-
-      return {
-        name: player,
-        gained: Number(gained || 0)
-      };
-    })
-    .sort((a, b) => b.gained - a.gained);
-
-  const totalGained = normalized.reduce(
-    (sum, player) => sum + Number(player.gained || 0),
-    0
-  );
-
-  const contributors =
-    normalized.filter(player => Number(player.gained || 0) > 0).length;
-
-  return {
-    title: details.title || event.title,
-    metric: details.metric,
-    startsAt: details.startsAt,
-    endsAt: details.endsAt,
-    totalGained,
-    contributors,
-    standings: normalized
-  };
 }
 
 export async function onRequestPost({ request, env }) {
@@ -118,12 +148,20 @@ export async function onRequestPost({ request, env }) {
   const dropsValue = await env.DROPS_KV.get(`drops:${event.id}`);
   const drops = dropsValue ? JSON.parse(dropsValue) : [];
 
-  const topFive =
-    standings?.standings
-      ?.filter(player => Number(player.gained || 0) > 0)
-      .slice(0, 5) || [];
+  const standingsRows =
+    standings?.standings?.length
+      ? standings.standings
+      : Array.isArray(event.leaderboard)
+        ? event.leaderboard
+        : Array.isArray(event.topFive)
+          ? event.topFive
+          : [];
 
-  const winner = topFive[0] || null;
+  const topFive = normalizeStandingsRows(standingsRows)
+    .filter(player => Number(player.gained || 0) > 0)
+    .slice(0, 5);
+
+  const winner = topFive[0] || event.winner || null;
   const endedAt = new Date().toISOString();
 
   const archiveEntry = {
@@ -143,6 +181,7 @@ export async function onRequestPost({ request, env }) {
     contributors: standings?.contributors || 0,
     winner,
     topFive,
+    leaderboard: topFive,
     rewards: event.rewards || { placement: [], participation: [] },
     drops
   };
