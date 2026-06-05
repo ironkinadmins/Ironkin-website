@@ -197,9 +197,27 @@ export async function onRequestPost({ request, env }) {
   );
 
   if (events) {
+    const getResetEventTitle = item => {
+      if (item?.type === "sotw") return "Skill of the Week";
+      if (item?.type === "botw") return "Boss of the Week";
+      if (String(item?.type || "").includes("clan-goal")) return "Clan Goal";
+      return item?.label || item?.title || "Event";
+    };
+
     const updatedEvents = events.map(item =>
       item.id === event.id
-        ? { ...item, active: false, featured: false }
+        ? {
+            ...item,
+            title: getResetEventTitle(item),
+            description: "",
+            womCompetitionId: null,
+            target: null,
+            startDate: null,
+            endDate: null,
+            active: false,
+            featured: false,
+            dropsEnabled: false
+          }
         : item
     );
 
