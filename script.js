@@ -596,7 +596,7 @@ async function loadEventsHub() {
         href: `event.html?id=${encodeURIComponent(event.id)}`,
         icon: getEventIcon(event.type),
         label: event.label || formatEventType(event.type),
-        title: event.title,
+        title: displayEventTitle(event.title, event.type),
         description: event.description || "View the full Ironkin event dashboard."
       }));
     });
