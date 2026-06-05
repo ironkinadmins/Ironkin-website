@@ -16,6 +16,12 @@
       <p>Manage Ironkin events, WOM tracking, rewards, and event-specific drops.</p>
     </section>
 
+    <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+      <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Bingo</button>
+    </div>
+
+    <div class="admin-tab-panel active" id="adminTab-events">
     <section class="admin-card">
       <div class="admin-form-grid">
         <div class="admin-field">
@@ -127,7 +133,9 @@
       <div class="admin-divider"></div>
       <div id="adminDropsList" class="admin-drops-list">Loading...</div>
     </section>
+    </div>
 
+    <div class="admin-tab-panel" id="adminTab-bingo">
     <section class="admin-card admin-bingo-card">
       <div class="admin-section-header">
         <p class="eyebrow">Battleship Bingo</p>
@@ -142,10 +150,14 @@
         </div>
 
         <div class="admin-field">
-          <label for="bingoActiveInput">Show as Active</label>
+          <label>Visibility</label>
           <label class="admin-check-row">
             <input id="bingoActiveInput" type="checkbox" />
-            <span>Show ACTIVE badge and enable View Event</span>
+            <span>Show ACTIVE badge</span>
+          </label>
+          <label class="admin-check-row">
+            <input id="bingoViewEventInput" type="checkbox" />
+            <span>Enable View Event link</span>
           </label>
         </div>
 
@@ -162,6 +174,7 @@
 
       <p class="admin-muted" id="bingoSettingsStatus"></p>
     </section>
+    </div>
 
   </main>
 

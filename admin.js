@@ -428,6 +428,27 @@ function populateEventFields() {
 
 
 
+function setupAdminTabs() {
+  const buttons = Array.from(document.querySelectorAll(".admin-tab-btn"));
+  const panels = Array.from(document.querySelectorAll(".admin-tab-panel"));
+
+  if (!buttons.length || !panels.length) return;
+
+  buttons.forEach(button => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.adminTab;
+
+      buttons.forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
+
+      panels.forEach(panel => {
+        panel.classList.toggle("active", panel.id === `adminTab-${target}`);
+      });
+    });
+  });
+}
+
 async function fetchBingoSettings() {
   const response = await fetch("/api/bingo/settings");
   const data = await response.json();
@@ -443,14 +464,16 @@ async function loadBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const viewEventInput = document.getElementById("bingoViewEventInput");
 
-  if (!titleInput || !descriptionInput || !activeInput) return;
+  if (!titleInput || !descriptionInput || !activeInput || !viewEventInput) return;
 
   try {
     const settings = await fetchBingoSettings();
     titleInput.value = settings.title || "Battleship Bingo";
     descriptionInput.value = settings.description || "";
     activeInput.checked = settings.active === true;
+    viewEventInput.checked = settings.enableViewEvent === true;
   } catch (error) {
     const status = document.getElementById("bingoSettingsStatus");
     if (status) status.textContent = error.message;
@@ -461,9 +484,10 @@ async function saveBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const viewEventInput = document.getElementById("bingoViewEventInput");
   const status = document.getElementById("bingoSettingsStatus");
 
-  if (!titleInput || !descriptionInput || !activeInput) return;
+  if (!titleInput || !descriptionInput || !activeInput || !viewEventInput) return;
 
   const response = await fetch("/api/admin/bingo/settings", {
     method: "POST",
@@ -471,7 +495,8 @@ async function saveBingoSettings() {
     body: JSON.stringify({
       title: titleInput.value.trim() || "Battleship Bingo",
       description: descriptionInput.value.trim(),
-      active: activeInput.checked
+      active: activeInput.checked,
+      enableViewEvent: viewEventInput.checked
     })
   });
 
@@ -487,6 +512,8 @@ async function saveBingoSettings() {
 
 
 async function loadAdmin() {
+  setupAdminTabs();
+
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
   const saveEventBtn = document.getElementById("saveEventBtn");

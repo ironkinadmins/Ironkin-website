@@ -604,18 +604,26 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
     ? `<p>${description}</p>`
     : "";
 
-  const footerHtml = active && href
-    ? `
+  let footerHtml = `
+    <div class="event-hub-footer event-hub-footer-inactive">
+      <span>Not active</span>
+    </div>
+  `;
+
+  if (href) {
+    footerHtml = `
       <div class="event-hub-footer">
         <span>Dashboard</span>
         <strong>View Event →</strong>
       </div>
-    `
-    : `
+    `;
+  } else if (active) {
+    footerHtml = `
       <div class="event-hub-footer event-hub-footer-inactive">
-        <span>Not active</span>
+        <span>Not open yet</span>
       </div>
     `;
+  }
 
   card.innerHTML = `
     <div class="event-hub-topline">
@@ -644,19 +652,20 @@ async function fetchBingoSettings() {
       throw new Error(data.error || "Could not load Bingo settings.");
     }
 
-    return data.settings || { active: false };
+    return data.settings || { active: false, enableViewEvent: false };
   } catch {
-    return { active: false };
+    return { active: false, enableViewEvent: false };
   }
 }
 
 async function appendBattleshipBingoCard(grid) {
   const settings = await fetchBingoSettings();
   const active = settings.active === true;
+  const enableViewEvent = settings.enableViewEvent === true;
 
   grid.appendChild(createEventHubCard({
     type: "bingo",
-    href: active ? "battleship-bingo.html" : "",
+    href: enableViewEvent ? "battleship-bingo.html" : "",
     icon: "🚢",
     label: "BINGO",
     title: active ? (settings.title || "Battleship Bingo") : "Battleship Bingo",
