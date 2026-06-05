@@ -31,7 +31,7 @@ const DEFAULT_EVENTS = [
     id: "clan-goal-hueycoatl",
     type: "clan-goal-boss",
     label: "Clan Goal",
-    title: "Clan Goal - Hueycoatl",
+    title: "Hueycoatl",
     description: "Every kill brings Ironkin closer to the next clan milestone.",
     womCompetitionId: "138731",
     featured: true,
