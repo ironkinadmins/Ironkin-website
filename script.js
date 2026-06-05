@@ -221,6 +221,16 @@ function renderRewardsSection(event) {
 }
 
 
+function displayEventTitle(title, type) {
+  const rawTitle = String(title || "Event").trim();
+
+  if (String(type || "").includes("clan-goal")) {
+    return rawTitle.replace(/^Clan Goal\s*-\s*/i, "").trim() || rawTitle;
+  }
+
+  return rawTitle;
+}
+
 function formatEventType(type) {
   const labels = {
     sotw: "SOTW",
@@ -368,7 +378,7 @@ const homeTotalGained =
     }
 
     if (eventTitle) {
-      eventTitle.textContent = standings?.title || featuredEvent.title;
+      eventTitle.textContent = displayEventTitle(standings?.title || featuredEvent.title, featuredEvent.type);
     }
 
     if (eventMeta) {
@@ -690,7 +700,7 @@ async function loadSingleEventDashboard() {
             </p>
 
             <h1>
-              ${standings?.title || event.title}
+              ${displayEventTitle(standings?.title || event.title, event.type)}
             </h1>
 
             <p>
@@ -849,7 +859,7 @@ async function loadHomeEventWidgets() {
           row.innerHTML = `
             <span>${getEventIcon(event.type)}</span>
             <div>
-              <strong>${event.title}</strong>
+              <strong>${displayEventTitle(event.title, event.type)}</strong>
               <small>${event.label || formatEventType(event.type)}</small>
             </div>
             <em>View →</em>
@@ -879,7 +889,7 @@ async function loadHomeEventWidgets() {
 
       clanGoalWidget.innerHTML = `
         <p class="eyebrow">${getEventIcon(clanGoal.type)} Active Clan Goal</p>
-        <h2>${clanGoal.title}</h2>
+        <h2>${displayEventTitle(clanGoal.title, clanGoal.type)}</h2>
         <p>${clanGoal.description || "Clan-wide progress event."}</p>
 
         <div class="mini-progress-labels">
@@ -1678,7 +1688,7 @@ async function loadUpcomingEventsWidget() {
     container.innerHTML = upcoming.map(event => `
       <div class="upcoming-event-row">
         <div>
-          <strong>${event.title}</strong>
+          <strong>${displayEventTitle(event.title, event.type)}</strong>
           <span>${formatShortDateTime(event.start)}</span>
         </div>
         <small>${getCalendarEventType(event)}</small>
