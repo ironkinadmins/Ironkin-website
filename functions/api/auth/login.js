@@ -1,8 +1,12 @@
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+
+  const redirectUri =
+    env.DISCORD_REDIRECT_URI ||
+    `${new URL(request.url).origin}/api/auth/callback`;
 
   const params = new URLSearchParams({
     client_id: env.DISCORD_CLIENT_ID,
-    redirect_uri: env.DISCORD_REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "identify guilds guilds.members.read"
   });
