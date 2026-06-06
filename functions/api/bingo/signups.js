@@ -107,14 +107,20 @@ export async function onRequestPost({ request, env }) {
   const signups = await getSignups(env);
   const existing = signups.find(item => item.discordId === session.id);
 
-  if (existing) {
-    return Response.json({
-      success: true,
-      alreadySignedUp: true,
-      signup: publicSignup(existing),
-      signups: signups.map(publicSignup)
-    });
-  }
+if (existing) {
+  existing.displayName = getDisplayName(session);
+  existing.username = session.username;
+  existing.avatar = session.avatar;
+
+  await saveSignups(env, signups);
+
+  return Response.json({
+    success: true,
+    alreadySignedUp: true,
+    signup: publicSignup(existing),
+    signups: signups.map(publicSignup)
+  });
+}
 
   const signup = {
     eventId: "battleship-bingo",
