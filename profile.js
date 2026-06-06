@@ -13,9 +13,9 @@ function profileEscapeHtml(value) {
 }
 
 function profileFormatDate(value) {
-  if (!value) return "Not available";
+  if (!value) return "";
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "Not available";
+  if (!Number.isFinite(date.getTime())) return "";
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long" });
 }
 
@@ -30,6 +30,11 @@ function renderProfileHero(profile) {
   const hero = document.getElementById("profileHero");
   if (!hero) return;
 
+  const memberSince = profileFormatDate(profile.memberSince);
+  const memberSincePill = memberSince
+    ? `<span>Member Since: ${profileEscapeHtml(memberSince)}</span>`
+    : "";
+
   hero.innerHTML = `
     <div class="profile-identity-card">
       <img class="profile-avatar" src="${profileEscapeHtml(profile.avatarUrl)}" alt="${profileEscapeHtml(profile.displayName)} avatar" />
@@ -37,9 +42,8 @@ function renderProfileHero(profile) {
         <p class="eyebrow">Ironkin Member Profile</p>
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
         <div class="profile-meta-row">
-          <span>RSN: ${profileEscapeHtml(profile.rsn)}</span>
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
-          <span>Member Since: ${profileFormatDate(profile.memberSince)}</span>
+          ${memberSincePill}
         </div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
       </div>
@@ -56,8 +60,8 @@ function renderWomStats(profile) {
   if (!wom.found) {
     mount.innerHTML = `
       <div class="profile-empty-state">
-        WOM stats could not be loaded for <strong>${profileEscapeHtml(profile.rsn)}</strong>.
-        <br />${profileEscapeHtml(wom.error || "Make sure the Discord server nickname matches the RSN.")}
+        WOM stats are temporarily unavailable for <strong>${profileEscapeHtml(profile.displayName)}</strong>.
+        <br />${profileEscapeHtml(wom.error || "Try again later.")}
       </div>
     `;
     return;

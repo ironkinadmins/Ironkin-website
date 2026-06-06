@@ -1,4 +1,5 @@
 const PROFILE_INDEX_KEY = "member-profiles:index";
+const WOM_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const STAFF_ROLE_IDS = [
   "1364734283356569620",
   "1365445491776815104"
@@ -104,6 +105,32 @@ async function getEmberBalance(env, discordId, displayName) {
   return { balance: 0, source: "not-found" };
 }
 
+
+function getWomCacheKey(rsn) {
+  return `profile:wom:${normalizeName(rsn)}`;
+}
+
+async function getCachedWomStats(env, rsn) {
+  const cacheKey = getWomCacheKey(rsn);
+  const cached = safeJsonParse(await env.DROPS_KV.get(cacheKey), null);
+
+  if (!cached?.stats || !cached?.fetchedAt) return null;
+
+  const ageMs = Date.now() - new Date(cached.fetchedAt).getTime();
+  return {
+    ...cached,
+    isFresh: Number.isFinite(ageMs) && ageMs < WOM_CACHE_TTL_MS
+  };
+}
+
+async function saveCachedWomStats(env, rsn, stats) {
+  const cacheKey = getWomCacheKey(rsn);
+  await env.DROPS_KV.put(cacheKey, JSON.stringify({
+    fetchedAt: new Date().toISOString(),
+    stats
+  }));
+}
+
 function summarizeWomPlayer(data) {
   const skills = data?.latestSnapshot?.data?.skills || data?.skills || {};
   const bosses = data?.latestSnapshot?.data?.bosses || data?.bosses || {};
@@ -137,8 +164,14 @@ function summarizeWomPlayer(data) {
   };
 }
 
-async function getWomStats(rsn) {
+async function getWomStats(env, rsn) {
   if (!rsn) return { found: false, error: "No RSN available." };
+
+  const cached = await getCachedWomStats(env, rsn);
+
+  if (cached?.isFresh) {
+    return { ...cached.stats, cached: true, cachedAt: cached.fetchedAt };
+  }
 
   try {
     const response = await fetch(
@@ -148,12 +181,35 @@ async function getWomStats(rsn) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      return { found: false, error: data?.message || "Wise Old Man player not found." };
+      if (cached?.stats) {
+        return { ...cached.stats, cached: true, stale: true, cachedAt: cached.fetchedAt };
+      }
+
+      if (response.status === 429) {
+        return {
+          found: false,
+          error: "WOM stats are temporarily unavailable. Try again later."
+        };
+      }
+
+      return {
+        found: false,
+        error: data?.message || "Make sure your Discord server nickname matches your RSN."
+      };
     }
 
-    return summarizeWomPlayer(data);
+    const stats = summarizeWomPlayer(data);
+    await saveCachedWomStats(env, rsn, stats);
+    return stats;
   } catch {
-    return { found: false, error: "Could not load Wise Old Man stats." };
+    if (cached?.stats) {
+      return { ...cached.stats, cached: true, stale: true, cachedAt: cached.fetchedAt };
+    }
+
+    return {
+      found: false,
+      error: "WOM stats are temporarily unavailable. Try again later."
+    };
   }
 }
 
@@ -232,6 +288,7 @@ function buildProfile({ session, record, embers, wom, placements }) {
   const avatarUrl = record.adminAvatarOverride || record.customAvatarUrl || discordAvatarUrl;
   const blurb = record.adminBlurbOverride || record.blurb || "";
   const rank = record.rankOverride || (isStaff(session) ? "Staff" : "Ironkin Member");
+  const memberSince = session.joined_at || session.joinedAt || record.memberSince || null;
 
   return {
     discordId: session.id,
@@ -239,7 +296,7 @@ function buildProfile({ session, record, embers, wom, placements }) {
     displayName,
     rsn,
     rank,
-    memberSince: session.joined_at || session.joinedAt || null,
+    memberSince,
     avatarUrl,
     discordAvatarUrl,
     customAvatarUrl: record.customAvatarUrl || "",
@@ -267,7 +324,7 @@ export async function onRequestGet({ request, env }) {
 
   const [embers, wom, placements] = await Promise.all([
     getEmberBalance(env, session.id, displayName),
-    getWomStats(rsn),
+    getWomStats(env, rsn),
     getEventPlacements(env, rsn)
   ]);
 
@@ -276,6 +333,7 @@ export async function onRequestGet({ request, env }) {
     displayName,
     username: session.username,
     rsn,
+    memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
     lastSeenAt: new Date().toISOString()
   };
   await saveProfileRecord(env, session.id, refreshedRecord);
@@ -311,6 +369,7 @@ export async function onRequestPost({ request, env }) {
     displayName,
     username: session.username,
     rsn: displayName,
+    memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
     blurb,
     updatedAt: new Date().toISOString()
@@ -320,7 +379,7 @@ export async function onRequestPost({ request, env }) {
 
   const [embers, wom, placements] = await Promise.all([
     getEmberBalance(env, session.id, displayName),
-    getWomStats(displayName),
+    getWomStats(env, displayName),
     getEventPlacements(env, displayName)
   ]);
 

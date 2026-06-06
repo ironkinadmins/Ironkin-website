@@ -359,17 +359,15 @@ async function loadDiscordUser() {
 
     if (!data.signedIn) return;
 
-    loginBtn.textContent =
-      `Signed in as ${data.user.global_name || data.user.username}`;
-
-    loginBtn.href = "#";
+    loginBtn.textContent = "View Profile";
+    loginBtn.href = "profile.html";
 
     if (data.user.inGuild) {
-      loginBtn.title = "Verified Ironkin Discord member";
+      loginBtn.title = "View your Ironkin member profile";
     }
 
     if (profileNavLink) {
-      profileNavLink.style.display = "inline-block";
+      profileNavLink.style.display = "none";
     }
 
     if (isStaffUser(data.user) && adminNavLink) {
