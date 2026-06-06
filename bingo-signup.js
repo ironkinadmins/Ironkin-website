@@ -129,7 +129,7 @@ function renderSignupPage() {
 
 async function loadBingoSignups() {
   try {
-    const response = await fetch("/api/bingo/signups");
+    const response = await fetch(`/api/bingo/signups?t=${Date.now()}`, { cache: "no-store" });
     const data = await response.json();
 
     if (!response.ok) {

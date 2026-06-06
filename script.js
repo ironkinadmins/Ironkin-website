@@ -645,7 +645,7 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
 
 async function fetchBingoSettings() {
   try {
-    const response = await fetch("/api/bingo/settings");
+    const response = await fetch(`/api/bingo/settings?t=${Date.now()}`, { cache: "no-store" });
     const data = await response.json();
 
     if (!response.ok) {
