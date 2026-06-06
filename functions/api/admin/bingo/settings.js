@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
   title: "Battleship Bingo",
   description: "Build a board, split into teams, claim tiles, and track summer progress.",
   active: false,
+  signupOpen: false,
   enableViewEvent: false
 };
 
@@ -50,6 +51,7 @@ export async function onRequestPost({ request, env }) {
     title: cleanString(body.title, DEFAULT_SETTINGS.title, 80),
     description: cleanString(body.description, "", 300),
     active: body.active === true,
+    signupOpen: body.signupOpen === true,
     enableViewEvent: body.enableViewEvent === true
   };
 
