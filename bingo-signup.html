@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Signup | Ironkin Clan</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="page bingo-signup-page">
+    <section class="page-title bingo-signup-hero">
+      <p class="eyebrow">Registration Open</p>
+      <h1>Battleship Bingo Signup</h1>
+      <p>
+        Sign in with Discord, click one button, and you’ll be auto-assigned to the team
+        with fewer players. Once signed up, you can see both team rosters here.
+      </p>
+
+      <div id="bingoSignupStatus" class="bingo-signup-status">
+        Checking Discord sign-in...
+      </div>
+
+      <div class="bingo-signup-actions">
+        <a id="bingoSignupLogin" class="btn primary" href="/api/auth/login" style="display:none;">
+          Sign in with Discord
+        </a>
+
+        <button id="bingoSignupButton" class="btn primary" type="button" disabled>
+          Sign Up for Bingo
+        </button>
+      </div>
+    </section>
+
+    <section class="bingo-team-grid" aria-label="Bingo teams">
+      <article class="card bingo-team-card">
+        <div class="bingo-team-heading">
+          <div>
+            <p class="eyebrow">Fleet One</p>
+            <h2>Team 1</h2>
+          </div>
+          <strong id="bingoTeamOneCount">0</strong>
+        </div>
+        <div id="bingoTeamOneList" class="bingo-team-list">
+          Loading team...
+        </div>
+      </article>
+
+      <article class="card bingo-team-card">
+        <div class="bingo-team-heading">
+          <div>
+            <p class="eyebrow">Fleet Two</p>
+            <h2>Team 2</h2>
+          </div>
+          <strong id="bingoTeamTwoCount">0</strong>
+        </div>
+        <div id="bingoTeamTwoList" class="bingo-team-list">
+          Loading team...
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="bingo-signup.js"></script>
+</body>
+</html>

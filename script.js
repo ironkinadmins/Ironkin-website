@@ -583,7 +583,7 @@ async function loadRecentActivity() {
   }
 }
 
-function createEventHubCard({ type, href, icon, label, title, description, active = false }) {
+function createEventHubCard({ type, href, icon, label, title, description, active = false, ctaLabel = "View Event →" }) {
   const card = document.createElement(active && href ? "a" : "article");
 
   card.className = `event-hub-card event-${type}${active ? " is-active" : " is-inactive"}`;
@@ -614,7 +614,7 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
     footerHtml = `
       <div class="event-hub-footer">
         <span>Dashboard</span>
-        <strong>View Event →</strong>
+        <strong>${ctaLabel}</strong>
       </div>
     `;
   } else if (active) {
@@ -665,15 +665,31 @@ async function appendBattleshipBingoCard(grid) {
 
   grid.appendChild(createEventHubCard({
     type: "bingo",
-    href: enableViewEvent ? "battleship-bingo.html" : "",
+    href: active ? "bingo-signup.html" : "",
     icon: "🚢",
     label: "BINGO",
     title: active ? (settings.title || "Battleship Bingo") : "Battleship Bingo",
     description: active
       ? (settings.description || "Build a board, split into teams, claim tiles, and track summer progress.")
       : "",
-    active
+    active,
+    ctaLabel: "Sign Up →"
   }));
+}
+
+async function loadHomeBingoSignupBanner() {
+  const banner = document.getElementById("homeBingoSignupBanner");
+  if (!banner) return;
+
+  try {
+    const settings = await fetchBingoSettings();
+
+    if (settings.active === true) {
+      banner.style.display = "flex";
+    }
+  } catch {
+    banner.style.display = "none";
+  }
 }
 
 async function loadEventsHub() {
@@ -1966,6 +1982,7 @@ async function loadRecordsPage() {
 
 loadSiteNav();
 loadHomeStats();
+loadHomeBingoSignupBanner();
 loadRecentActivity();
 loadHomeEventWidgets();
 loadEventsHub();

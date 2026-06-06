@@ -5943,3 +5943,184 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 .admin-check-row input {
   width: auto !important;
 }
+
+/* Battleship Bingo signup */
+.bingo-home-banner {
+  max-width: 1180px;
+  margin: 0 auto 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(255, 166, 0, 0.28);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 166, 0, 0.18), transparent 34%),
+    rgba(16, 12, 10, 0.88);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bingo-home-banner h2 {
+  margin: 0.15rem 0 0.35rem;
+}
+
+.bingo-home-banner p:last-child {
+  margin: 0;
+  color: var(--muted, #b9a992);
+}
+
+.bingo-signup-page {
+  max-width: 1180px;
+}
+
+.bingo-signup-hero {
+  text-align: left;
+  border: 1px solid rgba(255, 166, 0, 0.22);
+  border-radius: 24px;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at top left, rgba(255, 166, 0, 0.16), transparent 38%),
+    rgba(16, 12, 10, 0.76);
+}
+
+.bingo-signup-status {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted, #b9a992);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bingo-signup-status.success {
+  border-color: rgba(71, 255, 154, 0.32);
+  color: #c8ffd9;
+}
+
+.bingo-signup-status.error {
+  border-color: rgba(255, 99, 99, 0.32);
+  color: #ffd2d2;
+}
+
+.bingo-signup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.bingo-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.bingo-team-card {
+  min-height: 320px;
+}
+
+.bingo-team-heading,
+.bingo-team-member,
+.bingo-member-main {
+  display: flex;
+  align-items: center;
+}
+
+.bingo-team-heading {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.bingo-team-heading h2 {
+  margin: 0.15rem 0 0;
+}
+
+.bingo-team-heading > strong {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 166, 0, 0.14);
+  border: 1px solid rgba(255, 166, 0, 0.26);
+}
+
+.bingo-team-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.bingo-team-member {
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.bingo-team-member.is-current-user {
+  border-color: rgba(255, 166, 0, 0.36);
+  background: rgba(255, 166, 0, 0.08);
+}
+
+.bingo-member-main {
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.bingo-member-main img,
+.bingo-member-avatar-fallback {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.bingo-member-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 166, 0, 0.16);
+  border: 1px solid rgba(255, 166, 0, 0.26);
+  font-weight: 800;
+}
+
+.bingo-member-main strong,
+.bingo-member-main small {
+  display: block;
+}
+
+.bingo-member-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bingo-member-main small {
+  color: var(--muted, #b9a992);
+}
+
+.bingo-move-btn {
+  white-space: nowrap;
+  padding: 0.55rem 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .bingo-home-banner,
+  .bingo-team-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bingo-home-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bingo-team-member {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
