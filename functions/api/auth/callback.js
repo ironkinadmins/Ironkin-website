@@ -70,6 +70,7 @@ export async function onRequestGet({ request, env }) {
     id: user.id,
     username: user.username,
     global_name: user.global_name,
+    nick: guildMember?.nick || null,
     avatar: user.avatar,
     inGuild: guildResponse.ok,
     roles: guildMember?.roles || []
