@@ -16,7 +16,10 @@ function profileFormatDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "long" });
+  return date.toLocaleDateString("en-CA", {
+  month: "long",
+  year: "numeric"
+})
 }
 
 function getPlacementIcon(place) {
