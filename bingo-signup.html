@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bingo Signup | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260605-bingo-flow-2" />
+  <link rel="stylesheet" href="styles.css?v=20260606-admin-nav-countdown-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -21,6 +21,19 @@
 
       <div id="bingoSignupStatus" class="bingo-signup-status">
         Checking Discord sign-in...
+      </div>
+
+      <div class="bingo-registration-summary">
+        <div id="bingoRegistrationCountdown" class="bingo-countdown-card" style="display:none;">
+          <span>Registration ends in</span>
+          <strong id="bingoCountdownValue">—</strong>
+          <small id="bingoDeadlineText"></small>
+        </div>
+        <div class="bingo-countdown-card">
+          <span>Total signed up</span>
+          <strong id="bingoTotalSignedUp">0</strong>
+          <small>Auto-split between both teams</small>
+        </div>
       </div>
 
       <div id="bingoStaffControls" class="bingo-staff-controls" style="display:none;">
@@ -51,7 +64,7 @@
         <div class="bingo-team-heading">
           <div>
             <p class="eyebrow">Fleet One</p>
-            <h2>Team 1</h2>
+            <h2 id="bingoTeamOneTitle">Team 1</h2>
           </div>
           <strong id="bingoTeamOneCount">0</strong>
         </div>
@@ -64,7 +77,7 @@
         <div class="bingo-team-heading">
           <div>
             <p class="eyebrow">Fleet Two</p>
-            <h2>Team 2</h2>
+            <h2 id="bingoTeamTwoTitle">Team 2</h2>
           </div>
           <strong id="bingoTeamTwoCount">0</strong>
         </div>
@@ -79,7 +92,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260605-bingo-flow-2"></script>
-  <script src="bingo-signup.js?v=20260605-bingo-flow-2"></script>
+  <script src="script.js?v=20260606-admin-nav-countdown-1"></script>
+  <script src="bingo-signup.js?v=20260606-admin-nav-countdown-1"></script>
 </body>
 </html>

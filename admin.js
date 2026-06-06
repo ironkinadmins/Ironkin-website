@@ -449,6 +449,23 @@ function setupAdminTabs() {
   });
 }
 
+function toDateTimeLocalValue(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+
+  const pad = number => String(number).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fromDateTimeLocalValue(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
+}
+
 async function fetchBingoSettings() {
   const response = await fetch(`/api/bingo/settings?t=${Date.now()}`, { cache: "no-store" });
   const data = await response.json();
@@ -466,6 +483,9 @@ async function loadBingoSettings() {
   const activeInput = document.getElementById("bingoActiveInput");
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
+  const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
+  const teamOneNameInput = document.getElementById("bingoTeamOneNameInput");
+  const teamTwoNameInput = document.getElementById("bingoTeamTwoNameInput");
 
   if (!titleInput || !descriptionInput || !activeInput || !signupOpenInput || !viewEventInput) return;
 
@@ -476,6 +496,9 @@ async function loadBingoSettings() {
     activeInput.checked = settings.active === true;
     signupOpenInput.checked = settings.signupOpen === true;
     viewEventInput.checked = settings.enableViewEvent === true;
+    if (registrationEndsAtInput) registrationEndsAtInput.value = toDateTimeLocalValue(settings.registrationEndsAt);
+    if (teamOneNameInput) teamOneNameInput.value = settings.teamOneName || "Team 1";
+    if (teamTwoNameInput) teamTwoNameInput.value = settings.teamTwoName || "Team 2";
   } catch (error) {
     const status = document.getElementById("bingoSettingsStatus");
     if (status) status.textContent = error.message;
@@ -488,6 +511,9 @@ async function saveBingoSettings() {
   const activeInput = document.getElementById("bingoActiveInput");
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
+  const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
+  const teamOneNameInput = document.getElementById("bingoTeamOneNameInput");
+  const teamTwoNameInput = document.getElementById("bingoTeamTwoNameInput");
   const status = document.getElementById("bingoSettingsStatus");
 
   if (!titleInput || !descriptionInput || !activeInput || !signupOpenInput || !viewEventInput) return;
@@ -500,7 +526,10 @@ async function saveBingoSettings() {
       description: descriptionInput.value.trim(),
       active: activeInput.checked,
       signupOpen: signupOpenInput.checked,
-      enableViewEvent: viewEventInput.checked
+      enableViewEvent: viewEventInput.checked,
+      registrationEndsAt: fromDateTimeLocalValue(registrationEndsAtInput?.value || ""),
+      teamOneName: teamOneNameInput?.value.trim() || "Team 1",
+      teamTwoName: teamTwoNameInput?.value.trim() || "Team 2"
     })
   });
 

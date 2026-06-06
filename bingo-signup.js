@@ -1,7 +1,9 @@
-const TEAM_LABELS = {
+const DEFAULT_TEAM_LABELS = {
   team1: "Team 1",
   team2: "Team 2"
 };
+
+let countdownTimerId = null;
 
 let hasRefreshedExistingSignupName = false;
 
@@ -16,6 +18,9 @@ let bingoSignupState = {
     active: false,
     signupOpen: false,
     enableViewEvent: false,
+    registrationEndsAt: "",
+    teamOneName: "Team 1",
+    teamTwoName: "Team 2",
     title: "Battleship Bingo",
     description: ""
   }
@@ -33,6 +38,38 @@ function escapeHtml(value) {
 function getAvatarUrl(user) {
   if (!user?.avatar || !user?.discordId) return "";
   return `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png?size=64`;
+}
+
+function getTeamLabel(team) {
+  if (team === "team1") return bingoSignupState.settings?.teamOneName || DEFAULT_TEAM_LABELS.team1;
+  if (team === "team2") return bingoSignupState.settings?.teamTwoName || DEFAULT_TEAM_LABELS.team2;
+  return DEFAULT_TEAM_LABELS[team] || "Team";
+}
+
+function formatDeadline(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+
+  return date.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
 }
 
 function setSignupStatus(message, type = "info") {
@@ -95,7 +132,7 @@ function renderTeamList(team, mountId, countId) {
               data-discord-id="${member.discordId}"
               data-team="${targetTeam}"
             >
-              Move to ${TEAM_LABELS[targetTeam]}
+              Move to ${getTeamLabel(targetTeam)}
             </button>
             ${!isCurrentUser ? `
               <button
@@ -112,6 +149,56 @@ function renderTeamList(team, mountId, countId) {
       </div>
     `;
   }).join("");
+}
+
+function renderSignupSummary() {
+  const total = document.getElementById("bingoTotalSignedUp");
+  const teamOneTitle = document.getElementById("bingoTeamOneTitle");
+  const teamTwoTitle = document.getElementById("bingoTeamTwoTitle");
+
+  if (total) total.textContent = String(bingoSignupState.signups.length);
+  if (teamOneTitle) teamOneTitle.textContent = getTeamLabel("team1");
+  if (teamTwoTitle) teamTwoTitle.textContent = getTeamLabel("team2");
+}
+
+function renderRegistrationCountdown() {
+  const card = document.getElementById("bingoRegistrationCountdown");
+  const value = document.getElementById("bingoCountdownValue");
+  const deadlineText = document.getElementById("bingoDeadlineText");
+  const deadlineValue = bingoSignupState.settings?.registrationEndsAt || "";
+  const deadline = deadlineValue ? new Date(deadlineValue) : null;
+
+  if (countdownTimerId) {
+    clearInterval(countdownTimerId);
+    countdownTimerId = null;
+  }
+
+  if (!card || !value || !deadlineText || !deadline || !Number.isFinite(deadline.getTime())) {
+    if (card) card.style.display = "none";
+    return;
+  }
+
+  card.style.display = "grid";
+  deadlineText.textContent = `Closes ${formatDeadline(deadlineValue)}`;
+
+  const tick = () => {
+    const remaining = deadline.getTime() - Date.now();
+
+    if (remaining <= 0) {
+      value.textContent = "Registration closed";
+      deadlineText.textContent = `Closed ${formatDeadline(deadlineValue)}`;
+      if (countdownTimerId) {
+        clearInterval(countdownTimerId);
+        countdownTimerId = null;
+      }
+      return;
+    }
+
+    value.textContent = formatCountdown(remaining);
+  };
+
+  tick();
+  countdownTimerId = setInterval(tick, 1000);
 }
 
 function renderStaffControls() {
@@ -166,7 +253,7 @@ function updateSignupButton() {
     delete button.dataset.action;
     setSignupStatus(
       bingoSignupState.currentSignup
-        ? `Battleship Bingo has started. You’re on ${TEAM_LABELS[bingoSignupState.currentSignup.team]}.`
+        ? `Battleship Bingo has started. You’re on ${getTeamLabel(bingoSignupState.currentSignup.team)}.`
         : "Battleship Bingo has started and registration is locked.",
       "info"
     );
@@ -184,7 +271,7 @@ function updateSignupButton() {
     button.style.display = "none";
     delete button.dataset.action;
     setSignupStatus(
-      `You’re signed up as ${bingoSignupState.currentSignup.displayName} on ${TEAM_LABELS[bingoSignupState.currentSignup.team]}.`,
+      `You’re signed up as ${bingoSignupState.currentSignup.displayName} on ${getTeamLabel(bingoSignupState.currentSignup.team)}.`,
       "success"
     );
     return;
@@ -201,6 +288,8 @@ function updateSignupButton() {
 }
 
 function renderSignupPage() {
+  renderSignupSummary();
+  renderRegistrationCountdown();
   renderStaffControls();
   updateSignupButton();
   renderTeamList("team1", "bingoTeamOneList", "bingoTeamOneCount");
@@ -223,7 +312,7 @@ async function loadBingoSignups() {
       currentUser: data.currentUser,
       currentSignup: data.currentSignup,
       signups: Array.isArray(data.signups) ? data.signups : [],
-      settings: data.settings || { active: false, signupOpen: false, enableViewEvent: false }
+      settings: data.settings || { active: false, signupOpen: false, enableViewEvent: false, registrationEndsAt: "", teamOneName: "Team 1", teamTwoName: "Team 2" }
     };
 
     const currentName = String(bingoSignupState.currentUser?.displayName || "");
@@ -364,7 +453,10 @@ async function saveBingoMode(mode) {
     description: settings.description || "Build a board, split into teams, claim tiles, and track summer progress.",
     active: true,
     signupOpen: mode === "registration",
-    enableViewEvent: mode === "started"
+    enableViewEvent: mode === "started",
+    registrationEndsAt: settings.registrationEndsAt || "",
+    teamOneName: settings.teamOneName || "Team 1",
+    teamTwoName: settings.teamTwoName || "Team 2"
   };
 
   try {

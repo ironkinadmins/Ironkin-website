@@ -8,7 +8,10 @@ const DEFAULT_SETTINGS = {
   description: "Build a board, split into teams, claim tiles, and track summer progress.",
   active: false,
   signupOpen: false,
-  enableViewEvent: false
+  enableViewEvent: false,
+  registrationEndsAt: "",
+  teamOneName: "Team 1",
+  teamTwoName: "Team 2"
 };
 
 function getSession(request) {
@@ -37,6 +40,14 @@ function cleanString(value, fallback = "", max = 300) {
   return cleaned || fallback;
 }
 
+function cleanDateTime(value) {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return "";
+
+  const parsed = new Date(cleaned);
+  return Number.isFinite(parsed.getTime()) ? cleaned : "";
+}
+
 export async function onRequestPost({ request, env }) {
   if (!isStaff(request)) {
     return Response.json(
@@ -52,7 +63,10 @@ export async function onRequestPost({ request, env }) {
     description: cleanString(body.description, "", 300),
     active: body.active === true,
     signupOpen: body.signupOpen === true,
-    enableViewEvent: body.enableViewEvent === true
+    enableViewEvent: body.enableViewEvent === true,
+    registrationEndsAt: cleanDateTime(body.registrationEndsAt),
+    teamOneName: cleanString(body.teamOneName, DEFAULT_SETTINGS.teamOneName, 40),
+    teamTwoName: cleanString(body.teamTwoName, DEFAULT_SETTINGS.teamTwoName, 40)
   };
 
   await env.DROPS_KV.put("bingo:settings", JSON.stringify(settings));

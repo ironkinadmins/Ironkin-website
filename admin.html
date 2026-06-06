@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=20260605-bingo-flow-1" />
+  <link rel="stylesheet" href="styles.css?v=20260606-admin-nav-countdown-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -150,6 +150,22 @@
         </div>
 
         <div class="admin-field">
+          <label for="bingoRegistrationEndsAtInput">Registration Deadline</label>
+          <input id="bingoRegistrationEndsAtInput" type="datetime-local" />
+          <small class="admin-muted">When this passes, signups lock and the Events page routes to the board.</small>
+        </div>
+
+        <div class="admin-field">
+          <label for="bingoTeamOneNameInput">Team 1 Name</label>
+          <input id="bingoTeamOneNameInput" type="text" placeholder="Team 1" />
+        </div>
+
+        <div class="admin-field">
+          <label for="bingoTeamTwoNameInput">Team 2 Name</label>
+          <input id="bingoTeamTwoNameInput" type="text" placeholder="Team 2" />
+        </div>
+
+        <div class="admin-field">
           <label>Visibility</label>
           <label class="admin-check-row">
             <input id="bingoActiveInput" type="checkbox" />
@@ -185,6 +201,7 @@
 
   </main>
 
-  <script src="admin.js?v=20260605-bingo-flow-1"></script>
+  <script src="script.js?v=20260606-admin-nav-countdown-1"></script>
+  <script src="admin.js?v=20260606-admin-nav-countdown-1"></script>
 </body>
 </html>

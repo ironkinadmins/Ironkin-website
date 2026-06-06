@@ -41,24 +41,40 @@ async function saveSignups(env, signups) {
   await env.DROPS_KV.put(SIGNUPS_KEY, JSON.stringify(signups));
 }
 
+function hasRegistrationDeadlinePassed(registrationEndsAt) {
+  if (!registrationEndsAt) return false;
+  const deadline = new Date(registrationEndsAt);
+  return Number.isFinite(deadline.getTime()) && deadline.getTime() <= Date.now();
+}
+
 async function getBingoSettings(env) {
   const raw = await env.DROPS_KV.get("bingo:settings");
   const parsed = raw ? JSON.parse(raw) : {};
-  const enableViewEvent =
+  const registrationEndsAt = typeof parsed.registrationEndsAt === "string" ? parsed.registrationEndsAt : "";
+
+  let enableViewEvent =
     typeof parsed.enableViewEvent === "boolean"
       ? parsed.enableViewEvent
       : false;
-  const signupOpen =
+  let signupOpen =
     typeof parsed.signupOpen === "boolean"
       ? parsed.signupOpen
       : parsed.active === true && enableViewEvent !== true;
+
+  if (parsed.active === true && signupOpen === true && hasRegistrationDeadlinePassed(registrationEndsAt)) {
+    signupOpen = false;
+    enableViewEvent = true;
+  }
 
   return {
     title: parsed.title || "Battleship Bingo",
     description: parsed.description || "Build a board, split into teams, claim tiles, and track summer progress.",
     active: parsed.active === true,
     signupOpen,
-    enableViewEvent
+    enableViewEvent,
+    registrationEndsAt,
+    teamOneName: parsed.teamOneName || "Team 1",
+    teamTwoName: parsed.teamTwoName || "Team 2"
   };
 }
 
