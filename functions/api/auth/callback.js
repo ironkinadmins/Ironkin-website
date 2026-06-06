@@ -71,6 +71,7 @@ export async function onRequestGet({ request, env }) {
     username: user.username,
     global_name: user.global_name,
     nick: guildMember?.nick || null,
+    joined_at: guildMember?.joined_at || null,
     avatar: user.avatar,
     inGuild: guildResponse.ok,
     roles: guildMember?.roles || []

@@ -349,6 +349,7 @@ async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
   const adminNavLink = document.getElementById("adminNavLink");
+  const profileNavLink = document.getElementById("profileNavLink");
 
   if (!loginBtn) return;
 
@@ -365,6 +366,10 @@ async function loadDiscordUser() {
 
     if (data.user.inGuild) {
       loginBtn.title = "Verified Ironkin Discord member";
+    }
+
+    if (profileNavLink) {
+      profileNavLink.style.display = "inline-block";
     }
 
     if (isStaffUser(data.user) && adminNavLink) {

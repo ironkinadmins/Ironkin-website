@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ironkin Member Profile</title>
+  <link rel="stylesheet" href="styles.css?v=20260606-profile-1" />
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="profile-page">
+    <section class="profile-hero" id="profileHero">
+      <div class="profile-loading-card">Loading your Ironkin profile...</div>
+    </section>
+
+    <section class="profile-grid" id="profileGrid" style="display:none;">
+      <div class="profile-panel profile-main-stats">
+        <div class="profile-section-header">
+          <p class="eyebrow">Member Stats</p>
+          <h2>Wise Old Man</h2>
+        </div>
+        <div id="profileWomStats" class="profile-stat-grid"></div>
+      </div>
+
+      <div class="profile-panel profile-embers-card">
+        <div class="profile-section-header">
+          <p class="eyebrow">Ironkin Currency</p>
+          <h2>Embers</h2>
+        </div>
+        <strong id="profileEmbersValue" class="profile-ember-value">0</strong>
+      </div>
+
+      <div class="profile-panel profile-events-card">
+        <div class="profile-section-header">
+          <p class="eyebrow">Event Record</p>
+          <h2>Event Results</h2>
+        </div>
+        <div id="profileEventRecord"></div>
+      </div>
+
+      <div class="profile-panel profile-settings-card">
+        <div class="profile-section-header">
+          <p class="eyebrow">Profile Settings</p>
+          <h2>Edit Profile</h2>
+          <p class="admin-muted">Discord avatar is used by default. Add a custom avatar URL or short blurb if you want.</p>
+        </div>
+
+        <div class="admin-form-grid single-column">
+          <div class="admin-field admin-field-wide">
+            <label for="profileAvatarInput">Custom Avatar URL</label>
+            <input id="profileAvatarInput" type="url" placeholder="https://example.com/avatar.png" />
+          </div>
+
+          <div class="admin-field admin-field-wide">
+            <label for="profileBlurbInput">Profile Blurb</label>
+            <textarea id="profileBlurbInput" rows="4" maxlength="250" placeholder="Short Ironkin blurb, max 250 characters."></textarea>
+          </div>
+        </div>
+
+        <div class="admin-action-row">
+          <button type="button" class="btn primary" id="saveProfileBtn">Save Profile</button>
+        </div>
+
+        <p class="admin-muted" id="profileSaveStatus"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js?v=20260606-profile-1"></script>
+  <script src="profile.js?v=20260606-profile-1"></script>
+</body>
+</html>

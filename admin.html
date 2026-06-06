@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=20260606-admin-nav-countdown-1" />
+  <link rel="stylesheet" href="styles.css?v=20260606-profile-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -19,6 +19,7 @@
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Bingo</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
     </div>
 
     <div class="admin-tab-panel active" id="adminTab-events">
@@ -199,9 +200,67 @@
     </section>
     </div>
 
+
+    <div class="admin-tab-panel" id="adminTab-profiles">
+      <section class="admin-card">
+        <div class="admin-section-header">
+          <p class="eyebrow">Member Profiles</p>
+          <h2>User Management</h2>
+          <p class="admin-muted">Search members by Discord nickname, RSN, or Discord ID. Staff can override profile blurbs, avatar URLs, and display rank labels if something does not meet clan rules.</p>
+        </div>
+
+        <div class="admin-field">
+          <label for="profileSearchInput">Search Member</label>
+          <div class="admin-inline-row">
+            <input id="profileSearchInput" type="text" placeholder="Example: Loote Goblin" />
+            <button type="button" class="btn primary" id="profileSearchBtn">Search</button>
+          </div>
+        </div>
+
+        <div id="profileSearchResults" class="admin-profile-results">Search for a member to manage their profile.</div>
+
+        <div id="profileAdminEditor" class="admin-profile-editor" style="display:none;">
+          <div class="admin-divider"></div>
+          <div class="admin-section-header compact">
+            <h3 id="profileEditorTitle">Selected Member</h3>
+            <p class="admin-muted" id="profileEditorMeta"></p>
+          </div>
+
+          <input type="hidden" id="profileEditorDiscordId" />
+          <input type="hidden" id="profileEditorDisplayName" />
+          <input type="hidden" id="profileEditorUsername" />
+
+          <div class="admin-form-grid">
+            <div class="admin-field">
+              <label for="profileRankOverrideInput">Rank Label Override</label>
+              <input id="profileRankOverrideInput" type="text" placeholder="Example: Chainkeeper" />
+            </div>
+
+            <div class="admin-field">
+              <label for="profileAvatarOverrideInput">Avatar Override URL</label>
+              <input id="profileAvatarOverrideInput" type="url" placeholder="Leave blank to allow member/Discord avatar" />
+            </div>
+
+            <div class="admin-field admin-field-wide">
+              <label for="profileBlurbOverrideInput">Blurb Override</label>
+              <textarea id="profileBlurbOverrideInput" rows="4" maxlength="250" placeholder="Leave blank to allow member blurb"></textarea>
+            </div>
+          </div>
+
+          <div class="admin-action-row">
+            <button type="button" class="btn primary" id="saveProfileOverrideBtn">Save Profile Overrides</button>
+            <button type="button" class="btn secondary" id="clearProfileOverrideBtn">Clear Overrides</button>
+            <a class="btn secondary" href="profile.html">Open My Profile</a>
+          </div>
+
+          <p class="admin-muted" id="profileAdminStatus"></p>
+        </div>
+      </section>
+    </div>
+
   </main>
 
-  <script src="script.js?v=20260606-admin-nav-countdown-1"></script>
-  <script src="admin.js?v=20260606-admin-nav-countdown-1"></script>
+  <script src="script.js?v=20260606-profile-1"></script>
+  <script src="admin.js?v=20260606-profile-1"></script>
 </body>
 </html>

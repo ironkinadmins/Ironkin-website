@@ -558,6 +558,129 @@ function applyBingoMode(mode) {
   saveBingoSettings();
 }
 
+
+function renderProfileSearchResults(results) {
+  const mount = document.getElementById("profileSearchResults");
+  if (!mount) return;
+
+  if (!results.length) {
+    mount.innerHTML = `<p class="admin-muted">No matching members found.</p>`;
+    return;
+  }
+
+  mount.innerHTML = results.map(member => `
+    <button type="button" class="admin-profile-result" data-profile-member='${escapeHtml(JSON.stringify(member))}'>
+      <span>
+        <strong>${escapeHtml(member.displayName || "Unknown member")}</strong>
+        <small>${escapeHtml(member.username || member.discordId || "")}</small>
+      </span>
+      <span class="admin-profile-embers">${formatNumber(member.embers || 0)} Embers</span>
+    </button>
+  `).join("");
+
+  mount.querySelectorAll("[data-profile-member]").forEach(button => {
+    button.addEventListener("click", () => {
+      try {
+        openProfileEditor(JSON.parse(button.dataset.profileMember));
+      } catch {
+        // Ignore malformed embedded data.
+      }
+    });
+  });
+}
+
+async function searchMemberProfiles() {
+  const input = document.getElementById("profileSearchInput");
+  const mount = document.getElementById("profileSearchResults");
+  const query = input?.value.trim() || "";
+
+  if (!query || query.length < 2) {
+    if (mount) mount.innerHTML = `<p class="admin-muted">Enter at least 2 characters.</p>`;
+    return;
+  }
+
+  if (mount) mount.innerHTML = `<p class="admin-muted">Searching...</p>`;
+
+  const response = await fetch(`/api/admin/profiles/search?q=${encodeURIComponent(query)}&t=${Date.now()}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (mount) mount.innerHTML = `<p class="admin-error">${escapeHtml(data.error || "Could not search profiles.")}</p>`;
+    return;
+  }
+
+  renderProfileSearchResults(data.results || []);
+}
+
+function openProfileEditor(member) {
+  const editor = document.getElementById("profileAdminEditor");
+  const title = document.getElementById("profileEditorTitle");
+  const meta = document.getElementById("profileEditorMeta");
+  const discordIdInput = document.getElementById("profileEditorDiscordId");
+  const displayNameInput = document.getElementById("profileEditorDisplayName");
+  const usernameInput = document.getElementById("profileEditorUsername");
+  const avatarInput = document.getElementById("profileAvatarOverrideInput");
+  const blurbInput = document.getElementById("profileBlurbOverrideInput");
+  const rankInput = document.getElementById("profileRankOverrideInput");
+  const status = document.getElementById("profileAdminStatus");
+
+  if (editor) editor.style.display = "block";
+  if (title) title.textContent = member.displayName || "Selected Member";
+  if (meta) meta.textContent = `Discord ID: ${member.discordId || "Unknown"} • ${formatNumber(member.embers || 0)} Embers`;
+  if (discordIdInput) discordIdInput.value = member.discordId || "";
+  if (displayNameInput) displayNameInput.value = member.displayName || "Unknown member";
+  if (usernameInput) usernameInput.value = member.username || "";
+  if (avatarInput) avatarInput.value = member.adminAvatarOverride || "";
+  if (blurbInput) blurbInput.value = member.adminBlurbOverride || "";
+  if (rankInput) rankInput.value = member.rankOverride || "";
+  if (status) status.textContent = "";
+}
+
+async function saveProfileOverrides(clear = false) {
+  const discordId = document.getElementById("profileEditorDiscordId")?.value.trim();
+  const displayName = document.getElementById("profileEditorDisplayName")?.value.trim();
+  const username = document.getElementById("profileEditorUsername")?.value.trim();
+  const avatarInput = document.getElementById("profileAvatarOverrideInput");
+  const blurbInput = document.getElementById("profileBlurbOverrideInput");
+  const rankInput = document.getElementById("profileRankOverrideInput");
+  const status = document.getElementById("profileAdminStatus");
+
+  if (!discordId) {
+    if (status) status.textContent = "Select a member first.";
+    return;
+  }
+
+  if (status) status.textContent = clear ? "Clearing overrides..." : "Saving overrides...";
+
+  const response = await fetch("/api/admin/profiles/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      discordId,
+      displayName,
+      username,
+      adminAvatarOverride: clear ? "" : avatarInput?.value.trim() || "",
+      adminBlurbOverride: clear ? "" : blurbInput?.value.trim() || "",
+      rankOverride: clear ? "" : rankInput?.value.trim() || ""
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (status) status.textContent = data.error || "Could not save profile overrides.";
+    return;
+  }
+
+  if (clear) {
+    if (avatarInput) avatarInput.value = "";
+    if (blurbInput) blurbInput.value = "";
+    if (rankInput) rankInput.value = "";
+  }
+
+  if (status) status.textContent = clear ? "Overrides cleared." : "Profile overrides saved.";
+}
+
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -572,6 +695,10 @@ async function loadAdmin() {
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
   const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
   const startBingoEventBtn = document.getElementById("startBingoEventBtn");
+  const profileSearchBtn = document.getElementById("profileSearchBtn");
+  const profileSearchInput = document.getElementById("profileSearchInput");
+  const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
+  const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -614,6 +741,14 @@ async function loadAdmin() {
         applyBingoMode("started");
       });
     }
+    if (profileSearchBtn) profileSearchBtn.addEventListener("click", searchMemberProfiles);
+    if (profileSearchInput) {
+      profileSearchInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") searchMemberProfiles();
+      });
+    }
+    if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
+    if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
     loadBingoSettings();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
