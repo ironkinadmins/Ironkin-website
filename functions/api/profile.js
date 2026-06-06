@@ -86,6 +86,12 @@ async function saveProfileRecord(env, discordId, record) {
     discordId,
     displayName: record.displayName || "Unknown member",
     username: record.username || "",
+    avatar: record.avatar || "",
+    avatarUrl: record.adminAvatarOverride || record.customAvatarUrl || record.discordAvatarUrl || "",
+    roles: Array.isArray(record.roles) ? record.roles : [],
+    rank: record.rank || "",
+    staffRank: record.staffRank || "",
+    memberSince: record.memberSince || null,
     updatedAt: new Date().toISOString()
   });
   await env.DROPS_KV.put(PROFILE_INDEX_KEY, JSON.stringify(nextIndex));
@@ -309,22 +315,36 @@ async function getEventPlacements(env, rsn) {
   };
 }
 
-function buildProfile({ session, record, embers, wom, placements }) {
+function buildProfile({ session, record, embers, wom, placements, isOwnProfile = true }) {
   const displayName = record.displayName || getDisplayName(session);
-  const rsn = record.rsn || getDisplayName(session);
-  const discordAvatarUrl = getDiscordAvatarUrl(session);
+  const rsn = record.rsn || displayName;
+  const discordAvatarUrl = record.discordAvatarUrl || getDiscordAvatarUrl(session);
   const avatarUrl = record.adminAvatarOverride || record.customAvatarUrl || discordAvatarUrl;
   const blurb = record.adminBlurbOverride || record.blurb || "";
-  const rank = record.rankOverride || getHighestRank(session.roles, CLAN_RANKS) || "Member";
-  const staffRank = getHighestRank(session.roles, STAFF_RANKS);
-  const memberSince = session.joined_at || session.joinedAt || record.memberSince || null;
+
+  const roleIds = Array.isArray(record.roles) && record.roles.length
+    ? record.roles
+    : session?.roles || [];
+
+  const clanRank =
+    record.rankOverride ||
+    getHighestRank(roleIds, CLAN_RANKS) ||
+    record.rank ||
+    "Member";
+
+  const staffRank =
+    getHighestRank(roleIds, STAFF_RANKS) ||
+    record.staffRank ||
+    null;
+
+  const memberSince = record.memberSince || session?.joined_at || session?.joinedAt || null;
 
   return {
-    discordId: session.id,
-    username: session.username,
+    discordId: record.discordId || session.id,
+    username: record.username || session.username || "",
     displayName,
     rsn,
-    rank,
+    rank: clanRank,
     staffRank,
     memberSince,
     avatarUrl,
@@ -337,7 +357,8 @@ function buildProfile({ session, record, embers, wom, placements }) {
     hasAdminBlurbOverride: Boolean(record.adminBlurbOverride),
     embers,
     wom,
-    placements
+    placements,
+    isOwnProfile
   };
 }
 
@@ -348,35 +369,93 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ error: "Please sign in with Discord first." }, { status: 401 });
   }
 
-  const record = await getProfileRecord(env, session.id);
-  const displayName = getDisplayName(session);
+  const url = new URL(request.url);
+  const requestedId = String(url.searchParams.get("id") || "").trim();
+  const targetDiscordId = requestedId || session.id;
+  const isOwnProfile = targetDiscordId === session.id;
+
+  let record = await getProfileRecord(env, targetDiscordId);
+
+  if (isOwnProfile) {
+    const displayName = getDisplayName(session);
+    const rsn = record.rsn || displayName;
+    const discordAvatarUrl = getDiscordAvatarUrl(session);
+    const roleIds = Array.isArray(session.roles) ? session.roles : [];
+    const rank = getHighestRank(roleIds, CLAN_RANKS) || record.rank || "Member";
+    const staffRank = getHighestRank(roleIds, STAFF_RANKS) || null;
+
+    record = {
+      ...record,
+      discordId: session.id,
+      displayName,
+      username: session.username,
+      avatar: session.avatar || "",
+      discordAvatarUrl,
+      roles: roleIds,
+      rank,
+      staffRank,
+      rsn,
+      memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
+      lastSeenAt: new Date().toISOString()
+    };
+    await saveProfileRecord(env, session.id, record);
+
+    const [embers, wom, placements] = await Promise.all([
+      getEmberBalance(env, session.id, displayName),
+      getWomStats(env, rsn),
+      getEventPlacements(env, rsn)
+    ]);
+
+    return Response.json({
+      signedIn: true,
+      isStaff: isStaff(session),
+      profile: buildProfile({
+        session,
+        record,
+        embers,
+        wom,
+        placements,
+        isOwnProfile
+      })
+    });
+  }
+
+  const preliminaryName = record.displayName || "";
+  const embers = await getEmberBalance(env, targetDiscordId, preliminaryName);
+  const displayName = record.displayName || embers.displayName || "";
+
+  if (!displayName) {
+    return Response.json(
+      { error: "That member profile could not be found." },
+      { status: 404 }
+    );
+  }
+
+  record = {
+    ...record,
+    discordId: targetDiscordId,
+    displayName,
+    username: record.username || "",
+    rsn: record.rsn || displayName
+  };
+
   const rsn = record.rsn || displayName;
 
-  const [embers, wom, placements] = await Promise.all([
-    getEmberBalance(env, session.id, displayName),
+  const [wom, placements] = await Promise.all([
     getWomStats(env, rsn),
     getEventPlacements(env, rsn)
   ]);
-
-  const refreshedRecord = {
-    ...record,
-    displayName,
-    username: session.username,
-    rsn,
-    memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
-    lastSeenAt: new Date().toISOString()
-  };
-  await saveProfileRecord(env, session.id, refreshedRecord);
 
   return Response.json({
     signedIn: true,
     isStaff: isStaff(session),
     profile: buildProfile({
       session,
-      record: refreshedRecord,
+      record,
       embers,
       wom,
-      placements
+      placements,
+      isOwnProfile: false
     })
   });
 }
@@ -394,10 +473,19 @@ export async function onRequestPost({ request, env }) {
   const displayName = getDisplayName(session);
 
   const existing = await getProfileRecord(env, session.id);
+  const roleIds = Array.isArray(session.roles) ? session.roles : [];
+  const discordAvatarUrl = getDiscordAvatarUrl(session);
+
   const next = {
     ...existing,
+    discordId: session.id,
     displayName,
     username: session.username,
+    avatar: session.avatar || "",
+    discordAvatarUrl,
+    roles: roleIds,
+    rank: getHighestRank(roleIds, CLAN_RANKS) || existing.rank || "Member",
+    staffRank: getHighestRank(roleIds, STAFF_RANKS) || null,
     rsn: displayName,
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,

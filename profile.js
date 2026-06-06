@@ -35,6 +35,10 @@ function renderProfileHero(profile) {
     ? `<span>Member Since: ${profileEscapeHtml(memberSince)}</span>`
     : "";
 
+  const staffPill = profile.staffRank
+    ? `<span>Staff: ${profileEscapeHtml(profile.staffRank)}</span>`
+    : "";
+
   hero.innerHTML = `
     <div class="profile-identity-card">
       <img class="profile-avatar" src="${profileEscapeHtml(profile.avatarUrl)}" alt="${profileEscapeHtml(profile.displayName)} avatar" />
@@ -43,6 +47,7 @@ function renderProfileHero(profile) {
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
         <div class="profile-meta-row">
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
+          ${staffPill}
           ${memberSincePill}
         </div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
@@ -60,8 +65,7 @@ function renderWomStats(profile) {
   if (!wom.found) {
     mount.innerHTML = `
       <div class="profile-empty-state">
-        WOM stats are temporarily unavailable for <strong>${profileEscapeHtml(profile.displayName)}</strong>.
-        <br />${profileEscapeHtml(wom.error || "Try again later.")}
+        Stats temporarily unavailable.
       </div>
     `;
     return;
@@ -149,6 +153,11 @@ function renderProfile(profile) {
   renderWomStats(profile);
   renderEmbers(profile);
   renderEventRecord(profile);
+  const settingsCard = document.querySelector(".profile-settings-card");
+  if (settingsCard) {
+    settingsCard.style.display = profile.isOwnProfile === false ? "none" : "";
+  }
+
   populateProfileForm(profile);
 }
 
@@ -156,7 +165,13 @@ async function loadProfile() {
   const hero = document.getElementById("profileHero");
 
   try {
-    const response = await fetch(`/api/profile?t=${Date.now()}`, { cache: "no-store" });
+    const params = new URLSearchParams(window.location.search);
+    const viewedId = params.get("id");
+    const profileUrl = viewedId
+      ? `/api/profile?id=${encodeURIComponent(viewedId)}&t=${Date.now()}`
+      : `/api/profile?t=${Date.now()}`;
+
+    const response = await fetch(profileUrl, { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {

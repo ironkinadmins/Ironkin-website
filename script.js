@@ -345,6 +345,89 @@ async function fetchEventStandings(event) {
   return data;
 }
 
+
+function escapeNavSearchHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function setupMemberSearch() {
+  const searchWrap = document.getElementById("navMemberSearch");
+  const input = document.getElementById("navMemberSearchInput");
+  const results = document.getElementById("navMemberSearchResults");
+
+  if (!searchWrap || !input || !results || searchWrap.dataset.ready === "true") return;
+
+  searchWrap.dataset.ready = "true";
+  let searchTimer = null;
+
+  function hideResults() {
+    results.style.display = "none";
+    results.innerHTML = "";
+  }
+
+  async function runSearch(query) {
+    const q = String(query || "").trim();
+
+    if (q.length < 2) {
+      hideResults();
+      return;
+    }
+
+    results.style.display = "block";
+    results.innerHTML = `<div class="nav-member-search-empty">Searching...</div>`;
+
+    try {
+      const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}&t=${Date.now()}`, {
+        cache: "no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Search failed.");
+      }
+
+      const items = Array.isArray(data.results) ? data.results : [];
+
+      if (!items.length) {
+        results.innerHTML = `<div class="nav-member-search-empty">No members found.</div>`;
+        return;
+      }
+
+      results.innerHTML = items.map(item => `
+        <a class="nav-member-search-result" href="${escapeNavSearchHtml(item.profileUrl || "profile.html")}">
+          <img src="${escapeNavSearchHtml(item.avatarUrl || "assets/ironkin-emblem.png")}" alt="" />
+          <span>
+            <strong>${escapeNavSearchHtml(item.displayName || "Unknown member")}</strong>
+            <small>${escapeNavSearchHtml(item.staffRank || item.rank || "Member")}</small>
+          </span>
+        </a>
+      `).join("");
+    } catch {
+      results.innerHTML = `<div class="nav-member-search-empty">Could not search members.</div>`;
+    }
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => runSearch(input.value), 250);
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.value.trim().length >= 2) runSearch(input.value);
+  });
+
+  document.addEventListener("click", event => {
+    if (!searchWrap.contains(event.target)) {
+      hideResults();
+    }
+  });
+}
+
+
 async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
@@ -364,6 +447,12 @@ async function loadDiscordUser() {
 
     if (data.user.inGuild) {
       loginBtn.title = "View your Ironkin member profile";
+    }
+
+    const navSearch = document.getElementById("navMemberSearch");
+    if (navSearch) {
+      navSearch.style.display = "block";
+      setupMemberSearch();
     }
 
     if (profileNavLink) {
