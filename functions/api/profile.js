@@ -5,6 +5,34 @@ const STAFF_ROLE_IDS = [
   "1365445491776815104"
 ];
 
+
+const CLAN_RANKS = [
+  { id: "1366076296399949926", name: "Prospect" },
+  { id: "1365446145051987970", name: "Initiate" },
+  { id: "1365446223145730161", name: "Tempered" },
+  { id: "1365446302451896422", name: "Forged" },
+  { id: "1365446348614144063", name: "Warden" },
+  { id: "1369388927672123422", name: "Founder" },
+  { id: "1365446393216503828", name: "Ironkin" },
+  { id: "1403119309970210936", name: "Bloodbound" },
+  { id: "1403117777572859924", name: "Archivist" },
+  { id: "1365446563874476123", name: "Runeborn" },
+  { id: "1403119718960726146", name: "Writekeeper" },
+  { id: "1403119580825518140", name: "Curator" },
+  { id: "1371191498246324244", name: "Ascendant" },
+  { id: "1365446611395940432", name: "Elderkin" },
+  { id: "1365446652466298940", name: "Paragon" }
+];
+const STAFF_RANKS = [
+  { id: "1364734283356569620", name: "Chainbearer" },
+  { id: "1365445491776815104", name: "Chainkeeper" }
+];
+function getHighestRank(roleIds, ranks) {
+ const roles=roleIds||[];
+ for(let i=ranks.length-1;i>=0;i--){ if(roles.includes(ranks[i].id)) return ranks[i].name;}
+ return null;
+}
+
 function getSession(request) {
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/ironkin_session=([^;]+)/);
@@ -287,7 +315,8 @@ function buildProfile({ session, record, embers, wom, placements }) {
   const discordAvatarUrl = getDiscordAvatarUrl(session);
   const avatarUrl = record.adminAvatarOverride || record.customAvatarUrl || discordAvatarUrl;
   const blurb = record.adminBlurbOverride || record.blurb || "";
-  const rank = record.rankOverride || (isStaff(session) ? "Staff" : "Ironkin Member");
+  const rank = record.rankOverride || getHighestRank(session.roles, CLAN_RANKS) || "Member";
+  const staffRank = getHighestRank(session.roles, STAFF_RANKS);
   const memberSince = session.joined_at || session.joinedAt || record.memberSince || null;
 
   return {
@@ -296,6 +325,7 @@ function buildProfile({ session, record, embers, wom, placements }) {
     displayName,
     rsn,
     rank,
+    staffRank,
     memberSince,
     avatarUrl,
     discordAvatarUrl,
