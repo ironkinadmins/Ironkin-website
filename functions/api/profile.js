@@ -174,10 +174,10 @@ async function getWomStats(env, rsn) {
   }
 
   try {
-    const response = await fetch(
-      `https://api.wiseoldman.net/v2/players/username/${encodeURIComponent(rsn)}`,
-      { headers: { "User-Agent": "Ironkin Clan Website profile stats" } }
-    );
+const response = await fetch(
+  `https://api.wiseoldman.net/v2/players/${encodeURIComponent(rsn)}`,
+  { headers: { "User-Agent": "Ironkin Clan Website profile stats" } }
+);
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
