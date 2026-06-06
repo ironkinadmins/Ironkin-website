@@ -6141,3 +6141,12 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
     justify-content: flex-start;
   }
 }
+
+/* Bingo signup event flow controls */
+.bingo-staff-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1rem 0;
+}

@@ -11,7 +11,14 @@ let bingoSignupState = {
   isStaff: false,
   currentUser: null,
   currentSignup: null,
-  signups: []
+  signups: [],
+  settings: {
+    active: false,
+    signupOpen: false,
+    enableViewEvent: false,
+    title: "Battleship Bingo",
+    description: ""
+  }
 };
 
 function escapeHtml(value) {
@@ -70,7 +77,7 @@ function renderTeamList(team, mountId, countId) {
         </div>
 
         <div class="bingo-member-actions">
-          ${isCurrentUser ? `
+          ${isCurrentUser && isSignupOpen() ? `
             <button
               class="btn secondary bingo-remove-btn"
               type="button"
@@ -107,6 +114,32 @@ function renderTeamList(team, mountId, countId) {
   }).join("");
 }
 
+function renderStaffControls() {
+  const controls = document.getElementById("bingoStaffControls");
+  const startButton = document.getElementById("startBingoEventBtn");
+  const reopenButton = document.getElementById("reopenBingoRegistrationBtn");
+
+  if (!controls) return;
+
+  controls.style.display = bingoSignupState.isStaff ? "flex" : "none";
+
+  if (startButton) {
+    startButton.style.display = bingoSignupState.settings?.enableViewEvent === true ? "none" : "inline-flex";
+  }
+
+  if (reopenButton) {
+    reopenButton.style.display = bingoSignupState.settings?.signupOpen === true ? "none" : "inline-flex";
+  }
+}
+
+function isSignupOpen() {
+  return bingoSignupState.settings?.active === true && bingoSignupState.settings?.signupOpen === true;
+}
+
+function isEventStarted() {
+  return bingoSignupState.settings?.active === true && bingoSignupState.settings?.enableViewEvent === true;
+}
+
 function updateSignupButton() {
   const button = document.getElementById("bingoSignupButton");
   const login = document.getElementById("bingoSignupLogin");
@@ -121,19 +154,35 @@ function updateSignupButton() {
     return;
   }
 
-  button.style.display = "inline-flex";
-
   if (!bingoSignupState.inGuild) {
-    button.disabled = true;
+    button.style.display = "none";
     delete button.dataset.action;
     setSignupStatus("You must be in the Ironkin Discord server to sign up.", "error");
     return;
   }
 
+  if (isEventStarted()) {
+    button.style.display = "none";
+    delete button.dataset.action;
+    setSignupStatus(
+      bingoSignupState.currentSignup
+        ? `Battleship Bingo has started. You’re on ${TEAM_LABELS[bingoSignupState.currentSignup.team]}.`
+        : "Battleship Bingo has started and registration is locked.",
+      "info"
+    );
+    return;
+  }
+
+  if (!isSignupOpen()) {
+    button.style.display = "none";
+    delete button.dataset.action;
+    setSignupStatus("Bingo registration is currently closed.", "info");
+    return;
+  }
+
   if (bingoSignupState.currentSignup) {
-    button.disabled = false;
-    button.textContent = `Leave ${TEAM_LABELS[bingoSignupState.currentSignup.team]}`;
-    button.dataset.action = "leave";
+    button.style.display = "none";
+    delete button.dataset.action;
     setSignupStatus(
       `You’re signed up as ${bingoSignupState.currentSignup.displayName} on ${TEAM_LABELS[bingoSignupState.currentSignup.team]}.`,
       "success"
@@ -141,9 +190,9 @@ function updateSignupButton() {
     return;
   }
 
-  button.dataset.action = "signup";
-
+  button.style.display = "inline-flex";
   button.disabled = false;
+  button.dataset.action = "signup";
   button.textContent = "Sign Up for Bingo";
   setSignupStatus(
     `Signed in as ${bingoSignupState.currentUser?.displayName || "Ironkin member"}. Click below to join a team.`,
@@ -152,6 +201,7 @@ function updateSignupButton() {
 }
 
 function renderSignupPage() {
+  renderStaffControls();
   updateSignupButton();
   renderTeamList("team1", "bingoTeamOneList", "bingoTeamOneCount");
   renderTeamList("team2", "bingoTeamTwoList", "bingoTeamTwoCount");
@@ -172,7 +222,8 @@ async function loadBingoSignups() {
       isStaff: data.isStaff === true,
       currentUser: data.currentUser,
       currentSignup: data.currentSignup,
-      signups: Array.isArray(data.signups) ? data.signups : []
+      signups: Array.isArray(data.signups) ? data.signups : [],
+      settings: data.settings || { active: false, signupOpen: false, enableViewEvent: false }
     };
 
     const currentName = String(bingoSignupState.currentUser?.displayName || "");
@@ -304,6 +355,44 @@ async function removeBingoSignup(discordId, name = "this member") {
 }
 
 
+async function saveBingoMode(mode) {
+  if (!bingoSignupState.isStaff) return;
+
+  const settings = bingoSignupState.settings || {};
+  const nextSettings = {
+    title: settings.title || "Battleship Bingo",
+    description: settings.description || "Build a board, split into teams, claim tiles, and track summer progress.",
+    active: true,
+    signupOpen: mode === "registration",
+    enableViewEvent: mode === "started"
+  };
+
+  try {
+    const response = await fetch("/api/admin/bingo/settings", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nextSettings)
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not update Bingo settings.");
+    }
+
+    setSignupStatus(
+      mode === "started"
+        ? "Event started. Signups are locked and the Events page now routes to the board."
+        : "Registration reopened. Members can sign up again.",
+      "success"
+    );
+
+    await loadBingoSignups();
+  } catch (error) {
+    setSignupStatus(error.message, "error");
+  }
+}
+
 document.addEventListener("click", event => {
   const signupButton = event.target.closest("#bingoSignupButton");
   if (signupButton) {
@@ -312,6 +401,20 @@ document.addEventListener("click", event => {
     } else {
       submitBingoSignup();
     }
+    return;
+  }
+
+  const startEventButton = event.target.closest("#startBingoEventBtn");
+  if (startEventButton) {
+    if (!window.confirm("Start Battleship Bingo now? This locks signups and sends users to the board from the Events page.")) return;
+    saveBingoMode("started");
+    return;
+  }
+
+  const reopenButton = event.target.closest("#reopenBingoRegistrationBtn");
+  if (reopenButton) {
+    if (!window.confirm("Reopen Battleship Bingo registration? This sends users back to the signup page from the Events page.")) return;
+    saveBingoMode("registration");
     return;
   }
 
