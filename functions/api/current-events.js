@@ -28,7 +28,7 @@ const DEFAULT_EVENTS = [
     endDate: null
   },
   {
-    id: "clan-goal-hueycoatl",
+    id: "clan-goal",
     type: "clan-goal-boss",
     label: "Clan Goal",
     title: "Hueycoatl",
