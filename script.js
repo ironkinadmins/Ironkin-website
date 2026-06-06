@@ -32,6 +32,23 @@ function isEventActive(event) {
   return event?.active === true;
 }
 
+function hasUsableWomCompetition(event) {
+  const id = String(event?.womCompetitionId || "").trim();
+  return Boolean(id && id !== "PUT_YOUR_WOM_ID_HERE");
+}
+
+function hasLiveFeaturedData(event) {
+  if (!isEventActive(event)) return false;
+
+  if (hasUsableWomCompetition(event)) return true;
+
+  if (String(event?.type || "").includes("clan-goal")) {
+    return Boolean(Number(event?.target || 0) > 0);
+  }
+
+  return false;
+}
+
 function formatInactiveEventTitle(event) {
   if (String(event?.type || "").includes("clan-goal")) {
     return "";
@@ -445,10 +462,10 @@ async function loadHomeStats() {
   try {
     const events = await fetchCurrentEvents();
 
-    const activeEvents = events.filter(isEventActive);
+    const activeEvents = events.filter(hasLiveFeaturedData);
     const featuredEvent =
       activeEvents.find(event => event.featured) ||
-      activeEvents.find(event => event.womCompetitionId) ||
+      activeEvents.find(hasUsableWomCompetition) ||
       activeEvents[0];
 
     if (!featuredEvent) {
@@ -480,6 +497,16 @@ async function loadHomeStats() {
     }
 
     const standings = await fetchEventStandings(featuredEvent).catch(() => null);
+
+    if (!standings && !String(featuredEvent?.type || "").includes("clan-goal")) {
+      const archive = await fetchArchive().catch(() => []);
+      const latestResult = archive[0];
+
+      if (latestResult) {
+        renderHomeLastEventResult(latestResult);
+        return;
+      }
+    }
 
     const eventPercent = document.getElementById("homeEventPercent");
     const eventTitle = document.getElementById("homeEventTitle");
