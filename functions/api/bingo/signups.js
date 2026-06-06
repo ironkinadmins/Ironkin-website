@@ -107,20 +107,20 @@ export async function onRequestPost({ request, env }) {
   const signups = await getSignups(env);
   const existing = signups.find(item => item.discordId === session.id);
 
-if (existing) {
-  existing.displayName = getDisplayName(session);
+  if (existing) {
+    existing.displayName = getDisplayName(session);
   existing.username = session.username;
-  existing.avatar = session.avatar;
+    existing.avatar = session.avatar;
 
-  await saveSignups(env, signups);
+    await saveSignups(env, signups);
 
   return Response.json({
-    success: true,
-    alreadySignedUp: true,
-    signup: publicSignup(existing),
-    signups: signups.map(publicSignup)
-  });
-}
+      success: true,
+      alreadySignedUp: true,
+      signup: publicSignup(existing),
+      signups: signups.map(publicSignup)
+    });
+  }
 
   const signup = {
     eventId: "battleship-bingo",
@@ -139,5 +139,58 @@ if (existing) {
     success: true,
     signup: publicSignup(signup),
     signups: signups.map(publicSignup)
+  });
+}
+
+export async function onRequestDelete({ request, env }) {
+  const session = getSession(request);
+
+  if (!session) {
+    return Response.json(
+      { error: "Please sign in with Discord first." },
+      { status: 401 }
+    );
+  }
+
+  let requestedDiscordId = session.id;
+
+  try {
+    const body = await request.json();
+    if (body?.discordId) {
+      requestedDiscordId = String(body.discordId);
+    }
+  } catch {
+    // Body is optional. No body means the signed-in user is removing themself.
+  }
+
+  const removingSomeoneElse = requestedDiscordId !== session.id;
+
+  if (removingSomeoneElse && !isStaff(session)) {
+    return Response.json(
+      { error: "Only staff can remove another member from Bingo." },
+      { status: 403 }
+    );
+  }
+
+  const signups = await getSignups(env);
+  const existing = signups.find(item => item.discordId === requestedDiscordId);
+
+  if (!existing) {
+    return Response.json(
+      { error: "That member is not currently signed up." },
+      { status: 404 }
+    );
+  }
+
+  const updatedSignups = signups.filter(item => item.discordId !== requestedDiscordId);
+  await saveSignups(env, updatedSignups);
+
+  return Response.json({
+    success: true,
+    removedSignup: publicSignup(existing),
+    currentSignup: requestedDiscordId === session.id
+      ? null
+      : updatedSignups.find(item => item.discordId === session.id) || null,
+    signups: updatedSignups.map(publicSignup)
   });
 }

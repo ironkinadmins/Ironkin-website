@@ -6108,6 +6108,19 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   padding: 0.55rem 0.75rem;
 }
 
+.bingo-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.bingo-remove-btn {
+  white-space: nowrap;
+  padding: 0.55rem 0.75rem;
+  border-color: rgba(255, 99, 99, 0.34);
+}
+
 @media (max-width: 760px) {
   .bingo-home-banner,
   .bingo-team-grid {
@@ -6122,5 +6135,9 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   .bingo-team-member {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .bingo-member-actions {
+    justify-content: flex-start;
   }
 }

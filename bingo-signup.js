@@ -3,6 +3,8 @@ const TEAM_LABELS = {
   team2: "Team 2"
 };
 
+let hasRefreshedExistingSignupName = false;
+
 let bingoSignupState = {
   signedIn: false,
   inGuild: false,
@@ -67,16 +69,39 @@ function renderTeamList(team, mountId, countId) {
           </div>
         </div>
 
-        ${bingoSignupState.isStaff ? `
-          <button
-            class="btn secondary bingo-move-btn"
-            type="button"
-            data-discord-id="${member.discordId}"
-            data-team="${targetTeam}"
-          >
-            Move to ${TEAM_LABELS[targetTeam]}
-          </button>
-        ` : ""}
+        <div class="bingo-member-actions">
+          ${isCurrentUser ? `
+            <button
+              class="btn secondary bingo-remove-btn"
+              type="button"
+              data-discord-id="${member.discordId}"
+              data-name="${safeName}"
+            >
+              Leave Team
+            </button>
+          ` : ""}
+
+          ${bingoSignupState.isStaff ? `
+            <button
+              class="btn secondary bingo-move-btn"
+              type="button"
+              data-discord-id="${member.discordId}"
+              data-team="${targetTeam}"
+            >
+              Move to ${TEAM_LABELS[targetTeam]}
+            </button>
+            ${!isCurrentUser ? `
+              <button
+                class="btn secondary bingo-remove-btn"
+                type="button"
+                data-discord-id="${member.discordId}"
+                data-name="${safeName}"
+              >
+                Remove
+              </button>
+            ` : ""}
+          ` : ""}
+        </div>
       </div>
     `;
   }).join("");
@@ -91,6 +116,7 @@ function updateSignupButton() {
 
   if (!bingoSignupState.signedIn) {
     button.style.display = "none";
+    delete button.dataset.action;
     setSignupStatus("Sign in with Discord to join Battleship Bingo.", "info");
     return;
   }
@@ -99,19 +125,23 @@ function updateSignupButton() {
 
   if (!bingoSignupState.inGuild) {
     button.disabled = true;
+    delete button.dataset.action;
     setSignupStatus("You must be in the Ironkin Discord server to sign up.", "error");
     return;
   }
 
   if (bingoSignupState.currentSignup) {
-    button.disabled = true;
-    button.textContent = `Signed Up - ${TEAM_LABELS[bingoSignupState.currentSignup.team]}`;
+    button.disabled = false;
+    button.textContent = `Leave ${TEAM_LABELS[bingoSignupState.currentSignup.team]}`;
+    button.dataset.action = "leave";
     setSignupStatus(
       `You’re signed up as ${bingoSignupState.currentSignup.displayName} on ${TEAM_LABELS[bingoSignupState.currentSignup.team]}.`,
       "success"
     );
     return;
   }
+
+  button.dataset.action = "signup";
 
   button.disabled = false;
   button.textContent = "Sign Up for Bingo";
@@ -145,7 +175,42 @@ async function loadBingoSignups() {
       signups: Array.isArray(data.signups) ? data.signups : []
     };
 
+    const currentName = String(bingoSignupState.currentUser?.displayName || "");
+    const savedName = String(bingoSignupState.currentSignup?.displayName || "");
+
+    if (
+      bingoSignupState.signedIn &&
+      bingoSignupState.inGuild &&
+      bingoSignupState.currentSignup &&
+      currentName &&
+      savedName !== currentName &&
+      !hasRefreshedExistingSignupName
+    ) {
+      hasRefreshedExistingSignupName = true;
+      await refreshExistingBingoSignupName();
+      return;
+    }
+
     renderSignupPage();
+  } catch (error) {
+    setSignupStatus(error.message, "error");
+  }
+}
+
+
+async function refreshExistingBingoSignupName() {
+  try {
+    const response = await fetch("/api/bingo/signups", {
+      method: "POST",
+      cache: "no-store"
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not refresh signup name.");
+    }
+
+    await loadBingoSignups();
   } catch (error) {
     setSignupStatus(error.message, "error");
   }
@@ -160,7 +225,8 @@ async function submitBingoSignup() {
 
   try {
     const response = await fetch("/api/bingo/signups", {
-      method: "POST"
+      method: "POST",
+      cache: "no-store"
     });
     const data = await response.json();
 
@@ -196,17 +262,68 @@ async function moveBingoMember(discordId, team) {
     setSignupStatus(error.message, "error");
   }
 }
+async function removeBingoSignup(discordId, name = "this member") {
+  const currentUserId = bingoSignupState.currentUser?.discordId;
+  const isSelfRemoval = !discordId || discordId === currentUserId;
+  const confirmMessage = isSelfRemoval
+    ? "Are you sure you want to leave Battleship Bingo?"
+    : `Remove ${name} from Battleship Bingo?`;
+
+  if (!window.confirm(confirmMessage)) return;
+
+  try {
+    const response = await fetch("/api/bingo/signups", {
+      method: "DELETE",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ discordId: discordId || currentUserId })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not remove signup.");
+    }
+
+    bingoSignupState.currentSignup = data.currentSignup || null;
+    bingoSignupState.signups = Array.isArray(data.signups) ? data.signups : [];
+
+    renderSignupPage();
+
+    const removedName = data.removedSignup?.displayName || name || "Member";
+    setSignupStatus(
+      isSelfRemoval
+        ? "You’ve left Battleship Bingo. You can sign up again if you change your mind."
+        : `${removedName} was removed from Battleship Bingo.`,
+      "success"
+    );
+  } catch (error) {
+    setSignupStatus(error.message, "error");
+  }
+}
+
 
 document.addEventListener("click", event => {
   const signupButton = event.target.closest("#bingoSignupButton");
   if (signupButton) {
-    submitBingoSignup();
+    if (signupButton.dataset.action === "leave") {
+      removeBingoSignup(bingoSignupState.currentUser?.discordId, bingoSignupState.currentSignup?.displayName);
+    } else {
+      submitBingoSignup();
+    }
     return;
   }
 
   const moveButton = event.target.closest(".bingo-move-btn");
   if (moveButton) {
     moveBingoMember(moveButton.dataset.discordId, moveButton.dataset.team);
+    return;
+  }
+
+  const removeButton = event.target.closest(".bingo-remove-btn");
+  if (removeButton) {
+    removeBingoSignup(removeButton.dataset.discordId, removeButton.dataset.name);
   }
 });
 
