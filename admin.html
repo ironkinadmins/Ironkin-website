@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260605-bingo-flow-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -153,11 +153,15 @@
           <label>Visibility</label>
           <label class="admin-check-row">
             <input id="bingoActiveInput" type="checkbox" />
-            <span>Show ACTIVE badge</span>
+            <span>Bingo is active/visible</span>
+          </label>
+          <label class="admin-check-row">
+            <input id="bingoSignupOpenInput" type="checkbox" />
+            <span>Registration open</span>
           </label>
           <label class="admin-check-row">
             <input id="bingoViewEventInput" type="checkbox" />
-            <span>Enable View Event link</span>
+            <span>Board view enabled</span>
           </label>
         </div>
 
@@ -169,7 +173,10 @@
 
       <div class="admin-action-row">
         <button type="button" class="btn primary" id="saveBingoSettingsBtn">Save Bingo Settings</button>
-        <a class="btn secondary" href="battleship-bingo.html">Open Bingo Board</a>
+        <button type="button" class="btn secondary" id="openBingoRegistrationBtn">Open Registration</button>
+        <button type="button" class="btn secondary" id="startBingoEventBtn">Start Event / Lock Signups</button>
+        <a class="btn secondary" href="bingo-signup.html">Open Signup Page</a>
+        <a class="btn secondary" href="battleship-bingo.html">View Board</a>
       </div>
 
       <p class="admin-muted" id="bingoSettingsStatus"></p>
@@ -178,6 +185,6 @@
 
   </main>
 
-  <script src="admin.js"></script>
+  <script src="admin.js?v=20260605-bingo-flow-1"></script>
 </body>
 </html>

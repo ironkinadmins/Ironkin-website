@@ -41,6 +41,27 @@ async function saveSignups(env, signups) {
   await env.DROPS_KV.put(SIGNUPS_KEY, JSON.stringify(signups));
 }
 
+async function getBingoSettings(env) {
+  const raw = await env.DROPS_KV.get("bingo:settings");
+  const parsed = raw ? JSON.parse(raw) : {};
+  const enableViewEvent =
+    typeof parsed.enableViewEvent === "boolean"
+      ? parsed.enableViewEvent
+      : false;
+  const signupOpen =
+    typeof parsed.signupOpen === "boolean"
+      ? parsed.signupOpen
+      : parsed.active === true && enableViewEvent !== true;
+
+  return {
+    title: parsed.title || "Battleship Bingo",
+    description: parsed.description || "Build a board, split into teams, claim tiles, and track summer progress.",
+    active: parsed.active === true,
+    signupOpen,
+    enableViewEvent
+  };
+}
+
 function chooseBalancedTeam(signups) {
   const teamOneCount = signups.filter(item => item.team === "team1").length;
   const teamTwoCount = signups.filter(item => item.team === "team2").length;
@@ -64,7 +85,10 @@ function publicSignup(signup) {
 
 export async function onRequestGet({ request, env }) {
   const session = getSession(request);
-  const signups = await getSignups(env);
+  const [signups, settings] = await Promise.all([
+    getSignups(env),
+    getBingoSettings(env)
+  ]);
 
   signups.sort((a, b) =>
     String(a.displayName || "").localeCompare(String(b.displayName || ""))
@@ -83,7 +107,8 @@ export async function onRequestGet({ request, env }) {
     currentSignup: session
       ? signups.find(item => item.discordId === session.id) || null
       : null,
-    signups: signups.map(publicSignup)
+    signups: signups.map(publicSignup),
+    settings
   });
 }
 
@@ -104,22 +129,32 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const signups = await getSignups(env);
+  const [signups, settings] = await Promise.all([
+    getSignups(env),
+    getBingoSettings(env)
+  ]);
   const existing = signups.find(item => item.discordId === session.id);
 
   if (existing) {
     existing.displayName = getDisplayName(session);
-  existing.username = session.username;
+    existing.username = session.username;
     existing.avatar = session.avatar;
 
     await saveSignups(env, signups);
 
-  return Response.json({
+    return Response.json({
       success: true,
       alreadySignedUp: true,
       signup: publicSignup(existing),
       signups: signups.map(publicSignup)
     });
+  }
+
+  if (settings.active !== true || settings.signupOpen !== true) {
+    return Response.json(
+      { error: "Bingo registration is currently closed." },
+      { status: 403 }
+    );
   }
 
   const signup = {
@@ -165,6 +200,11 @@ export async function onRequestDelete({ request, env }) {
 
   const removingSomeoneElse = requestedDiscordId !== session.id;
 
+const [signups, settings] = await Promise.all([
+  getSignups(env),
+  getBingoSettings(env)
+]);
+
   if (removingSomeoneElse && !isStaff(session)) {
     return Response.json(
       { error: "Only staff can remove another member from Bingo." },
@@ -172,7 +212,13 @@ export async function onRequestDelete({ request, env }) {
     );
   }
 
-  const signups = await getSignups(env);
+  if (!removingSomeoneElse && !isStaff(session) && settings.signupOpen !== true) {
+    return Response.json(
+      { error: "Registration is locked, so members can no longer leave the team." },
+      { status: 403 }
+    );
+  }
+
   const existing = signups.find(item => item.discordId === requestedDiscordId);
 
   if (!existing) {

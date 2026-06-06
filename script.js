@@ -384,18 +384,82 @@ async function loadSiteNav() {
   }
 }
 
+function renderHomeLastEventResult(entry) {
+  const eventPercent = document.getElementById("homeEventPercent");
+  const eventTitle = document.getElementById("homeEventTitle");
+  const eventMeta = document.getElementById("homeEventMeta");
+  const topThree = document.getElementById("homeTopThree");
+  const featuredStats = document.getElementById("homeFeaturedStats");
+  const homeTotalGained = document.getElementById("homeTotalGained");
+  const homeClanXp = document.getElementById("homeClanXp");
+
+  const winner = getArchiveWinner(entry);
+  const metric = getEventMetricLabel(entry);
+  const dateText = entry?.endedAt
+    ? new Date(entry.endedAt).toLocaleDateString()
+    : entry?.endDate
+      ? new Date(entry.endDate).toLocaleDateString()
+      : "Completed";
+
+  if (eventPercent) eventPercent.textContent = `Previous ${formatEventType(entry?.type || "event")}`;
+  if (eventTitle) eventTitle.textContent = displayEventTitle(entry?.title || "Previous Event", entry?.type);
+  if (eventMeta) eventMeta.textContent = `${dateText} • Final Results`;
+  if (homeTotalGained) homeTotalGained.textContent = winner ? formatNumber(winner.gained) : "Results";
+  if (homeClanXp) homeClanXp.textContent = winner ? `${formatNumber(winner.gained)} ${metric}` : "Last Results";
+
+  if (featuredStats) {
+    featuredStats.innerHTML = `
+      <div class="featured-stat">
+        <strong>${winner ? escapeHtml(winner.name) : "—"}</strong>
+        <span>Winner</span>
+      </div>
+
+      <div class="featured-stat">
+        <strong>${winner ? formatNumber(winner.gained) : "0"}</strong>
+        <span>Winning ${metric}</span>
+      </div>
+
+      <div class="featured-stat">
+        <strong>${dateText}</strong>
+        <span>Archived</span>
+      </div>
+    `;
+  }
+
+  if (topThree) {
+    const rows = entry?.topFive?.length ? entry.topFive : entry?.leaderboard || [];
+    topThree.innerHTML = rows.length
+      ? rows.slice(0, 3).map((player, index) => `
+          <div>
+            <strong>#${index + 1} ${escapeHtml(player.name)}</strong>
+            <span>${formatNumber(player.gained)} ${metric}</span>
+          </div>
+        `).join("")
+      : "No leaderboard snapshot available.";
+  }
+}
+
 async function loadHomeStats() {
   const homeClanXp = document.getElementById("homeClanXp");
 
   try {
     const events = await fetchCurrentEvents();
 
+    const activeEvents = events.filter(isEventActive);
     const featuredEvent =
-      events.find(event => event.featured) ||
-      events.find(event => event.womCompetitionId) ||
-      events[0];
+      activeEvents.find(event => event.featured) ||
+      activeEvents.find(event => event.womCompetitionId) ||
+      activeEvents[0];
 
     if (!featuredEvent) {
+      const archive = await fetchArchive().catch(() => []);
+      const latestResult = archive[0];
+
+      if (latestResult) {
+        renderHomeLastEventResult(latestResult);
+        return;
+      }
+
       if (homeClanXp) {
         homeClanXp.textContent = "No Active Event";
       }
@@ -403,10 +467,14 @@ async function loadHomeStats() {
       const eventTitle = document.getElementById("homeEventTitle");
       const eventMeta = document.getElementById("homeEventMeta");
       const topThree = document.getElementById("homeTopThree");
+      const featuredStats = document.getElementById("homeFeaturedStats");
+      const homeTotalGained = document.getElementById("homeTotalGained");
 
       if (eventTitle) eventTitle.textContent = "No active event";
-      if (eventMeta) eventMeta.textContent = "No event is currently featured.";
-      if (topThree) topThree.textContent = "No competitors loaded.";
+      if (eventMeta) eventMeta.textContent = "No previous results found yet.";
+      if (topThree) topThree.textContent = "Archive an event to show its final results here.";
+      if (featuredStats) featuredStats.innerHTML = "";
+      if (homeTotalGained) homeTotalGained.textContent = "—";
 
       return;
     }
@@ -652,28 +720,36 @@ async function fetchBingoSettings() {
       throw new Error(data.error || "Could not load Bingo settings.");
     }
 
-    return data.settings || { active: false, enableViewEvent: false };
+    return data.settings || { active: false, signupOpen: false, enableViewEvent: false };
   } catch {
-    return { active: false, enableViewEvent: false };
+    return { active: false, signupOpen: false, enableViewEvent: false };
   }
 }
 
 async function appendBattleshipBingoCard(grid) {
   const settings = await fetchBingoSettings();
   const active = settings.active === true;
+  const signupOpen = settings.signupOpen === true;
   const enableViewEvent = settings.enableViewEvent === true;
+  const href = enableViewEvent
+    ? "battleship-bingo.html"
+    : signupOpen
+      ? "bingo-signup.html"
+      : "";
 
   grid.appendChild(createEventHubCard({
     type: "bingo",
-    href: active ? "bingo-signup.html" : "",
+    href,
     icon: "🚢",
     label: "BINGO",
     title: active ? (settings.title || "Battleship Bingo") : "Battleship Bingo",
     description: active
-      ? (settings.description || "Build a board, split into teams, claim tiles, and track summer progress.")
+      ? enableViewEvent
+        ? "Event in progress. View the live Battleship Bingo board."
+        : (settings.description || "Build a board, split into teams, claim tiles, and track summer progress.")
       : "",
     active,
-    ctaLabel: "Sign Up →"
+    ctaLabel: enableViewEvent ? "View Event →" : "Sign Up →"
   }));
 }
 
@@ -683,10 +759,33 @@ async function loadHomeBingoSignupBanner() {
 
   try {
     const settings = await fetchBingoSettings();
+    const title = banner.querySelector("h2");
+    const text = banner.querySelector("p:last-of-type");
+    const link = banner.querySelector("a");
 
-    if (settings.active === true) {
+    if (settings.active === true && settings.enableViewEvent === true) {
       banner.style.display = "flex";
+      if (title) title.textContent = "Battleship Bingo is live";
+      if (text) text.textContent = "The event has started. Jump straight to the live board.";
+      if (link) {
+        link.href = "battleship-bingo.html";
+        link.textContent = "View Board";
+      }
+      return;
     }
+
+    if (settings.active === true && settings.signupOpen === true) {
+      banner.style.display = "flex";
+      if (title) title.textContent = "Registration is open";
+      if (text) text.textContent = "Sign up with one click. Teams are auto-balanced between Team 1 and Team 2.";
+      if (link) {
+        link.href = "bingo-signup.html";
+        link.textContent = "Sign Up Now";
+      }
+      return;
+    }
+
+    banner.style.display = "none";
   } catch {
     banner.style.display = "none";
   }

@@ -464,15 +464,17 @@ async function loadBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
 
-  if (!titleInput || !descriptionInput || !activeInput || !viewEventInput) return;
+  if (!titleInput || !descriptionInput || !activeInput || !signupOpenInput || !viewEventInput) return;
 
   try {
     const settings = await fetchBingoSettings();
     titleInput.value = settings.title || "Battleship Bingo";
     descriptionInput.value = settings.description || "";
     activeInput.checked = settings.active === true;
+    signupOpenInput.checked = settings.signupOpen === true;
     viewEventInput.checked = settings.enableViewEvent === true;
   } catch (error) {
     const status = document.getElementById("bingoSettingsStatus");
@@ -484,10 +486,11 @@ async function saveBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
   const status = document.getElementById("bingoSettingsStatus");
 
-  if (!titleInput || !descriptionInput || !activeInput || !viewEventInput) return;
+  if (!titleInput || !descriptionInput || !activeInput || !signupOpenInput || !viewEventInput) return;
 
   const response = await fetch("/api/admin/bingo/settings", {
     method: "POST",
@@ -496,6 +499,7 @@ async function saveBingoSettings() {
       title: titleInput.value.trim() || "Battleship Bingo",
       description: descriptionInput.value.trim(),
       active: activeInput.checked,
+      signupOpen: signupOpenInput.checked,
       enableViewEvent: viewEventInput.checked
     })
   });
@@ -511,6 +515,20 @@ async function saveBingoSettings() {
 }
 
 
+function applyBingoMode(mode) {
+  const activeInput = document.getElementById("bingoActiveInput");
+  const signupOpenInput = document.getElementById("bingoSignupOpenInput");
+  const viewEventInput = document.getElementById("bingoViewEventInput");
+
+  if (!activeInput || !signupOpenInput || !viewEventInput) return;
+
+  activeInput.checked = true;
+  signupOpenInput.checked = mode === "registration";
+  viewEventInput.checked = mode === "started";
+
+  saveBingoSettings();
+}
+
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -523,6 +541,8 @@ async function loadAdmin() {
   const archiveEventBtn = document.getElementById("archiveEventBtn");
   const previewWomBtn = document.getElementById("previewWomBtn");
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
+  const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
+  const startBingoEventBtn = document.getElementById("startBingoEventBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -556,6 +576,15 @@ async function loadAdmin() {
     if (archiveEventBtn) archiveEventBtn.addEventListener("click", archiveSelectedEvent);
     if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
     if (saveBingoSettingsBtn) saveBingoSettingsBtn.addEventListener("click", saveBingoSettings);
+    if (openBingoRegistrationBtn) {
+      openBingoRegistrationBtn.addEventListener("click", () => applyBingoMode("registration"));
+    }
+    if (startBingoEventBtn) {
+      startBingoEventBtn.addEventListener("click", () => {
+        if (!confirm("Start Battleship Bingo now? This locks signups and sends users to the board from the Events page.")) return;
+        applyBingoMode("started");
+      });
+    }
     loadBingoSettings();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
