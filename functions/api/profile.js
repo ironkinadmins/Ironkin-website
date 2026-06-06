@@ -329,19 +329,18 @@ function buildProfile({ session, record, embers, wom, placements, isOwnProfile =
 const clanRank =
   record.rankOverride ||
   getHighestRank(roleIds, CLAN_RANKS) ||
+  record.rank ||
   null;
 
-const staffRank = getHighestRank(roleIds, STAFF_RANKS);
+const staffRank =
+  getHighestRank(roleIds, STAFF_RANKS) ||
+  record.staffRank ||
+  null;
 
 const displayRank =
   staffRank ||
   clanRank ||
   "Member";
-
-  const staffRank =
-    getHighestRank(roleIds, STAFF_RANKS) ||
-    record.staffRank ||
-    null;
 
   const memberSince = record.memberSince || session?.joined_at || session?.joinedAt || null;
 
@@ -352,7 +351,7 @@ const displayRank =
     rsn,
     rank: displayRank,
     staffRank,
-    ClanRank,
+    clanRank,
     memberSince,
     avatarUrl,
     discordAvatarUrl,
