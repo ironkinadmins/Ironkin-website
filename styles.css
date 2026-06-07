@@ -6776,3 +6776,24 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   margin-bottom: 0;
   color: var(--muted);
 }
+
+/* Force hidden WOM/admin sub-fields to stay hidden even when component CSS sets display:grid. */
+.calendar-wom-panel[hidden],
+.calendar-wom-panel label[hidden],
+.calendar-sidebar-form [hidden] {
+  display: none !important;
+}
+
+/* Wider creator rail so the fields don't get crushed. */
+.calendar-workspace {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+
+.calendar-admin-sidebar {
+  min-width: 300px;
+}
+
+.calendar-sidebar-form input[type="date"],
+.calendar-sidebar-form input[type="time"] {
+  min-height: 46px;
+}

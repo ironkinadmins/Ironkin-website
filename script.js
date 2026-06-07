@@ -2468,30 +2468,28 @@ function updateCalendarWomFields() {
 
   const createWom = createWomInput?.checked === true;
   const eventType = eventTypeInput?.value || "normal";
-  let competitionType = competitionTypeInput?.value || "boss-kc";
+  const isClanGoal = eventType === "clan-goal";
 
-  if (eventType === "sotw" || eventType === "clan-goal-skill") competitionType = "skill-xp";
-  if (eventType === "botw" || eventType === "clan-goal-boss" || eventType === "mass") competitionType = "boss-kc";
+  let competitionType = competitionTypeInput?.value || "boss-kc";
+  if (eventType === "sotw") competitionType = "skill-xp";
+  if (eventType === "botw" || eventType === "mass") competitionType = "boss-kc";
   if (competitionTypeInput) competitionTypeInput.value = competitionType;
 
   const needsSkill = competitionType === "skill-xp";
   const needsBoss = competitionType === "boss-kc";
-  const needsTarget = eventType === "clan-goal-skill" || eventType === "clan-goal-boss";
 
   if (panel) panel.hidden = !createWom;
-  if (competitionTypeField) {
-    competitionTypeField.hidden = !createWom || eventType === "sotw" || eventType === "botw" || eventType === "mass" || eventType.startsWith("clan-goal");
-  }
+  if (competitionTypeField) competitionTypeField.hidden = !createWom || eventType === "sotw" || eventType === "botw" || eventType === "mass";
   if (skillField) skillField.hidden = !createWom || !needsSkill;
   if (bossField) bossField.hidden = !createWom || !needsBoss;
-  if (targetField) targetField.hidden = !createWom || !needsTarget;
+  if (targetField) targetField.hidden = !createWom || !isClanGoal;
   if (targetLabel) targetLabel.textContent = needsSkill ? "Target XP" : "Target KC";
 }
 
 function getCalendarCompetitionTypeForForm() {
   const eventType = document.getElementById("calendarEventTypeInput")?.value || "normal";
-  if (eventType === "sotw" || eventType === "clan-goal-skill") return "skill-xp";
-  if (eventType === "botw" || eventType === "clan-goal-boss" || eventType === "mass") return "boss-kc";
+  if (eventType === "sotw") return "skill-xp";
+  if (eventType === "botw" || eventType === "mass") return "boss-kc";
   return document.getElementById("calendarCompetitionTypeInput")?.value || "boss-kc";
 }
 

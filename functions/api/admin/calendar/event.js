@@ -43,7 +43,7 @@ function makeId(prefix = "calendar") {
 function getLabelForType(type) {
   if (type === "sotw") return "SOTW";
   if (type === "botw") return "BOTW";
-  if (type === "clan-goal-skill" || type === "clan-goal-boss") return "Clan Goal";
+  if (type === "clan-goal" || type === "clan-goal-skill" || type === "clan-goal-boss") return "Clan Goal";
   if (type === "normal") return "Normal Event";
   if (type === "mass") return "Clan Mass";
   if (type === "giveaway") return "Giveaway";
@@ -97,7 +97,7 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
     endDate: calendarEvent.end,
     metric: calendarEvent.womMetric || null,
     goalKind: calendarEvent.goalKind || null,
-    milestones: calendarEvent.eventType === "clan-goal-skill" || calendarEvent.eventType === "clan-goal-boss"
+    milestones: calendarEvent.eventType === "clan-goal" || calendarEvent.eventType === "clan-goal-skill" || calendarEvent.eventType === "clan-goal-boss"
       ? [
           { percent: 33, title: "Clan Mass" },
           { percent: 66, title: "Bonus Embers" },
@@ -204,7 +204,7 @@ export async function onRequestPost({ request, env }) {
         return Response.json({ error: "Choose a skill or boss metric before creating a WOM competition." }, { status: 400 });
       }
 
-      if ((event.eventType === "clan-goal-skill" || event.eventType === "clan-goal-boss") && !event.target) {
+      if ((event.eventType === "clan-goal" || event.eventType === "clan-goal-skill" || event.eventType === "clan-goal-boss") && !event.target) {
         return Response.json({ error: "Clan Goals need a target XP or target KC." }, { status: 400 });
       }
 
