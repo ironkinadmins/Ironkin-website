@@ -78,6 +78,30 @@ async function saveCustomCalendarEvent(env, event) {
   return events;
 }
 
+async function deleteCustomCalendarEvent(env, eventId) {
+  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const remaining = events.filter(item => item.id !== eventId);
+  const deleted = remaining.length !== events.length;
+
+  if (!deleted) return false;
+
+  await env.CALENDAR_KV.put(CUSTOM_CALENDAR_EVENTS_KEY, JSON.stringify(remaining));
+  await env.CALENDAR_KV.delete(GOOGLE_CACHE_KEY).catch(() => null);
+
+  return true;
+}
+
+async function deleteActiveEvent(env, eventId) {
+  if (!env.DROPS_KV) return;
+
+  const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
+  const remaining = events.filter(item => item.id !== eventId);
+
+  if (remaining.length !== events.length) {
+    await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(remaining));
+  }
+}
+
 async function addOrUpdateActiveEvent(env, calendarEvent) {
   if (!env.DROPS_KV || !calendarEvent.womCompetitionId) return;
 
@@ -156,6 +180,40 @@ async function createWomCompetition(env, event) {
   if (!competition?.id) throw new Error("Wise Old Man created a response without a competition ID.");
 
   return competition;
+}
+
+export async function onRequestDelete({ request, env }) {
+  if (!isStaff(request)) {
+    return Response.json({ error: "Staff only." }, { status: 403 });
+  }
+
+  if (!env.CALENDAR_KV) {
+    return Response.json({ error: "Missing CALENDAR_KV binding." }, { status: 500 });
+  }
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const eventId = cleanText(body.id);
+
+    if (!eventId) {
+      return Response.json({ error: "Missing event ID." }, { status: 400 });
+    }
+
+    const deleted = await deleteCustomCalendarEvent(env, eventId);
+
+    if (!deleted) {
+      return Response.json(
+        { error: "Event not found or cannot be deleted from here." },
+        { status: 404 }
+      );
+    }
+
+    await deleteActiveEvent(env, eventId);
+
+    return Response.json({ success: true, deletedId: eventId });
+  } catch (error) {
+    return Response.json({ error: error.message || "Could not delete calendar event." }, { status: 500 });
+  }
 }
 
 export async function onRequestPost({ request, env }) {
