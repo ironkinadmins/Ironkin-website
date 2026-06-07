@@ -1,5 +1,6 @@
 const CACHE_KEY = "calendar:events";
 const CACHE_TTL_SECONDS = 60 * 30; // 30 minutes
+const CUSTOM_EVENTS_KEY = "calendar:custom-events";
 
 function parseIcsDate(value) {
   if (!value) return null;
@@ -69,6 +70,23 @@ async function getCachedEvents(env) {
   return JSON.parse(cached);
 }
 
+async function getCustomEvents(env) {
+  if (!env.CALENDAR_KV) return [];
+
+  const saved = await env.CALENDAR_KV.get(CUSTOM_EVENTS_KEY);
+  if (!saved) return [];
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return [];
+  }
+}
+
+function sortEvents(events) {
+  return events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
+}
+
 async function setCachedEvents(env, events) {
   if (!env.CALENDAR_KV) return;
 
@@ -93,9 +111,11 @@ export async function onRequestGet({ env }) {
 
   const cachedEvents = await getCachedEvents(env);
 
+  const customEvents = await getCustomEvents(env);
+
   if (cachedEvents) {
     return Response.json({
-      events: cachedEvents,
+      events: sortEvents([...cachedEvents, ...customEvents]),
       cached: true
     });
   }
@@ -123,7 +143,7 @@ export async function onRequestGet({ env }) {
   await setCachedEvents(env, events);
 
   return Response.json({
-    events,
+    events: sortEvents([...events, ...customEvents]),
     cached: false
   });
 }

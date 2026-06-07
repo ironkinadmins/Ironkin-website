@@ -1738,6 +1738,9 @@ async function changeDrop(name, direction) {
 let calendarFilter = "all";
 
 function getCalendarEventType(event) {
+  if (event?.eventType) return String(event.eventType).replace("clan-goal-skill", "challenge").replace("clan-goal-boss", "mass");
+  if (event?.category) return String(event.category);
+
   const title = String(event.title || "").toLowerCase();
   const description = String(event.description || "").toLowerCase();
   const text = `${title} ${description}`;
@@ -1866,6 +1869,12 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
         event.start && event.start.slice(0, 10) === dateKey
       );
 
+      if (calendarCurrentUserIsStaff) {
+        cell.classList.add("calendar-staff-create");
+        cell.title = "Click to create an event on this day";
+        cell.addEventListener("dblclick", () => openCalendarEventModal(dateKey));
+      }
+
       cell.innerHTML = `
         <strong>${day}</strong>
         <div class="calendar-events"></div>
@@ -1875,8 +1884,13 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
 
       dayEvents.forEach(event => {
         const eventEl = document.createElement("div");
-        eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}`;
+        const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
+        eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}`;
         eventEl.textContent = event.title;
+        eventEl.addEventListener("click", clickEvent => {
+          clickEvent.stopPropagation();
+          showCalendarEventDetails(event);
+        });
         eventBox.appendChild(eventEl);
       });
 
@@ -2198,6 +2212,276 @@ async function loadRecordsPage() {
   }
 }
 
+
+const WOM_SKILL_OPTIONS = [
+  ["attack", "Attack"],
+  ["strength", "Strength"],
+  ["defence", "Defence"],
+  ["ranged", "Ranged"],
+  ["prayer", "Prayer"],
+  ["magic", "Magic"],
+  ["runecrafting", "Runecrafting"],
+  ["construction", "Construction"],
+  ["hitpoints", "Hitpoints"],
+  ["agility", "Agility"],
+  ["herblore", "Herblore"],
+  ["thieving", "Thieving"],
+  ["crafting", "Crafting"],
+  ["fletching", "Fletching"],
+  ["slayer", "Slayer"],
+  ["hunter", "Hunter"],
+  ["mining", "Mining"],
+  ["smithing", "Smithing"],
+  ["fishing", "Fishing"],
+  ["cooking", "Cooking"],
+  ["firemaking", "Firemaking"],
+  ["woodcutting", "Woodcutting"],
+  ["farming", "Farming"]
+];
+
+const WOM_BOSS_OPTIONS = [
+  ["abyssal_sire", "Abyssal Sire"],
+  ["alchemical_hydra", "Alchemical Hydra"],
+  ["amoxliatl", "Amoxliatl"],
+  ["araxxor", "Araxxor"],
+  ["artio", "Artio"],
+  ["barrows_chests", "Barrows Chests"],
+  ["bryophyta", "Bryophyta"],
+  ["callisto", "Callisto"],
+  ["calvarion", "Calvar'ion"],
+  ["cerberus", "Cerberus"],
+  ["chambers_of_xeric", "Chambers of Xeric"],
+  ["chambers_of_xeric_challenge_mode", "Chambers of Xeric CM"],
+  ["chaos_elemental", "Chaos Elemental"],
+  ["chaos_fanatic", "Chaos Fanatic"],
+  ["commander_zilyana", "Commander Zilyana"],
+  ["corporeal_beast", "Corporeal Beast"],
+  ["crazy_archaeologist", "Crazy Archaeologist"],
+  ["dagannoth_prime", "Dagannoth Prime"],
+  ["dagannoth_rex", "Dagannoth Rex"],
+  ["dagannoth_supreme", "Dagannoth Supreme"],
+  ["deranged_archaeologist", "Deranged Archaeologist"],
+  ["duke_sucellus", "Duke Sucellus"],
+  ["general_graardor", "General Graardor"],
+  ["giant_mole", "Giant Mole"],
+  ["grotesque_guardians", "Grotesque Guardians"],
+  ["hespori", "Hespori"],
+  ["hueycoatl", "Hueycoatl"],
+  ["kalphite_queen", "Kalphite Queen"],
+  ["king_black_dragon", "King Black Dragon"],
+  ["kraken", "Kraken"],
+  ["kreearra", "Kree'arra"],
+  ["kril_tsutsaroth", "K'ril Tsutsaroth"],
+  ["lunar_chests", "Lunar Chests"],
+  ["mimic", "Mimic"],
+  ["nex", "Nex"],
+  ["nightmare", "Nightmare"],
+  ["phosanis_nightmare", "Phosani's Nightmare"],
+  ["obor", "Obor"],
+  ["phantom_muspah", "Phantom Muspah"],
+  ["sarachnis", "Sarachnis"],
+  ["scorpia", "Scorpia"],
+  ["scurrius", "Scurrius"],
+  ["skotizo", "Skotizo"],
+  ["sol_heredit", "Sol Heredit"],
+  ["spindel", "Spindel"],
+  ["tempoross", "Tempoross"],
+  ["the_gauntlet", "The Gauntlet"],
+  ["the_corrupted_gauntlet", "The Corrupted Gauntlet"],
+  ["the_leviathan", "The Leviathan"],
+  ["the_whisperer", "The Whisperer"],
+  ["theatre_of_blood", "Theatre of Blood"],
+  ["theatre_of_blood_hard_mode", "Theatre of Blood HM"],
+  ["thermonuclear_smoke_devil", "Thermonuclear Smoke Devil"],
+  ["tombs_of_amascut", "Tombs of Amascut"],
+  ["tombs_of_amascut_expert", "Tombs of Amascut Expert"],
+  ["tzkal_zuk", "TzKal-Zuk"],
+  ["tztok_jad", "TzTok-Jad"],
+  ["vardorvis", "Vardorvis"],
+  ["venenatis", "Venenatis"],
+  ["vetion", "Vet'ion"],
+  ["vorkath", "Vorkath"],
+  ["wintertodt", "Wintertodt"],
+  ["yama", "Yama"],
+  ["zalcano", "Zalcano"],
+  ["zulrah", "Zulrah"]
+];
+
+let calendarCurrentUserIsStaff = false;
+let calendarSelectedDate = null;
+
+function fillCalendarMetricDropdowns() {
+  const skillSelect = document.getElementById("calendarSkillMetricInput");
+  const bossSelect = document.getElementById("calendarBossMetricInput");
+
+  if (skillSelect && !skillSelect.dataset.loaded) {
+    skillSelect.innerHTML = WOM_SKILL_OPTIONS
+      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+      .join("");
+    skillSelect.dataset.loaded = "true";
+  }
+
+  if (bossSelect && !bossSelect.dataset.loaded) {
+    bossSelect.innerHTML = WOM_BOSS_OPTIONS
+      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+      .join("");
+    bossSelect.dataset.loaded = "true";
+  }
+}
+
+function setDateTimeLocal(input, date) {
+  if (!input || !date) return;
+  const pad = value => String(value).padStart(2, "0");
+  input.value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function openCalendarEventModal(dateKey = null) {
+  const modal = document.getElementById("calendarEventModal");
+  const form = document.getElementById("calendarEventForm");
+  const status = document.getElementById("calendarEventFormStatus");
+  if (!modal || !form) return;
+
+  fillCalendarMetricDropdowns();
+  form.reset();
+  if (status) status.textContent = "";
+
+  const baseDate = dateKey ? new Date(`${dateKey}T19:00:00`) : new Date();
+  const endDate = new Date(baseDate.getTime() + 60 * 60 * 1000);
+  calendarSelectedDate = dateKey;
+
+  setDateTimeLocal(document.getElementById("calendarEventStartInput"), baseDate);
+  setDateTimeLocal(document.getElementById("calendarEventEndInput"), endDate);
+
+  modal.hidden = false;
+  updateCalendarWomFields();
+}
+
+function closeCalendarEventModal() {
+  const modal = document.getElementById("calendarEventModal");
+  if (modal) modal.hidden = true;
+}
+
+function updateCalendarWomFields() {
+  const createWomInput = document.getElementById("calendarCreateWomInput");
+  const eventTypeInput = document.getElementById("calendarEventTypeInput");
+  const panel = document.getElementById("calendarWomPanel");
+  const skillField = document.getElementById("calendarSkillMetricField");
+  const bossField = document.getElementById("calendarBossMetricField");
+  const targetField = document.getElementById("calendarTargetField");
+  const targetLabel = document.getElementById("calendarTargetLabel");
+
+  const createWom = createWomInput?.checked === true;
+  const eventType = eventTypeInput?.value || "mass";
+  const needsBoss = eventType === "botw" || eventType === "clan-goal-boss";
+  const needsSkill = eventType === "sotw" || eventType === "clan-goal-skill";
+  const needsTarget = eventType === "clan-goal-skill" || eventType === "clan-goal-boss";
+
+  if (panel) panel.hidden = !createWom;
+  if (skillField) skillField.hidden = !createWom || !needsSkill;
+  if (bossField) bossField.hidden = !createWom || !needsBoss;
+  if (targetField) targetField.hidden = !createWom || !needsTarget;
+  if (targetLabel) targetLabel.textContent = eventType === "clan-goal-skill" ? "Target XP" : "Target KC";
+
+  if (createWom && eventType === "mass") {
+    if (skillField) skillField.hidden = true;
+    if (bossField) bossField.hidden = false;
+  }
+}
+
+function getCalendarWomMetricForForm() {
+  const eventType = document.getElementById("calendarEventTypeInput")?.value || "mass";
+  if (eventType === "sotw" || eventType === "clan-goal-skill") {
+    return document.getElementById("calendarSkillMetricInput")?.value || "";
+  }
+  return document.getElementById("calendarBossMetricInput")?.value || "";
+}
+
+async function saveCalendarEventForm(event) {
+  event.preventDefault();
+
+  const status = document.getElementById("calendarEventFormStatus");
+  const createWom = document.getElementById("calendarCreateWomInput")?.checked === true;
+  const eventType = document.getElementById("calendarEventTypeInput")?.value || "mass";
+  const targetValue = document.getElementById("calendarTargetInput")?.value || "";
+
+  const payload = {
+    title: document.getElementById("calendarEventTitleInput")?.value.trim(),
+    description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
+    location: document.getElementById("calendarEventLocationInput")?.value.trim(),
+    start: document.getElementById("calendarEventStartInput")?.value,
+    end: document.getElementById("calendarEventEndInput")?.value,
+    eventType,
+    category: eventType,
+    createWom,
+    womMetric: createWom ? getCalendarWomMetricForForm() : "",
+    target: createWom && targetValue ? Number(targetValue) : null,
+    goalKind: eventType === "clan-goal-skill" ? "skill-xp" : eventType === "clan-goal-boss" ? "boss-kc" : "",
+    featured: document.getElementById("calendarFeaturedInput")?.checked === true,
+    dropsEnabled: true
+  };
+
+  if (status) status.textContent = createWom ? "Saving event and creating WOM competition..." : "Saving event...";
+
+  const response = await fetch("/api/admin/calendar/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (status) status.textContent = data.error || "Could not save event.";
+    return;
+  }
+
+  if (status) {
+    status.textContent = data.event?.womCompetitionId
+      ? `Event saved. WOM competition #${data.event.womCompetitionId} created.`
+      : "Event saved.";
+  }
+
+  setTimeout(() => {
+    closeCalendarEventModal();
+    loadCalendar();
+    loadUpcomingEventsWidget();
+    loadHomeEventWidgets();
+  }, 700);
+}
+
+function showCalendarEventDetails(event) {
+  const lines = [
+    event.title || "Untitled Event",
+    event.start ? `Starts: ${formatShortDateTime(event.start)}` : "",
+    event.end ? `Ends: ${formatShortDateTime(event.end)}` : "",
+    event.location ? `Location: ${event.location}` : "",
+    event.description || "",
+    event.womCompetitionId ? `WOM: https://wiseoldman.net/competitions/${event.womCompetitionId}` : ""
+  ].filter(Boolean);
+
+  alert(lines.join("\n"));
+}
+
+async function setupCalendarAdminTools() {
+  const panel = document.getElementById("calendarAdminPanel");
+  if (!panel) return;
+
+  const user = await getCurrentAuthUser();
+  calendarCurrentUserIsStaff = isStaffUser(user);
+  panel.hidden = !calendarCurrentUserIsStaff;
+
+  if (!calendarCurrentUserIsStaff) return;
+
+  fillCalendarMetricDropdowns();
+
+  document.getElementById("openCreateCalendarEventBtn")?.addEventListener("click", () => openCalendarEventModal());
+  document.getElementById("closeCalendarEventModalBtn")?.addEventListener("click", closeCalendarEventModal);
+  document.getElementById("cancelCalendarEventBtn")?.addEventListener("click", closeCalendarEventModal);
+  document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
+  document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
+  document.getElementById("calendarEventForm")?.addEventListener("submit", saveCalendarEventForm);
+  loadCalendar();
+}
+
 loadSiteNav();
 loadHomeStats();
 loadHomeBingoSignupBanner();
@@ -2208,6 +2492,7 @@ loadSingleEventDashboard();
 loadArchivePage();
 loadHallOfFlamePage();
 setupCalendarFilters();
+setupCalendarAdminTools();
 loadCalendar();
 loadUpcomingEventsWidget();
 loadHomeEmberLeaders();
