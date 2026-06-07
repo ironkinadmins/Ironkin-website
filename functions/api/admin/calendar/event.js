@@ -30,9 +30,63 @@ function cleanText(value, fallback = "") {
   return String(value || fallback).trim();
 }
 
+const IRONKIN_ADMIN_TIME_ZONE = "America/Toronto";
+
+function getTimeZoneOffsetMs(date, timeZone = IRONKIN_ADMIN_TIME_ZONE) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).formatToParts(date).reduce((map, part) => {
+    if (part.type !== "literal") map[part.type] = part.value;
+    return map;
+  }, {});
+
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function easternWallTimeToUtcIso(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const wallTimeAsUtc = Date.UTC(year, month - 1, day, hour, minute, 0);
+  let utcDate = new Date(wallTimeAsUtc - getTimeZoneOffsetMs(new Date(wallTimeAsUtc)));
+  utcDate = new Date(wallTimeAsUtc - getTimeZoneOffsetMs(utcDate));
+
+  return Number.isFinite(utcDate.getTime()) ? utcDate.toISOString() : null;
+}
+
 function normalizeDate(value) {
   if (!value) return null;
-  const date = new Date(value);
+
+  const raw = String(value);
+
+  // If the browser sent a timezone-aware timestamp, preserve that exact instant.
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    const date = new Date(raw);
+    return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+  }
+
+  // Legacy fallback: treat timezone-less admin timestamps as Eastern Time, not UTC.
+  const easternIso = easternWallTimeToUtcIso(raw);
+  if (easternIso) return easternIso;
+
+  const date = new Date(raw);
   return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 }
 
