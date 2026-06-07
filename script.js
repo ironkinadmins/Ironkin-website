@@ -617,45 +617,65 @@ async function loadHomeStats() {
     const standings = await fetchEventStandings(featuredEvent).catch(() => null);
     const eventHasNotStarted = isBeforeEventStart(standings, featuredEvent);
 
-    if (eventHasNotStarted) {
-      const eventPercent = document.getElementById("homeEventPercent");
-      const eventTitle = document.getElementById("homeEventTitle");
-      const eventMeta = document.getElementById("homeEventMeta");
-      const topThree = document.getElementById("homeTopThree");
-      const featuredStats = document.getElementById("homeFeaturedStats");
-      const homeTotalGained = document.getElementById("homeTotalGained");
-      const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
-      const homeClanXp = document.getElementById("homeClanXp");
-      const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
+   if (eventHasNotStarted) {
+  const eventPercent = document.getElementById("homeEventPercent");
+  const eventTitle = document.getElementById("homeEventTitle");
+  const eventMeta = document.getElementById("homeEventMeta");
+  const topThree = document.getElementById("homeTopThree");
+  const featuredStats = document.getElementById("homeFeaturedStats");
+  const homeTotalGained = document.getElementById("homeTotalGained");
+  const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
+  const homeClanXp = document.getElementById("homeClanXp");
 
-      if (eventPercent) eventPercent.textContent = formatEventType(featuredEvent.type);
-      if (eventTitle) eventTitle.textContent = displayEventTitle(standings?.title || featuredEvent.title, featuredEvent.type);
-      if (eventMeta) eventMeta.textContent = standings?.startsAt
-        ? `Starts ${new Date(standings.startsAt).toLocaleString()}`
-        : "Tracking will begin once the event starts.";
-      if (homeTotalGained) homeTotalGained.textContent = "Event Starting Soon";
-      if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Tracking will begin when the WOM competition starts.";
-      if (homeClanXp) homeClanXp.textContent = `Starts in ${startText}`;
-      if (featuredStats) {
-        featuredStats.innerHTML = `
-          <div class="featured-stat featured-stat-countdown">
-            <strong>${startText}</strong>
-            <span>Until Start</span>
-          </div>
-        `;
-      }
-if (topThree) topThree.innerHTML = "";
-    }
+  const startText = getCountdownToStart(
+    standings?.startsAt || featuredEvent.startDate || featuredEvent.start
+  );
 
-    if (!standings && !String(featuredEvent?.type || "").includes("clan-goal")) {
-      const archive = await fetchArchive().catch(() => []);
-      const latestResult = archive[0];
+  if (eventPercent) eventPercent.textContent = formatEventType(featuredEvent.type);
 
-      if (latestResult) {
-        renderHomeLastEventResult(latestResult);
-        return;
-      }
-    }
+  if (eventTitle) {
+    eventTitle.textContent = displayEventTitle(
+      standings?.title || featuredEvent.title,
+      featuredEvent.type
+    );
+  }
+
+  if (eventMeta) {
+    eventMeta.textContent = standings?.startsAt
+      ? `Starts ${new Date(standings.startsAt).toLocaleString()}`
+      : "Tracking will begin once the event starts.";
+  }
+
+  if (homeTotalGained) {
+    homeTotalGained.textContent = "Event Starting Soon";
+  }
+
+  // This removes the duplicate text under Event Starting Soon
+  if (homeTotalGainedLabel) {
+    homeTotalGainedLabel.textContent = "";
+  }
+
+  if (homeClanXp) {
+    homeClanXp.textContent = `Starts in ${startText}`;
+  }
+
+  if (featuredStats) {
+    featuredStats.innerHTML = `
+      <div class="featured-stat featured-stat-countdown">
+        <strong>${startText}</strong>
+        <span>Until Start</span>
+      </div>
+    `;
+  }
+
+  // Important: only blank this during pre-start.
+  // Do not change the active-event leaderboard code later in the file.
+  if (topThree) {
+    topThree.innerHTML = "";
+  }
+
+  return;
+}
 
     const eventPercent = document.getElementById("homeEventPercent");
     const eventTitle = document.getElementById("homeEventTitle");
