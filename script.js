@@ -602,12 +602,14 @@ async function loadHomeStats() {
       const topThree = document.getElementById("homeTopThree");
       const featuredStats = document.getElementById("homeFeaturedStats");
       const homeTotalGained = document.getElementById("homeTotalGained");
+      const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
 
       if (eventTitle) eventTitle.textContent = "No active event";
       if (eventMeta) eventMeta.textContent = "No previous results found yet.";
       if (topThree) topThree.textContent = "Archive an event to show its final results here.";
       if (featuredStats) featuredStats.innerHTML = "";
       if (homeTotalGained) homeTotalGained.textContent = "—";
+      if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
 
       return;
     }
@@ -622,6 +624,7 @@ async function loadHomeStats() {
       const topThree = document.getElementById("homeTopThree");
       const featuredStats = document.getElementById("homeFeaturedStats");
       const homeTotalGained = document.getElementById("homeTotalGained");
+      const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
       const homeClanXp = document.getElementById("homeClanXp");
       const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
 
@@ -631,22 +634,13 @@ async function loadHomeStats() {
         ? `Starts ${new Date(standings.startsAt).toLocaleString()}`
         : "Tracking will begin once the event starts.";
       if (homeTotalGained) homeTotalGained.textContent = "Event Starting Soon";
+      if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Tracking will begin when the WOM competition starts.";
       if (homeClanXp) homeClanXp.textContent = `Starts in ${startText}`;
       if (featuredStats) {
         featuredStats.innerHTML = `
-          <div class="featured-stat">
+          <div class="featured-stat featured-stat-countdown">
             <strong>${startText}</strong>
             <span>Until Start</span>
-          </div>
-
-          <div class="featured-stat">
-            <strong>${standings?.participantCount || 0}</strong>
-            <span>Registered</span>
-          </div>
-
-          <div class="featured-stat">
-            <strong>Ready</strong>
-            <span>WOM Linked</span>
           </div>
         `;
       }
@@ -671,6 +665,8 @@ async function loadHomeStats() {
     const featuredStats = document.getElementById("homeFeaturedStats");
 const homeTotalGained =
   document.getElementById("homeTotalGained");
+const homeTotalGainedLabel =
+  document.getElementById("homeTotalGainedLabel");
     if (eventPercent) {
       eventPercent.textContent = formatEventType(featuredEvent.type);
     }
@@ -691,6 +687,9 @@ const homeTotalGained =
   homeTotalGained.textContent =
     formatNumber(standings.totalGained);
 }
+      if (homeTotalGainedLabel) {
+        homeTotalGainedLabel.textContent = "Total Gained";
+      }
       if (homeClanXp) {
         homeClanXp.textContent =
           `${formatNumber(standings.totalGained)} gained`;
@@ -738,6 +737,10 @@ featuredStats.innerHTML = `
         }
       }
     } else {
+      if (homeTotalGainedLabel) {
+        homeTotalGainedLabel.textContent = "Total Gained";
+      }
+
       if (homeClanXp) {
         homeClanXp.textContent = featuredEvent.target
           ? `${formatNumber(featuredEvent.target)} goal`
