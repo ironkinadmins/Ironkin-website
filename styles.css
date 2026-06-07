@@ -6917,12 +6917,16 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 
 .calendar-time-control {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(90px, 120px) 72px;
   gap: 0.5rem;
   align-items: center;
 }
 
-.calendar-time-control input,
+.calendar-time-control input {
+  width: 100%;
+  min-width: 90px;
+}
+
 .calendar-time-control select {
-  min-width: 0;
+  width: 72px;
 }
