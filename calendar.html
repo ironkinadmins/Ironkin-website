@@ -62,7 +62,13 @@
             </label>
             <label>
               <span>Start Time</span>
-              <input id="calendarEventStartTimeInput" type="time" required value="19:00" />
+              <div class="calendar-time-control">
+                <input id="calendarEventStartTimeInput" type="text" inputmode="numeric" required value="7:00" placeholder="3:30" />
+                <select id="calendarEventStartMeridiemInput" aria-label="Start AM or PM">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
             </label>
           </div>
 
@@ -73,7 +79,13 @@
             </label>
             <label>
               <span>End Time</span>
-              <input id="calendarEventEndTimeInput" type="time" required value="20:00" />
+              <div class="calendar-time-control">
+                <input id="calendarEventEndTimeInput" type="text" inputmode="numeric" required value="8:00" placeholder="4:30" />
+                <select id="calendarEventEndMeridiemInput" aria-label="End AM or PM">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
             </label>
           </div>
 

@@ -2490,6 +2490,127 @@ let calendarSelectedDate = null;
 let calendarEditingEventId = null;
 let calendarEditingEvent = null;
 
+
+const IRONKIN_ADMIN_TIME_ZONE = "America/Toronto";
+
+function getTimeZoneOffsetMs(date, timeZone = IRONKIN_ADMIN_TIME_ZONE) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).formatToParts(date).reduce((map, part) => {
+    if (part.type !== "literal") map[part.type] = part.value;
+    return map;
+  }, {});
+
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second)
+  );
+
+  return asUtc - date.getTime();
+}
+
+function parseCalendarTwelveHourTime(value, meridiem = "PM") {
+  const text = String(value || "").trim().toUpperCase();
+  const match = text.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/);
+
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  const suffix = match[3] || String(meridiem || "PM").toUpperCase();
+
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+
+  if (suffix === "PM" && hour !== 12) hour += 12;
+  if (suffix === "AM" && hour === 12) hour = 0;
+
+  return { hour, minute };
+}
+
+function calendarEasternWallTimeToUtcIso(dateKey, timeValue, meridiem) {
+  if (!dateKey) return "";
+
+  const parsed = parseCalendarTwelveHourTime(timeValue, meridiem);
+  if (!parsed) return "";
+
+  const [year, month, day] = String(dateKey).split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const wallTimeAsUtc = Date.UTC(year, month - 1, day, parsed.hour, parsed.minute, 0);
+  let utcDate = new Date(wallTimeAsUtc - getTimeZoneOffsetMs(new Date(wallTimeAsUtc)));
+
+  const correctedOffset = getTimeZoneOffsetMs(utcDate);
+  utcDate = new Date(wallTimeAsUtc - correctedOffset);
+
+  return utcDate.toISOString();
+}
+
+function formatCalendarAdminDateTime(value) {
+  if (!value) return { date: "", time: "", meridiem: "PM" };
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return { date: "", time: "", meridiem: "PM" };
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: IRONKIN_ADMIN_TIME_ZONE,
+    hour12: true,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit"
+  }).formatToParts(date).reduce((map, part) => {
+    if (part.type !== "literal") map[part.type] = part.value;
+    return map;
+  }, {});
+
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${Number(parts.hour)}:${parts.minute}`,
+    meridiem: parts.dayPeriod || "PM"
+  };
+}
+
+function setMeridiemValue(id, value) {
+  const input = document.getElementById(id);
+  if (input) input.value = String(value || "PM").toUpperCase();
+}
+
+function normalizeCalendarTimeInput(inputId, meridiemId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const raw = String(input.value || "").trim().toUpperCase();
+  const suffixMatch = raw.match(/\b(AM|PM)\b/);
+  if (suffixMatch) {
+    setMeridiemValue(meridiemId, suffixMatch[1]);
+  }
+
+  const parsed = parseCalendarTwelveHourTime(raw.replace(/\b(AM|PM)\b/g, ""), document.getElementById(meridiemId)?.value || "PM");
+  if (!parsed) return;
+
+  const displayHour24 = parsed.hour;
+  const meridiem = displayHour24 >= 12 ? "PM" : "AM";
+  const hour12 = displayHour24 % 12 || 12;
+  const minute = String(parsed.minute).padStart(2, "0");
+
+  input.value = `${hour12}:${minute}`;
+  setMeridiemValue(meridiemId, meridiem);
+}
+
+
 function fillCalendarMetricDropdowns() {
   const skillSelect = document.getElementById("calendarSkillMetricInput");
   const bossSelect = document.getElementById("calendarBossMetricInput");
@@ -2511,18 +2632,22 @@ function fillCalendarMetricDropdowns() {
 
 function setCalendarDateAndTime(dateKey = null) {
   const pad = value => String(value).padStart(2, "0");
-  const baseDate = dateKey ? new Date(`${dateKey}T19:00:00`) : new Date();
-  const endDate = new Date(baseDate.getTime() + 60 * 60 * 1000);
+  const now = new Date();
+  const fallbackDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const selectedDate = dateKey || fallbackDate;
 
   const startDate = document.getElementById("calendarEventStartDateInput");
   const startTime = document.getElementById("calendarEventStartTimeInput");
   const endDateInput = document.getElementById("calendarEventEndDateInput");
   const endTime = document.getElementById("calendarEventEndTimeInput");
 
-  if (startDate) startDate.value = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}`;
-  if (startTime) startTime.value = `${pad(baseDate.getHours())}:${pad(baseDate.getMinutes())}`;
-  if (endDateInput) endDateInput.value = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}`;
-  if (endTime) endTime.value = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+  if (startDate) startDate.value = selectedDate;
+  if (startTime) startTime.value = "7:00";
+  setMeridiemValue("calendarEventStartMeridiemInput", "PM");
+
+  if (endDateInput) endDateInput.value = selectedDate;
+  if (endTime) endTime.value = "8:00";
+  setMeridiemValue("calendarEventEndMeridiemInput", "PM");
 }
 
 function selectCalendarAdminDate(dateKey = null) {
@@ -2553,25 +2678,14 @@ function clearCalendarEventForm() {
 }
 
 function splitCalendarDateTime(value) {
-  if (!value) return { date: "", time: "" };
-  const raw = String(value);
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
-    return { date: raw.slice(0, 10), time: raw.slice(11, 16) };
-  }
-
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return { date: "", time: "" };
-  const pad = item => String(item).padStart(2, "0");
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`
-  };
+  return formatCalendarAdminDateTime(value);
 }
 
-function getCalendarDateTimeValue(dateId, timeId) {
+function getCalendarDateTimeValue(dateId, timeId, meridiemId) {
   const date = document.getElementById(dateId)?.value || "";
-  const time = document.getElementById(timeId)?.value || "00:00";
-  return date ? `${date}T${time}` : "";
+  const time = document.getElementById(timeId)?.value || "";
+  const meridiem = document.getElementById(meridiemId)?.value || "PM";
+  return calendarEasternWallTimeToUtcIso(date, time, meridiem);
 }
 
 function updateCalendarWomFields() {
@@ -2644,8 +2758,10 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   const competitionInput = document.getElementById("calendarCompetitionTypeInput");
   const startDateInput = document.getElementById("calendarEventStartDateInput");
   const startTimeInput = document.getElementById("calendarEventStartTimeInput");
+  const startMeridiemInput = document.getElementById("calendarEventStartMeridiemInput");
   const endDateInput = document.getElementById("calendarEventEndDateInput");
   const endTimeInput = document.getElementById("calendarEventEndTimeInput");
+  const endMeridiemInput = document.getElementById("calendarEventEndMeridiemInput");
   const status = document.getElementById("calendarEventFormStatus");
 
   if (titleInput) titleInput.value = duplicate ? `${event.title || "Untitled Event"} Copy` : (event.title || "");
@@ -2664,8 +2780,10 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   const end = splitCalendarDateTime(event.end);
   if (startDateInput) startDateInput.value = start.date;
   if (startTimeInput) startTimeInput.value = start.time;
+  if (startMeridiemInput) startMeridiemInput.value = start.meridiem;
   if (endDateInput) endDateInput.value = end.date;
   if (endTimeInput) endTimeInput.value = end.time;
+  if (endMeridiemInput) endMeridiemInput.value = end.meridiem;
 
   setCalendarFormTitle(duplicate ? "Duplicate Event" : "Edit Event");
   updateCalendarWomFields();
@@ -2687,8 +2805,8 @@ async function saveCalendarEventForm(event) {
     title: document.getElementById("calendarEventTitleInput")?.value.trim(),
     description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
     location: "",
-    start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput"),
-    end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput"),
+    start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput", "calendarEventStartMeridiemInput"),
+    end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput", "calendarEventEndMeridiemInput"),
     eventType,
     category: eventType,
     createWom,
@@ -2934,6 +3052,8 @@ async function setupCalendarAdminTools() {
   document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarCompetitionTypeInput")?.addEventListener("change", updateCalendarWomFields);
+  document.getElementById("calendarEventStartTimeInput")?.addEventListener("blur", () => normalizeCalendarTimeInput("calendarEventStartTimeInput", "calendarEventStartMeridiemInput"));
+  document.getElementById("calendarEventEndTimeInput")?.addEventListener("blur", () => normalizeCalendarTimeInput("calendarEventEndTimeInput", "calendarEventEndMeridiemInput"));
   document.getElementById("calendarEventForm")?.addEventListener("submit", saveCalendarEventForm);
   loadCalendar();
 }
