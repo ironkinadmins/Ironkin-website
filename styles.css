@@ -6810,3 +6810,18 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 .calendar-sidebar-form input[type="time"] {
   min-height: 46px;
 }
+
+/* Calendar event details / delete dialog */
+.calendar-event-details-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.calendar-event-details-list p {
+  margin: 0;
+}
+
+.calendar-event-details-card .admin-action-row {
+  justify-content: flex-end;
+}

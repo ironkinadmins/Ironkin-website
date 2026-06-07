@@ -1972,9 +1972,10 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
 
       const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-      const dayEvents = filteredEvents.filter(event =>
-        event.start && event.start.slice(0, 10) === dateKey
-      );
+      const dayEvents = filteredEvents.filter(event => {
+        const eventStart = event.start || event.startDate || event.date;
+        return eventStart && String(eventStart).slice(0, 10) === dateKey;
+      });
 
       if (calendarCurrentUserIsStaff) {
         cell.classList.add("calendar-staff-create");
@@ -2575,17 +2576,92 @@ async function saveCalendarEventForm(event) {
   }, 700);
 }
 
-function showCalendarEventDetails(event) {
-  const lines = [
-    event.title || "Untitled Event",
-    event.start ? `Starts: ${formatShortDateTime(event.start)}` : "",
-    event.end ? `Ends: ${formatShortDateTime(event.end)}` : "",
-    event.location ? `Location: ${event.location}` : "",
-    event.description || "",
-    event.womCompetitionId ? `WOM: https://wiseoldman.net/competitions/${event.womCompetitionId}` : ""
-  ].filter(Boolean);
+function closeCalendarEventDetails() {
+  document.getElementById("calendarEventDetailsModal")?.remove();
+}
 
-  alert(lines.join("\n"));
+async function deleteCalendarEvent(eventId) {
+  if (!eventId) return;
+
+  const confirmed = confirm("Delete this calendar event? This will remove it from the Ironkin calendar and active events if it was linked there.");
+  if (!confirmed) return;
+
+  const status = document.getElementById("calendarEventDetailsStatus");
+  if (status) status.textContent = "Deleting event...";
+
+  try {
+    const response = await fetch("/api/admin/calendar/event", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: eventId })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not delete calendar event.");
+    }
+
+    closeCalendarEventDetails();
+    await loadCalendar();
+    loadUpcomingEventsWidget();
+    loadHomeEventWidgets();
+
+    const formStatus = document.getElementById("calendarEventFormStatus");
+    if (formStatus) formStatus.textContent = "Event deleted.";
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  }
+}
+
+function showCalendarEventDetails(event) {
+  closeCalendarEventDetails();
+
+  const canDelete = calendarCurrentUserIsStaff && event?.source === "ironkin-admin" && event?.id;
+  const womUrl = event?.womCompetitionId
+    ? `https://wiseoldman.net/competitions/${encodeURIComponent(event.womCompetitionId)}`
+    : "";
+
+  const modal = document.createElement("div");
+  modal.id = "calendarEventDetailsModal";
+  modal.className = "calendar-modal-backdrop";
+
+  modal.innerHTML = `
+    <article class="calendar-modal calendar-event-details-card">
+      <div class="calendar-modal-header">
+        <div>
+          <p class="eyebrow">Calendar Event</p>
+          <h2>${escapeHtml(event?.title || "Untitled Event")}</h2>
+        </div>
+        <button class="calendar-modal-close" type="button" aria-label="Close event details">×</button>
+      </div>
+
+      <div class="calendar-event-details-list">
+        ${event?.start ? `<p><strong>Starts:</strong> ${escapeHtml(formatShortDateTime(event.start))}</p>` : ""}
+        ${event?.end ? `<p><strong>Ends:</strong> ${escapeHtml(formatShortDateTime(event.end))}</p>` : ""}
+        ${event?.location ? `<p><strong>Location:</strong> ${escapeHtml(event.location)}</p>` : ""}
+        ${event?.description ? `<p>${escapeHtml(event.description)}</p>` : ""}
+        ${womUrl ? `<p><a class="text-link" href="${womUrl}" target="_blank" rel="noopener">View WOM Competition →</a></p>` : ""}
+        ${event?.source === "ironkin-admin" ? `<p class="admin-muted">Created from the Ironkin calendar admin.</p>` : `<p class="admin-muted">Synced calendar events are view-only here.</p>`}
+      </div>
+
+      <p class="calendar-form-status" id="calendarEventDetailsStatus"></p>
+
+      <div class="admin-action-row">
+        ${canDelete ? `<button class="btn secondary danger" type="button" id="deleteCalendarEventBtn">Delete Event</button>` : ""}
+        <button class="btn primary" type="button" id="closeCalendarEventDetailsBtn">Close</button>
+      </div>
+    </article>
+  `;
+
+  modal.addEventListener("click", clickEvent => {
+    if (clickEvent.target === modal) closeCalendarEventDetails();
+  });
+
+  document.body.appendChild(modal);
+  modal.querySelector(".calendar-modal-close")?.addEventListener("click", closeCalendarEventDetails);
+  modal.querySelector("#closeCalendarEventDetailsBtn")?.addEventListener("click", closeCalendarEventDetails);
+  modal.querySelector("#deleteCalendarEventBtn")?.addEventListener("click", () => deleteCalendarEvent(event.id));
 }
 
 async function setupCalendarAdminTools() {
