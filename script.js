@@ -1922,8 +1922,13 @@ loadRecordsPage();
 }
 
 let calendarDate = new Date();
+let calendarEventsCache = [];
 
-async function loadCalendar() {
+function getCalendarEventStart(event) {
+  return event?.start || event?.startDate || event?.date || "";
+}
+
+function renderCalendarMonth(events = calendarEventsCache) {
   const grid = document.getElementById("calendarGrid");
   const title = document.getElementById("calendarMonthTitle");
   const prevBtn = document.getElementById("prevMonthBtn");
@@ -1934,94 +1939,116 @@ async function loadCalendar() {
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
 
-title.textContent = calendarDate.toLocaleDateString("en-US", {
+  title.textContent = calendarDate.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric"
   });
 
-  try {
-    const response = await fetch("/api/calendar/events");
-    const data = await response.json();
+  const safeEvents = Array.isArray(events) ? events : [];
+  const filteredEvents =
+    calendarFilter === "all"
+      ? safeEvents
+      : safeEvents.filter(event => getCalendarEventType(event) === calendarFilter);
 
-    if (!response.ok) {
-      throw new Error(data.error || "Could not load calendar.");
+  const firstDay = new Date(year, month, 1);
+  const startDay = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  grid.innerHTML = "";
+
+  for (let i = 0; i < startDay; i++) {
+    const blank = document.createElement("div");
+    blank.className = "calendar-day calendar-empty";
+    grid.appendChild(blank);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const cell = document.createElement("div");
+    cell.className = "calendar-day";
+
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    const dayEvents = filteredEvents.filter(event => {
+      const eventStart = getCalendarEventStart(event);
+      if (!eventStart) return false;
+      return String(eventStart).slice(0, 10) === dateKey;
+    });
+
+    if (calendarCurrentUserIsStaff) {
+      cell.classList.add("calendar-staff-create");
+      cell.title = "Click to create an event on this day";
+      cell.addEventListener("click", () => selectCalendarAdminDate(dateKey));
     }
 
-    const events = data.events || [];
+    cell.innerHTML = `
+      <strong>${day}</strong>
+      <div class="calendar-events"></div>
+    `;
 
-    const filteredEvents =
-      calendarFilter === "all"
-        ? events
-        : events.filter(event => getCalendarEventType(event) === calendarFilter);
+    const eventBox = cell.querySelector(".calendar-events");
 
-    const firstDay = new Date(year, month, 1);
-    const startDay = firstDay.getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    grid.innerHTML = "";
-
-    for (let i = 0; i < startDay; i++) {
-      const blank = document.createElement("div");
-      blank.className = "calendar-day calendar-empty";
-      grid.appendChild(blank);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const cell = document.createElement("div");
-      cell.className = "calendar-day";
-
-      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-      const dayEvents = filteredEvents.filter(event =>
-        event.start && event.start.slice(0, 10) === dateKey
-      );
-
-      if (calendarCurrentUserIsStaff) {
-        cell.classList.add("calendar-staff-create");
-        cell.title = "Click to create an event on this day";
-        cell.addEventListener("click", () => selectCalendarAdminDate(dateKey));
-      }
-
-      cell.innerHTML = `
-        <strong>${day}</strong>
-        <div class="calendar-events"></div>
-      `;
-
-      const eventBox = cell.querySelector(".calendar-events");
-
-      dayEvents.forEach(event => {
-        const eventEl = document.createElement("div");
-        const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
-        eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}`;
-        eventEl.textContent = event.title;
-        eventEl.addEventListener("click", clickEvent => {
-          clickEvent.stopPropagation();
-          showCalendarEventDetails(event);
-        });
-        eventBox.appendChild(eventEl);
+    dayEvents.forEach(event => {
+      const eventEl = document.createElement("div");
+      const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
+      eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}`;
+      eventEl.textContent = event.title || "Untitled Event";
+      eventEl.addEventListener("click", clickEvent => {
+        clickEvent.stopPropagation();
+        showCalendarEventDetails(event);
       });
+      eventBox.appendChild(eventEl);
+    });
 
-      grid.appendChild(cell);
-    }
-  } catch (error) {
-    grid.textContent = error.message;
+    grid.appendChild(cell);
   }
 
   if (prevBtn) {
     prevBtn.onclick = () => {
       calendarDate = new Date(year, month - 1, 1);
-      loadCalendar();
+      renderCalendarMonth();
     };
   }
 
   if (nextBtn) {
     nextBtn.onclick = () => {
       calendarDate = new Date(year, month + 1, 1);
-      loadCalendar();
+      renderCalendarMonth();
     };
   }
 }
 
+async function loadCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const title = document.getElementById("calendarMonthTitle");
+
+  if (!grid || !title) return;
+
+  if (!calendarEventsCache.length) {
+    grid.textContent = "Loading calendar...";
+  } else {
+    renderCalendarMonth();
+  }
+
+  try {
+    const response = await fetch(`/api/calendar/events?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load calendar.");
+    }
+
+    calendarEventsCache = Array.isArray(data.events) ? data.events : [];
+    renderCalendarMonth(calendarEventsCache);
+  } catch (error) {
+    console.warn("Calendar load failed", error);
+    renderCalendarMonth(calendarEventsCache);
+
+    const status = document.getElementById("calendarEventFormStatus");
+    if (status && calendarCurrentUserIsStaff) {
+      status.textContent = `Calendar refresh failed: ${error.message}`;
+    }
+  }
+}
 
 function formatShortDateTime(value) {
   if (!value) return "TBD";
@@ -2567,12 +2594,24 @@ async function saveCalendarEventForm(event) {
       : "Event saved.";
   }
 
-  setTimeout(() => {
-    clearCalendarEventForm();
-    loadCalendar();
-    loadUpcomingEventsWidget();
-    loadHomeEventWidgets();
-  }, 700);
+  if (data.event) {
+    calendarEventsCache = [
+      ...calendarEventsCache.filter(item => item.id !== data.event.id),
+      data.event
+    ].sort((a, b) => new Date(getCalendarEventStart(a) || 0) - new Date(getCalendarEventStart(b) || 0));
+    renderCalendarMonth(calendarEventsCache);
+  }
+
+  clearCalendarEventForm();
+  if (status) {
+    status.textContent = data.event?.womCompetitionId
+      ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} created. Discord will sync in the background.`
+      : "Event saved instantly. Discord will sync in the background.";
+  }
+
+  loadCalendar();
+  loadUpcomingEventsWidget();
+  loadHomeEventWidgets();
 }
 
 function getCalendarEventSource(event) {
@@ -2611,10 +2650,12 @@ async function deleteCalendarEvent(eventId) {
       throw new Error(data.error || "Could not delete event.");
     }
 
+    calendarEventsCache = calendarEventsCache.filter(event => event.id !== eventId);
     closeCalendarEventDetails();
-    await loadCalendar();
-    await loadUpcomingEventsWidget();
-    await loadHomeEventWidgets();
+    renderCalendarMonth(calendarEventsCache);
+    loadCalendar();
+    loadUpcomingEventsWidget();
+    loadHomeEventWidgets();
   } catch (error) {
     alert(error.message || "Could not delete event.");
 
@@ -2650,7 +2691,7 @@ function showCalendarEventDetails(event) {
     <div class="calendar-event-details-card" role="dialog" aria-modal="true" aria-labelledby="calendarEventDetailsTitle">
       <div class="calendar-event-details-header">
         <div>
-          <p class="eyebrow">${isSiteEvent ? "Ironkin Calendar Event" : "Synced Calendar Event"}</p>
+          <p class="eyebrow">${isSiteEvent ? "Ironkin Calendar Event" : "External Calendar Event"}</p>
           <h2 id="calendarEventDetailsTitle">${escapeHtml(event.title || "Untitled Event")}</h2>
         </div>
 
@@ -2685,7 +2726,7 @@ function showCalendarEventDetails(event) {
         <button class="btn primary" id="calendarCloseEventBtn" type="button">Close</button>
       </div>
 
-      ${!isSiteEvent ? `<p class="admin-muted">Synced Google Calendar events are view-only here.</p>` : ""}
+      ${!isSiteEvent ? `<p class="admin-muted">External calendar events are view-only here.</p>` : ""}
     </div>
   `;
 

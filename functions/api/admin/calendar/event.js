@@ -1,10 +1,11 @@
+import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, syncDiscordCalendarBoard } from "../../../_discordCalendar.js";
+
 const STAFF_ROLE_IDS = [
   "1364734283356569620",
   "1365445491776815104"
 ];
 
 const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
-const GOOGLE_CACHE_KEY = "calendar:events";
 const ACTIVE_EVENTS_KEY = "events:active";
 
 function getSession(request) {
@@ -67,28 +68,32 @@ async function saveCustomCalendarEvent(env, event) {
   const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
   const index = events.findIndex(item => item.id === event.id);
 
-  if (index >= 0) events[index] = event;
+  if (event.featured === true) {
+    events.forEach(item => {
+      item.featured = false;
+    });
+  }
+
+  if (index >= 0) events[index] = { ...events[index], ...event, updatedAt: new Date().toISOString() };
   else events.push(event);
 
   events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
 
   await env.CALENDAR_KV.put(CUSTOM_CALENDAR_EVENTS_KEY, JSON.stringify(events));
-  await env.CALENDAR_KV.delete(GOOGLE_CACHE_KEY).catch(() => null);
 
   return events;
 }
 
 async function deleteCustomCalendarEvent(env, eventId) {
   const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const event = events.find(item => item.id === eventId);
+
+  if (!event) return null;
+
   const remaining = events.filter(item => item.id !== eventId);
-  const deleted = remaining.length !== events.length;
-
-  if (!deleted) return false;
-
   await env.CALENDAR_KV.put(CUSTOM_CALENDAR_EVENTS_KEY, JSON.stringify(remaining));
-  await env.CALENDAR_KV.delete(GOOGLE_CACHE_KEY).catch(() => null);
 
-  return true;
+  return event;
 }
 
 async function deleteActiveEvent(env, eventId) {
@@ -130,12 +135,18 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
       : []
   };
 
+  if (activeEvent.featured === true) {
+    events.forEach(item => {
+      item.featured = false;
+    });
+  }
+
   const index = events.findIndex(item => item.id === activeEvent.id);
   if (index >= 0) {
     events[index] = {
       ...events[index],
       ...activeEvent,
-      milestones: Array.isArray(events[index].milestones) ? events[index].milestones : []
+      milestones: Array.isArray(events[index].milestones) ? events[index].milestones : activeEvent.milestones
     };
   } else {
     events.push(activeEvent);
@@ -182,7 +193,7 @@ async function createWomCompetition(env, event) {
   return competition;
 }
 
-export async function onRequestDelete({ request, env }) {
+export async function onRequestDelete({ request, env, waitUntil }) {
   if (!isStaff(request)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
@@ -199,9 +210,9 @@ export async function onRequestDelete({ request, env }) {
       return Response.json({ error: "Missing event ID." }, { status: 400 });
     }
 
-    const deleted = await deleteCustomCalendarEvent(env, eventId);
+    const deletedEvent = await deleteCustomCalendarEvent(env, eventId);
 
-    if (!deleted) {
+    if (!deletedEvent) {
       return Response.json(
         { error: "Event not found or cannot be deleted from here." },
         { status: 404 }
@@ -210,13 +221,17 @@ export async function onRequestDelete({ request, env }) {
 
     await deleteActiveEvent(env, eventId);
 
+    const discordSync = mirrorCalendarEventDelete(env, deletedEvent);
+    if (typeof waitUntil === "function") waitUntil(discordSync);
+    else await discordSync.catch(() => null);
+
     return Response.json({ success: true, deletedId: eventId });
   } catch (error) {
     return Response.json({ error: error.message || "Could not delete calendar event." }, { status: 500 });
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   if (!isStaff(request)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
@@ -273,6 +288,10 @@ export async function onRequestPost({ request, env }) {
 
     await saveCustomCalendarEvent(env, event);
     if (event.womCompetitionId) await addOrUpdateActiveEvent(env, event);
+
+    const discordSync = mirrorCalendarEventCreate(env, event);
+    if (typeof waitUntil === "function") waitUntil(discordSync);
+    else await discordSync.catch(() => null);
 
     return Response.json({ success: true, event });
   } catch (error) {
