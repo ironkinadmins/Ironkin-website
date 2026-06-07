@@ -86,6 +86,30 @@ function getTimeRemaining(endDate) {
   return `${hours}h`;
 }
 
+function getCountdownToStart(startDate) {
+  const start = new Date(startDate);
+  const now = new Date();
+  const diff = start - now;
+
+  if (!Number.isFinite(start.getTime())) return "Soon";
+  if (diff <= 0) return "Started";
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function isBeforeEventStart(standings, event) {
+  const startValue = standings?.startsAt || event?.startDate || event?.start;
+  if (!startValue) return false;
+  const start = new Date(startValue);
+  return Number.isFinite(start.getTime()) && Date.now() < start.getTime();
+}
+
 
 function getEventMetricLabel(event) {
   if (event?.type === "sotw") return "XP";
@@ -589,6 +613,46 @@ async function loadHomeStats() {
     }
 
     const standings = await fetchEventStandings(featuredEvent).catch(() => null);
+    const eventHasNotStarted = isBeforeEventStart(standings, featuredEvent);
+
+    if (eventHasNotStarted) {
+      const eventPercent = document.getElementById("homeEventPercent");
+      const eventTitle = document.getElementById("homeEventTitle");
+      const eventMeta = document.getElementById("homeEventMeta");
+      const topThree = document.getElementById("homeTopThree");
+      const featuredStats = document.getElementById("homeFeaturedStats");
+      const homeTotalGained = document.getElementById("homeTotalGained");
+      const homeClanXp = document.getElementById("homeClanXp");
+      const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
+
+      if (eventPercent) eventPercent.textContent = formatEventType(featuredEvent.type);
+      if (eventTitle) eventTitle.textContent = displayEventTitle(standings?.title || featuredEvent.title, featuredEvent.type);
+      if (eventMeta) eventMeta.textContent = standings?.startsAt
+        ? `Starts ${new Date(standings.startsAt).toLocaleString()}`
+        : "Tracking will begin once the event starts.";
+      if (homeTotalGained) homeTotalGained.textContent = "Event Starting Soon";
+      if (homeClanXp) homeClanXp.textContent = `Starts in ${startText}`;
+      if (featuredStats) {
+        featuredStats.innerHTML = `
+          <div class="featured-stat">
+            <strong>${startText}</strong>
+            <span>Until Start</span>
+          </div>
+
+          <div class="featured-stat">
+            <strong>${standings?.participantCount || 0}</strong>
+            <span>Registered</span>
+          </div>
+
+          <div class="featured-stat">
+            <strong>Ready</strong>
+            <span>WOM Linked</span>
+          </div>
+        `;
+      }
+      if (topThree) topThree.textContent = "Progress tracking will begin when the WOM competition starts.";
+      return;
+    }
 
     if (!standings && !String(featuredEvent?.type || "").includes("clan-goal")) {
       const archive = await fetchArchive().catch(() => []);
@@ -974,8 +1038,9 @@ async function loadSingleEventDashboard() {
     }
 
     const standings = await fetchEventStandings(event).catch(() => null);
+    const eventHasNotStarted = isBeforeEventStart(standings, event);
 
-    const totalGained = standings?.totalGained || 0;
+    const totalGained = eventHasNotStarted ? 0 : (standings?.totalGained || 0);
     const contributors = standings?.contributors || 0;
     const goal = event.target || event.goal || null;
 
@@ -1021,9 +1086,11 @@ async function loadSingleEventDashboard() {
         ? formatNumber(goal)
         : formatNumber(highestGain);
 
-    const topContributors = standings?.standings
-      ?.filter(player => player.gained > 0)
-      .slice(0, 5) || [];
+    const topContributors = eventHasNotStarted
+      ? []
+      : (standings?.standings
+        ?.filter(player => player.gained > 0)
+        .slice(0, 5) || []);
 
     const eventDateText =
       standings?.startsAt && standings?.endsAt
@@ -1075,6 +1142,18 @@ async function loadSingleEventDashboard() {
         </div>
 
         <div class="event-detail-body">
+
+          ${
+            eventHasNotStarted
+              ? `
+                <div class="event-starting-soon-panel">
+                  <p class="eyebrow">Event Starting Soon</p>
+                  <h2>Starts in ${getCountdownToStart(standings?.startsAt || event.startDate || event.start)}</h2>
+                  <p>Progress tracking will begin when the Wise Old Man competition starts.</p>
+                </div>
+              `
+              : ""
+          }
 
           <div class="event-kpi-grid">
 
@@ -1135,7 +1214,7 @@ async function loadSingleEventDashboard() {
                           <span>${formatNumber(player.gained)} gained</span>
                         </div>
                       `).join("")
-                    : "No gained KC/XP yet."
+                    : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC/XP yet.")
                 }
 
               </div>
@@ -1738,7 +1817,13 @@ async function changeDrop(name, direction) {
 let calendarFilter = "all";
 
 function getCalendarEventType(event) {
-  if (event?.eventType) return String(event.eventType).replace("clan-goal-skill", "challenge").replace("clan-goal-boss", "mass");
+  if (event?.eventType) {
+    const type = String(event.eventType);
+    if (type === "normal") return "other";
+    if (type === "clan-goal-skill") return "challenge";
+    if (type === "clan-goal-boss") return "mass";
+    return type;
+  }
   if (event?.category) return String(event.category);
 
   const title = String(event.title || "").toLowerCase();
@@ -2373,33 +2458,46 @@ function getCalendarDateTimeValue(dateId, timeId) {
 function updateCalendarWomFields() {
   const createWomInput = document.getElementById("calendarCreateWomInput");
   const eventTypeInput = document.getElementById("calendarEventTypeInput");
+  const competitionTypeInput = document.getElementById("calendarCompetitionTypeInput");
   const panel = document.getElementById("calendarWomPanel");
+  const competitionTypeField = document.getElementById("calendarCompetitionTypeField");
   const skillField = document.getElementById("calendarSkillMetricField");
   const bossField = document.getElementById("calendarBossMetricField");
   const targetField = document.getElementById("calendarTargetField");
   const targetLabel = document.getElementById("calendarTargetLabel");
 
   const createWom = createWomInput?.checked === true;
-  const eventType = eventTypeInput?.value || "mass";
-  const needsBoss = eventType === "botw" || eventType === "clan-goal-boss";
-  const needsSkill = eventType === "sotw" || eventType === "clan-goal-skill";
+  const eventType = eventTypeInput?.value || "normal";
+  let competitionType = competitionTypeInput?.value || "boss-kc";
+
+  if (eventType === "sotw" || eventType === "clan-goal-skill") competitionType = "skill-xp";
+  if (eventType === "botw" || eventType === "clan-goal-boss" || eventType === "mass") competitionType = "boss-kc";
+  if (competitionTypeInput) competitionTypeInput.value = competitionType;
+
+  const needsSkill = competitionType === "skill-xp";
+  const needsBoss = competitionType === "boss-kc";
   const needsTarget = eventType === "clan-goal-skill" || eventType === "clan-goal-boss";
 
   if (panel) panel.hidden = !createWom;
+  if (competitionTypeField) {
+    competitionTypeField.hidden = !createWom || eventType === "sotw" || eventType === "botw" || eventType === "mass" || eventType.startsWith("clan-goal");
+  }
   if (skillField) skillField.hidden = !createWom || !needsSkill;
   if (bossField) bossField.hidden = !createWom || !needsBoss;
   if (targetField) targetField.hidden = !createWom || !needsTarget;
-  if (targetLabel) targetLabel.textContent = eventType === "clan-goal-skill" ? "Target XP" : "Target KC";
+  if (targetLabel) targetLabel.textContent = needsSkill ? "Target XP" : "Target KC";
+}
 
-  if (createWom && eventType === "mass") {
-    if (skillField) skillField.hidden = true;
-    if (bossField) bossField.hidden = false;
-  }
+function getCalendarCompetitionTypeForForm() {
+  const eventType = document.getElementById("calendarEventTypeInput")?.value || "normal";
+  if (eventType === "sotw" || eventType === "clan-goal-skill") return "skill-xp";
+  if (eventType === "botw" || eventType === "clan-goal-boss" || eventType === "mass") return "boss-kc";
+  return document.getElementById("calendarCompetitionTypeInput")?.value || "boss-kc";
 }
 
 function getCalendarWomMetricForForm() {
-  const eventType = document.getElementById("calendarEventTypeInput")?.value || "mass";
-  if (eventType === "sotw" || eventType === "clan-goal-skill") {
+  const competitionType = getCalendarCompetitionTypeForForm();
+  if (competitionType === "skill-xp") {
     return document.getElementById("calendarSkillMetricInput")?.value || "";
   }
   return document.getElementById("calendarBossMetricInput")?.value || "";
@@ -2416,7 +2514,7 @@ async function saveCalendarEventForm(event) {
   const payload = {
     title: document.getElementById("calendarEventTitleInput")?.value.trim(),
     description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
-    location: document.getElementById("calendarEventLocationInput")?.value.trim(),
+    location: "",
     start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput"),
     end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput"),
     eventType,
@@ -2424,12 +2522,12 @@ async function saveCalendarEventForm(event) {
     createWom,
     womMetric: createWom ? getCalendarWomMetricForForm() : "",
     target: createWom && targetValue ? Number(targetValue) : null,
-    goalKind: eventType === "clan-goal-skill" ? "skill-xp" : eventType === "clan-goal-boss" ? "boss-kc" : "",
+    goalKind: getCalendarCompetitionTypeForForm(),
     featured: document.getElementById("calendarFeaturedInput")?.checked === true,
     dropsEnabled: true
   };
 
-  if (status) status.textContent = createWom ? "Saving event and creating WOM competition..." : "Saving event...";
+  if (status) status.textContent = createWom ? "Saving event, creating WOM competition, and syncing the admin dashboard..." : "Saving event...";
 
   const response = await fetch("/api/admin/calendar/event", {
     method: "POST",
@@ -2486,6 +2584,7 @@ async function setupCalendarAdminTools() {
   document.getElementById("clearCalendarEventBtn")?.addEventListener("click", clearCalendarEventForm);
   document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
+  document.getElementById("calendarCompetitionTypeInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventForm")?.addEventListener("submit", saveCalendarEventForm);
   loadCalendar();
 }

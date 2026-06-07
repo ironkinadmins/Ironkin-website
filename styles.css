@@ -6757,3 +6757,22 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
     max-height: none;
   }
 }
+
+.event-starting-soon-panel {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(255, 122, 26, 0.14), rgba(0, 0, 0, 0.28));
+}
+
+.event-starting-soon-panel h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  color: var(--accent);
+}
+
+.event-starting-soon-panel p:last-child {
+  margin-bottom: 0;
+  color: var(--muted);
+}

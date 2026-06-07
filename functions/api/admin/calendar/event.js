@@ -44,9 +44,9 @@ function getLabelForType(type) {
   if (type === "sotw") return "SOTW";
   if (type === "botw") return "BOTW";
   if (type === "clan-goal-skill" || type === "clan-goal-boss") return "Clan Goal";
-  if (type === "mass") return "Mass";
+  if (type === "normal") return "Normal Event";
+  if (type === "mass") return "Clan Mass";
   if (type === "giveaway") return "Giveaway";
-  if (type === "bingo") return "Bingo";
   return "Event";
 }
 
@@ -97,7 +97,13 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
     endDate: calendarEvent.end,
     metric: calendarEvent.womMetric || null,
     goalKind: calendarEvent.goalKind || null,
-    milestones: []
+    milestones: calendarEvent.eventType === "clan-goal-skill" || calendarEvent.eventType === "clan-goal-boss"
+      ? [
+          { percent: 33, title: "Clan Mass" },
+          { percent: 66, title: "Bonus Embers" },
+          { percent: 100, title: "Bond Giveaway" }
+        ]
+      : []
   };
 
   const index = events.findIndex(item => item.id === activeEvent.id);
