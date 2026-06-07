@@ -1928,6 +1928,36 @@ function getCalendarEventStart(event) {
   return event?.start || event?.startDate || event?.date || "";
 }
 
+function getCalendarEventEnd(event) {
+  return event?.end || event?.endDate || getCalendarEventStart(event);
+}
+
+function getDateOnlyKey(value) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) {
+    return String(value).slice(0, 10);
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isCalendarEventOnDate(event, dateKey) {
+  const startKey = getDateOnlyKey(getCalendarEventStart(event));
+  const endKey = getDateOnlyKey(getCalendarEventEnd(event));
+
+  if (!startKey) return false;
+  return dateKey >= startKey && dateKey <= (endKey || startKey);
+}
+
+function isCalendarEventCancelled(event) {
+  return String(event?.status || "").toLowerCase() === "cancelled";
+}
+
 function renderCalendarMonth(events = calendarEventsCache) {
   const grid = document.getElementById("calendarGrid");
   const title = document.getElementById("calendarMonthTitle");
@@ -1968,11 +1998,7 @@ function renderCalendarMonth(events = calendarEventsCache) {
 
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-    const dayEvents = filteredEvents.filter(event => {
-      const eventStart = getCalendarEventStart(event);
-      if (!eventStart) return false;
-      return String(eventStart).slice(0, 10) === dateKey;
-    });
+    const dayEvents = filteredEvents.filter(event => isCalendarEventOnDate(event, dateKey));
 
     if (calendarCurrentUserIsStaff) {
       cell.classList.add("calendar-staff-create");
@@ -1990,8 +2016,10 @@ function renderCalendarMonth(events = calendarEventsCache) {
     dayEvents.forEach(event => {
       const eventEl = document.createElement("div");
       const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
-      eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}`;
-      eventEl.textContent = event.title || "Untitled Event";
+      const cancelledClass = isCalendarEventCancelled(event) ? " calendar-event-cancelled" : "";
+      eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}${cancelledClass}`;
+      const timeText = String(getDateOnlyKey(getCalendarEventStart(event)) || "") === dateKey ? formatCalendarTime(getCalendarEventStart(event)) : "↔";
+      eventEl.textContent = `${timeText ? `${timeText} · ` : ""}${event.title || "Untitled Event"}`;
       eventEl.addEventListener("click", clickEvent => {
         clickEvent.stopPropagation();
         showCalendarEventDetails(event);
@@ -2053,11 +2081,27 @@ async function loadCalendar() {
 function formatShortDateTime(value) {
   if (!value) return "TBD";
 
-  return new Date(value).toLocaleString("en-US", {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+
+  return date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+function formatCalendarTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+
+  return date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
   });
 }
 
@@ -2443,6 +2487,8 @@ const WOM_BOSS_OPTIONS = [
 
 let calendarCurrentUserIsStaff = false;
 let calendarSelectedDate = null;
+let calendarEditingEventId = null;
+let calendarEditingEvent = null;
 
 function fillCalendarMetricDropdowns() {
   const skillSelect = document.getElementById("calendarSkillMetricInput");
@@ -2482,10 +2528,15 @@ function setCalendarDateAndTime(dateKey = null) {
 function selectCalendarAdminDate(dateKey = null) {
   calendarSelectedDate = dateKey;
   fillCalendarMetricDropdowns();
-  setCalendarDateAndTime(dateKey);
+  if (!calendarEditingEventId) setCalendarDateAndTime(dateKey);
 
   const status = document.getElementById("calendarEventFormStatus");
   if (status) status.textContent = dateKey ? `Selected ${dateKey}. Fill in the event details and save.` : "";
+}
+
+function setCalendarFormTitle(text) {
+  const title = document.getElementById("calendarAdminFormTitle");
+  if (title) title.textContent = text;
 }
 
 function clearCalendarEventForm() {
@@ -2493,9 +2544,28 @@ function clearCalendarEventForm() {
   const status = document.getElementById("calendarEventFormStatus");
   if (form) form.reset();
   calendarSelectedDate = null;
+  calendarEditingEventId = null;
+  calendarEditingEvent = null;
   if (status) status.textContent = "";
+  setCalendarFormTitle("Create Event");
   setCalendarDateAndTime();
   updateCalendarWomFields();
+}
+
+function splitCalendarDateTime(value) {
+  if (!value) return { date: "", time: "" };
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
+    return { date: raw.slice(0, 10), time: raw.slice(11, 16) };
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return { date: "", time: "" };
+  const pad = item => String(item).padStart(2, "0");
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  };
 }
 
 function getCalendarDateTimeValue(dateId, timeId) {
@@ -2514,10 +2584,12 @@ function updateCalendarWomFields() {
   const bossField = document.getElementById("calendarBossMetricField");
   const targetField = document.getElementById("calendarTargetField");
   const targetLabel = document.getElementById("calendarTargetLabel");
+  const womAlreadyLinked = document.getElementById("calendarWomAlreadyLinked");
 
   const createWom = createWomInput?.checked === true;
   const eventType = eventTypeInput?.value || "normal";
   const isClanGoal = eventType === "clan-goal";
+  const hasExistingWom = Boolean(calendarEditingEvent?.womCompetitionId);
 
   let competitionType = competitionTypeInput?.value || "boss-kc";
   if (eventType === "sotw") competitionType = "skill-xp";
@@ -2527,12 +2599,16 @@ function updateCalendarWomFields() {
   const needsSkill = competitionType === "skill-xp";
   const needsBoss = competitionType === "boss-kc";
 
-  if (panel) panel.hidden = !createWom;
-  if (competitionTypeField) competitionTypeField.hidden = !createWom || eventType === "sotw" || eventType === "botw" || eventType === "mass";
-  if (skillField) skillField.hidden = !createWom || !needsSkill;
-  if (bossField) bossField.hidden = !createWom || !needsBoss;
-  if (targetField) targetField.hidden = !createWom || !isClanGoal;
+  if (panel) panel.hidden = !createWom && !hasExistingWom;
+  if (competitionTypeField) competitionTypeField.hidden = !createWom || hasExistingWom || eventType === "sotw" || eventType === "botw" || eventType === "mass";
+  if (skillField) skillField.hidden = !createWom || hasExistingWom || !needsSkill;
+  if (bossField) bossField.hidden = !createWom || hasExistingWom || !needsBoss;
+  if (targetField) targetField.hidden = (!createWom && !hasExistingWom) || !isClanGoal;
   if (targetLabel) targetLabel.textContent = needsSkill ? "Target XP" : "Target KC";
+  if (womAlreadyLinked) {
+    womAlreadyLinked.hidden = !hasExistingWom;
+    womAlreadyLinked.textContent = hasExistingWom ? `WOM already linked: #${calendarEditingEvent.womCompetitionId}. Saving will not create a duplicate.` : "";
+  }
 }
 
 function getCalendarCompetitionTypeForForm() {
@@ -2550,15 +2626,64 @@ function getCalendarWomMetricForForm() {
   return document.getElementById("calendarBossMetricInput")?.value || "";
 }
 
+function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
+  closeCalendarEventDetails();
+  fillCalendarMetricDropdowns();
+
+  calendarEditingEventId = duplicate ? null : event.id;
+  calendarEditingEvent = duplicate ? null : event;
+
+  const titleInput = document.getElementById("calendarEventTitleInput");
+  const typeInput = document.getElementById("calendarEventTypeInput");
+  const descInput = document.getElementById("calendarEventDescriptionInput");
+  const createWomInput = document.getElementById("calendarCreateWomInput");
+  const featuredInput = document.getElementById("calendarFeaturedInput");
+  const targetInput = document.getElementById("calendarTargetInput");
+  const skillInput = document.getElementById("calendarSkillMetricInput");
+  const bossInput = document.getElementById("calendarBossMetricInput");
+  const competitionInput = document.getElementById("calendarCompetitionTypeInput");
+  const startDateInput = document.getElementById("calendarEventStartDateInput");
+  const startTimeInput = document.getElementById("calendarEventStartTimeInput");
+  const endDateInput = document.getElementById("calendarEventEndDateInput");
+  const endTimeInput = document.getElementById("calendarEventEndTimeInput");
+  const status = document.getElementById("calendarEventFormStatus");
+
+  if (titleInput) titleInput.value = duplicate ? `${event.title || "Untitled Event"} Copy` : (event.title || "");
+  if (typeInput) typeInput.value = event.eventType || event.category || "normal";
+  if (descInput) descInput.value = event.description || "";
+  if (featuredInput) featuredInput.checked = event.featured === true;
+  if (targetInput) targetInput.value = event.target || "";
+  if (createWomInput) createWomInput.checked = duplicate ? false : Boolean(event.womCompetitionId);
+
+  const goalKind = event.goalKind || (event.eventType === "sotw" ? "skill-xp" : "boss-kc");
+  if (competitionInput) competitionInput.value = goalKind;
+  if (goalKind === "skill-xp" && skillInput && event.womMetric) skillInput.value = event.womMetric;
+  if (goalKind !== "skill-xp" && bossInput && event.womMetric) bossInput.value = event.womMetric;
+
+  const start = splitCalendarDateTime(event.start);
+  const end = splitCalendarDateTime(event.end);
+  if (startDateInput) startDateInput.value = start.date;
+  if (startTimeInput) startTimeInput.value = start.time;
+  if (endDateInput) endDateInput.value = end.date;
+  if (endTimeInput) endTimeInput.value = end.time;
+
+  setCalendarFormTitle(duplicate ? "Duplicate Event" : "Edit Event");
+  updateCalendarWomFields();
+  if (status) status.textContent = duplicate ? "Duplicating this event. Adjust anything needed, then save." : "Editing existing event. Save to update the calendar and Discord.";
+}
+
 async function saveCalendarEventForm(event) {
   event.preventDefault();
 
   const status = document.getElementById("calendarEventFormStatus");
-  const createWom = document.getElementById("calendarCreateWomInput")?.checked === true;
+  const createWomInput = document.getElementById("calendarCreateWomInput");
   const eventType = document.getElementById("calendarEventTypeInput")?.value || "mass";
   const targetValue = document.getElementById("calendarTargetInput")?.value || "";
+  const alreadyHasWom = Boolean(calendarEditingEvent?.womCompetitionId);
+  const createWom = createWomInput?.checked === true && !alreadyHasWom;
 
   const payload = {
+    id: calendarEditingEventId || undefined,
     title: document.getElementById("calendarEventTitleInput")?.value.trim(),
     description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
     location: "",
@@ -2567,14 +2692,16 @@ async function saveCalendarEventForm(event) {
     eventType,
     category: eventType,
     createWom,
-    womMetric: createWom ? getCalendarWomMetricForForm() : "",
-    target: createWom && targetValue ? Number(targetValue) : null,
+    womMetric: (createWom || alreadyHasWom) ? getCalendarWomMetricForForm() : "",
+    womCompetitionId: alreadyHasWom ? calendarEditingEvent.womCompetitionId : "",
+    target: (createWom || alreadyHasWom) && targetValue ? Number(targetValue) : null,
     goalKind: getCalendarCompetitionTypeForForm(),
     featured: document.getElementById("calendarFeaturedInput")?.checked === true,
-    dropsEnabled: true
+    dropsEnabled: true,
+    status: calendarEditingEvent?.status || "scheduled"
   };
 
-  if (status) status.textContent = createWom ? "Saving event, creating WOM competition, and syncing the admin dashboard..." : "Saving event...";
+  if (status) status.textContent = createWom ? "Saving event and creating WOM competition..." : (calendarEditingEventId ? "Updating event..." : "Saving event...");
 
   const response = await fetch("/api/admin/calendar/event", {
     method: "POST",
@@ -2588,12 +2715,6 @@ async function saveCalendarEventForm(event) {
     return;
   }
 
-  if (status) {
-    status.textContent = data.event?.womCompetitionId
-      ? `Event saved. WOM competition #${data.event.womCompetitionId} created.`
-      : "Event saved.";
-  }
-
   if (data.event) {
     calendarEventsCache = [
       ...calendarEventsCache.filter(item => item.id !== data.event.id),
@@ -2602,12 +2723,12 @@ async function saveCalendarEventForm(event) {
     renderCalendarMonth(calendarEventsCache);
   }
 
+  const message = data.event?.womCompetitionId
+    ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} linked. Discord will sync in the background.`
+    : "Event saved instantly. Discord will sync in the background.";
+
   clearCalendarEventForm();
-  if (status) {
-    status.textContent = data.event?.womCompetitionId
-      ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} created. Discord will sync in the background.`
-      : "Event saved instantly. Discord will sync in the background.";
-  }
+  if (status) status.textContent = message;
 
   loadCalendar();
   loadUpcomingEventsWidget();
@@ -2615,11 +2736,15 @@ async function saveCalendarEventForm(event) {
 }
 
 function getCalendarEventSource(event) {
-  return String(event?.source || event?.calendarSource || "");
+  return String(event?.source || event?.calendarSource || "ironkin-admin");
+}
+
+function canManageCalendarEvent(event) {
+  return calendarCurrentUserIsStaff && getCalendarEventSource(event) === "ironkin-admin" && Boolean(event?.id);
 }
 
 function canDeleteCalendarEvent(event) {
-  return calendarCurrentUserIsStaff && getCalendarEventSource(event) === "ironkin-admin" && Boolean(event?.id);
+  return canManageCalendarEvent(event);
 }
 
 function closeCalendarEventDetails() {
@@ -2666,6 +2791,45 @@ async function deleteCalendarEvent(eventId) {
   }
 }
 
+async function cancelCalendarEvent(eventId) {
+  const confirmed = confirm("Cancel this calendar event? It will stay on the site as cancelled and be removed from Discord scheduled events.");
+  if (!confirmed) return;
+
+  const cancelButton = document.getElementById("calendarCancelEventBtn");
+  if (cancelButton) {
+    cancelButton.disabled = true;
+    cancelButton.textContent = "Cancelling...";
+  }
+
+  try {
+    const event = calendarEventsCache.find(item => item.id === eventId);
+    if (!event) throw new Error("Event not found.");
+
+    const response = await fetch("/api/admin/calendar/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...event, status: "cancelled", createWom: false })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not cancel event.");
+
+    calendarEventsCache = [
+      ...calendarEventsCache.filter(item => item.id !== data.event.id),
+      data.event
+    ];
+    closeCalendarEventDetails();
+    renderCalendarMonth(calendarEventsCache);
+    loadCalendar();
+  } catch (error) {
+    alert(error.message || "Could not cancel event.");
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = "Cancel Event";
+    }
+  }
+}
+
 function showCalendarEventDetails(event) {
   closeCalendarEventDetails();
 
@@ -2673,7 +2837,9 @@ function showCalendarEventDetails(event) {
   const ends = event.end ? formatShortDateTime(event.end) : "TBD";
   const source = getCalendarEventSource(event);
   const isSiteEvent = source === "ironkin-admin";
+  const canManage = canManageCalendarEvent(event);
   const showDelete = canDeleteCalendarEvent(event);
+  const cancelled = isCalendarEventCancelled(event);
 
   const womLink = event.womCompetitionId
     ? `
@@ -2691,7 +2857,7 @@ function showCalendarEventDetails(event) {
     <div class="calendar-event-details-card" role="dialog" aria-modal="true" aria-labelledby="calendarEventDetailsTitle">
       <div class="calendar-event-details-header">
         <div>
-          <p class="eyebrow">${isSiteEvent ? "Ironkin Calendar Event" : "External Calendar Event"}</p>
+          <p class="eyebrow">${cancelled ? "Cancelled Event" : "Ironkin Calendar Event"}</p>
           <h2 id="calendarEventDetailsTitle">${escapeHtml(event.title || "Untitled Event")}</h2>
         </div>
 
@@ -2709,10 +2875,15 @@ function showCalendarEventDetails(event) {
           <strong>${escapeHtml(ends)}</strong>
         </div>
 
-        ${event.location ? `
+        <div>
+          <span>Status</span>
+          <strong>${escapeHtml(cancelled ? "Cancelled" : (event.status || "Scheduled"))}</strong>
+        </div>
+
+        ${event.womCompetitionId ? `
           <div>
-            <span>Location</span>
-            <strong>${escapeHtml(event.location)}</strong>
+            <span>WOM</span>
+            <strong>#${escapeHtml(event.womCompetitionId)}</strong>
           </div>
         ` : ""}
       </div>
@@ -2722,11 +2893,14 @@ function showCalendarEventDetails(event) {
       ${womLink}
 
       <div class="calendar-event-details-actions">
+        ${canManage ? `<button class="btn secondary" id="calendarEditEventBtn" type="button">Edit Event</button>` : ""}
+        ${canManage ? `<button class="btn secondary" id="calendarDuplicateEventBtn" type="button">Duplicate</button>` : ""}
+        ${canManage && !cancelled ? `<button class="btn secondary danger" id="calendarCancelEventBtn" type="button">Cancel Event</button>` : ""}
         ${showDelete ? `<button class="btn secondary danger" id="calendarDeleteEventBtn" type="button">Delete Event</button>` : ""}
         <button class="btn primary" id="calendarCloseEventBtn" type="button">Close</button>
       </div>
 
-      ${!isSiteEvent ? `<p class="admin-muted">External calendar events are view-only here.</p>` : ""}
+      <p class="admin-muted">Times are shown in your local timezone.</p>
     </div>
   `;
 
@@ -2735,6 +2909,9 @@ function showCalendarEventDetails(event) {
   backdrop.querySelector(".calendar-modal-close")?.addEventListener("click", closeCalendarEventDetails);
   backdrop.querySelector("#calendarCloseEventBtn")?.addEventListener("click", closeCalendarEventDetails);
   backdrop.querySelector("#calendarDeleteEventBtn")?.addEventListener("click", () => deleteCalendarEvent(event.id));
+  backdrop.querySelector("#calendarCancelEventBtn")?.addEventListener("click", () => cancelCalendarEvent(event.id));
+  backdrop.querySelector("#calendarEditEventBtn")?.addEventListener("click", () => setCalendarEventFormFromEvent(event));
+  backdrop.querySelector("#calendarDuplicateEventBtn")?.addEventListener("click", () => setCalendarEventFormFromEvent(event, { duplicate: true }));
   backdrop.addEventListener("click", clickEvent => {
     if (clickEvent.target === backdrop) closeCalendarEventDetails();
   });

@@ -34,8 +34,9 @@
         <form class="calendar-sidebar-form" id="calendarEventForm">
           <div>
             <p class="eyebrow">Staff Calendar Admin</p>
-            <h2>Create Event</h2>
+            <h2 id="calendarAdminFormTitle">Create Event</h2>
             <p class="admin-muted">Click any day on the calendar to fill the date, or set it manually below.</p>
+            <p class="calendar-timezone-note">🕒 Enter all admin times in Eastern Time (ET). Members will see Discord times in their own local timezone.</p>
           </div>
 
           <label>
@@ -116,6 +117,7 @@
               <span>Feature this event on the homepage</span>
             </label>
 
+            <p class="admin-muted" id="calendarWomAlreadyLinked" hidden></p>
             <p class="admin-muted">Milestones stay editable from your existing Admin Dashboard after the event is created.</p>
           </div>
 
@@ -148,6 +150,7 @@
       <div id="calendarGrid" class="calendar-grid">
         Loading calendar...
       </div>
+      <p class="calendar-local-time-note">Times shown in your local timezone.</p>
       </section>
     </div>
   </main>

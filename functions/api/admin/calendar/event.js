@@ -1,4 +1,4 @@
-import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, syncDiscordCalendarBoard } from "../../../_discordCalendar.js";
+import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, mirrorCalendarEventCancel } from "../../../_discordCalendar.js";
 
 const STAFF_ROLE_IDS = [
   "1364734283356569620",
@@ -23,7 +23,6 @@ function getSession(request) {
 
 function isStaff(request) {
   const session = getSession(request);
-
   return session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId));
 }
 
@@ -53,7 +52,6 @@ function getLabelForType(type) {
 
 async function getJson(kv, key, fallback) {
   if (!kv) return fallback;
-
   const saved = await kv.get(key);
   if (!saved) return fallback;
 
@@ -64,34 +62,45 @@ async function getJson(kv, key, fallback) {
   }
 }
 
+async function putJson(kv, key, value) {
+  await kv.put(key, JSON.stringify(value));
+}
+
+async function getCustomCalendarEvents(env) {
+  return getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+}
+
 async function saveCustomCalendarEvent(env, event) {
-  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const events = await getCustomCalendarEvents(env);
   const index = events.findIndex(item => item.id === event.id);
 
   if (event.featured === true) {
     events.forEach(item => {
-      item.featured = false;
+      if (item.id !== event.id) item.featured = false;
     });
   }
 
-  if (index >= 0) events[index] = { ...events[index], ...event, updatedAt: new Date().toISOString() };
-  else events.push(event);
+  const savedEvent = index >= 0
+    ? { ...events[index], ...event, updatedAt: new Date().toISOString() }
+    : event;
+
+  if (index >= 0) events[index] = savedEvent;
+  else events.push(savedEvent);
 
   events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
+  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, events);
 
-  await env.CALENDAR_KV.put(CUSTOM_CALENDAR_EVENTS_KEY, JSON.stringify(events));
-
-  return events;
+  return { events, event: savedEvent };
 }
 
 async function deleteCustomCalendarEvent(env, eventId) {
-  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const events = await getCustomCalendarEvents(env);
   const event = events.find(item => item.id === eventId);
 
   if (!event) return null;
 
   const remaining = events.filter(item => item.id !== eventId);
-  await env.CALENDAR_KV.put(CUSTOM_CALENDAR_EVENTS_KEY, JSON.stringify(remaining));
+  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, remaining);
 
   return event;
 }
@@ -108,7 +117,10 @@ async function deleteActiveEvent(env, eventId) {
 }
 
 async function addOrUpdateActiveEvent(env, calendarEvent) {
-  if (!env.DROPS_KV || !calendarEvent.womCompetitionId) return;
+  if (!env.DROPS_KV || !calendarEvent.womCompetitionId || calendarEvent.status === "cancelled") {
+    if (calendarEvent.status === "cancelled") await deleteActiveEvent(env, calendarEvent.id);
+    return;
+  }
 
   const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
   const activeEvent = {
@@ -242,9 +254,12 @@ export async function onRequestPost({ request, env, waitUntil }) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const createWom = body.createWom === true;
+    const createWomRequested = body.createWom === true;
+    const events = await getCustomCalendarEvents(env);
+    const existing = cleanText(body.id) ? events.find(item => item.id === cleanText(body.id)) : null;
 
     const event = {
+      ...(existing || {}),
       id: cleanText(body.id) || makeId("calendar"),
       source: "ironkin-admin",
       title: cleanText(body.title, "Untitled Event"),
@@ -258,9 +273,10 @@ export async function onRequestPost({ request, env, waitUntil }) {
       dropsEnabled: body.dropsEnabled !== false,
       target: body.target ? Number(body.target) : null,
       goalKind: cleanText(body.goalKind),
-      womMetric: cleanText(body.womMetric),
-      womCompetitionId: cleanText(body.womCompetitionId) || null,
-      createdAt: new Date().toISOString(),
+      womMetric: cleanText(body.womMetric) || cleanText(existing?.womMetric),
+      womCompetitionId: cleanText(body.womCompetitionId) || cleanText(existing?.womCompetitionId) || null,
+      status: cleanText(body.status, existing?.status || "scheduled"),
+      createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
@@ -272,7 +288,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
       return Response.json({ error: "End date must be after start date." }, { status: 400 });
     }
 
-    if (createWom) {
+    if (event.status === "cancelled") {
+      event.featured = false;
+    }
+
+    if (createWomRequested && !event.womCompetitionId && event.status !== "cancelled") {
       if (!event.womMetric) {
         return Response.json({ error: "Choose a skill or boss metric before creating a WOM competition." }, { status: 400 });
       }
@@ -286,14 +306,19 @@ export async function onRequestPost({ request, env, waitUntil }) {
       event.womCreatedAt = new Date().toISOString();
     }
 
-    await saveCustomCalendarEvent(env, event);
-    if (event.womCompetitionId) await addOrUpdateActiveEvent(env, event);
+    const { event: savedEvent } = await saveCustomCalendarEvent(env, event);
 
-    const discordSync = mirrorCalendarEventCreate(env, event);
+    if (savedEvent.status === "cancelled") await deleteActiveEvent(env, savedEvent.id);
+    else if (savedEvent.womCompetitionId) await addOrUpdateActiveEvent(env, savedEvent);
+
+    const discordSync = savedEvent.status === "cancelled"
+      ? mirrorCalendarEventCancel(env, savedEvent)
+      : mirrorCalendarEventCreate(env, savedEvent);
+
     if (typeof waitUntil === "function") waitUntil(discordSync);
     else await discordSync.catch(() => null);
 
-    return Response.json({ success: true, event });
+    return Response.json({ success: true, event: savedEvent });
   } catch (error) {
     return Response.json({ error: error.message || "Could not save calendar event." }, { status: 500 });
   }

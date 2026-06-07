@@ -6554,8 +6554,7 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 }
 
 .calendar-event-source-ironkin-admin::after {
-  content: " • site";
-  opacity: 0.75;
+  content: "";
 }
 
 .calendar-modal-backdrop {
@@ -6886,4 +6885,31 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 
 .btn.danger:hover {
   background: rgba(255, 92, 92, 0.16);
+}
+
+.calendar-timezone-note,
+.calendar-local-time-note {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 122, 26, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 122, 26, 0.08);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.calendar-local-time-note {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.calendar-event-cancelled {
+  opacity: 0.68;
+  text-decoration: line-through;
+  border-style: dashed;
+}
+
+.calendar-event-details-actions .btn {
+  white-space: nowrap;
 }

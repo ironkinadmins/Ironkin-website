@@ -118,6 +118,25 @@ async function createDiscordScheduledEvent(env, event) {
   return data;
 }
 
+async function updateDiscordScheduledEvent(env, event) {
+  if (!hasDiscordConfig(env) || !event?.discordScheduledEventId || !event?.start) return null;
+
+  const response = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${event.discordScheduledEventId}`, {
+    method: "PATCH",
+    headers: getHeaders(env),
+    body: JSON.stringify(buildScheduledEventPayload(env, event))
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.warn("Discord scheduled event update failed", response.status, data);
+    return null;
+  }
+
+  return data;
+}
+
 async function deleteDiscordScheduledEvent(env, discordScheduledEventId) {
   if (!hasDiscordConfig(env) || !discordScheduledEventId) return;
 
@@ -152,13 +171,17 @@ function buildCurrentEventsEmbed(env, events) {
   const siteUrl = getSiteUrl(env);
   const now = Date.now();
   const normalized = normalizeEvents(events);
-  const active = normalized.filter(event => {
+  const visible = normalized.filter(event => String(event.status || "scheduled").toLowerCase() !== "cancelled");
+  const active = visible.filter(event => {
     const start = new Date(event.start).getTime();
     const end = new Date(event.end || event.start).getTime();
     return start <= now && end >= now;
   });
-  const upcoming = normalized.filter(event => new Date(event.start).getTime() > now).slice(0, 8);
-  const featured = normalized.find(event => event.featured) || active[0] || upcoming[0];
+  const upcoming = visible.filter(event => new Date(event.start).getTime() > now).slice(0, 8);
+  const cancelled = normalized
+    .filter(event => String(event.status || "").toLowerCase() === "cancelled")
+    .slice(0, 3);
+  const featured = visible.find(event => event.featured) || active[0] || upcoming[0];
 
   const fields = [];
 
@@ -185,6 +208,14 @@ function buildCurrentEventsEmbed(env, events) {
       : "No upcoming events found.",
     inline: false
   });
+
+  if (cancelled.length) {
+    fields.push({
+      name: "❌ Recently Cancelled",
+      value: cancelled.map(event => `• ~~${truncate(event.title, 70)}~~`).join("\n"),
+      inline: false
+    });
+  }
 
   return {
     title: "📅 Ironkin Current Events",
@@ -252,7 +283,14 @@ export async function mirrorCalendarEventCreate(env, event) {
   try {
     let updatedEvent = event;
 
-    if (!event.discordScheduledEventId) {
+    if (String(event?.status || "").toLowerCase() === "cancelled") {
+      await mirrorCalendarEventCancel(env, event);
+      return event;
+    }
+
+    if (event.discordScheduledEventId) {
+      await updateDiscordScheduledEvent(env, event);
+    } else {
       const scheduledEvent = await createDiscordScheduledEvent(env, event);
       if (scheduledEvent?.id) {
         updatedEvent = { ...event, discordScheduledEventId: String(scheduledEvent.id) };
@@ -263,8 +301,19 @@ export async function mirrorCalendarEventCreate(env, event) {
     await syncDiscordCalendarBoard(env);
     return updatedEvent;
   } catch (error) {
-    console.warn("Discord calendar create mirror failed", error?.message || error);
+    console.warn("Discord calendar create/update mirror failed", error?.message || error);
     return event;
+  }
+}
+
+export async function mirrorCalendarEventCancel(env, event) {
+  if (!hasDiscordConfig(env)) return;
+
+  try {
+    await deleteDiscordScheduledEvent(env, event?.discordScheduledEventId);
+    await syncDiscordCalendarBoard(env);
+  } catch (error) {
+    console.warn("Discord calendar cancel mirror failed", error?.message || error);
   }
 }
 
