@@ -644,8 +644,7 @@ async function loadHomeStats() {
           </div>
         `;
       }
-      if (topThree) topThree.textContent = "Progress tracking will begin when the WOM competition starts.";
-      return;
+if (topThree) topThree.innerHTML = "";
     }
 
     if (!standings && !String(featuredEvent?.type || "").includes("clan-goal")) {
