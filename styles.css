@@ -6811,17 +6811,79 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   min-height: 46px;
 }
 
-/* Calendar event details / delete dialog */
-.calendar-event-details-list {
+.calendar-event-details-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
   display: grid;
-  gap: 10px;
-  margin: 0 0 18px;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
 }
 
-.calendar-event-details-list p {
+.calendar-event-details-card {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--panel-light), var(--panel));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
+}
+
+.calendar-event-details-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.calendar-event-details-header h2 {
   margin: 0;
 }
 
-.calendar-event-details-card .admin-action-row {
+.calendar-event-details-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.calendar-event-details-meta div {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.calendar-event-details-meta span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.calendar-event-details-description {
+  margin: 16px 0;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.calendar-event-details-actions {
+  display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.btn.danger {
+  border-color: rgba(255, 92, 92, 0.75);
+  color: #ffb1a8;
+}
+
+.btn.danger:hover {
+  background: rgba(255, 92, 92, 0.16);
 }
