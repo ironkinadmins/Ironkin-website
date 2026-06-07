@@ -29,105 +29,105 @@
 
 
 
-    <div class="calendar-layout">
-      <aside class="calendar-admin-panel" id="calendarAdminPanel" hidden>
-        <div class="calendar-admin-sticky">
-          <p class="eyebrow">Staff Calendar Admin</p>
-          <h2>Create Event</h2>
-          <p>Click any day on the calendar to fill the date automatically, or set the date manually below.</p>
+    <div class="calendar-workspace">
+      <aside class="calendar-admin-sidebar" id="calendarAdminPanel" hidden>
+        <form class="calendar-sidebar-form" id="calendarEventForm">
+          <div>
+            <p class="eyebrow">Staff Calendar Admin</p>
+            <h2>Create Event</h2>
+            <p class="admin-muted">Click any day on the calendar to fill the date, or set it manually below.</p>
+          </div>
 
-          <form id="calendarEventForm" class="calendar-sidebar-form">
+          <label>
+            <span>Title</span>
+            <input id="calendarEventTitleInput" type="text" required placeholder="Example: Vet'ion Clan Goal" />
+          </label>
+
+          <label>
+            <span>Event Type</span>
+            <select id="calendarEventTypeInput">
+              <option value="mass">Clan Mass / Normal Event</option>
+              <option value="sotw">SOTW</option>
+              <option value="botw">BOTW</option>
+              <option value="clan-goal-skill">Clan Goal - Skill XP</option>
+              <option value="clan-goal-boss">Clan Goal - Boss KC</option>
+              <option value="giveaway">Giveaway</option>
+              <option value="bingo">Bingo</option>
+              <option value="challenge">Challenge</option>
+            </select>
+          </label>
+
+          <div class="calendar-sidebar-split">
             <label>
-              <span>Title</span>
-              <input id="calendarEventTitleInput" type="text" required placeholder="Example: Vet'ion Clan Goal" />
+              <span>Start Date</span>
+              <input id="calendarEventStartDateInput" type="date" required />
+            </label>
+            <label>
+              <span>Start Time</span>
+              <input id="calendarEventStartTimeInput" type="time" required value="19:00" />
+            </label>
+          </div>
+
+          <div class="calendar-sidebar-split">
+            <label>
+              <span>End Date</span>
+              <input id="calendarEventEndDateInput" type="date" required />
+            </label>
+            <label>
+              <span>End Time</span>
+              <input id="calendarEventEndTimeInput" type="time" required value="20:00" />
+            </label>
+          </div>
+
+          <label>
+            <span>Description</span>
+            <textarea id="calendarEventDescriptionInput" rows="4" placeholder="Optional event details"></textarea>
+          </label>
+
+          <label>
+            <span>Location / Discord Channel</span>
+            <input id="calendarEventLocationInput" type="text" placeholder="Optional" />
+          </label>
+
+          <label class="calendar-check-card">
+            <input id="calendarCreateWomInput" type="checkbox" />
+            <span>Also create a Wise Old Man competition for this event</span>
+          </label>
+
+          <div class="calendar-wom-panel" id="calendarWomPanel" hidden>
+            <label id="calendarSkillMetricField">
+              <span>Skill</span>
+              <select id="calendarSkillMetricInput"></select>
             </label>
 
-            <label>
-              <span>Event Type</span>
-              <select id="calendarEventTypeInput">
-                <option value="mass">Clan Mass / Normal Event</option>
-                <option value="sotw">SOTW</option>
-                <option value="botw">BOTW</option>
-                <option value="clan-goal-skill">Clan Goal - Skill XP</option>
-                <option value="clan-goal-boss">Clan Goal - Boss KC</option>
-                <option value="giveaway">Giveaway</option>
-                <option value="bingo">Bingo</option>
-                <option value="challenge">Challenge</option>
-              </select>
+            <label id="calendarBossMetricField" hidden>
+              <span>Boss</span>
+              <select id="calendarBossMetricInput"></select>
             </label>
 
-            <div class="calendar-form-two">
-              <label>
-                <span>Start Date</span>
-                <input id="calendarEventStartDateInput" type="date" required />
-              </label>
-              <label>
-                <span>Start Time</span>
-                <input id="calendarEventStartTimeInput" type="time" required />
-              </label>
-            </div>
-
-            <div class="calendar-form-two">
-              <label>
-                <span>End Date</span>
-                <input id="calendarEventEndDateInput" type="date" required />
-              </label>
-              <label>
-                <span>End Time</span>
-                <input id="calendarEventEndTimeInput" type="time" required />
-              </label>
-            </div>
-
-            <label>
-              <span>Description</span>
-              <textarea id="calendarEventDescriptionInput" rows="3" placeholder="Optional event details"></textarea>
-            </label>
-
-            <label>
-              <span>Location / Discord Channel</span>
-              <input id="calendarEventLocationInput" type="text" placeholder="Optional" />
+            <label id="calendarTargetField" hidden>
+              <span id="calendarTargetLabel">Target</span>
+              <input id="calendarTargetInput" type="number" min="1" placeholder="Example: 2000" />
             </label>
 
             <label class="calendar-check-card">
-              <input id="calendarCreateWomInput" type="checkbox" />
-              <span>Also create a Wise Old Man competition for this event</span>
+              <input id="calendarFeaturedInput" type="checkbox" />
+              <span>Feature this event on the homepage</span>
             </label>
 
-            <div class="calendar-wom-panel" id="calendarWomPanel" hidden>
-              <label id="calendarSkillMetricField">
-                <span>Skill</span>
-                <select id="calendarSkillMetricInput"></select>
-              </label>
+            <p class="admin-muted">Milestones stay editable from your existing Admin Dashboard after the event is created.</p>
+          </div>
 
-              <label id="calendarBossMetricField" hidden>
-                <span>Boss</span>
-                <select id="calendarBossMetricInput"></select>
-              </label>
+          <p class="calendar-form-status" id="calendarEventFormStatus"></p>
 
-              <label id="calendarTargetField" hidden>
-                <span id="calendarTargetLabel">Target</span>
-                <input id="calendarTargetInput" type="number" min="1" placeholder="Example: 2000" />
-              </label>
-
-              <label class="calendar-check-card">
-                <input id="calendarFeaturedInput" type="checkbox" />
-                <span>Feature this event on the homepage</span>
-              </label>
-
-              <p class="admin-muted">Milestones stay editable from your existing Admin Dashboard after the event is created.</p>
-            </div>
-
-            <p class="calendar-form-status" id="calendarEventFormStatus"></p>
-
-            <div class="admin-action-row">
-              <button type="submit" class="btn primary">Save Event</button>
-              <button type="button" class="btn secondary" id="cancelCalendarEventBtn">Clear</button>
-            </div>
-          </form>
-        </div>
+          <div class="admin-action-row">
+            <button type="submit" class="btn primary">Save Event</button>
+            <button type="button" class="btn secondary" id="clearCalendarEventBtn">Clear</button>
+          </div>
+        </form>
       </aside>
 
-    <section class="calendar-card">
+      <section class="calendar-card">
       <div class="calendar-header">
         <button id="prevMonthBtn">←</button>
         <h2 id="calendarMonthTitle">Loading...</h2>
@@ -147,7 +147,7 @@
       <div id="calendarGrid" class="calendar-grid">
         Loading calendar...
       </div>
-    </section>
+      </section>
     </div>
   </main>
 

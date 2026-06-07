@@ -1871,8 +1871,8 @@ title.textContent = calendarDate.toLocaleDateString("en-US", {
 
       if (calendarCurrentUserIsStaff) {
         cell.classList.add("calendar-staff-create");
-        cell.title = "Click to set the admin form date";
-        cell.addEventListener("click", () => openCalendarEventModal(dateKey));
+        cell.title = "Click to create an event on this day";
+        cell.addEventListener("click", () => selectCalendarAdminDate(dateKey));
       }
 
       cell.innerHTML = `
@@ -2329,50 +2329,45 @@ function fillCalendarMetricDropdowns() {
   }
 }
 
-function setCalendarDateTimeFields(prefix, date) {
-  if (!date) return;
+function setCalendarDateAndTime(dateKey = null) {
   const pad = value => String(value).padStart(2, "0");
-  const dateInput = document.getElementById(`calendarEvent${prefix}DateInput`);
-  const timeInput = document.getElementById(`calendarEvent${prefix}TimeInput`);
-
-  if (dateInput) dateInput.value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  if (timeInput) timeInput.value = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function getCalendarDateTimeValue(prefix) {
-  const dateValue = document.getElementById(`calendarEvent${prefix}DateInput`)?.value || "";
-  const timeValue = document.getElementById(`calendarEvent${prefix}TimeInput`)?.value || "";
-  return dateValue && timeValue ? `${dateValue}T${timeValue}` : "";
-}
-
-function openCalendarEventModal(dateKey = null) {
-  const form = document.getElementById("calendarEventForm");
-  const status = document.getElementById("calendarEventFormStatus");
-  if (!form) return;
-
-  fillCalendarMetricDropdowns();
-  form.reset();
-  if (status) status.textContent = dateKey ? `Selected ${dateKey}. Add the event details below.` : "";
-
   const baseDate = dateKey ? new Date(`${dateKey}T19:00:00`) : new Date();
   const endDate = new Date(baseDate.getTime() + 60 * 60 * 1000);
-  calendarSelectedDate = dateKey;
 
-  setCalendarDateTimeFields("Start", baseDate);
-  setCalendarDateTimeFields("End", endDate);
+  const startDate = document.getElementById("calendarEventStartDateInput");
+  const startTime = document.getElementById("calendarEventStartTimeInput");
+  const endDateInput = document.getElementById("calendarEventEndDateInput");
+  const endTime = document.getElementById("calendarEventEndTimeInput");
 
-  updateCalendarWomFields();
-  document.getElementById("calendarEventTitleInput")?.focus();
-  document.getElementById("calendarAdminPanel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (startDate) startDate.value = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}`;
+  if (startTime) startTime.value = `${pad(baseDate.getHours())}:${pad(baseDate.getMinutes())}`;
+  if (endDateInput) endDateInput.value = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}`;
+  if (endTime) endTime.value = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
 }
 
-function closeCalendarEventModal() {
+function selectCalendarAdminDate(dateKey = null) {
+  calendarSelectedDate = dateKey;
+  fillCalendarMetricDropdowns();
+  setCalendarDateAndTime(dateKey);
+
+  const status = document.getElementById("calendarEventFormStatus");
+  if (status) status.textContent = dateKey ? `Selected ${dateKey}. Fill in the event details and save.` : "";
+}
+
+function clearCalendarEventForm() {
   const form = document.getElementById("calendarEventForm");
   const status = document.getElementById("calendarEventFormStatus");
-  form?.reset();
+  if (form) form.reset();
   calendarSelectedDate = null;
   if (status) status.textContent = "";
+  setCalendarDateAndTime();
   updateCalendarWomFields();
+}
+
+function getCalendarDateTimeValue(dateId, timeId) {
+  const date = document.getElementById(dateId)?.value || "";
+  const time = document.getElementById(timeId)?.value || "00:00";
+  return date ? `${date}T${time}` : "";
 }
 
 function updateCalendarWomFields() {
@@ -2422,8 +2417,8 @@ async function saveCalendarEventForm(event) {
     title: document.getElementById("calendarEventTitleInput")?.value.trim(),
     description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
     location: document.getElementById("calendarEventLocationInput")?.value.trim(),
-    start: getCalendarDateTimeValue("Start"),
-    end: getCalendarDateTimeValue("End"),
+    start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput"),
+    end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput"),
     eventType,
     category: eventType,
     createWom,
@@ -2455,7 +2450,7 @@ async function saveCalendarEventForm(event) {
   }
 
   setTimeout(() => {
-    closeCalendarEventModal();
+    clearCalendarEventForm();
     loadCalendar();
     loadUpcomingEventsWidget();
     loadHomeEventWidgets();
@@ -2487,8 +2482,8 @@ async function setupCalendarAdminTools() {
 
   fillCalendarMetricDropdowns();
 
-  openCalendarEventModal();
-  document.getElementById("cancelCalendarEventBtn")?.addEventListener("click", closeCalendarEventModal);
+  selectCalendarAdminDate();
+  document.getElementById("clearCalendarEventBtn")?.addEventListener("click", clearCalendarEventForm);
   document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventForm")?.addEventListener("submit", saveCalendarEventForm);

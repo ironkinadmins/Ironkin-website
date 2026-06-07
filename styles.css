@@ -6660,61 +6660,49 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   }
 }
 
-/* Calendar left-side admin layout */
-.calendar-admin-panel[hidden],
-.calendar-admin-panel [hidden] {
-  display: none !important;
-}
-
-.calendar-layout {
+/* Calendar left-side staff creator */
+.calendar-workspace {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
 
-.calendar-layout .calendar-card {
-  margin: 0;
+.calendar-admin-sidebar[hidden] {
+  display: none !important;
 }
 
-.calendar-admin-panel {
-  display: block;
-  margin: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 122, 26, 0.12), rgba(0,0,0,0.28));
+.calendar-admin-sidebar[hidden] + .calendar-card {
+  grid-column: 1 / -1;
 }
 
-.calendar-admin-sticky {
+.calendar-admin-sidebar {
   position: sticky;
-  top: 88px;
-}
-
-.calendar-admin-panel h2 {
-  margin: 2px 0 8px;
-}
-
-.calendar-admin-panel p {
-  margin: 0 0 14px;
-  color: var(--muted);
-}
-
-.calendar-sidebar-form,
-.calendar-sidebar-form label,
-.calendar-wom-panel label {
-  display: grid;
-  gap: 7px;
+  top: 86px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 122, 26, 0.10), rgba(0,0,0,0.32));
+  box-shadow: 0 24px 70px rgba(0,0,0,0.35);
 }
 
 .calendar-sidebar-form {
-  gap: 13px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
 }
 
-.calendar-form-two {
+.calendar-sidebar-form h2 {
+  margin: 2px 0 4px;
+}
+
+.calendar-sidebar-form label,
+.calendar-wom-panel label {
   display: grid;
-  grid-template-columns: 1fr 0.78fr;
-  gap: 10px;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 800;
 }
 
 .calendar-sidebar-form input,
@@ -6724,60 +6712,48 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 .calendar-wom-panel select {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 11px 12px;
-  background: rgba(0,0,0,0.26);
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: rgba(0,0,0,0.35);
   color: var(--text);
   font: inherit;
 }
 
-.calendar-sidebar-form span,
-.calendar-wom-panel span {
-  color: var(--text);
-  font-weight: 800;
+.calendar-sidebar-split {
+  display: grid;
+  grid-template-columns: 1fr 0.85fr;
+  gap: 10px;
+}
+
+.calendar-sidebar-form .calendar-check-card {
+  align-self: stretch;
+}
+
+.calendar-sidebar-form .admin-action-row {
+  justify-content: flex-start;
 }
 
 .calendar-wom-panel {
   display: grid;
-  gap: 13px;
+  gap: 12px;
 }
 
 .calendar-day.calendar-staff-create {
   cursor: pointer;
 }
 
-.calendar-day.calendar-staff-create::after {
-  content: "+";
-  position: absolute;
-  top: 8px;
-  right: 9px;
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255, 122, 26, 0.35);
-  border-radius: 999px;
-  color: var(--ember);
-  font-size: 0.75rem;
-  opacity: 0.55;
-}
-
-.calendar-day.calendar-staff-create:hover::after {
-  opacity: 1;
+.calendar-day.calendar-staff-create:hover {
+  border-color: rgba(255, 122, 26, 0.65);
+  background: rgba(255, 122, 26, 0.08);
 }
 
 @media (max-width: 980px) {
-  .calendar-layout {
+  .calendar-workspace {
     grid-template-columns: 1fr;
   }
 
-  .calendar-admin-sticky {
+  .calendar-admin-sidebar {
     position: static;
-  }
-}
-
-@media (max-width: 520px) {
-  .calendar-form-two {
-    grid-template-columns: 1fr;
+    max-height: none;
   }
 }
