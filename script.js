@@ -49,6 +49,70 @@ function hasLiveFeaturedData(event) {
   return false;
 }
 
+function getUnifiedEventType(event) {
+  return String(event?.eventType || event?.type || event?.category || "").toLowerCase();
+}
+
+function getEventStartTime(event) {
+  const value = event?.start || event?.startDate || event?.date || "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function getEventEndTime(event) {
+  const value = event?.end || event?.endDate || event?.start || event?.startDate || event?.date || "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function isEventCurrentlyActiveByDates(event, now = Date.now()) {
+  if (isEventActive(event)) return true;
+  const start = getEventStartTime(event);
+  const end = getEventEndTime(event);
+  return start !== null && end !== null && start <= now && end >= now;
+}
+
+function isEventUpcomingByDates(event, now = Date.now()) {
+  const start = getEventStartTime(event);
+  return start !== null && start > now;
+}
+
+function featuredPriorityScore(event, now = Date.now()) {
+  const type = getUnifiedEventType(event);
+  const active = isEventCurrentlyActiveByDates(event, now);
+  const upcoming = isEventUpcomingByDates(event, now);
+
+  if (active && type.includes("clan-goal")) return 1;
+  if (active && type === "botw") return 2;
+  if (active && type === "sotw") return 3;
+  if (upcoming && type.includes("clan-goal")) return 4;
+  if (upcoming && type === "botw") return 5;
+  if (upcoming && type === "sotw") return 6;
+  if (upcoming && (type === "mass" || type === "clan-mass")) return 7;
+  if (upcoming && type === "giveaway") return 8;
+  if (upcoming) return 9;
+  return 99;
+}
+
+function chooseFeaturedEvent(events) {
+  const list = (Array.isArray(events) ? events : [])
+    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled");
+
+  const manual = list.find(event => event.featured === true);
+  if (manual) return manual;
+
+  return list
+    .slice()
+    .sort((a, b) => {
+      const scoreDiff = featuredPriorityScore(a) - featuredPriorityScore(b);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const aStart = getEventStartTime(a) ?? Number.MAX_SAFE_INTEGER;
+      const bStart = getEventStartTime(b) ?? Number.MAX_SAFE_INTEGER;
+      return aStart - bStart;
+    })[0] || null;
+}
+
 function formatInactiveEventTitle(event) {
   if (String(event?.type || "").includes("clan-goal")) {
     return "";
@@ -578,11 +642,12 @@ async function loadHomeStats() {
   try {
     const events = await fetchCurrentEvents();
 
-    const activeEvents = events.filter(hasLiveFeaturedData);
-    const featuredEvent =
-      activeEvents.find(event => event.featured) ||
-      activeEvents.find(hasUsableWomCompetition) ||
-      activeEvents[0];
+    const activeEvents = events.filter(event =>
+      hasLiveFeaturedData(event) ||
+      isEventCurrentlyActiveByDates(event) ||
+      isEventUpcomingByDates(event)
+    );
+    const featuredEvent = chooseFeaturedEvent(activeEvents);
 
     if (!featuredEvent) {
       const archive = await fetchArchive().catch(() => []);
@@ -1954,6 +2019,24 @@ function isCalendarEventOnDate(event, dateKey) {
   return dateKey >= startKey && dateKey <= (endKey || startKey);
 }
 
+function getMultiDayCalendarTitle(event, dateKey) {
+  const rawTitle = String(event?.title || "Untitled Event").trim();
+  const cleanTitle = rawTitle
+    .replace(/\s+(Begins|Ends)$/i, "")
+    .trim() || rawTitle;
+
+  const startKey = getDateOnlyKey(getCalendarEventStart(event));
+  const endKey = getDateOnlyKey(getCalendarEventEnd(event));
+
+  if (!startKey || !endKey || startKey === endKey) {
+    return cleanTitle;
+  }
+
+  if (dateKey === startKey) return `${cleanTitle} Begins`;
+  if (dateKey === endKey) return `${cleanTitle} Ends`;
+  return cleanTitle;
+}
+
 function isCalendarEventCancelled(event) {
   return String(event?.status || "").toLowerCase() === "cancelled";
 }
@@ -2019,7 +2102,7 @@ function renderCalendarMonth(events = calendarEventsCache) {
       const cancelledClass = isCalendarEventCancelled(event) ? " calendar-event-cancelled" : "";
       eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}${cancelledClass}`;
       const timeText = String(getDateOnlyKey(getCalendarEventStart(event)) || "") === dateKey ? formatCalendarTime(getCalendarEventStart(event)) : "↔";
-      eventEl.textContent = `${timeText ? `${timeText} · ` : ""}${event.title || "Untitled Event"}`;
+      eventEl.textContent = `${timeText ? `${timeText} · ` : ""}${getMultiDayCalendarTitle(event, dateKey)}`;
       eventEl.addEventListener("click", clickEvent => {
         clickEvent.stopPropagation();
         showCalendarEventDetails(event);
@@ -2085,8 +2168,9 @@ function formatShortDateTime(value) {
   if (!Number.isFinite(date.getTime())) return "TBD";
 
   return date.toLocaleString("en-US", {
-    month: "short",
+    month: "long",
     day: "numeric",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true

@@ -81,6 +81,67 @@ function normalizeEvents(events) {
     .sort((a, b) => new Date(a.start) - new Date(b.start));
 }
 
+function getUnifiedEventType(event) {
+  return String(event?.eventType || event?.type || event?.category || "").toLowerCase();
+}
+
+function getEventStartTime(event) {
+  const date = new Date(event?.start || event?.startDate || event?.date || "");
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function getEventEndTime(event) {
+  const date = new Date(event?.end || event?.endDate || event?.start || event?.startDate || event?.date || "");
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function isActiveByDates(event, now = Date.now()) {
+  const start = getEventStartTime(event);
+  const end = getEventEndTime(event);
+  return start !== null && end !== null && start <= now && end >= now;
+}
+
+function isUpcomingByDates(event, now = Date.now()) {
+  const start = getEventStartTime(event);
+  return start !== null && start > now;
+}
+
+function featuredPriorityScore(event, now = Date.now()) {
+  const type = getUnifiedEventType(event);
+  const active = isActiveByDates(event, now);
+  const upcoming = isUpcomingByDates(event, now);
+
+  if (active && type.includes("clan-goal")) return 1;
+  if (active && type === "botw") return 2;
+  if (active && type === "sotw") return 3;
+  if (upcoming && type.includes("clan-goal")) return 4;
+  if (upcoming && type === "botw") return 5;
+  if (upcoming && type === "sotw") return 6;
+  if (upcoming && (type === "mass" || type === "clan-mass")) return 7;
+  if (upcoming && type === "giveaway") return 8;
+  if (upcoming) return 9;
+  return 99;
+}
+
+function chooseFeaturedEvent(events) {
+  const list = (Array.isArray(events) ? events : [])
+    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled");
+
+  const manual = list.find(event => event.featured === true);
+  if (manual) return manual;
+
+  return list
+    .slice()
+    .sort((a, b) => {
+      const scoreDiff = featuredPriorityScore(a) - featuredPriorityScore(b);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const aStart = getEventStartTime(a) ?? Number.MAX_SAFE_INTEGER;
+      const bStart = getEventStartTime(b) ?? Number.MAX_SAFE_INTEGER;
+      return aStart - bStart;
+    })[0] || null;
+}
+
 function buildScheduledEventPayload(env, event) {
   const start = new Date(event.start);
   const end = new Date(event.end || start.getTime() + 60 * 60 * 1000);
@@ -181,7 +242,7 @@ function buildCurrentEventsEmbed(env, events) {
   const cancelled = normalized
     .filter(event => String(event.status || "").toLowerCase() === "cancelled")
     .slice(0, 3);
-  const featured = visible.find(event => event.featured) || active[0] || upcoming[0];
+  const featured = chooseFeaturedEvent(visible);
 
   const fields = [];
 
@@ -223,7 +284,7 @@ function buildCurrentEventsEmbed(env, events) {
     color: 0xff7a1a,
     fields,
     footer: {
-      text: "Website calendar is the source of truth."
+      text: "🕒 Event times are shown in your local timezone."
     },
     timestamp: new Date().toISOString()
   };
