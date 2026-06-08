@@ -1,3 +1,5 @@
+import { syncDiscordCalendarBoard } from "../../_discordCalendar.js";
+
 const CUSTOM_EVENTS_KEY = "calendar:custom-events";
 
 async function getCustomEvents(env) {
@@ -23,11 +25,18 @@ function sortEvents(events) {
     .sort((a, b) => new Date(getStartValue(a)) - new Date(getStartValue(b)));
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ env, waitUntil }) {
   const events = await getCustomEvents(env);
+  const sortedEvents = sortEvents(events);
+
+  // Keep the Discord #current-events board fresh whenever the website calendar is viewed.
+  // This is intentionally non-blocking so the website calendar stays instant.
+  if (typeof waitUntil === "function") {
+    waitUntil(syncDiscordCalendarBoard(env));
+  }
 
   return Response.json({
-    events: sortEvents(events),
+    events: sortedEvents,
     source: "ironkin-website",
     cached: false
   });
