@@ -113,6 +113,16 @@ function chooseFeaturedEvent(events) {
     })[0] || null;
 }
 
+function isClanGoalEvent(event) {
+  const type = getUnifiedEventType(event);
+  return type.includes("clan-goal") || type === "clan_goal";
+}
+
+function getEventPageHref(event) {
+  if (isClanGoalEvent(event)) return "event.html?id=clan-goal";
+  return `event.html?id=${encodeURIComponent(event?.id || "")}`;
+}
+
 function formatInactiveEventTitle(event) {
   if (String(event?.type || "").includes("clan-goal")) {
     return "";
@@ -1085,7 +1095,7 @@ async function loadEventsHub() {
 
       grid.appendChild(createEventHubCard({
         type: event.type,
-        href: active ? `event.html?id=${encodeURIComponent(event.id)}` : "",
+        href: active ? getEventPageHref(event) : "",
         icon: getEventIcon(event.type),
         label: event.label || formatEventType(event.type),
         title: active ? displayEventTitle(event.title, event.type) : formatInactiveEventTitle(event),
@@ -1117,7 +1127,10 @@ async function loadSingleEventDashboard() {
 
   try {
     const events = await fetchCurrentEvents();
-    const event = events.find(item => item.id === eventId);
+    const event = eventId === "clan-goal"
+      ? events.find(item => isClanGoalEvent(item) && isEventActive(item)) ||
+        events.find(item => isClanGoalEvent(item))
+      : events.find(item => item.id === eventId);
 
     if (!event) {
       dashboard.textContent = "Event not found.";
@@ -1365,7 +1378,7 @@ async function loadHomeEventWidgets() {
         activeEvents.slice(0, 3).forEach(event => {
           const row = document.createElement("a");
           row.className = "home-active-event-row";
-          row.href = `event.html?id=${encodeURIComponent(event.id)}`;
+          row.href = getEventPageHref(event);
           row.innerHTML = `
             <span>${getEventIcon(event.type)}</span>
             <div>
@@ -1415,7 +1428,7 @@ async function loadHomeEventWidgets() {
           Next reward: <strong>${nextMilestone ? `${nextMilestone.percent}% ${nextMilestone.title}` : "All rewards unlocked"}</strong>
         </p>
 
-        <a class="btn primary" href="event.html?id=${encodeURIComponent(clanGoal.id)}">View Clan Goal</a>
+        <a class="btn primary" href="event.html?id=clan-goal">View Clan Goal</a>
       `;
     }
   } catch (error) {
