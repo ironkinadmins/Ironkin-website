@@ -1046,26 +1046,26 @@ async function appendGiveawaysHubCard(grid) {
       type: "giveaway",
       href: "giveaways.html",
       icon: "🎁",
-      label: "Giveaways",
-      title: activeGiveaway ? activeGiveaway.title : "KC Guess Giveaways",
+      label: "Giveaway",
+      title: "Guess the KC",
       description: activeGiveaway
-        ? `${activeGiveaway.host || "A clan member"} is hosting a ${activeGiveaway.drop || "drop"} kill count guessing giveaway.`
+        ? `${activeGiveaway.host || "A clan member"} is hosting ${activeGiveaway.drop || "a drop"} KC guesses.`
         : completed
           ? `Latest winner: ${completed.winnerName || "TBD"}`
           : "Guess the kill count of a drop. Closest guess wins.",
       active: Boolean(activeGiveaway),
-      ctaLabel: activeGiveaway ? "Submit Guess →" : "View Giveaways →"
+      ctaLabel: activeGiveaway ? "Submit Guess →" : "View Giveaway →"
     }));
   } catch {
     grid.appendChild(createEventHubCard({
       type: "giveaway",
       href: "giveaways.html",
       icon: "🎁",
-      label: "Giveaways",
-      title: "KC Guess Giveaways",
+      label: "Giveaway",
+      title: "Guess the KC",
       description: "Guess the kill count of a drop. Closest guess wins.",
-      active: true,
-      ctaLabel: "View Giveaways →"
+      active: false,
+      ctaLabel: "View Giveaway →"
     }));
   }
 }
@@ -1124,7 +1124,7 @@ async function loadEventsHub() {
       empty.textContent = "No Ironkin events found.";
       grid.appendChild(empty);
       await appendBattleshipBingoCard(grid);
-    await appendGiveawaysHubCard(grid);
+      await appendGiveawaysHubCard(grid);
       return;
     }
 
@@ -1145,6 +1145,7 @@ async function loadEventsHub() {
     });
 
     await appendBattleshipBingoCard(grid);
+    await appendGiveawaysHubCard(grid);
   } catch (error) {
     grid.textContent = `Could not load events: ${error.message}`;
   }
