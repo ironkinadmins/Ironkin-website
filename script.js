@@ -3516,10 +3516,6 @@ function setupGiveawayHandlers(current, isStaff) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ giveawayId: current.id })
     });
-    loadGiveawaysPage();
-  });
-}
-
 loadSiteNav();
 loadHomeStats();
 loadHomeBingoSignupBanner();
@@ -3537,3 +3533,7 @@ loadHomeEmberLeaders();
 loadEmberLeaderboard();
 loadDiscordStats();
 loadRecordsPage();
+
+if (document.getElementById("giveawaysApp")) {
+  loadGiveawaysPage();
+}
