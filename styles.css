@@ -5869,10 +5869,21 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
   opacity: 0.72;
 }
 
+a.event-hub-card.is-inactive {
+  cursor: pointer;
+  opacity: 1;
+}
+
 .event-hub-card.is-inactive:hover {
   transform: none;
   border-color: var(--border);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+a.event-hub-card.is-inactive:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 122, 26, 0.55);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
 }
 
 .event-hub-footer-inactive {

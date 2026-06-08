@@ -932,11 +932,11 @@ async function loadRecentActivity() {
 }
 
 function createEventHubCard({ type, href, icon, label, title, description, active = false, ctaLabel = "View Event →" }) {
-  const card = document.createElement(active && href ? "a" : "article");
+  const card = document.createElement(href ? "a" : "article");
 
   card.className = `event-hub-card event-${type}${active ? " is-active" : " is-inactive"}`;
 
-  if (active && href) {
+  if (href) {
     card.href = href;
   }
 
