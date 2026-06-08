@@ -37,8 +37,16 @@ function toDiscordTimestamp(value, style = "f") {
   return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
 }
 
+function isClanGoalEvent(event) {
+  const type = String(event?.eventType || event?.type || event?.category || "").toLowerCase();
+  return type.includes("clan-goal") || type === "clan_goal";
+}
+
 function getEventUrl(env, event) {
   const siteUrl = getSiteUrl(env);
+  if (isClanGoalEvent(event)) {
+    return `${siteUrl}/event.html?id=clan-goal`;
+  }
   if (event?.womCompetitionId) {
     return `${siteUrl}/event.html?id=${encodeURIComponent(event.id)}`;
   }

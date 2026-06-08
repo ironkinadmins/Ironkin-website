@@ -1033,6 +1033,43 @@ async function appendBattleshipBingoCard(grid) {
   }));
 }
 
+
+async function appendGiveawaysHubCard(grid) {
+  try {
+    const response = await fetch(`/api/giveaways/list?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    const giveaways = Array.isArray(data.giveaways) ? data.giveaways : [];
+    const activeGiveaway = giveaways.find(item => item.status === "open") || giveaways.find(item => item.status === "scheduled");
+    const completed = giveaways.find(item => item.status === "completed");
+
+    grid.appendChild(createEventHubCard({
+      type: "giveaway",
+      href: "giveaways.html",
+      icon: "🎁",
+      label: "Giveaways",
+      title: activeGiveaway ? activeGiveaway.title : "KC Guess Giveaways",
+      description: activeGiveaway
+        ? `${activeGiveaway.host || "A clan member"} is hosting a ${activeGiveaway.drop || "drop"} kill count guessing giveaway.`
+        : completed
+          ? `Latest winner: ${completed.winnerName || "TBD"}`
+          : "Guess the kill count of a drop. Closest guess wins.",
+      active: Boolean(activeGiveaway),
+      ctaLabel: activeGiveaway ? "Submit Guess →" : "View Giveaways →"
+    }));
+  } catch {
+    grid.appendChild(createEventHubCard({
+      type: "giveaway",
+      href: "giveaways.html",
+      icon: "🎁",
+      label: "Giveaways",
+      title: "KC Guess Giveaways",
+      description: "Guess the kill count of a drop. Closest guess wins.",
+      active: true,
+      ctaLabel: "View Giveaways →"
+    }));
+  }
+}
+
 async function loadHomeBingoSignupBanner() {
   const banner = document.getElementById("homeBingoSignupBanner");
   if (!banner) return;
@@ -1087,6 +1124,7 @@ async function loadEventsHub() {
       empty.textContent = "No Ironkin events found.";
       grid.appendChild(empty);
       await appendBattleshipBingoCard(grid);
+    await appendGiveawaysHubCard(grid);
       return;
     }
 
@@ -1118,7 +1156,12 @@ async function loadSingleEventDashboard() {
   if (!dashboard) return;
 
   const params = new URLSearchParams(window.location.search);
-  const eventId = params.get("id");
+  let eventId = params.get("id");
+
+  if (eventId && /^clan-goal-/i.test(eventId)) {
+    eventId = "clan-goal";
+    window.history.replaceState({}, "", "event.html?id=clan-goal");
+  }
 
   if (!eventId) {
     dashboard.textContent = "Missing event ID.";
@@ -3153,6 +3196,327 @@ async function setupCalendarAdminTools() {
   document.getElementById("calendarEventEndTimeInput")?.addEventListener("blur", () => normalizeCalendarTimeInput("calendarEventEndTimeInput", "calendarEventEndMeridiemInput"));
   document.getElementById("calendarEventForm")?.addEventListener("submit", saveCalendarEventForm);
   loadCalendar();
+}
+
+
+function formatGiveawayDate(value) {
+  if (!value) return "No deadline set";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "No deadline set";
+  return date.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+function getGiveawayStatusLabel(giveaway) {
+  if (giveaway?.status === "completed") return "Completed";
+  if (giveaway?.status === "cancelled") return "Cancelled";
+  if (giveaway?.status === "scheduled") return "Scheduled";
+  return "Open";
+}
+
+function getClosestGiveawayRows(giveaway) {
+  const actual = Number(giveaway?.actualKc || 0);
+  const submissions = Array.isArray(giveaway?.submissions) ? giveaway.submissions : [];
+  if (!actual) return submissions.slice().sort((a, b) => Number(a.kc || 0) - Number(b.kc || 0));
+
+  return submissions
+    .slice()
+    .sort((a, b) => {
+      const diff = Math.abs(Number(a.kc || 0) - actual) - Math.abs(Number(b.kc || 0) - actual);
+      if (diff !== 0) return diff;
+      return new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0);
+    });
+}
+
+async function loadGiveawaysPage() {
+  const root = document.getElementById("giveawaysApp");
+  if (!root) return;
+
+  const [user, response] = await Promise.all([
+    getCurrentAuthUser(),
+    fetch(`/api/giveaways/list?t=${Date.now()}`, { cache: "no-store" })
+  ]);
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    root.innerHTML = `<article class="card"><p>Could not load giveaways: ${escapeHtml(data.error || "Unknown error")}</p></article>`;
+    return;
+  }
+
+  const giveaways = Array.isArray(data.giveaways) ? data.giveaways : [];
+  const isStaff = isStaffUser(user);
+  const active = giveaways.find(item => item.status === "open") || giveaways.find(item => item.status === "scheduled");
+  const current = active || giveaways[0] || null;
+
+  root.innerHTML = `
+    <div class="giveaway-layout">
+      <section class="giveaway-main card">
+        <p class="eyebrow">Clan KC Guess Giveaway</p>
+        ${
+          current
+            ? renderGiveawayUserPanel(current, data.currentUserId)
+            : `
+              <h2>No giveaway active</h2>
+              <p class="muted">A staff member can create the next KC guess giveaway from the Admin tab.</p>
+            `
+        }
+      </section>
+
+      <section class="giveaway-side card">
+        <div class="giveaway-tabs">
+          <button class="active" type="button" data-giveaway-tab="user">Users</button>
+          ${isStaff ? `<button type="button" data-giveaway-tab="admin">Admin</button>` : ""}
+        </div>
+
+        <div id="giveawayUserTab" class="giveaway-tab-panel">
+          ${renderGiveawayHistory(giveaways)}
+        </div>
+
+        ${isStaff ? `
+          <div id="giveawayAdminTab" class="giveaway-tab-panel" hidden>
+            ${renderGiveawayAdminPanel(current)}
+          </div>
+        ` : ""}
+      </section>
+    </div>
+  `;
+
+  setupGiveawayHandlers(current, isStaff);
+}
+
+function renderGiveawayUserPanel(giveaway, currentUserId) {
+  const submissions = Array.isArray(giveaway.submissions) ? giveaway.submissions : [];
+  const ownSubmission = submissions.find(item => item.discordId === currentUserId);
+  const closed = giveaway.status === "completed" || giveaway.status === "cancelled";
+  const completed = giveaway.status === "completed";
+  const winnerText = completed
+    ? `${giveaway.winnerName || "No winner"}${giveaway.actualKc ? ` won with ${formatNumber(giveaway.winnerKc)} KC. Actual KC: ${formatNumber(giveaway.actualKc)}.` : ""}`
+    : "";
+
+  return `
+    <div class="giveaway-hero">
+      <div>
+        <h2>${escapeHtml(giveaway.title || "KC Guess Giveaway")}</h2>
+        <p>${escapeHtml(giveaway.description || "Guess the kill count where the drop will land. Closest guess wins, whether lower or higher.")}</p>
+      </div>
+      <span class="giveaway-status">${escapeHtml(getGiveawayStatusLabel(giveaway))}</span>
+    </div>
+
+    <div class="giveaway-detail-grid">
+      <div><span>Host</span><strong>${escapeHtml(giveaway.host || "TBD")}</strong></div>
+      <div><span>Drop</span><strong>${escapeHtml(giveaway.drop || "TBD")}</strong></div>
+      <div><span>Guesses</span><strong>${formatNumber(submissions.length)}</strong></div>
+      <div><span>Closes</span><strong>${escapeHtml(formatGiveawayDate(giveaway.closesAt))}</strong></div>
+    </div>
+
+    ${completed ? `<div class="giveaway-winner-box">🏆 ${escapeHtml(winnerText)}</div>` : ""}
+
+    ${
+      closed
+        ? `<p class="admin-muted">This giveaway is closed.</p>`
+        : `
+          <form id="giveawayGuessForm" class="giveaway-guess-form">
+            <label>
+              Your KC Guess
+              <input id="giveawayKcInput" type="number" min="0" step="1" required placeholder="Example: 417" value="${ownSubmission ? Number(ownSubmission.kc || 0) : ""}" />
+            </label>
+            <button class="btn primary" type="submit">${ownSubmission ? "Update Guess" : "Submit Guess"}</button>
+          </form>
+          <p id="giveawayGuessStatus" class="admin-muted">
+            Your submission will show as: ${escapeHtml(ownSubmission?.rsn || "Your RSN")} - ${ownSubmission ? formatNumber(ownSubmission.kc) : "KC"}
+          </p>
+        `
+    }
+
+    <section class="giveaway-rules">
+      <h3>How it works</h3>
+      <ul>
+        <li>One guess per member. You can update your guess while the giveaway is open.</li>
+        <li>Closest KC wins, whether the guess is lower or higher than the actual drop KC.</li>
+        <li>If two guesses are equally close, the earlier submission wins.</li>
+        <li>Staff marks the giveaway completed once the drop is obtained.</li>
+      </ul>
+    </section>
+  `;
+}
+
+function renderGiveawayHistory(giveaways) {
+  if (!giveaways.length) {
+    return `<p class="admin-muted">No KC guess giveaways have been created yet.</p>`;
+  }
+
+  return `
+    <h3>Giveaways</h3>
+    <div class="giveaway-history-list">
+      ${giveaways.map(item => `
+        <div class="giveaway-history-row">
+          <strong>${escapeHtml(item.title || "KC Guess Giveaway")}</strong>
+          <span>${escapeHtml(item.drop || "Drop TBD")} · ${escapeHtml(getGiveawayStatusLabel(item))}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderGiveawayAdminPanel(giveaway) {
+  const rows = giveaway ? getClosestGiveawayRows(giveaway) : [];
+  return `
+    <h3>Admin</h3>
+
+    <form id="giveawayAdminForm" class="giveaway-admin-form">
+      <input type="hidden" id="giveawayAdminId" value="${escapeHtml(giveaway?.id || "")}" />
+
+      <label>Giveaway Title
+        <input id="giveawayAdminTitle" type="text" value="${escapeHtml(giveaway?.title || "")}" placeholder="Example: Vet'ion Ring of the Gods Guess" required />
+      </label>
+
+      <label>Host
+        <input id="giveawayAdminHost" type="text" value="${escapeHtml(giveaway?.host || "")}" placeholder="Host RSN or Discord name" required />
+      </label>
+
+      <label>Drop
+        <input id="giveawayAdminDrop" type="text" value="${escapeHtml(giveaway?.drop || "")}" placeholder="Example: Dragon Pickaxe" required />
+      </label>
+
+      <label>Description
+        <textarea id="giveawayAdminDescription" rows="3" placeholder="Optional giveaway details">${escapeHtml(giveaway?.description || "")}</textarea>
+      </label>
+
+      <label>Guessing Closes
+        <input id="giveawayAdminClosesAt" type="datetime-local" value="${escapeHtml(formatDateTimeLocalForInput(giveaway?.closesAt))}" />
+      </label>
+
+      <label class="checkbox-row">
+        <input id="giveawayAdminOpen" type="checkbox" ${!giveaway || giveaway.status === "open" ? "checked" : ""} />
+        Open for guesses
+      </label>
+
+      <button class="btn primary" type="submit">${giveaway ? "Save Giveaway" : "Create Giveaway"}</button>
+      <p id="giveawayAdminStatus" class="admin-muted"></p>
+    </form>
+
+    ${giveaway ? `
+      <div class="giveaway-complete-box">
+        <h3>Complete Giveaway</h3>
+        <label>Actual Drop KC
+          <input id="giveawayActualKcInput" type="number" min="0" step="1" placeholder="Actual KC" value="${giveaway.actualKc || ""}" />
+        </label>
+        <button class="btn primary" id="giveawayCompleteBtn" type="button">Mark Completed & Pick Winner</button>
+        <button class="btn secondary danger" id="giveawayDeleteBtn" type="button">Delete Giveaway</button>
+      </div>
+
+      <h3>Submissions</h3>
+      <div class="giveaway-submission-list">
+        ${
+          rows.length
+            ? rows.map((item, index) => `
+              <div class="giveaway-submission-row">
+                <strong>#${index + 1} ${escapeHtml(item.rsn || item.displayName || "Unknown")}</strong>
+                <span>${formatNumber(item.kc)} KC</span>
+              </div>
+            `).join("")
+            : `<p class="admin-muted">No guesses submitted yet.</p>`
+        }
+      </div>
+    ` : ""}
+  `;
+}
+
+function formatDateTimeLocalForInput(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const pad = n => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function setupGiveawayHandlers(current, isStaff) {
+  document.querySelectorAll("[data-giveaway-tab]").forEach(button => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-giveaway-tab]").forEach(item => item.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById("giveawayUserTab").hidden = button.dataset.giveawayTab !== "user";
+      const adminTab = document.getElementById("giveawayAdminTab");
+      if (adminTab) adminTab.hidden = button.dataset.giveawayTab !== "admin";
+    });
+  });
+
+  document.getElementById("giveawayGuessForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("giveawayGuessStatus");
+    const kc = Number(document.getElementById("giveawayKcInput")?.value || 0);
+    if (!current?.id || !Number.isFinite(kc) || kc < 0) return;
+
+    if (status) status.textContent = "Submitting guess...";
+    const response = await fetch("/api/giveaways/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giveawayId: current.id, kc })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (status) status.textContent = response.ok ? "Guess saved." : (data.error || "Could not save guess.");
+    if (response.ok) setTimeout(loadGiveawaysPage, 500);
+  });
+
+  if (!isStaff) return;
+
+  document.getElementById("giveawayAdminForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("giveawayAdminStatus");
+    if (status) status.textContent = "Saving giveaway...";
+
+    const payload = {
+      id: document.getElementById("giveawayAdminId")?.value || undefined,
+      title: document.getElementById("giveawayAdminTitle")?.value || "",
+      host: document.getElementById("giveawayAdminHost")?.value || "",
+      drop: document.getElementById("giveawayAdminDrop")?.value || "",
+      description: document.getElementById("giveawayAdminDescription")?.value || "",
+      closesAt: document.getElementById("giveawayAdminClosesAt")?.value || "",
+      status: document.getElementById("giveawayAdminOpen")?.checked ? "open" : "scheduled"
+    };
+
+    const response = await fetch("/api/admin/giveaways/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (status) status.textContent = response.ok ? "Giveaway saved." : (data.error || "Could not save giveaway.");
+    if (response.ok) setTimeout(loadGiveawaysPage, 500);
+  });
+
+  document.getElementById("giveawayCompleteBtn")?.addEventListener("click", async () => {
+    const actualKc = Number(document.getElementById("giveawayActualKcInput")?.value || 0);
+    if (!current?.id || !Number.isFinite(actualKc) || actualKc < 0) return;
+    const confirmed = confirm("Mark this giveaway completed and pick the closest winner?");
+    if (!confirmed) return;
+
+    await fetch("/api/admin/giveaways/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giveawayId: current.id, actualKc })
+    });
+    loadGiveawaysPage();
+  });
+
+  document.getElementById("giveawayDeleteBtn")?.addEventListener("click", async () => {
+    if (!current?.id) return;
+    const confirmed = confirm("Delete this giveaway and all KC guesses?");
+    if (!confirmed) return;
+
+    await fetch("/api/admin/giveaways/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giveawayId: current.id })
+    });
+    loadGiveawaysPage();
+  });
 }
 
 loadSiteNav();

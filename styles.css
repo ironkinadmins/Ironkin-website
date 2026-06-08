@@ -6930,3 +6930,177 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
 .calendar-time-control select {
   width: 72px;
 }
+
+
+/* KC Guess Giveaways */
+.giveaway-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.giveaway-main,
+.giveaway-side {
+  padding: 28px;
+}
+
+.giveaway-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.giveaway-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: rgba(255, 122, 26, 0.12);
+  color: var(--ember);
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.giveaway-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.giveaway-detail-grid > div {
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.giveaway-detail-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.giveaway-detail-grid strong {
+  font-size: 1.05rem;
+}
+
+.giveaway-guess-form,
+.giveaway-admin-form,
+.giveaway-complete-box {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.giveaway-guess-form label,
+.giveaway-admin-form label,
+.giveaway-complete-box label {
+  display: grid;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.giveaway-guess-form input,
+.giveaway-admin-form input,
+.giveaway-admin-form textarea,
+.giveaway-complete-box input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.giveaway-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.giveaway-tabs button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  padding: 10px 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.giveaway-tabs button.active {
+  background: linear-gradient(135deg, var(--ember), #ffb15a);
+  color: #180a02;
+}
+
+.giveaway-history-list,
+.giveaway-submission-list {
+  display: grid;
+  gap: 10px;
+}
+
+.giveaway-history-row,
+.giveaway-submission-row {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.22);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.giveaway-history-row span,
+.giveaway-submission-row span {
+  color: var(--muted);
+}
+
+.giveaway-winner-box {
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  background: rgba(255, 193, 7, 0.10);
+  color: #ffd166;
+  border-radius: 16px;
+  padding: 16px;
+  font-weight: 900;
+  margin: 16px 0;
+}
+
+.giveaway-rules {
+  margin-top: 24px;
+  color: var(--muted);
+}
+
+.giveaway-rules h3 {
+  color: var(--text);
+}
+
+.checkbox-row {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input {
+  width: auto !important;
+}
+
+@media (max-width: 900px) {
+  .giveaway-layout,
+  .giveaway-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .giveaway-hero,
+  .giveaway-history-row,
+  .giveaway-submission-row {
+    flex-direction: column;
+  }
+}
