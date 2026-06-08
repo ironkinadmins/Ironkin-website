@@ -114,3 +114,55 @@ export async function onRequestPost({ request, env }) {
     submission: entry
   });
 }
+
+
+export async function onRequestDelete({ request, env }) {
+  const session = getSession(request);
+  if (!isStaffSession(session)) {
+    return Response.json({ error: "Staff only." }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const giveawayId = cleanText(body.giveawayId, "", 120);
+  const submissionId = cleanText(body.submissionId, "", 120);
+  const submittedAt = cleanText(body.submittedAt, "", 120);
+  const rsn = cleanText(body.rsn, "", 40);
+
+  if (!giveawayId) {
+    return Response.json({ error: "Missing giveaway ID." }, { status: 400 });
+  }
+
+  if (!submissionId && !submittedAt && !rsn) {
+    return Response.json({ error: "Missing submission details." }, { status: 400 });
+  }
+
+  const giveaways = await getGiveaways(env);
+  const giveaway = giveaways.find(item => item.id === giveawayId);
+
+  if (!giveaway) {
+    return Response.json({ error: "Giveaway not found." }, { status: 404 });
+  }
+
+  const submissions = Array.isArray(giveaway.submissions) ? giveaway.submissions : [];
+  const rsnKey = normalizeRsn(rsn);
+  const beforeCount = submissions.length;
+
+  giveaway.submissions = submissions.filter(item => {
+    if (submissionId && String(item.discordId || "") === submissionId) return false;
+    if (submittedAt && String(item.submittedAt || "") === submittedAt) return false;
+    if (rsnKey && normalizeRsn(item.rsn || item.displayName) === rsnKey) return false;
+    return true;
+  });
+
+  if (giveaway.submissions.length === beforeCount) {
+    return Response.json({ error: "Submission not found." }, { status: 404 });
+  }
+
+  giveaway.updatedAt = new Date().toISOString();
+  await saveGiveaways(env, giveaways);
+
+  return Response.json({
+    success: true,
+    giveaway: publicGiveaway(giveaway, true)
+  });
+}

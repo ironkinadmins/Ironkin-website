@@ -3444,7 +3444,19 @@ function renderGiveawayAdminPanel(giveaway) {
             ? rows.map((item, index) => `
               <div class="giveaway-submission-row">
                 <strong>#${index + 1} ${escapeHtml(item.rsn || item.displayName || "Unknown")}</strong>
-                <span>${formatNumber(item.kc)} KC</span>
+                <div class="giveaway-submission-actions">
+                  <span>${formatNumber(item.kc)} KC</span>
+                  <button
+                    class="giveaway-remove-submission-btn"
+                    type="button"
+                    title="Remove submission"
+                    aria-label="Remove ${escapeHtml(item.rsn || item.displayName || "submission")}'s guess"
+                    data-giveaway-id="${escapeHtml(giveaway.id || "") }"
+                    data-submission-id="${escapeHtml(item.discordId || "") }"
+                    data-submitted-at="${escapeHtml(item.submittedAt || "") }"
+                    data-rsn="${escapeHtml(item.rsn || item.displayName || "") }"
+                  >×</button>
+                </div>
               </div>
             `).join("")
             : `<p class="admin-muted">No guesses submitted yet.</p>`
@@ -3539,6 +3551,39 @@ function setupGiveawayHandlers(current, isStaff) {
     const data = await response.json().catch(() => ({}));
     if (status) status.textContent = response.ok ? "Guess added." : (data.error || "Could not add guess.");
     if (response.ok) setTimeout(loadGiveawaysPage, 500);
+  });
+
+  document.querySelectorAll(".giveaway-remove-submission-btn").forEach(button => {
+    button.addEventListener("click", async () => {
+      const giveawayId = button.dataset.giveawayId || current?.id;
+      const rsn = button.dataset.rsn || "this member";
+      const confirmed = confirm(`Remove ${rsn}'s KC guess?`);
+      if (!confirmed || !giveawayId) return;
+
+      button.disabled = true;
+      button.textContent = "…";
+
+      const response = await fetch("/api/admin/giveaways/submission", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          giveawayId,
+          submissionId: button.dataset.submissionId || "",
+          submittedAt: button.dataset.submittedAt || "",
+          rsn: button.dataset.rsn || ""
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data.error || "Could not remove submission.");
+        button.disabled = false;
+        button.textContent = "×";
+        return;
+      }
+
+      loadGiveawaysPage();
+    });
   });
 
   document.getElementById("giveawayCompleteBtn")?.addEventListener("click", async () => {
