@@ -1749,7 +1749,7 @@ function bindBingoControls() {
 
 function formatDateTime(value) {
   if (!value) return "";
-  return new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function escapeHtml(value) {

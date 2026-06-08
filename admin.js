@@ -42,7 +42,7 @@ function getAdminEventOptionText(event) {
 function formatAdminDate(value) {
   if (!value) return "Dates not loaded yet.";
 
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString("en-US");
 }
 
 function updateDetectedWomBox(event, details = null) {

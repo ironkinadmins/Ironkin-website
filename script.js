@@ -66,7 +66,7 @@ function formatInactiveEventDescription(event) {
 }
 
 function formatNumber(num) {
-  return Number(num || 0).toLocaleString();
+  return Number(num || 0).toLocaleString("en-US");
 }
 
 function getTimeRemaining(endDate) {
@@ -529,9 +529,9 @@ function renderHomeLastEventResult(entry) {
   const winner = getArchiveWinner(entry);
   const metric = getEventMetricLabel(entry);
   const dateText = entry?.endedAt
-    ? new Date(entry.endedAt).toLocaleDateString()
+    ? new Date(entry.endedAt).toLocaleDateString("en-US")
     : entry?.endDate
-      ? new Date(entry.endDate).toLocaleDateString()
+      ? new Date(entry.endDate).toLocaleDateString("en-US")
       : "Completed";
 
   if (eventPercent) eventPercent.textContent = `Previous ${formatEventType(entry?.type || "event")}`;
@@ -642,7 +642,7 @@ async function loadHomeStats() {
 
   if (eventMeta) {
     eventMeta.textContent = standings?.startsAt
-      ? `Starts ${new Date(standings.startsAt).toLocaleString()}`
+      ? `Starts ${new Date(standings.startsAt).toLocaleString("en-US")}`
       : "Tracking will begin once the event starts.";
   }
 
@@ -697,7 +697,7 @@ const homeTotalGainedLabel =
     if (eventMeta) {
       eventMeta.textContent =
         standings?.endsAt
-          ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString()}`
+          ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString("en-US")}`
           : featuredEvent.description || "Event details coming soon.";
     }
 
@@ -835,7 +835,7 @@ async function loadRecentActivity() {
       const player = item.player || "Unknown";
       const achievement = item.name || "Achievement";
       const date = item.createdAt
-        ? new Date(item.createdAt).toLocaleDateString()
+        ? new Date(item.createdAt).toLocaleDateString("en-US")
         : "Recent";
 
       row.innerHTML = `
@@ -1116,9 +1116,9 @@ async function loadSingleEventDashboard() {
 
     const eventDateText =
       standings?.startsAt && standings?.endsAt
-        ? `${new Date(standings.startsAt).toLocaleDateString()} - ${new Date(standings.endsAt).toLocaleDateString()}`
+        ? `${new Date(standings.startsAt).toLocaleDateString("en-US")} - ${new Date(standings.endsAt).toLocaleDateString("en-US")}`
         : event.startDate && event.endDate
-        ? `${new Date(event.startDate).toLocaleDateString()} - ${new Date(event.endDate).toLocaleDateString()}`
+        ? `${new Date(event.startDate).toLocaleDateString("en-US")} - ${new Date(event.endDate).toLocaleDateString("en-US")}`
         : "Dates will appear when tracking is available.";
 
     dashboard.innerHTML = `
@@ -1457,7 +1457,7 @@ async function loadArchivePage() {
       card.className = "card archive-card";
 
       const dateText = entry.endedAt
-        ? new Date(entry.endedAt).toLocaleDateString()
+        ? new Date(entry.endedAt).toLocaleDateString("en-US")
         : "Archived";
 
       card.innerHTML = `
@@ -2084,7 +2084,7 @@ function formatShortDateTime(value) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "TBD";
 
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -2098,7 +2098,7 @@ function formatCalendarTime(value) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
 
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true

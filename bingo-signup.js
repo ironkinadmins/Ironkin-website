@@ -51,7 +51,7 @@ function formatDeadline(value) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
 
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
