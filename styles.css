@@ -7104,3 +7104,27 @@ body.bingo-active .active-game-sidebar.collapsed .active-sidebar-collapse {
     flex-direction: column;
   }
 }
+
+
+.giveaway-submitted-box {
+  border: 1px solid rgba(255, 137, 33, 0.45);
+  border-radius: 16px;
+  padding: 18px;
+  background: rgba(255, 137, 33, 0.08);
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.giveaway-submitted-box strong {
+  color: #fff3e8;
+}
+
+.giveaway-submitted-box span {
+  color: #ff8a21;
+  font-weight: 800;
+}
+
+.giveaway-submitted-box small {
+  color: rgba(255, 255, 255, 0.72);
+}

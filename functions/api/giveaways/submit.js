@@ -79,20 +79,23 @@ export async function onRequestPost({ request, env }) {
 
   const submissions = Array.isArray(giveaway.submissions) ? giveaway.submissions : [];
   const existing = submissions.find(item => item.discordId === session.id);
+
+  if (existing) {
+    return Response.json({
+      error: "You have already submitted a guess for this giveaway. Guesses cannot be changed after submitting.",
+      submission: existing
+    }, { status: 409 });
+  }
+
   const entry = {
     discordId: session.id,
     rsn: getDisplayName(session),
     displayName: getDisplayName(session),
     kc,
-    submittedAt: existing?.submittedAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    submittedAt: new Date().toISOString()
   };
 
-  if (existing) {
-    Object.assign(existing, entry);
-  } else {
-    submissions.push(entry);
-  }
+  submissions.push(entry);
 
   giveaway.submissions = submissions;
   giveaway.updatedAt = new Date().toISOString();

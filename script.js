@@ -932,11 +932,11 @@ async function loadRecentActivity() {
 }
 
 function createEventHubCard({ type, href, icon, label, title, description, active = false, ctaLabel = "View Event →" }) {
-  const card = document.createElement(active && href ? "a" : "article");
+  const card = document.createElement(href ? "a" : "article");
 
   card.className = `event-hub-card event-${type}${active ? " is-active" : " is-inactive"}`;
 
-  if (active && href) {
+  if (href) {
     card.href = href;
   }
 
@@ -3321,24 +3321,32 @@ function renderGiveawayUserPanel(giveaway, currentUserId) {
     ${
       closed
         ? `<p class="admin-muted">This giveaway is closed.</p>`
-        : `
-          <form id="giveawayGuessForm" class="giveaway-guess-form">
-            <label>
-              Your KC Guess
-              <input id="giveawayKcInput" type="number" min="0" step="1" required placeholder="Example: 417" value="${ownSubmission ? Number(ownSubmission.kc || 0) : ""}" />
-            </label>
-            <button class="btn primary" type="submit">${ownSubmission ? "Update Guess" : "Submit Guess"}</button>
-          </form>
-          <p id="giveawayGuessStatus" class="admin-muted">
-            Your submission will show as: ${escapeHtml(ownSubmission?.rsn || "Your RSN")} - ${ownSubmission ? formatNumber(ownSubmission.kc) : "KC"}
-          </p>
-        `
+        : ownSubmission
+          ? `
+            <div class="giveaway-submitted-box">
+              <strong>Your guess has been submitted.</strong>
+              <span>${escapeHtml(ownSubmission.rsn || ownSubmission.displayName || "Your RSN")} - ${formatNumber(ownSubmission.kc)} KC</span>
+              <small>Guesses cannot be changed after submitting.</small>
+            </div>
+          `
+          : `
+            <form id="giveawayGuessForm" class="giveaway-guess-form">
+              <label>
+                Your KC Guess
+                <input id="giveawayKcInput" type="number" min="0" step="1" required placeholder="Example: 417" />
+              </label>
+              <button class="btn primary" type="submit">Submit Guess</button>
+            </form>
+            <p id="giveawayGuessStatus" class="admin-muted">
+              Your submission will show as: ${escapeHtml(ownSubmission?.rsn || "Your RSN")} - KC
+            </p>
+          `
     }
 
     <section class="giveaway-rules">
       <h3>How it works</h3>
       <ul>
-        <li>One guess per member. You can update your guess while the giveaway is open.</li>
+        <li>One guess per member. Guesses cannot be changed after submitting.</li>
         <li>Closest KC wins, whether the guess is lower or higher than the actual drop KC.</li>
         <li>If two guesses are equally close, the earlier submission wins.</li>
         <li>Staff marks the giveaway completed once the drop is obtained.</li>
@@ -3461,7 +3469,7 @@ function setupGiveawayHandlers(current, isStaff) {
       body: JSON.stringify({ giveawayId: current.id, kc })
     });
     const data = await response.json().catch(() => ({}));
-    if (status) status.textContent = response.ok ? "Guess saved." : (data.error || "Could not save guess.");
+    if (status) status.textContent = response.ok ? "Guess submitted. It cannot be changed." : (data.error || "Could not save guess.");
     if (response.ok) setTimeout(loadGiveawaysPage, 500);
   });
 
