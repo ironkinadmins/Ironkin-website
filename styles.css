@@ -7139,3 +7139,22 @@ a.event-hub-card.is-inactive:hover {
 .giveaway-submitted-box small {
   color: rgba(255, 255, 255, 0.72);
 }
+
+.giveaway-locked-guess {
+  border: 1px solid rgba(255, 145, 42, 0.35);
+  border-radius: 16px;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: rgba(255, 145, 42, 0.08);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.giveaway-locked-guess span {
+  color: var(--orange, #ff8a1c);
+  font-weight: 800;
+}
+
+.giveaway-manual-guess-form {
+  margin-top: 0.75rem;
+}

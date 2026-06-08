@@ -3321,26 +3321,36 @@ function renderGiveawayUserPanel(giveaway, currentUserId) {
     ${
       closed
         ? `<p class="admin-muted">This giveaway is closed.</p>`
-        : `
-          <form id="giveawayGuessForm" class="giveaway-guess-form">
-            <label>
-              Your KC Guess
-              <input id="giveawayKcInput" type="number" min="0" step="1" required placeholder="Example: 417" value="${ownSubmission ? Number(ownSubmission.kc || 0) : ""}" />
-            </label>
-            <button class="btn primary" type="submit">${ownSubmission ? "Update Guess" : "Submit Guess"}</button>
-          </form>
-          <p id="giveawayGuessStatus" class="admin-muted">
-            Your submission will show as: ${escapeHtml(ownSubmission?.rsn || "Your RSN")} - ${ownSubmission ? formatNumber(ownSubmission.kc) : "KC"}
-          </p>
-        `
+        : ownSubmission
+          ? `
+            <div class="giveaway-locked-guess">
+              <strong>Your guess is locked in:</strong>
+              <span>${escapeHtml(ownSubmission.rsn || "Your RSN")} - ${formatNumber(ownSubmission.kc)} KC</span>
+              <small>Guesses cannot be changed after submitting.</small>
+            </div>
+            <p id="giveawayGuessStatus" class="admin-muted"></p>
+          `
+          : `
+            <form id="giveawayGuessForm" class="giveaway-guess-form">
+              <label>
+                Your KC Guess
+                <input id="giveawayKcInput" type="number" min="0" step="1" required placeholder="Example: 417" />
+              </label>
+              <button class="btn primary" type="submit">Submit Guess</button>
+            </form>
+            <p id="giveawayGuessStatus" class="admin-muted">
+              Your submission will show as: Your RSN - KC
+            </p>
+          `
     }
 
     <section class="giveaway-rules">
       <h3>How it works</h3>
       <ul>
-        <li>One guess per member. You can update your guess while the giveaway is open.</li>
+        <li>One guess per member. Guesses cannot be changed after submitting.</li>
         <li>Closest KC wins, whether the guess is lower or higher than the actual drop KC.</li>
         <li>If two guesses are equally close, the earlier submission wins.</li>
+        <li>Staff can manually add member guesses from the Admin tab.</li>
         <li>Staff marks the giveaway completed once the drop is obtained.</li>
       </ul>
     </section>
@@ -3403,6 +3413,20 @@ function renderGiveawayAdminPanel(giveaway) {
     </form>
 
     ${giveaway ? `
+      <div class="giveaway-complete-box">
+        <h3>Add Member Guess</h3>
+        <form id="giveawayManualGuessForm" class="giveaway-admin-form giveaway-manual-guess-form">
+          <label>RSN
+            <input id="giveawayManualRsnInput" type="text" maxlength="40" placeholder="Example: Loote Goblin" required />
+          </label>
+          <label>KC Guess
+            <input id="giveawayManualKcInput" type="number" min="0" step="1" placeholder="Example: 417" required />
+          </label>
+          <button class="btn secondary" type="submit">Add Guess</button>
+          <p id="giveawayManualGuessStatus" class="admin-muted"></p>
+        </form>
+      </div>
+
       <div class="giveaway-complete-box">
         <h3>Complete Giveaway</h3>
         <label>Actual Drop KC
@@ -3489,6 +3513,30 @@ function setupGiveawayHandlers(current, isStaff) {
     });
     const data = await response.json().catch(() => ({}));
     if (status) status.textContent = response.ok ? "Giveaway saved." : (data.error || "Could not save giveaway.");
+    if (response.ok) setTimeout(loadGiveawaysPage, 500);
+  });
+
+  document.getElementById("giveawayManualGuessForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.getElementById("giveawayManualGuessStatus");
+    const rsn = document.getElementById("giveawayManualRsnInput")?.value || "";
+    const kc = Number(document.getElementById("giveawayManualKcInput")?.value || 0);
+
+    if (!current?.id || !rsn.trim() || !Number.isFinite(kc) || kc < 0 || !Number.isInteger(kc)) {
+      if (status) status.textContent = "Enter an RSN and a valid whole-number KC.";
+      return;
+    }
+
+    if (status) status.textContent = "Adding guess...";
+
+    const response = await fetch("/api/admin/giveaways/submission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giveawayId: current.id, rsn, kc })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (status) status.textContent = response.ok ? "Guess added." : (data.error || "Could not add guess.");
     if (response.ok) setTimeout(loadGiveawaysPage, 500);
   });
 
