@@ -3413,14 +3413,15 @@ function renderGiveawayAdminPanel(giveaway) {
     </form>
 
     ${giveaway ? `
-      <div class="giveaway-complete-box">
-        <h3>Add Member Guess</h3>
+      <div class="giveaway-complete-box giveaway-manual-entry-box">
+        <h3>Add Someone's Guess</h3>
+        <p class="admin-muted">Use this for members who gave their RSN and KC guess in Discord instead of submitting on the site.</p>
         <form id="giveawayManualGuessForm" class="giveaway-admin-form giveaway-manual-guess-form">
           <label>RSN
             <input id="giveawayManualRsnInput" type="text" maxlength="40" placeholder="Example: Loote Goblin" required />
           </label>
           <label>KC Guess
-            <input id="giveawayManualKcInput" type="number" min="0" step="1" placeholder="Example: 417" required />
+            <input id="giveawayManualKcInput" type="number" min="0" step="1" placeholder="Example: 4067" required />
           </label>
           <button class="btn secondary" type="submit">Add Guess</button>
           <p id="giveawayManualGuessStatus" class="admin-muted"></p>

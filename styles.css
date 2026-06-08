@@ -7158,3 +7158,14 @@ a.event-hub-card.is-inactive:hover {
 .giveaway-manual-guess-form {
   margin-top: 0.75rem;
 }
+
+.giveaway-manual-entry-box {
+  border: 1px solid rgba(255, 132, 31, 0.45);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 132, 31, 0.06);
+}
+
+.giveaway-manual-entry-box h3 {
+  margin-top: 0;
+}
