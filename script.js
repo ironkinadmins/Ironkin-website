@@ -1181,6 +1181,8 @@ async function loadSingleEventDashboard() {
       return;
     }
 
+    resolvedSingleEventDropId = event.id || eventId;
+
     const standings = await fetchEventStandings(event).catch(() => null);
     const eventHasNotStarted = isBeforeEventStart(standings, event);
 
@@ -1890,7 +1892,11 @@ async function loadDrops() {
       authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
 
     const params = new URLSearchParams(window.location.search);
-    const eventId = params.get("id") || "global";
+    const requestedEventId = params.get("id") || "global";
+    const eventId =
+      requestedEventId === "clan-goal" && resolvedSingleEventDropId
+        ? resolvedSingleEventDropId
+        : requestedEventId;
 
     const response = await fetch(
       `/api/drops/list?eventId=${encodeURIComponent(eventId)}`
@@ -1940,9 +1946,13 @@ async function changeDrop(name, direction) {
       ? "/api/drops/increment"
       : "/api/drops/decrement";
 
-  const eventId =
+  const requestedEventId =
     new URLSearchParams(window.location.search).get("id") ||
     "global";
+  const eventId =
+    requestedEventId === "clan-goal" && resolvedSingleEventDropId
+      ? resolvedSingleEventDropId
+      : requestedEventId;
 
   await fetch(endpoint, {
     method: "POST",
@@ -2045,6 +2055,7 @@ loadRecordsPage();
 
 let calendarDate = new Date();
 let calendarEventsCache = [];
+let resolvedSingleEventDropId = null;
 
 function getCalendarEventStart(event) {
   return event?.start || event?.startDate || event?.date || "";
