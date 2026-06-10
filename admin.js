@@ -682,7 +682,10 @@ async function saveProfileOverrides(clear = false) {
 }
 
 let bingoTileItems = [];
+let bingoTileStaffMembers = [];
+let bingoTileReportRows = [];
 let bingoTileFilters = { search: "", category: "all", sort: "votes" };
+let activeBingoTileView = "vote";
 
 function getFilteredBingoTileItems() {
   const search = bingoTileFilters.search.toLowerCase();
@@ -723,6 +726,120 @@ function renderBingoTileSummary() {
     <span><strong>${yes}</strong> yes votes from you</span>
     <span><strong>Top:</strong> ${top.map(item => `${escapeHtml(item.name)} (${item.yesVotes})`).join(", ") || "No votes yet"}</span>
   `;
+}
+
+function getBingoTileReportRows() {
+  const search = bingoTileFilters.search.toLowerCase();
+  let rows = [...bingoTileReportRows];
+
+  if (bingoTileFilters.category !== "all") {
+    rows = rows.filter(row => row.category === bingoTileFilters.category);
+  }
+
+  if (search) {
+    rows = rows.filter(row =>
+      `${row.name} ${row.activity} ${row.category}`.toLowerCase().includes(search)
+    );
+  }
+
+  rows.sort((a, b) => {
+    if (bingoTileFilters.sort === "name") return a.name.localeCompare(b.name);
+    if (bingoTileFilters.sort === "activity") return a.activity.localeCompare(b.activity) || a.name.localeCompare(b.name);
+    if (bingoTileFilters.sort === "qty") return (b.highestQty || 0) - (a.highestQty || 0) || (b.support || 0) - (a.support || 0);
+    return (b.support || 0) - (a.support || 0) || (b.highestQty || 0) - (a.highestQty || 0) || a.name.localeCompare(b.name);
+  });
+
+  return rows;
+}
+
+function renderBingoTileReport() {
+  const wrap = document.getElementById("bingoTileReportWrap");
+  if (!wrap) return;
+
+  const staff = bingoTileStaffMembers;
+  const rows = getBingoTileReportRows();
+
+  if (!staff.length) {
+    wrap.innerHTML = `<p class="admin-muted">No staff votes have been saved yet.</p>`;
+    return;
+  }
+
+  if (!rows.length) {
+    wrap.innerHTML = `<p class="admin-muted">No report rows match this filter.</p>`;
+    return;
+  }
+
+  const headers = staff.map(member => `<th>${escapeHtml(member.name)}</th>`).join("");
+  const body = rows.map(row => {
+    const cells = staff.map(member => {
+      const vote = row.votes?.[member.id];
+      const value = vote?.want === true ? escapeHtml(vote.qty || 1) : "—";
+      const title = vote?.want === false ? `${member.name} voted No` : vote?.want === true ? `${member.name} voted Yes for ${vote.qty || 1}` : `${member.name} has not voted Yes`;
+      return `<td title="${escapeHtml(title)}">${value}</td>`;
+    }).join("");
+
+    return `
+      <tr>
+        <th class="report-item-cell">
+          <strong>${escapeHtml(row.name)}</strong>
+          <span>${escapeHtml(row.activity)} • ${escapeHtml(row.category.toUpperCase())}</span>
+        </th>
+        ${cells}
+        <td>${row.support || 0}/${staff.length}</td>
+      </tr>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <table class="admin-bingo-report-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          ${headers}
+          <th>Support</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+function renderBingoTileViews() {
+  document.querySelectorAll("[data-bingo-tile-view]").forEach(button => {
+    button.classList.toggle("active", button.dataset.bingoTileView === activeBingoTileView);
+  });
+
+  document.getElementById("bingoTileVoteView")?.classList.toggle("active", activeBingoTileView === "vote");
+  document.getElementById("bingoTileReportView")?.classList.toggle("active", activeBingoTileView === "report");
+
+  if (activeBingoTileView === "report") renderBingoTileReport();
+}
+
+function downloadBingoTileReportCsv() {
+  const staff = bingoTileStaffMembers;
+  const rows = getBingoTileReportRows();
+
+  if (!staff.length || !rows.length) return;
+
+  const escapeCsv = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const header = ["Item", ...staff.map(member => member.name), "Support"].map(escapeCsv).join(",");
+  const lines = rows.map(row => {
+    const cells = staff.map(member => {
+      const vote = row.votes?.[member.id];
+      return vote?.want === true ? vote.qty || 1 : "";
+    });
+    return [row.name, ...cells, `${row.support || 0}/${staff.length}`].map(escapeCsv).join(",");
+  });
+
+  const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ironkin-bingo-tile-vote-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function renderBingoTileList() {
@@ -782,8 +899,12 @@ async function loadBingoTileVotes() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not load bingo tile votes.");
     bingoTileItems = data.items || [];
+    bingoTileStaffMembers = data.staffMembers || [];
+    bingoTileReportRows = data.reportRows || [];
     if (status) status.textContent = "";
     renderBingoTileList();
+    renderBingoTileReport();
+    renderBingoTileViews();
   } catch (error) {
     list.innerHTML = `<p class="admin-error">${escapeHtml(error.message)}</p>`;
   }
@@ -806,29 +927,38 @@ async function saveBingoTileVote(itemId, want, qty) {
     return;
   }
 
-  const index = bingoTileItems.findIndex(item => item.id === itemId);
-  if (index >= 0) bingoTileItems[index] = data.item;
+  await loadBingoTileVotes();
   if (status) status.textContent = "Vote saved.";
-  renderBingoTileList();
 }
 
 function setupBingoTileControls() {
   const search = document.getElementById("bingoTileSearchInput");
   const category = document.getElementById("bingoTileCategoryFilter");
   const sort = document.getElementById("bingoTileSortSelect");
+  const reportDownload = document.getElementById("downloadBingoTileReportBtn");
 
   if (search) search.addEventListener("input", () => {
     bingoTileFilters.search = search.value.trim();
     renderBingoTileList();
+    renderBingoTileReport();
   });
   if (category) category.addEventListener("change", () => {
     bingoTileFilters.category = category.value;
     renderBingoTileList();
+    renderBingoTileReport();
   });
   if (sort) sort.addEventListener("change", () => {
     bingoTileFilters.sort = sort.value;
     renderBingoTileList();
+    renderBingoTileReport();
   });
+  document.querySelectorAll("[data-bingo-tile-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      activeBingoTileView = button.dataset.bingoTileView || "vote";
+      renderBingoTileViews();
+    });
+  });
+  if (reportDownload) reportDownload.addEventListener("click", downloadBingoTileReportCsv);
 }
 
 async function loadAdmin() {

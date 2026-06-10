@@ -1159,6 +1159,59 @@ function summarizeItem(item, votes) {
   return { ...item, yesVotes, noVotes, totalVotes: entries.length, recommendedQty };
 }
 
+function getStaffMembers(votes, currentUser) {
+  const members = new Map();
+
+  if (currentUser?.id) {
+    members.set(String(currentUser.id), {
+      id: String(currentUser.id),
+      name: currentUser.name || "Staff"
+    });
+  }
+
+  Object.values(votes || {}).forEach(itemVotes => {
+    Object.entries(itemVotes || {}).forEach(([staffId, vote]) => {
+      const id = String(staffId || "");
+      if (!id) return;
+      members.set(id, {
+        id,
+        name: vote?.staffName || members.get(id)?.name || "Staff"
+      });
+    });
+  });
+
+  return Array.from(members.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function buildReportRow(item, votes) {
+  const itemVotes = votes[item.id] || {};
+  const cleanedVotes = {};
+  let support = 0;
+  let highestQty = 0;
+
+  Object.entries(itemVotes).forEach(([staffId, vote]) => {
+    const want = vote?.want === true;
+    const qty = want ? Math.max(1, Math.min(99, Number.parseInt(vote.qty || 1, 10) || 1)) : 0;
+    cleanedVotes[staffId] = {
+      want,
+      qty,
+      staffName: vote?.staffName || "Staff",
+      updatedAt: vote?.updatedAt || ""
+    };
+    if (want) {
+      support += 1;
+      highestQty = Math.max(highestQty, qty);
+    }
+  });
+
+  return {
+    ...item,
+    votes: cleanedVotes,
+    support,
+    highestQty
+  };
+}
+
 export async function onRequestGet({ request, env }) {
   const session = getSession(request);
   if (!isStaffSession(session)) {
@@ -1167,10 +1220,18 @@ export async function onRequestGet({ request, env }) {
 
   const votes = safeJsonParse(await env.DROPS_KV.get(BINGO_TILE_VOTES_KEY), {});
   const userId = session.id || session.discordId || session.username || "unknown";
+  const staffUser = {
+    id: userId,
+    name: session.displayName || session.global_name || session.username || "Staff"
+  };
   const items = DEFAULT_BINGO_TILE_ITEMS.map(item => ({
     ...summarizeItem(item, votes),
     myVote: votes[item.id]?.[userId] || null
   }));
+  const staffMembers = getStaffMembers(votes, staffUser);
+  const reportRows = DEFAULT_BINGO_TILE_ITEMS
+    .map(item => buildReportRow(item, votes))
+    .filter(row => row.support > 0 || Object.keys(row.votes || {}).length > 0);
 
-  return Response.json({ items, staffUser: { id: userId, name: session.displayName || session.global_name || session.username || "Staff" } });
+  return Response.json({ items, staffUser, staffMembers, reportRows });
 }
