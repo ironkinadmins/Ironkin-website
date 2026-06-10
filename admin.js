@@ -681,6 +681,156 @@ async function saveProfileOverrides(clear = false) {
   if (status) status.textContent = clear ? "Overrides cleared." : "Profile overrides saved.";
 }
 
+let bingoTileItems = [];
+let bingoTileFilters = { search: "", category: "all", sort: "votes" };
+
+function getFilteredBingoTileItems() {
+  const search = bingoTileFilters.search.toLowerCase();
+  let items = [...bingoTileItems];
+
+  if (bingoTileFilters.category !== "all") {
+    items = items.filter(item => item.category === bingoTileFilters.category);
+  }
+
+  if (search) {
+    items = items.filter(item =>
+      `${item.name} ${item.activity} ${item.category}`.toLowerCase().includes(search)
+    );
+  }
+
+  items.sort((a, b) => {
+    if (bingoTileFilters.sort === "name") return a.name.localeCompare(b.name);
+    if (bingoTileFilters.sort === "activity") return a.activity.localeCompare(b.activity) || a.name.localeCompare(b.name);
+    if (bingoTileFilters.sort === "qty") return (b.recommendedQty || 1) - (a.recommendedQty || 1) || b.yesVotes - a.yesVotes;
+    return b.yesVotes - a.yesVotes || (b.recommendedQty || 1) - (a.recommendedQty || 1) || a.name.localeCompare(b.name);
+  });
+
+  return items;
+}
+
+function renderBingoTileSummary() {
+  const summary = document.getElementById("bingoTileSummary");
+  if (!summary) return;
+
+  const total = bingoTileItems.length;
+  const voted = bingoTileItems.filter(item => item.myVote).length;
+  const yes = bingoTileItems.filter(item => item.myVote?.want === true).length;
+  const top = [...bingoTileItems].sort((a, b) => b.yesVotes - a.yesVotes).slice(0, 3);
+
+  summary.innerHTML = `
+    <span><strong>${total}</strong> items loaded</span>
+    <span><strong>${voted}</strong> voted by you</span>
+    <span><strong>${yes}</strong> yes votes from you</span>
+    <span><strong>Top:</strong> ${top.map(item => `${escapeHtml(item.name)} (${item.yesVotes})`).join(", ") || "No votes yet"}</span>
+  `;
+}
+
+function renderBingoTileList() {
+  const list = document.getElementById("bingoTileList");
+  if (!list) return;
+
+  const items = getFilteredBingoTileItems();
+  renderBingoTileSummary();
+
+  if (!items.length) {
+    list.innerHTML = `<p class="admin-muted">No items match this filter.</p>`;
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const myWant = item.myVote?.want;
+    const myQty = item.myVote?.qty || item.recommendedQty || 1;
+    return `
+      <div class="admin-bingo-tile-row" data-bingo-tile-id="${escapeHtml(item.id)}">
+        <div class="admin-bingo-tile-main">
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${escapeHtml(item.activity)} • ${escapeHtml(item.category.toUpperCase())}</span>
+        </div>
+        <div class="admin-bingo-tile-score">
+          <span title="Staff yes votes">✅ ${item.yesVotes || 0}</span>
+          <span title="Staff no votes">❌ ${item.noVotes || 0}</span>
+          <span title="Highest requested quantity">Qty ${item.recommendedQty || 1}</span>
+        </div>
+        <div class="admin-bingo-tile-actions">
+          <button type="button" class="${myWant === true ? "active" : ""}" data-bingo-vote="yes">Yes</button>
+          <button type="button" class="${myWant === false ? "active danger" : ""}" data-bingo-vote="no">No</button>
+          <label>
+            Qty
+            <input type="number" min="1" max="99" value="${escapeHtml(myQty)}" data-bingo-qty />
+          </label>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  list.querySelectorAll("[data-bingo-vote]").forEach(button => {
+    button.addEventListener("click", () => {
+      const row = button.closest("[data-bingo-tile-id]");
+      const qtyInput = row?.querySelector("[data-bingo-qty]");
+      saveBingoTileVote(row?.dataset.bingoTileId, button.dataset.bingoVote === "yes", qtyInput?.value || 1);
+    });
+  });
+}
+
+async function loadBingoTileVotes() {
+  const list = document.getElementById("bingoTileList");
+  const status = document.getElementById("bingoTileStatus");
+  if (!list) return;
+
+  try {
+    const response = await fetch(`/api/admin/bingo-tiles/list?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not load bingo tile votes.");
+    bingoTileItems = data.items || [];
+    if (status) status.textContent = "";
+    renderBingoTileList();
+  } catch (error) {
+    list.innerHTML = `<p class="admin-error">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function saveBingoTileVote(itemId, want, qty) {
+  const status = document.getElementById("bingoTileStatus");
+  if (!itemId) return;
+  if (status) status.textContent = "Saving vote...";
+
+  const response = await fetch("/api/admin/bingo-tiles/vote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemId, want, qty })
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (status) status.textContent = data.error || "Could not save vote.";
+    return;
+  }
+
+  const index = bingoTileItems.findIndex(item => item.id === itemId);
+  if (index >= 0) bingoTileItems[index] = data.item;
+  if (status) status.textContent = "Vote saved.";
+  renderBingoTileList();
+}
+
+function setupBingoTileControls() {
+  const search = document.getElementById("bingoTileSearchInput");
+  const category = document.getElementById("bingoTileCategoryFilter");
+  const sort = document.getElementById("bingoTileSortSelect");
+
+  if (search) search.addEventListener("input", () => {
+    bingoTileFilters.search = search.value.trim();
+    renderBingoTileList();
+  });
+  if (category) category.addEventListener("change", () => {
+    bingoTileFilters.category = category.value;
+    renderBingoTileList();
+  });
+  if (sort) sort.addEventListener("change", () => {
+    bingoTileFilters.sort = sort.value;
+    renderBingoTileList();
+  });
+}
+
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -699,6 +849,8 @@ async function loadAdmin() {
   const profileSearchInput = document.getElementById("profileSearchInput");
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
+
+  setupBingoTileControls();
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -750,6 +902,7 @@ async function loadAdmin() {
     if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
     if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
     loadBingoSettings();
+    loadBingoTileVotes();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }
