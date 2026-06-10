@@ -1173,9 +1173,12 @@ function getStaffMembers(votes, currentUser) {
     Object.entries(itemVotes || {}).forEach(([staffId, vote]) => {
       const id = String(staffId || "");
       if (!id) return;
+      const existingMember = members.get(id);
       members.set(id, {
         id,
-        name: vote?.staffName || members.get(id)?.name || "Staff"
+        // Keep the current session nickname when this is the logged-in staff member,
+        // so older saved votes do not keep showing an outdated Discord display name.
+        name: existingMember?.name || vote?.staffName || "Staff"
       });
     });
   });
@@ -1222,7 +1225,7 @@ export async function onRequestGet({ request, env }) {
   const userId = session.id || session.discordId || session.username || "unknown";
   const staffUser = {
     id: userId,
-    name: session.serverNickname || session.displayName || session.global_name || session.username || "Staff"
+    name: session.nick || session.serverNickname || session.displayName || session.global_name || session.username || "Staff"
   };
   const items = DEFAULT_BINGO_TILE_ITEMS.map(item => ({
     ...summarizeItem(item, votes),
