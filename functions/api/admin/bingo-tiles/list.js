@@ -1222,7 +1222,7 @@ export async function onRequestGet({ request, env }) {
   const userId = session.id || session.discordId || session.username || "unknown";
   const staffUser = {
     id: userId,
-    name: session.displayName || session.global_name || session.username || "Staff"
+    name: session.serverNickname || session.displayName || session.global_name || session.username || "Staff"
   };
   const items = DEFAULT_BINGO_TILE_ITEMS.map(item => ({
     ...summarizeItem(item, votes),

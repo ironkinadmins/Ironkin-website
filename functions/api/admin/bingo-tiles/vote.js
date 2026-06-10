@@ -1186,7 +1186,7 @@ export async function onRequestPost({ request, env }) {
   votes[itemId][userId] = {
     want,
     qty: want ? qty : 1,
-    staffName: session.displayName || session.global_name || session.username || "Staff",
+    staffName: session.serverNickname || session.displayName || session.global_name || session.username || "Staff",
     updatedAt: new Date().toISOString()
   };
 
