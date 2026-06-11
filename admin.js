@@ -16,9 +16,18 @@ function getSelectedEvent() {
   return allEvents.find(event => event.id === selectedEventId);
 }
 
+function getBotwTierLabel(event) {
+  if (event?.botwTier === "elite" || event?.id === "botw-elite") return "Elite";
+  if (event?.botwTier === "standard" || event?.id === "botw-standard") return "Standard";
+  return "";
+}
+
 function getResetEventTitle(event) {
   if (event?.type === "sotw") return "Skill of the Week";
-  if (event?.type === "botw") return "Boss of the Week";
+  if (event?.type === "botw") {
+    const tier = getBotwTierLabel(event);
+    return tier ? `Boss of the Week - ${tier}` : "Boss of the Week";
+  }
   if (String(event?.type || "").includes("clan-goal")) return "Clan Goal";
   return event?.label || event?.title || "Event";
 }
@@ -36,7 +45,9 @@ function resetEventAfterArchive(event) {
 
 function getAdminEventOptionText(event) {
   const title = event.title || getResetEventTitle(event);
-  return `${event.label || event.type} — ${title}${event.active ? " (Active)" : ""}`;
+  const tier = event?.type === "botw" ? getBotwTierLabel(event) : "";
+  const label = tier ? `BOTW ${tier}` : (event.label || event.type);
+  return `${label} — ${title}${event.active ? " (Active)" : ""}`;
 }
 
 function formatAdminDate(value) {
@@ -412,6 +423,15 @@ function populateEventFields() {
   if (!event) return;
 
   normalizeRewards(event);
+
+  const botwTierNotice = document.getElementById("botwTierNotice");
+  if (botwTierNotice) {
+    const tier = getBotwTierLabel(event);
+    botwTierNotice.style.display = event.type === "botw" ? "block" : "none";
+    botwTierNotice.innerHTML = tier
+      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> WOM ID, rewards, active status, drops, and archive are saved separately for this tier.`
+      : `<strong>Editing BOTW.</strong> This event is separated from other BOTW tiers.`;
+  }
 
   document.getElementById("eventDescriptionInput").value = event.description || "";
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";

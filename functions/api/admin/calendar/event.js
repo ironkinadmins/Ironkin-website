@@ -94,14 +94,57 @@ function makeId(prefix = "calendar") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function getLabelForType(type) {
+function getLabelForType(type, botwTier = "") {
   if (type === "sotw") return "SOTW";
+  if (type === "botw" && botwTier === "elite") return "BOTW Elite";
+  if (type === "botw" && botwTier === "standard") return "BOTW Standard";
   if (type === "botw") return "BOTW";
   if (type === "clan-goal" || type === "clan-goal-skill" || type === "clan-goal-boss") return "Clan Goal";
   if (type === "normal") return "Normal Event";
   if (type === "mass") return "Clan Mass";
   if (type === "giveaway") return "Giveaway";
   return "Event";
+}
+
+function normalizeCalendarEventType(rawType, rawTier = "") {
+  const value = cleanText(rawType, "normal").toLowerCase();
+  const tierValue = cleanText(rawTier).toLowerCase();
+
+  if (value === "botw-elite") {
+    return { eventType: "botw", category: "botw", botwTier: "elite", activeEventId: "botw-elite" };
+  }
+
+  if (value === "botw-standard") {
+    return { eventType: "botw", category: "botw", botwTier: "standard", activeEventId: "botw-standard" };
+  }
+
+  if (value === "botw") {
+    const botwTier = tierValue === "standard" ? "standard" : "elite";
+    return { eventType: "botw", category: "botw", botwTier, activeEventId: botwTier === "standard" ? "botw-standard" : "botw-elite" };
+  }
+
+  if (value === "clan-goal-skill" || value === "clan-goal-boss") {
+    return { eventType: value, category: "clan-goal", botwTier: "", activeEventId: "clan-goal" };
+  }
+
+  if (value === "clan-goal") {
+    return { eventType: value, category: value, botwTier: "", activeEventId: "clan-goal" };
+  }
+
+  if (value === "sotw") {
+    return { eventType: value, category: value, botwTier: "", activeEventId: "sotw-current" };
+  }
+
+  return { eventType: value, category: value, botwTier: "", activeEventId: "" };
+}
+
+function getActiveEventIdForCalendarEvent(calendarEvent) {
+  if (calendarEvent?.activeEventId) return calendarEvent.activeEventId;
+  if (calendarEvent?.eventType === "botw" && calendarEvent?.botwTier === "standard") return "botw-standard";
+  if (calendarEvent?.eventType === "botw") return "botw-elite";
+  if (calendarEvent?.eventType === "sotw") return "sotw-current";
+  if (String(calendarEvent?.eventType || "").startsWith("clan-goal")) return "clan-goal";
+  return calendarEvent?.id || "";
 }
 
 async function getJson(kv, key, fallback) {
@@ -163,7 +206,8 @@ async function deleteActiveEvent(env, eventId) {
   if (!env.DROPS_KV) return;
 
   const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
-  const remaining = events.filter(item => item.id !== eventId);
+  const activeId = typeof eventId === "object" ? getActiveEventIdForCalendarEvent(eventId) : eventId;
+  const remaining = events.filter(item => item.id !== activeId);
 
   if (remaining.length !== events.length) {
     await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(remaining));
@@ -172,15 +216,17 @@ async function deleteActiveEvent(env, eventId) {
 
 async function addOrUpdateActiveEvent(env, calendarEvent) {
   if (!env.DROPS_KV || !calendarEvent.womCompetitionId || calendarEvent.status === "cancelled") {
-    if (calendarEvent.status === "cancelled") await deleteActiveEvent(env, calendarEvent.id);
+    if (calendarEvent.status === "cancelled") await deleteActiveEvent(env, calendarEvent);
     return;
   }
 
   const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
   const activeEvent = {
-    id: calendarEvent.id,
+    id: getActiveEventIdForCalendarEvent(calendarEvent),
+    calendarEventId: calendarEvent.id,
     type: calendarEvent.eventType,
-    label: getLabelForType(calendarEvent.eventType),
+    botwTier: calendarEvent.botwTier || undefined,
+    label: getLabelForType(calendarEvent.eventType, calendarEvent.botwTier),
     title: calendarEvent.title,
     description: calendarEvent.description || "",
     womCompetitionId: String(calendarEvent.womCompetitionId),
@@ -285,7 +331,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
       );
     }
 
-    await deleteActiveEvent(env, eventId);
+    await deleteActiveEvent(env, deletedEvent);
 
     const discordSync = mirrorCalendarEventDelete(env, deletedEvent);
     if (typeof waitUntil === "function") waitUntil(discordSync);
@@ -312,6 +358,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const events = await getCustomCalendarEvents(env);
     const existing = cleanText(body.id) ? events.find(item => item.id === cleanText(body.id)) : null;
 
+    const normalizedType = normalizeCalendarEventType(body.eventType, body.botwTier || existing?.botwTier);
+
     const event = {
       ...(existing || {}),
       id: cleanText(body.id) || makeId("calendar"),
@@ -321,8 +369,10 @@ export async function onRequestPost({ request, env, waitUntil }) {
       location: cleanText(body.location),
       start: normalizeDate(body.start),
       end: normalizeDate(body.end),
-      eventType: cleanText(body.eventType, "other"),
-      category: cleanText(body.category, body.eventType || "other"),
+      eventType: normalizedType.eventType,
+      category: normalizedType.category,
+      botwTier: normalizedType.botwTier || undefined,
+      activeEventId: normalizedType.activeEventId || undefined,
       featured: body.featured === true,
       dropsEnabled: body.dropsEnabled !== false,
       target: body.target ? Number(body.target) : null,
@@ -362,7 +412,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
 
     const { event: savedEvent } = await saveCustomCalendarEvent(env, event);
 
-    if (savedEvent.status === "cancelled") await deleteActiveEvent(env, savedEvent.id);
+    if (savedEvent.status === "cancelled") await deleteActiveEvent(env, savedEvent);
     else if (savedEvent.womCompetitionId) await addOrUpdateActiveEvent(env, savedEvent);
 
     const discordSync = savedEvent.status === "cancelled"

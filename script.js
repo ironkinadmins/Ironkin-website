@@ -118,8 +118,19 @@ function isClanGoalEvent(event) {
   return type.includes("clan-goal") || type === "clan_goal";
 }
 
+function getBotwTierLabel(event) {
+  if (event?.botwTier === "elite" || event?.id === "botw-elite") return "Elite";
+  if (event?.botwTier === "standard" || event?.id === "botw-standard") return "Standard";
+  return "";
+}
+
+function isBotwEvent(event) {
+  return event?.type === "botw" || String(event?.id || "").startsWith("botw-");
+}
+
 function getEventPageHref(event) {
   if (isClanGoalEvent(event)) return "event.html?id=clan-goal";
+  if (isBotwEvent(event)) return "event.html?id=botw-current";
   return `event.html?id=${encodeURIComponent(event?.id || "")}`;
 }
 
@@ -1128,7 +1139,10 @@ async function loadEventsHub() {
       return;
     }
 
-    events.forEach(event => {
+    const botwEvents = events.filter(event => isBotwEvent(event));
+    const nonBotwEvents = events.filter(event => !isBotwEvent(event));
+
+    nonBotwEvents.forEach(event => {
       const active = isEventActive(event);
 
       grid.appendChild(createEventHubCard({
@@ -1144,11 +1158,142 @@ async function loadEventsHub() {
       }));
     });
 
+    if (botwEvents.length) {
+      const activeBotw = botwEvents.some(event => isEventActive(event));
+      grid.appendChild(createEventHubCard({
+        type: "botw",
+        href: activeBotw ? "event.html?id=botw-current" : "",
+        icon: getEventIcon("botw"),
+        label: "BOTW",
+        title: activeBotw ? "Boss of the Week" : "",
+        description: activeBotw
+          ? "Elite and Standard BOTW leaderboards are tracked separately."
+          : "",
+        active: activeBotw
+      }));
+    }
+
     await appendBattleshipBingoCard(grid);
     await appendGiveawaysHubCard(grid);
   } catch (error) {
     grid.textContent = `Could not load events: ${error.message}`;
   }
+}
+
+
+function getBotwEventsForDashboard(events) {
+  const botw = events.filter(event => isBotwEvent(event));
+  const elite = botw.find(event => event.botwTier === "elite" || event.id === "botw-elite") || null;
+  const standard = botw.find(event => event.botwTier === "standard" || event.id === "botw-standard") || null;
+  return [elite, standard].filter(Boolean);
+}
+
+function renderBotwTierDashboardColumn(event, standings) {
+  const tier = getBotwTierLabel(event) || "BOTW";
+  const eventHasNotStarted = isBeforeEventStart(standings, event);
+  const totalGained = eventHasNotStarted ? 0 : (standings?.totalGained || 0);
+  const contributors = standings?.contributors || 0;
+  const highestGain = standings?.standings?.[0]?.gained || 0;
+  const topContributors = eventHasNotStarted
+    ? []
+    : (standings?.standings?.filter(player => player.gained > 0).slice(0, 5) || []);
+  const eventDateText = standings?.startsAt && standings?.endsAt
+    ? `${new Date(standings.startsAt).toLocaleDateString("en-US")} - ${new Date(standings.endsAt).toLocaleDateString("en-US")}`
+    : event.startDate && event.endDate
+      ? `${new Date(event.startDate).toLocaleDateString("en-US")} - ${new Date(event.endDate).toLocaleDateString("en-US")}`
+      : "Dates will appear when tracking is available.";
+
+  return `
+    <section class="event-panel botw-tier-panel">
+      <div class="botw-tier-header">
+        <p class="eyebrow">☠️ BOTW ${escapeHtml(tier)}</p>
+        <h2>${displayEventTitle(standings?.title || event.title || `Boss of the Week - ${tier}`, event.type)}</h2>
+        <p>${event.description || standings?.metric || "Boss of the Week dashboard."}</p>
+        <small><strong>Event Date:</strong> ${eventDateText}</small>
+      </div>
+
+      ${eventHasNotStarted ? `
+        <div class="event-starting-soon-panel compact">
+          <p class="eyebrow">Event Starting Soon</p>
+          <h3>Starts in ${getCountdownToStart(standings?.startsAt || event.startDate || event.start)}</h3>
+          <p>Progress tracking will begin when the WOM competition starts.</p>
+        </div>
+      ` : ""}
+
+      <div class="event-kpi-grid botw-tier-kpis">
+        <div class="event-kpi">
+          <span>Total KC</span>
+          <strong>${formatNumber(totalGained)}</strong>
+        </div>
+        <div class="event-kpi">
+          <span>Active Killers</span>
+          <strong>${formatNumber(contributors)}</strong>
+        </div>
+        <div class="event-kpi">
+          <span>Highest KC</span>
+          <strong>${formatNumber(highestGain)}</strong>
+        </div>
+      </div>
+
+      <div class="event-detail-grid botw-tier-details">
+        <section class="event-panel inner-panel">
+          <h3>Leaderboard</h3>
+          ${topContributors.length
+            ? topContributors.map((player, index) => `
+                <div class="event-contributor-row">
+                  <strong>#${index + 1} ${escapeHtml(player.name)}</strong>
+                  <span>${formatNumber(player.gained)} gained</span>
+                </div>
+              `).join("")
+            : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC yet.")
+          }
+        </section>
+        ${renderCompetitionStats(event, standings)}
+      </div>
+
+      ${renderRewardsSection(event)}
+
+      ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `
+        <a class="btn primary" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">
+          View BOTW ${escapeHtml(tier)} WOM Leaderboard
+        </a>
+      ` : ""}
+    </section>
+  `;
+}
+
+async function renderBotwDashboard(dashboard, events) {
+  const botwEvents = getBotwEventsForDashboard(events);
+
+  if (!botwEvents.length) {
+    dashboard.textContent = "BOTW events not found.";
+    return;
+  }
+
+  const standingsList = await Promise.all(
+    botwEvents.map(event => fetchEventStandings(event).catch(() => null))
+  );
+
+  dashboard.innerHTML = `
+    <section class="event-detail-card botw-dashboard-card">
+      <div class="event-detail-hero">
+        <div>
+          <p class="eyebrow">☠️ BOTW</p>
+          <h1>Boss of the Week</h1>
+          <p>Elite and Standard are tracked separately so admins can manage different WOM IDs, rewards, drops, and archives without mixing results.</p>
+        </div>
+        <div class="event-percent-box">
+          <strong>2</strong>
+          <span>Divisions</span>
+        </div>
+      </div>
+      <div class="event-detail-body">
+        <div class="botw-dashboard-grid">
+          ${botwEvents.map((event, index) => renderBotwTierDashboardColumn(event, standingsList[index])).join("")}
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 async function loadSingleEventDashboard() {
@@ -1171,6 +1316,11 @@ async function loadSingleEventDashboard() {
 
   try {
     const events = await fetchCurrentEvents();
+    if (["botw", "botw-current", "botw-elite", "botw-standard"].includes(eventId)) {
+      await renderBotwDashboard(dashboard, events);
+      return;
+    }
+
     const event = eventId === "clan-goal"
       ? events.find(item => isClanGoalEvent(item) && isEventActive(item)) ||
         events.find(item => isClanGoalEvent(item))
@@ -2846,6 +2996,18 @@ function getCalendarDateTimeValue(dateId, timeId, meridiemId) {
   return calendarEasternWallTimeToUtcIso(date, time, meridiem);
 }
 
+function isCalendarBotwEventType(eventType) {
+  return eventType === "botw" || eventType === "botw-elite" || eventType === "botw-standard";
+}
+
+function getCalendarEventTypeInputValue(event) {
+  const type = event?.eventType || event?.category || "normal";
+  if (type === "botw") {
+    return event?.botwTier === "standard" ? "botw-standard" : "botw-elite";
+  }
+  return type;
+}
+
 function updateCalendarWomFields() {
   const createWomInput = document.getElementById("calendarCreateWomInput");
   const eventTypeInput = document.getElementById("calendarEventTypeInput");
@@ -2865,14 +3027,14 @@ function updateCalendarWomFields() {
 
   let competitionType = competitionTypeInput?.value || "boss-kc";
   if (eventType === "sotw") competitionType = "skill-xp";
-  if (eventType === "botw" || eventType === "mass") competitionType = "boss-kc";
+  if (isCalendarBotwEventType(eventType) || eventType === "mass") competitionType = "boss-kc";
   if (competitionTypeInput) competitionTypeInput.value = competitionType;
 
   const needsSkill = competitionType === "skill-xp";
   const needsBoss = competitionType === "boss-kc";
 
   if (panel) panel.hidden = !createWom && !hasExistingWom;
-  if (competitionTypeField) competitionTypeField.hidden = !createWom || hasExistingWom || eventType === "sotw" || eventType === "botw" || eventType === "mass";
+  if (competitionTypeField) competitionTypeField.hidden = !createWom || hasExistingWom || eventType === "sotw" || isCalendarBotwEventType(eventType) || eventType === "mass";
   if (skillField) skillField.hidden = !createWom || hasExistingWom || !needsSkill;
   if (bossField) bossField.hidden = !createWom || hasExistingWom || !needsBoss;
   if (targetField) targetField.hidden = (!createWom && !hasExistingWom) || !isClanGoal;
@@ -2886,7 +3048,7 @@ function updateCalendarWomFields() {
 function getCalendarCompetitionTypeForForm() {
   const eventType = document.getElementById("calendarEventTypeInput")?.value || "normal";
   if (eventType === "sotw") return "skill-xp";
-  if (eventType === "botw" || eventType === "mass") return "boss-kc";
+  if (isCalendarBotwEventType(eventType) || eventType === "mass") return "boss-kc";
   return document.getElementById("calendarCompetitionTypeInput")?.value || "boss-kc";
 }
 
@@ -2923,7 +3085,7 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   const status = document.getElementById("calendarEventFormStatus");
 
   if (titleInput) titleInput.value = duplicate ? `${event.title || "Untitled Event"} Copy` : (event.title || "");
-  if (typeInput) typeInput.value = event.eventType || event.category || "normal";
+  if (typeInput) typeInput.value = getCalendarEventTypeInputValue(event);
   if (descInput) descInput.value = event.description || "";
   if (featuredInput) featuredInput.checked = event.featured === true;
   if (targetInput) targetInput.value = event.target || "";
@@ -2966,7 +3128,8 @@ async function saveCalendarEventForm(event) {
     start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput", "calendarEventStartMeridiemInput"),
     end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput", "calendarEventEndMeridiemInput"),
     eventType,
-    category: eventType,
+    category: isCalendarBotwEventType(eventType) ? "botw" : eventType,
+    botwTier: eventType === "botw-standard" ? "standard" : (eventType === "botw-elite" ? "elite" : undefined),
     createWom,
     womMetric: (createWom || alreadyHasWom) ? getCalendarWomMetricForForm() : "",
     womCompetitionId: alreadyHasWom ? calendarEditingEvent.womCompetitionId : "",
