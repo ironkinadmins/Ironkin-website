@@ -327,12 +327,12 @@ function renderCompetitionStats(event, standings) {
   `;
 }
 
-function renderDropsPanel() {
+function renderDropsPanel(listId = "dropsList") {
   return `
     <section class="event-panel">
       <h2>Unique Drops Received</h2>
       <p>Drops tracked throughout this event.</p>
-      <div id="dropsList"></div>
+      <div id="${escapeHtml(listId)}" class="drops-list"></div>
     </section>
   `;
 }
@@ -1140,9 +1140,29 @@ async function loadEventsHub() {
     }
 
     const botwEvents = events.filter(event => isBotwEvent(event));
-    const nonBotwEvents = events.filter(event => !isBotwEvent(event));
+    let botwHubCardAdded = false;
 
-    nonBotwEvents.forEach(event => {
+    events.forEach(event => {
+      if (isBotwEvent(event)) {
+        if (botwHubCardAdded) return;
+
+        const activeBotw = botwEvents.some(item => isEventActive(item));
+        botwHubCardAdded = true;
+
+        grid.appendChild(createEventHubCard({
+          type: "botw",
+          href: activeBotw ? "event.html?id=botw-current" : "",
+          icon: getEventIcon("botw"),
+          label: "BOTW",
+          title: activeBotw ? "Boss of the Week" : "Boss of the Week",
+          description: activeBotw
+            ? "View Elite and Standard BOTW dashboards in one place."
+            : "Not active",
+          active: activeBotw
+        }));
+        return;
+      }
+
       const active = isEventActive(event);
 
       grid.appendChild(createEventHubCard({
@@ -1158,17 +1178,17 @@ async function loadEventsHub() {
       }));
     });
 
-    if (botwEvents.length) {
+    if (botwEvents.length && !botwHubCardAdded) {
       const activeBotw = botwEvents.some(event => isEventActive(event));
       grid.appendChild(createEventHubCard({
         type: "botw",
         href: activeBotw ? "event.html?id=botw-current" : "",
         icon: getEventIcon("botw"),
         label: "BOTW",
-        title: activeBotw ? "Boss of the Week" : "",
+        title: "Boss of the Week",
         description: activeBotw
-          ? "Elite and Standard BOTW leaderboards are tracked separately."
-          : "",
+          ? "View Elite and Standard BOTW dashboards in one place."
+          : "Not active",
         active: activeBotw
       }));
     }
@@ -1251,6 +1271,8 @@ function renderBotwTierDashboardColumn(event, standings) {
         ${renderCompetitionStats(event, standings)}
       </div>
 
+      ${event.dropsEnabled ? renderDropsPanel(`dropsList-${event.id}`) : ""}
+
       ${renderRewardsSection(event)}
 
       ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `
@@ -1294,6 +1316,10 @@ async function renderBotwDashboard(dashboard, events) {
       </div>
     </section>
   `;
+
+  botwEvents.forEach(event => {
+    if (event.dropsEnabled) loadDropsForEvent(event.id, `dropsList-${event.id}`);
+  });
 }
 
 async function loadSingleEventDashboard() {
@@ -2022,6 +2048,93 @@ async function loadHallOfFlamePage() {
   }
 }
 
+
+
+async function loadDropsForEvent(eventId, listId = "dropsList") {
+  const dropsList = document.getElementById(listId);
+
+  if (!dropsList) return;
+
+  try {
+    const authResponse = await fetch("/api/auth/me");
+    const authData = await authResponse.json();
+
+    const staffRoles = [
+      "1364734283356569620",
+      "1365445491776815104"
+    ];
+
+    const isStaff =
+      authData.signedIn &&
+      authData.user?.roles?.some(roleId => staffRoles.includes(roleId));
+
+    const response = await fetch(
+      `/api/drops/list?eventId=${encodeURIComponent(eventId)}`
+    );
+    const data = await response.json();
+
+    dropsList.innerHTML = "";
+
+    const drops = data.drops || [];
+
+    if (drops.length === 0) {
+      dropsList.textContent = "No drops tracked yet.";
+      return;
+    }
+
+    drops.forEach(drop => {
+      const row = document.createElement("div");
+      row.className = "drop-row";
+
+      row.innerHTML = `
+        <span>${escapeHtml(drop.name)}</span>
+
+        <div class="drop-controls">
+          <strong>${formatNumber(drop.count)}</strong>
+
+          ${
+            isStaff
+              ? `
+                <button type="button" class="drop-adjust-btn" data-event-id="${escapeHtml(eventId)}" data-list-id="${escapeHtml(listId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="1">+</button>
+                <button type="button" class="drop-adjust-btn" data-event-id="${escapeHtml(eventId)}" data-list-id="${escapeHtml(listId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="-1">−</button>
+              `
+              : ""
+          }
+        </div>
+      `;
+
+      dropsList.appendChild(row);
+    });
+
+    dropsList.querySelectorAll(".drop-adjust-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        changeDropForEvent(button.dataset.eventId, button.dataset.dropName, Number(button.dataset.direction || 0), button.dataset.listId);
+      });
+    });
+  } catch {
+    dropsList.innerHTML = "";
+  }
+}
+
+async function changeDropForEvent(eventId, name, direction, listId = "dropsList") {
+  const endpoint =
+    direction > 0
+      ? "/api/drops/increment"
+      : "/api/drops/decrement";
+
+  await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      eventId,
+      name
+    })
+  });
+
+  loadDropsForEvent(eventId, listId);
+}
 
 async function loadDrops() {
   const dropsList = document.getElementById("dropsList");

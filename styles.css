@@ -7503,3 +7503,43 @@ a.event-hub-card.is-inactive:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* BOTW unified admin layout */
+.botw-admin-hub {
+  width: 100%;
+}
+
+.botw-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.botw-admin-tier-card {
+  border: 1px solid rgba(255, 109, 0, 0.28);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(20, 12, 10, 0.78);
+}
+
+.botw-admin-tier-card .admin-field {
+  margin-bottom: 14px;
+}
+
+.botw-admin-tier-card textarea {
+  min-height: 90px;
+  font-family: inherit;
+}
+
+.admin-toggle-row.compact {
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 16px;
+}
+
+@media (max-width: 860px) {
+  .botw-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -981,6 +981,252 @@ function setupBingoTileControls() {
   if (reportDownload) reportDownload.addEventListener("click", downloadBingoTileReportCsv);
 }
 
+function getBotwAdminEvents() {
+  const botw = allEvents.filter(event => event?.type === "botw" || String(event?.id || "").startsWith("botw-"));
+  const elite = botw.find(event => event.botwTier === "elite" || event.id === "botw-elite") || null;
+  const standard = botw.find(event => event.botwTier === "standard" || event.id === "botw-standard") || null;
+  return [elite, standard].filter(Boolean);
+}
+
+function renderSelectedAdminMode() {
+  const isBotwHub = selectedEventId === "botw-current";
+  const botwHub = document.getElementById("botwAdminHub");
+  const standardEditor = document.getElementById("standardEventEditor");
+  const standardDrops = document.getElementById("standardDropsEditor");
+
+  if (botwHub) botwHub.style.display = isBotwHub ? "block" : "none";
+  if (standardEditor) standardEditor.style.display = isBotwHub ? "none" : "block";
+  if (standardDrops) standardDrops.style.display = isBotwHub ? "none" : "block";
+
+  if (isBotwHub) {
+    renderBotwAdminHub();
+    return;
+  }
+
+  populateEventFields();
+  loadAdminDrops();
+}
+
+function renderBotwRewardTextarea(event, kind) {
+  normalizeRewards(event);
+  return JSON.stringify(event.rewards?.[kind] || [], null, 2);
+}
+
+function parseBotwRewardTextarea(value, fallback) {
+  if (!value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    alert("One of the BOTW reward boxes has invalid JSON. Nothing was saved.");
+    throw new Error("Invalid reward JSON");
+  }
+}
+
+function renderBotwAdminHub() {
+  const grid = document.getElementById("botwAdminGrid");
+  if (!grid) return;
+
+  const events = getBotwAdminEvents();
+  if (!events.length) {
+    grid.innerHTML = `<p class="admin-muted">No BOTW events found.</p>`;
+    return;
+  }
+
+  grid.innerHTML = events.map(event => {
+    const tier = getBotwTierLabel(event) || "BOTW";
+    normalizeRewards(event);
+    return `
+      <article class="botw-admin-tier-card" data-botw-admin-card="${escapeHtml(event.id)}">
+        <div class="botw-tier-header">
+          <p class="eyebrow">BOTW ${escapeHtml(tier)}</p>
+          <h3>${escapeHtml(event.title || `Boss of the Week - ${tier}`)}</h3>
+          <small>${event.active ? "Active" : "Inactive"}</small>
+        </div>
+
+        <div class="admin-field">
+          <label>WOM Competition ID</label>
+          <input type="text" data-botw-field="womCompetitionId" value="${escapeHtml(event.womCompetitionId || "")}" placeholder="Example: 138731" />
+        </div>
+
+        <div class="admin-field">
+          <label>Description</label>
+          <textarea rows="3" data-botw-field="description">${escapeHtml(event.description || "")}</textarea>
+        </div>
+
+        <div class="admin-toggle-row compact">
+          <label><input type="checkbox" data-botw-field="active" ${event.active ? "checked" : ""} /> Active</label>
+          <label><input type="checkbox" data-botw-field="featured" ${event.featured ? "checked" : ""} /> Featured</label>
+          <label><input type="checkbox" data-botw-field="dropsEnabled" ${event.dropsEnabled ? "checked" : ""} /> Drops Enabled</label>
+        </div>
+
+        <div class="admin-field">
+          <label>Placement Rewards</label>
+          <textarea rows="6" data-botw-field="placementRewards">${escapeHtml(renderBotwRewardTextarea(event, "placement"))}</textarea>
+        </div>
+
+        <div class="admin-field">
+          <label>Participation Rewards</label>
+          <textarea rows="5" data-botw-field="participationRewards">${escapeHtml(renderBotwRewardTextarea(event, "participation"))}</textarea>
+        </div>
+
+        <div class="admin-section-header compact">
+          <h3>Drops</h3>
+          <p>Saved only for BOTW ${escapeHtml(tier)}.</p>
+        </div>
+        <div class="admin-add-row">
+          <input type="text" placeholder="Example: Primordial crystal" data-botw-drop-input="${escapeHtml(event.id)}" />
+          <button type="button" class="btn secondary" data-botw-add-drop="${escapeHtml(event.id)}">Add</button>
+        </div>
+        <div class="admin-drops-list" data-botw-drops-list="${escapeHtml(event.id)}">Loading...</div>
+
+        <div class="admin-action-row">
+          <button type="button" class="btn primary" data-botw-save="${escapeHtml(event.id)}">Save BOTW ${escapeHtml(tier)}</button>
+          <button type="button" class="btn secondary danger" data-botw-archive="${escapeHtml(event.id)}">Archive ${escapeHtml(tier)}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  grid.querySelectorAll("[data-botw-save]").forEach(button => {
+    button.addEventListener("click", () => saveBotwTier(button.dataset.botwSave));
+  });
+  grid.querySelectorAll("[data-botw-archive]").forEach(button => {
+    button.addEventListener("click", () => archiveBotwTier(button.dataset.botwArchive));
+  });
+  grid.querySelectorAll("[data-botw-add-drop]").forEach(button => {
+    button.addEventListener("click", () => addBotwDrop(button.dataset.botwAddDrop));
+  });
+
+  events.forEach(event => loadBotwAdminDrops(event.id));
+}
+
+function collectBotwTierCard(eventId) {
+  const event = allEvents.find(item => item.id === eventId);
+  const card = document.querySelector(`[data-botw-admin-card="${CSS.escape(eventId)}"]`);
+  if (!event || !card) return null;
+
+  event.womCompetitionId = card.querySelector('[data-botw-field="womCompetitionId"]')?.value.trim() || null;
+  event.description = card.querySelector('[data-botw-field="description"]')?.value.trim() || "";
+  event.active = Boolean(card.querySelector('[data-botw-field="active"]')?.checked);
+  event.featured = Boolean(card.querySelector('[data-botw-field="featured"]')?.checked);
+  event.dropsEnabled = Boolean(card.querySelector('[data-botw-field="dropsEnabled"]')?.checked);
+  event.rewards = {
+    placement: parseBotwRewardTextarea(card.querySelector('[data-botw-field="placementRewards"]')?.value || "", event.rewards?.placement || []),
+    participation: parseBotwRewardTextarea(card.querySelector('[data-botw-field="participationRewards"]')?.value || "", event.rewards?.participation || [])
+  };
+  return event;
+}
+
+async function saveAllEventsFromAdmin() {
+  const response = await fetch("/api/admin/events/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events: allEvents })
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Could not save events.");
+  }
+}
+
+async function saveBotwTier(eventId) {
+  try {
+    collectBotwTierCard(eventId);
+    await saveAllEventsFromAdmin();
+    alert("BOTW tier saved.");
+  } catch (error) {
+    if (error.message !== "Invalid reward JSON") alert(error.message);
+  }
+}
+
+async function archiveBotwTier(eventId) {
+  const event = collectBotwTierCard(eventId);
+  if (!event) return;
+  const tier = getBotwTierLabel(event) || "BOTW";
+  if (!confirm(`Archive BOTW ${tier}? This saves the current standings snapshot and marks only this tier inactive.`)) return;
+
+  const response = await fetch("/api/admin/events/archive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event, events: allEvents })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(data.error || "Could not archive BOTW tier.");
+    return;
+  }
+
+  resetEventAfterArchive(event);
+  renderBotwAdminHub();
+  alert(`BOTW ${tier} archived and marked inactive.`);
+}
+
+async function loadBotwAdminDrops(eventId) {
+  const list = document.querySelector(`[data-botw-drops-list="${CSS.escape(eventId)}"]`);
+  if (!list) return;
+
+  const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}`);
+  const data = await response.json().catch(() => ({}));
+  const drops = data.drops || [];
+  if (!drops.length) {
+    list.textContent = "No drops added yet.";
+    return;
+  }
+
+  list.innerHTML = drops.map(drop => `
+    <div class="drop-row">
+      <span>${escapeHtml(drop.name)}</span>
+      <div class="drop-controls">
+        <button type="button" data-botw-drop-change="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="-1">−</button>
+        <strong>${escapeHtml(drop.count)}</strong>
+        <button type="button" data-botw-drop-change="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="1">+</button>
+        <button type="button" data-botw-drop-delete="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}">Delete</button>
+      </div>
+    </div>
+  `).join("");
+
+  list.querySelectorAll("[data-botw-drop-change]").forEach(button => {
+    button.addEventListener("click", () => changeBotwDrop(button.dataset.botwDropChange, button.dataset.dropName, Number(button.dataset.direction)));
+  });
+  list.querySelectorAll("[data-botw-drop-delete]").forEach(button => {
+    button.addEventListener("click", () => deleteBotwDrop(button.dataset.botwDropDelete, button.dataset.dropName));
+  });
+}
+
+async function addBotwDrop(eventId) {
+  const input = document.querySelector(`[data-botw-drop-input="${CSS.escape(eventId)}"]`);
+  const name = input?.value.trim();
+  if (!name) return;
+  await fetch("/api/drops/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, name })
+  });
+  input.value = "";
+  loadBotwAdminDrops(eventId);
+}
+
+async function changeBotwDrop(eventId, name, direction) {
+  const endpoint = direction > 0 ? "/api/drops/increment" : "/api/drops/decrement";
+  await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, name })
+  });
+  loadBotwAdminDrops(eventId);
+}
+
+async function deleteBotwDrop(eventId, name) {
+  await fetch("/api/drops/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, name })
+  });
+  loadBotwAdminDrops(eventId);
+}
+
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -1008,7 +1254,18 @@ async function loadAdmin() {
     allEvents = await fetchEvents();
     eventSelect.innerHTML = "";
 
+    const botwEvents = allEvents.filter(event => event.type === "botw" || String(event.id || "").startsWith("botw-"));
+    const hasBotw = botwEvents.length > 0;
+
+    if (hasBotw) {
+      const option = document.createElement("option");
+      option.value = "botw-current";
+      option.textContent = "BOTW — Manage Elite + Standard";
+      eventSelect.appendChild(option);
+    }
+
     allEvents.forEach(event => {
+      if (hasBotw && (event.type === "botw" || String(event.id || "").startsWith("botw-"))) return;
       const option = document.createElement("option");
       option.value = event.id;
       option.textContent = getAdminEventOptionText(event);
@@ -1016,13 +1273,11 @@ async function loadAdmin() {
     });
 
     selectedEventId = eventSelect.value;
-    populateEventFields();
-    loadAdminDrops();
+    renderSelectedAdminMode();
 
     eventSelect.addEventListener("change", () => {
       selectedEventId = eventSelect.value;
-      populateEventFields();
-      loadAdminDrops();
+      renderSelectedAdminMode();
     });
 
     addDropBtn.addEventListener("click", addDrop);
