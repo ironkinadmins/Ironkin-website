@@ -473,6 +473,11 @@ function setupAdminTabs() {
   });
 }
 
+function renderSelectedAdminMode() {
+  populateEventFields();
+  loadAdminDrops();
+}
+
 function toDateTimeLocalValue(value) {
   if (!value) return "";
 
@@ -730,18 +735,7 @@ async function loadAdmin() {
     allEvents = await fetchEvents();
     eventSelect.innerHTML = "";
 
-    const botwEvents = allEvents.filter(event => event.type === "botw" || String(event.id || "").startsWith("botw-"));
-    const hasBotw = botwEvents.length > 0;
-
-    if (hasBotw) {
-      const option = document.createElement("option");
-      option.value = "botw-current";
-      option.textContent = "BOTW — Manage Elite + Standard";
-      eventSelect.appendChild(option);
-    }
-
     allEvents.forEach(event => {
-      if (hasBotw && (event.type === "botw" || String(event.id || "").startsWith("botw-"))) return;
       const option = document.createElement("option");
       option.value = event.id;
       option.textContent = getAdminEventOptionText(event);
@@ -749,11 +743,13 @@ async function loadAdmin() {
     });
 
     selectedEventId = eventSelect.value;
-    renderSelectedAdminMode();
+    populateEventFields();
+    loadAdminDrops();
 
     eventSelect.addEventListener("change", () => {
       selectedEventId = eventSelect.value;
-      renderSelectedAdminMode();
+      populateEventFields();
+      loadAdminDrops();
     });
 
     addDropBtn.addEventListener("click", addDrop);
