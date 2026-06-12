@@ -657,53 +657,91 @@ function renderHomeLastEventResult(entry) {
   }
 }
 
-async function loadHomeStats() {
-  const homeClanXp = document.getElementById("homeClanXp");
+let homeFeaturedRotationTimer = null;
+let homeFeaturedRotationIndex = 0;
+let homeFeaturedRotationItems = [];
 
-  try {
-    const events = await fetchCurrentEvents();
+function getHomeFeaturedCandidates(events) {
+  return (Array.isArray(events) ? events : [])
+    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled")
+    .filter(event => hasLiveFeaturedData(event) || isEventCurrentlyActiveByDates(event) || isEventUpcomingByDates(event))
+    .sort((a, b) => {
+      const scoreDiff = featuredPriorityScore(a) - featuredPriorityScore(b);
+      if (scoreDiff !== 0) return scoreDiff;
 
-    const activeEvents = events.filter(event =>
-      hasLiveFeaturedData(event) ||
-      isEventCurrentlyActiveByDates(event) ||
-      isEventUpcomingByDates(event)
-    );
-    const featuredEvent = chooseFeaturedEvent(activeEvents);
+      const tierA = getBotwTierLabel(a) === "Elite" ? 0 : getBotwTierLabel(a) === "Standard" ? 1 : 2;
+      const tierB = getBotwTierLabel(b) === "Elite" ? 0 : getBotwTierLabel(b) === "Standard" ? 1 : 2;
+      if (tierA !== tierB) return tierA - tierB;
 
-    if (!featuredEvent) {
-      const archive = await fetchArchive().catch(() => []);
-      const latestResult = archive[0];
+      const aStart = getEventStartTime(a) ?? Number.MAX_SAFE_INTEGER;
+      const bStart = getEventStartTime(b) ?? Number.MAX_SAFE_INTEGER;
+      return aStart - bStart;
+    });
+}
 
-      if (latestResult) {
-        renderHomeLastEventResult(latestResult);
-        return;
-      }
+function setHomeFeaturedControls(items, activeIndex) {
+  const controls = document.getElementById("homeFeaturedControls");
+  if (!controls) return;
 
-      if (homeClanXp) {
-        homeClanXp.textContent = "No Active Event";
-      }
+  if (!Array.isArray(items) || items.length <= 1) {
+    controls.innerHTML = "";
+    return;
+  }
 
-      const eventTitle = document.getElementById("homeEventTitle");
-      const eventMeta = document.getElementById("homeEventMeta");
-      const topThree = document.getElementById("homeTopThree");
-      const featuredStats = document.getElementById("homeFeaturedStats");
-      const homeTotalGained = document.getElementById("homeTotalGained");
-      const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
+  controls.innerHTML = `
+    <button type="button" class="featured-rotation-arrow" data-featured-rotation="prev" aria-label="Previous featured event">‹</button>
+    <div class="featured-rotation-dots" aria-label="Featured event slides">
+      ${items.map((item, index) => `
+        <button
+          type="button"
+          class="featured-rotation-dot${index === activeIndex ? " is-active" : ""}"
+          data-featured-rotation-index="${index}"
+          aria-label="Show ${escapeHtml(item.event.label || item.event.title || `event ${index + 1}`)}"
+        ></button>
+      `).join("")}
+    </div>
+    <button type="button" class="featured-rotation-arrow" data-featured-rotation="next" aria-label="Next featured event">›</button>
+  `;
 
-      if (eventTitle) eventTitle.textContent = "No active event";
-      if (eventMeta) eventMeta.textContent = "No previous results found yet.";
-      if (topThree) topThree.textContent = "Archive an event to show its final results here.";
-      if (featuredStats) featuredStats.innerHTML = "";
-      if (homeTotalGained) homeTotalGained.textContent = "—";
-      if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
+  controls.querySelectorAll("[data-featured-rotation]").forEach(button => {
+    button.addEventListener("click", () => {
+      const direction = button.getAttribute("data-featured-rotation");
+      const nextIndex = direction === "prev"
+        ? (homeFeaturedRotationIndex - 1 + homeFeaturedRotationItems.length) % homeFeaturedRotationItems.length
+        : (homeFeaturedRotationIndex + 1) % homeFeaturedRotationItems.length;
+      renderHomeFeaturedRotationItem(nextIndex, true);
+    });
+  });
 
-      return;
-    }
+  controls.querySelectorAll("[data-featured-rotation-index]").forEach(button => {
+    button.addEventListener("click", () => {
+      renderHomeFeaturedRotationItem(Number(button.getAttribute("data-featured-rotation-index")), true);
+    });
+  });
+}
 
-    const standings = await fetchEventStandings(featuredEvent).catch(() => null);
-    const eventHasNotStarted = isBeforeEventStart(standings, featuredEvent);
+function restartHomeFeaturedRotation() {
+  if (homeFeaturedRotationTimer) {
+    clearInterval(homeFeaturedRotationTimer);
+    homeFeaturedRotationTimer = null;
+  }
 
-   if (eventHasNotStarted) {
+  if (homeFeaturedRotationItems.length <= 1) return;
+
+  homeFeaturedRotationTimer = setInterval(() => {
+    const nextIndex = (homeFeaturedRotationIndex + 1) % homeFeaturedRotationItems.length;
+    renderHomeFeaturedRotationItem(nextIndex, false);
+  }, 8000);
+}
+
+function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
+  if (!homeFeaturedRotationItems.length) return;
+
+  homeFeaturedRotationIndex = Math.max(0, Math.min(index, homeFeaturedRotationItems.length - 1));
+  const item = homeFeaturedRotationItems[homeFeaturedRotationIndex];
+  const featuredEvent = item.event;
+  const standings = item.standings;
+
   const eventPercent = document.getElementById("homeEventPercent");
   const eventTitle = document.getElementById("homeEventTitle");
   const eventMeta = document.getElementById("homeEventMeta");
@@ -712,185 +750,163 @@ async function loadHomeStats() {
   const homeTotalGained = document.getElementById("homeTotalGained");
   const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
   const homeClanXp = document.getElementById("homeClanXp");
+  const featuredLink = document.getElementById("homeFeaturedLink");
 
-  const startText = getCountdownToStart(
-    standings?.startsAt || featuredEvent.startDate || featuredEvent.start
-  );
+  const eventHasNotStarted = isBeforeEventStart(standings, featuredEvent);
+  const typeLabel = featuredEvent.label || formatEventType(featuredEvent.type);
+  const title = displayEventTitle(standings?.title || featuredEvent.title || typeLabel, featuredEvent.type);
 
-  if (eventPercent) eventPercent.textContent = formatEventType(featuredEvent.type);
+  if (eventPercent) eventPercent.textContent = typeLabel;
+  if (eventTitle) eventTitle.textContent = title;
+  if (featuredLink) featuredLink.href = getEventPageHref(featuredEvent);
 
-  if (eventTitle) {
-    eventTitle.textContent = displayEventTitle(
-      standings?.title || featuredEvent.title,
-      featuredEvent.type
-    );
+  if (eventHasNotStarted) {
+    const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
+
+    if (eventMeta) {
+      eventMeta.textContent = standings?.startsAt
+        ? `Starts ${new Date(standings.startsAt).toLocaleString("en-US")}`
+        : "Tracking will begin once the event starts.";
+    }
+    if (homeTotalGained) homeTotalGained.textContent = "Event Starting Soon";
+    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "";
+    if (homeClanXp) homeClanXp.textContent = `Starts in ${startText}`;
+    if (featuredStats) {
+      featuredStats.innerHTML = `
+        <div class="featured-stat featured-stat-countdown">
+          <strong>${startText}</strong>
+          <span>Until Start</span>
+        </div>
+      `;
+    }
+    if (topThree) topThree.innerHTML = "";
+    setHomeFeaturedControls(homeFeaturedRotationItems, homeFeaturedRotationIndex);
+    if (resetTimer) restartHomeFeaturedRotation();
+    return;
   }
 
   if (eventMeta) {
-    eventMeta.textContent = standings?.startsAt
-      ? `Starts ${new Date(standings.startsAt).toLocaleString("en-US")}`
-      : "Tracking will begin once the event starts.";
+    eventMeta.textContent = standings?.endsAt
+      ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString("en-US")}`
+      : featuredEvent.description || "Event details coming soon.";
   }
 
-  if (homeTotalGained) {
-    homeTotalGained.textContent = "Event Starting Soon";
+  if (standings) {
+    const topPlayer = standings.standings?.[0];
+    const timeRemaining = standings.endsAt ? getTimeRemaining(standings.endsAt) : "TBD";
+
+    if (homeTotalGained) homeTotalGained.textContent = formatNumber(standings.totalGained);
+    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
+    if (homeClanXp) homeClanXp.textContent = `${formatNumber(standings.totalGained)} gained`;
+    if (featuredStats) {
+      featuredStats.innerHTML = `
+        <div class="featured-stat">
+          <strong>${formatNumber(standings.contributors || 0)}</strong>
+          <span>Active Participants</span>
+        </div>
+        <div class="featured-stat">
+          <strong>${timeRemaining}</strong>
+          <span>Time Remaining</span>
+        </div>
+        <div class="featured-stat">
+          <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
+          <span>Top Gain</span>
+        </div>
+      `;
+    }
+    if (topThree) {
+      topThree.innerHTML = "";
+      if (standings.standings?.length) {
+        standings.standings.slice(0, 3).forEach((player, playerIndex) => {
+          const div = document.createElement("div");
+          div.innerHTML = `<strong>#${playerIndex + 1} ${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} gained</span>`;
+          topThree.appendChild(div);
+        });
+      } else {
+        topThree.textContent = "No standings yet.";
+      }
+    }
+  } else {
+    if (homeTotalGained) homeTotalGained.textContent = "—";
+    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
+    if (homeClanXp) homeClanXp.textContent = featuredEvent.target ? `${formatNumber(featuredEvent.target)} goal` : "Coming Soon";
+    if (featuredStats) featuredStats.innerHTML = "";
+    if (topThree) topThree.textContent = "No WOM competition linked yet.";
   }
 
-  // This removes the duplicate text under Event Starting Soon
-  if (homeTotalGainedLabel) {
-    homeTotalGainedLabel.textContent = "";
-  }
-
-  if (homeClanXp) {
-    homeClanXp.textContent = `Starts in ${startText}`;
-  }
-
-  if (featuredStats) {
-    featuredStats.innerHTML = `
-      <div class="featured-stat featured-stat-countdown">
-        <strong>${startText}</strong>
-        <span>Until Start</span>
-      </div>
-    `;
-  }
-
-  // Important: only blank this during pre-start.
-  // Do not change the active-event leaderboard code later in the file.
-  if (topThree) {
-    topThree.innerHTML = "";
-  }
-
-  return;
+  setHomeFeaturedControls(homeFeaturedRotationItems, homeFeaturedRotationIndex);
+  if (resetTimer) restartHomeFeaturedRotation();
 }
 
-    const eventPercent = document.getElementById("homeEventPercent");
-    const eventTitle = document.getElementById("homeEventTitle");
-    const eventMeta = document.getElementById("homeEventMeta");
-    const topThree = document.getElementById("homeTopThree");
-    const featuredStats = document.getElementById("homeFeaturedStats");
-const homeTotalGained =
-  document.getElementById("homeTotalGained");
-const homeTotalGainedLabel =
-  document.getElementById("homeTotalGainedLabel");
-    if (eventPercent) {
-      eventPercent.textContent = formatEventType(featuredEvent.type);
+async function loadHomeStats() {
+  const homeClanXp = document.getElementById("homeClanXp");
+
+  try {
+    const events = await fetchCurrentEvents();
+    const featuredCandidates = getHomeFeaturedCandidates(events);
+
+    if (!featuredCandidates.length) {
+      const archive = await fetchArchive().catch(() => []);
+      const latestResult = archive[0];
+
+      if (latestResult) {
+        renderHomeLastEventResult(latestResult);
+        return;
+      }
+
+      if (homeClanXp) homeClanXp.textContent = "No Active Event";
+
+      const eventTitle = document.getElementById("homeEventTitle");
+      const eventMeta = document.getElementById("homeEventMeta");
+      const topThree = document.getElementById("homeTopThree");
+      const featuredStats = document.getElementById("homeFeaturedStats");
+      const homeTotalGained = document.getElementById("homeTotalGained");
+      const homeTotalGainedLabel = document.getElementById("homeTotalGainedLabel");
+      const controls = document.getElementById("homeFeaturedControls");
+
+      if (eventTitle) eventTitle.textContent = "No active event";
+      if (eventMeta) eventMeta.textContent = "No previous results found yet.";
+      if (topThree) topThree.textContent = "Archive an event to show its final results here.";
+      if (featuredStats) featuredStats.innerHTML = "";
+      if (homeTotalGained) homeTotalGained.textContent = "—";
+      if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
+      if (controls) controls.innerHTML = "";
+      return;
     }
 
-    if (eventTitle) {
-      eventTitle.textContent = displayEventTitle(standings?.title || featuredEvent.title, featuredEvent.type);
-    }
+    const standingsList = await Promise.all(
+      featuredCandidates.map(event => fetchEventStandings(event).catch(() => null))
+    );
 
-    if (eventMeta) {
-      eventMeta.textContent =
-        standings?.endsAt
-          ? `${standings.metric || "Competition"} • Ends ${new Date(standings.endsAt).toLocaleDateString("en-US")}`
-          : featuredEvent.description || "Event details coming soon.";
-    }
+    homeFeaturedRotationItems = featuredCandidates.map((event, index) => ({
+      event,
+      standings: standingsList[index]
+    }));
 
-    if (standings) {
-      if (homeTotalGained) {
-  homeTotalGained.textContent =
-    formatNumber(standings.totalGained);
-}
-      if (homeTotalGainedLabel) {
-        homeTotalGainedLabel.textContent = "Total Gained";
-      }
-      if (homeClanXp) {
-        homeClanXp.textContent =
-          `${formatNumber(standings.totalGained)} gained`;
-      }
+    renderHomeFeaturedRotationItem(0, false);
+    restartHomeFeaturedRotation();
 
-      if (featuredStats) {
-        const topPlayer = standings.standings?.[0];
-
-        const timeRemaining = standings.endsAt
-          ? getTimeRemaining(standings.endsAt)
-          : "TBD";
-
-featuredStats.innerHTML = `
-  <div class="featured-stat">
-    <strong>${formatNumber(standings.contributors || 0)}</strong>
-    <span>Active Participants</span>
-  </div>
-
-  <div class="featured-stat">
-    <strong>${timeRemaining}</strong>
-    <span>Time Remaining</span>
-  </div>
-
-  <div class="featured-stat">
-    <strong>${topPlayer ? formatNumber(topPlayer.gained) : "0"}</strong>
-    <span>Top Gain</span>
-  </div>
-`;
-      }
-
-      if (topThree) {
-        topThree.innerHTML = "";
-
-        if (standings.standings?.length) {
-          standings.standings.slice(0, 3).forEach((player, index) => {
-            const div = document.createElement("div");
-
-            div.innerHTML =
-              `<strong>#${index + 1} ${player.name}</strong><span>${formatNumber(player.gained)} gained</span>`;
-
-            topThree.appendChild(div);
-          });
-        } else {
-          topThree.textContent = "No standings yet.";
-        }
-      }
-    } else {
-      if (homeTotalGainedLabel) {
-        homeTotalGainedLabel.textContent = "Total Gained";
-      }
-
-      if (homeClanXp) {
-        homeClanXp.textContent = featuredEvent.target
-          ? `${formatNumber(featuredEvent.target)} goal`
-          : "Coming Soon";
-      }
-
-      if (featuredStats) {
-        featuredStats.innerHTML = "";
-      }
-
-      if (topThree) {
-        topThree.textContent = "No WOM competition linked yet.";
-      }
-    }
-
-    const womResponse =
-      await fetch("https://api.wiseoldman.net/v2/groups/12095");
-
-    const womData =
-      await womResponse.json();
+    const womResponse = await fetch("https://api.wiseoldman.net/v2/groups/12095");
+    const womData = await womResponse.json();
 
     if (womResponse.ok) {
       const homeClanMembers = document.getElementById("homeClanMembers");
-
-      if (homeClanMembers) {
-        homeClanMembers.textContent =
-          womData.memberCount ||
-          womData.members?.length ||
-          "0";
-      }
+      if (homeClanMembers) homeClanMembers.textContent = womData.memberCount || womData.members?.length || "0";
     }
   } catch (error) {
-    if (homeClanXp) {
-      homeClanXp.textContent = "Unavailable";
-    }
+    if (homeClanXp) homeClanXp.textContent = "Unavailable";
 
     const eventPercent = document.getElementById("homeEventPercent");
     const eventTitle = document.getElementById("homeEventTitle");
     const eventMeta = document.getElementById("homeEventMeta");
     const topThree = document.getElementById("homeTopThree");
+    const controls = document.getElementById("homeFeaturedControls");
 
     if (eventPercent) eventPercent.textContent = "Unavailable";
     if (eventTitle) eventTitle.textContent = "Could not load event";
     if (eventMeta) eventMeta.textContent = error.message;
     if (topThree) topThree.textContent = "No competitors loaded.";
+    if (controls) controls.innerHTML = "";
   }
 }
 

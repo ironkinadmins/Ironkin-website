@@ -7543,3 +7543,48 @@ a.event-hub-card.is-inactive:hover {
     grid-template-columns: 1fr;
   }
 }
+
+
+.featured-rotation-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 16px;
+}
+
+.featured-rotation-arrow,
+.featured-rotation-dot {
+  border: 1px solid rgba(255, 122, 26, 0.45);
+  background: rgba(255, 122, 26, 0.08);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.featured-rotation-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.featured-rotation-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.featured-rotation-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.featured-rotation-dot.is-active {
+  background: var(--ember);
+  box-shadow: 0 0 0 4px rgba(255, 122, 26, 0.16);
+}
