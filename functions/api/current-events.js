@@ -8,7 +8,7 @@ const DEFAULT_EVENTS = [
     womCompetitionId: null,
     featured: false,
     active: true,
-    dropsEnabled: true,
+    dropsEnabled: false,
     target: null,
     startDate: null,
     endDate: null
@@ -23,7 +23,7 @@ const DEFAULT_EVENTS = [
     womCompetitionId: null,
     featured: false,
     active: true,
-    dropsEnabled: true,
+    dropsEnabled: false,
     target: null,
     startDate: null,
     endDate: null
@@ -38,7 +38,7 @@ const DEFAULT_EVENTS = [
     womCompetitionId: null,
     featured: false,
     active: true,
-    dropsEnabled: true,
+    dropsEnabled: false,
     target: null,
     startDate: null,
     endDate: null
@@ -88,7 +88,8 @@ function normalizeBotwEvents(events) {
       label: "BOTW Elite",
       title: base.title && base.title !== "Boss of the Week" ? base.title : "Boss of the Week - Elite",
       description: base.description || "Battle for the top spot in the Elite Boss of the Week challenge.",
-      womCompetitionId: base.womCompetitionId || null
+      womCompetitionId: base.womCompetitionId || null,
+      dropsEnabled: false
     });
   }
 
@@ -102,7 +103,8 @@ function normalizeBotwEvents(events) {
       title: "Boss of the Week - Standard",
       description: "Battle for the top spot in the Standard Boss of the Week challenge.",
       womCompetitionId: null,
-      featured: false
+      featured: false,
+      dropsEnabled: false
     });
   }
 

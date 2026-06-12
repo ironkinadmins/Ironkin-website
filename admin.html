@@ -13,26 +13,17 @@
     <section class="admin-hero">
       <p class="eyebrow">Ironkin Admin</p>
       <h1>Admin Dashboard</h1>
-      <p>Manage Ironkin events, WOM tracking, rewards, and event-specific drops.</p>
+      <p>Manage Ironkin events, WOM tracking, rewards, and admin tools.</p>
     </section>
 
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Bingo</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="bingo-tiles">Bingo Tile List</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
     </div>
 
     <div class="admin-tab-panel active" id="adminTab-events">
     <section class="admin-card">
-      <div id="botwAdminHub" class="botw-admin-hub" style="display:none">
-        <div class="admin-section-header">
-          <p class="eyebrow">Boss of the Week</p>
-          <h2>BOTW Management</h2>
-          <p class="admin-muted">Manage Elite and Standard side-by-side. Each tier keeps its own WOM ID, status, rewards, drops, and archive history.</p>
-        </div>
-        <div class="botw-admin-grid" id="botwAdminGrid"></div>
-      </div>
       <div id="standardEventEditor">
       <div class="admin-form-grid">
         <div class="admin-field">
@@ -216,65 +207,6 @@
     </div>
 
 
-
-    <div class="admin-tab-panel" id="adminTab-bingo-tiles">
-      <section class="admin-card admin-bingo-tiles-card">
-        <div class="admin-section-header">
-          <p class="eyebrow">Battleship Bingo</p>
-          <h2>Bingo Tile Vote List</h2>
-          <p class="admin-muted">Staff-only voting list for PvM and skilling uniques. Vote Yes/No for each item, and set a quantity when you think more than one should be required on the board.</p>
-        </div>
-
-        <div class="bingo-tile-subtabs" role="tablist" aria-label="Bingo tile voting sections">
-          <button type="button" class="bingo-tile-subtab active" data-bingo-tile-view="vote">Vote on Items</button>
-          <button type="button" class="bingo-tile-subtab" data-bingo-tile-view="report">Vote Report</button>
-        </div>
-
-        <div class="bingo-tile-view active" id="bingoTileVoteView">
-          <div class="admin-bingo-tile-toolbar">
-            <div class="admin-field">
-              <label for="bingoTileSearchInput">Search Items</label>
-              <input id="bingoTileSearchInput" type="search" placeholder="Search by item or activity" />
-            </div>
-
-            <div class="admin-field">
-              <label for="bingoTileCategoryFilter">Category</label>
-              <select id="bingoTileCategoryFilter">
-                <option value="all">All Categories</option>
-                <option value="pvm">PvM</option>
-                <option value="skilling">Skilling</option>
-              </select>
-            </div>
-
-            <div class="admin-field">
-              <label for="bingoTileSortSelect">Sort</label>
-              <select id="bingoTileSortSelect">
-                <option value="votes">Most Yes Votes</option>
-                <option value="qty">Highest Qty</option>
-                <option value="name">Item Name</option>
-                <option value="activity">Activity</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="admin-bingo-tile-summary" id="bingoTileSummary">Loading tile votes...</div>
-          <div class="admin-bingo-tile-list" id="bingoTileList">Loading...</div>
-        </div>
-
-        <div class="bingo-tile-view" id="bingoTileReportView">
-          <div class="admin-bingo-report-header">
-            <div>
-              <h3>Vote Report</h3>
-              <p class="admin-muted">Each staff member has their own column. The number shown is that person's voted quantity for the item. A dash means they did not vote yes for that item.</p>
-            </div>
-            <button type="button" class="btn secondary" id="downloadBingoTileReportBtn">Download CSV</button>
-          </div>
-          <div class="admin-bingo-report-wrap" id="bingoTileReportWrap">Loading vote report...</div>
-        </div>
-
-        <p class="admin-muted" id="bingoTileStatus"></p>
-      </section>
-    </div>
 
     <div class="admin-tab-panel" id="adminTab-profiles">
       <section class="admin-card">

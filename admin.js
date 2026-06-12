@@ -181,10 +181,14 @@ function updateEventFieldVisibility() {
   const event = getSelectedEvent();
   const targetSection = document.getElementById("targetSection");
   const milestonesSection = document.getElementById("milestonesSection");
+  const standardDrops = document.getElementById("standardDropsEditor");
+  const dropsToggle = document.getElementById("eventDropsInput")?.closest("label");
   const showGoalFields = isClanGoalEvent(event);
 
   if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
   if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
+  if (standardDrops) standardDrops.style.display = showGoalFields ? "block" : "none";
+  if (dropsToggle) dropsToggle.style.display = showGoalFields ? "inline-flex" : "none";
 }
 
 function renderMilestonesEditor() {
@@ -429,7 +433,7 @@ function populateEventFields() {
     const tier = getBotwTierLabel(event);
     botwTierNotice.style.display = event.type === "botw" ? "block" : "none";
     botwTierNotice.innerHTML = tier
-      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> WOM ID, rewards, active status, drops, and archive are saved separately for this tier.`
+      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> WOM ID, rewards, active status, and archive are saved separately for this tier.`
       : `<strong>Editing BOTW.</strong> This event is separated from other BOTW tiers.`;
   }
 
@@ -701,532 +705,6 @@ async function saveProfileOverrides(clear = false) {
   if (status) status.textContent = clear ? "Overrides cleared." : "Profile overrides saved.";
 }
 
-let bingoTileItems = [];
-let bingoTileStaffMembers = [];
-let bingoTileReportRows = [];
-let bingoTileFilters = { search: "", category: "all", sort: "votes" };
-let activeBingoTileView = "vote";
-
-function getFilteredBingoTileItems() {
-  const search = bingoTileFilters.search.toLowerCase();
-  let items = [...bingoTileItems];
-
-  if (bingoTileFilters.category !== "all") {
-    items = items.filter(item => item.category === bingoTileFilters.category);
-  }
-
-  if (search) {
-    items = items.filter(item =>
-      `${item.name} ${item.activity} ${item.category}`.toLowerCase().includes(search)
-    );
-  }
-
-  items.sort((a, b) => {
-    if (bingoTileFilters.sort === "name") return a.name.localeCompare(b.name);
-    if (bingoTileFilters.sort === "activity") return a.activity.localeCompare(b.activity) || a.name.localeCompare(b.name);
-    if (bingoTileFilters.sort === "qty") return (b.recommendedQty || 1) - (a.recommendedQty || 1) || b.yesVotes - a.yesVotes;
-    return b.yesVotes - a.yesVotes || (b.recommendedQty || 1) - (a.recommendedQty || 1) || a.name.localeCompare(b.name);
-  });
-
-  return items;
-}
-
-function renderBingoTileSummary() {
-  const summary = document.getElementById("bingoTileSummary");
-  if (!summary) return;
-
-  const total = bingoTileItems.length;
-  const voted = bingoTileItems.filter(item => item.myVote).length;
-  const yes = bingoTileItems.filter(item => item.myVote?.want === true).length;
-  const top = [...bingoTileItems].sort((a, b) => b.yesVotes - a.yesVotes).slice(0, 3);
-
-  summary.innerHTML = `
-    <span><strong>${total}</strong> items loaded</span>
-    <span><strong>${voted}</strong> voted by you</span>
-    <span><strong>${yes}</strong> yes votes from you</span>
-    <span><strong>Top:</strong> ${top.map(item => `${escapeHtml(item.name)} (${item.yesVotes})`).join(", ") || "No votes yet"}</span>
-  `;
-}
-
-function getBingoTileReportRows() {
-  const search = bingoTileFilters.search.toLowerCase();
-  let rows = [...bingoTileReportRows];
-
-  if (bingoTileFilters.category !== "all") {
-    rows = rows.filter(row => row.category === bingoTileFilters.category);
-  }
-
-  if (search) {
-    rows = rows.filter(row =>
-      `${row.name} ${row.activity} ${row.category}`.toLowerCase().includes(search)
-    );
-  }
-
-  rows.sort((a, b) => {
-    if (bingoTileFilters.sort === "name") return a.name.localeCompare(b.name);
-    if (bingoTileFilters.sort === "activity") return a.activity.localeCompare(b.activity) || a.name.localeCompare(b.name);
-    if (bingoTileFilters.sort === "qty") return (b.highestQty || 0) - (a.highestQty || 0) || (b.support || 0) - (a.support || 0);
-    return (b.support || 0) - (a.support || 0) || (b.highestQty || 0) - (a.highestQty || 0) || a.name.localeCompare(b.name);
-  });
-
-  return rows;
-}
-
-function renderBingoTileReport() {
-  const wrap = document.getElementById("bingoTileReportWrap");
-  if (!wrap) return;
-
-  const staff = bingoTileStaffMembers;
-  const rows = getBingoTileReportRows();
-
-  if (!staff.length) {
-    wrap.innerHTML = `<p class="admin-muted">No staff votes have been saved yet.</p>`;
-    return;
-  }
-
-  if (!rows.length) {
-    wrap.innerHTML = `<p class="admin-muted">No report rows match this filter.</p>`;
-    return;
-  }
-
-  const headers = staff.map(member => `<th>${escapeHtml(member.name)}</th>`).join("");
-  const body = rows.map(row => {
-    const cells = staff.map(member => {
-      const vote = row.votes?.[member.id];
-      const value = vote?.want === true ? escapeHtml(vote.qty || 1) : "—";
-      const title = vote?.want === false ? `${member.name} voted No` : vote?.want === true ? `${member.name} voted Yes for ${vote.qty || 1}` : `${member.name} has not voted Yes`;
-      return `<td title="${escapeHtml(title)}">${value}</td>`;
-    }).join("");
-
-    return `
-      <tr>
-        <th class="report-item-cell">
-          <strong>${escapeHtml(row.name)}</strong>
-          <span>${escapeHtml(row.activity)} • ${escapeHtml(row.category.toUpperCase())}</span>
-        </th>
-        ${cells}
-        <td>${row.support || 0}/${staff.length}</td>
-      </tr>
-    `;
-  }).join("");
-
-  wrap.innerHTML = `
-    <table class="admin-bingo-report-table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          ${headers}
-          <th>Support</th>
-        </tr>
-      </thead>
-      <tbody>${body}</tbody>
-    </table>
-  `;
-}
-
-function renderBingoTileViews() {
-  document.querySelectorAll("[data-bingo-tile-view]").forEach(button => {
-    button.classList.toggle("active", button.dataset.bingoTileView === activeBingoTileView);
-  });
-
-  document.getElementById("bingoTileVoteView")?.classList.toggle("active", activeBingoTileView === "vote");
-  document.getElementById("bingoTileReportView")?.classList.toggle("active", activeBingoTileView === "report");
-
-  if (activeBingoTileView === "report") renderBingoTileReport();
-}
-
-function downloadBingoTileReportCsv() {
-  const staff = bingoTileStaffMembers;
-  const rows = getBingoTileReportRows();
-
-  if (!staff.length || !rows.length) return;
-
-  const escapeCsv = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  const header = ["Item", ...staff.map(member => member.name), "Support"].map(escapeCsv).join(",");
-  const lines = rows.map(row => {
-    const cells = staff.map(member => {
-      const vote = row.votes?.[member.id];
-      return vote?.want === true ? vote.qty || 1 : "";
-    });
-    return [row.name, ...cells, `${row.support || 0}/${staff.length}`].map(escapeCsv).join(",");
-  });
-
-  const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `ironkin-bingo-tile-vote-report-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function renderBingoTileList() {
-  const list = document.getElementById("bingoTileList");
-  if (!list) return;
-
-  const items = getFilteredBingoTileItems();
-  renderBingoTileSummary();
-
-  if (!items.length) {
-    list.innerHTML = `<p class="admin-muted">No items match this filter.</p>`;
-    return;
-  }
-
-  list.innerHTML = items.map(item => {
-    const myWant = item.myVote?.want;
-    const myQty = item.myVote?.qty || item.recommendedQty || 1;
-    return `
-      <div class="admin-bingo-tile-row" data-bingo-tile-id="${escapeHtml(item.id)}">
-        <div class="admin-bingo-tile-main">
-          <strong>${escapeHtml(item.name)}</strong>
-          <span>${escapeHtml(item.activity)} • ${escapeHtml(item.category.toUpperCase())}</span>
-        </div>
-        <div class="admin-bingo-tile-score">
-          <span title="Staff yes votes">✅ ${item.yesVotes || 0}</span>
-          <span title="Staff no votes">❌ ${item.noVotes || 0}</span>
-          <span title="Highest requested quantity">Qty ${item.recommendedQty || 1}</span>
-        </div>
-        <div class="admin-bingo-tile-actions">
-          <button type="button" class="${myWant === true ? "active" : ""}" data-bingo-vote="yes">Yes</button>
-          <button type="button" class="${myWant === false ? "active danger" : ""}" data-bingo-vote="no">No</button>
-          <label>
-            Qty
-            <input type="number" min="1" max="99" value="${escapeHtml(myQty)}" data-bingo-qty />
-          </label>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  list.querySelectorAll("[data-bingo-vote]").forEach(button => {
-    button.addEventListener("click", () => {
-      const row = button.closest("[data-bingo-tile-id]");
-      const qtyInput = row?.querySelector("[data-bingo-qty]");
-      saveBingoTileVote(row?.dataset.bingoTileId, button.dataset.bingoVote === "yes", qtyInput?.value || 1);
-    });
-  });
-}
-
-async function loadBingoTileVotes() {
-  const list = document.getElementById("bingoTileList");
-  const status = document.getElementById("bingoTileStatus");
-  if (!list) return;
-
-  try {
-    const response = await fetch(`/api/admin/bingo-tiles/list?t=${Date.now()}`, { cache: "no-store" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load bingo tile votes.");
-    bingoTileItems = data.items || [];
-    bingoTileStaffMembers = data.staffMembers || [];
-    bingoTileReportRows = data.reportRows || [];
-    if (status) status.textContent = "";
-    renderBingoTileList();
-    renderBingoTileReport();
-    renderBingoTileViews();
-  } catch (error) {
-    list.innerHTML = `<p class="admin-error">${escapeHtml(error.message)}</p>`;
-  }
-}
-
-async function saveBingoTileVote(itemId, want, qty) {
-  const status = document.getElementById("bingoTileStatus");
-  if (!itemId) return;
-  if (status) status.textContent = "Saving vote...";
-
-  const response = await fetch("/api/admin/bingo-tiles/vote", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemId, want, qty })
-  });
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    if (status) status.textContent = data.error || "Could not save vote.";
-    return;
-  }
-
-  await loadBingoTileVotes();
-  if (status) status.textContent = "Vote saved.";
-}
-
-function setupBingoTileControls() {
-  const search = document.getElementById("bingoTileSearchInput");
-  const category = document.getElementById("bingoTileCategoryFilter");
-  const sort = document.getElementById("bingoTileSortSelect");
-  const reportDownload = document.getElementById("downloadBingoTileReportBtn");
-
-  if (search) search.addEventListener("input", () => {
-    bingoTileFilters.search = search.value.trim();
-    renderBingoTileList();
-    renderBingoTileReport();
-  });
-  if (category) category.addEventListener("change", () => {
-    bingoTileFilters.category = category.value;
-    renderBingoTileList();
-    renderBingoTileReport();
-  });
-  if (sort) sort.addEventListener("change", () => {
-    bingoTileFilters.sort = sort.value;
-    renderBingoTileList();
-    renderBingoTileReport();
-  });
-  document.querySelectorAll("[data-bingo-tile-view]").forEach(button => {
-    button.addEventListener("click", () => {
-      activeBingoTileView = button.dataset.bingoTileView || "vote";
-      renderBingoTileViews();
-    });
-  });
-  if (reportDownload) reportDownload.addEventListener("click", downloadBingoTileReportCsv);
-}
-
-function getBotwAdminEvents() {
-  const botw = allEvents.filter(event => event?.type === "botw" || String(event?.id || "").startsWith("botw-"));
-  const elite = botw.find(event => event.botwTier === "elite" || event.id === "botw-elite") || null;
-  const standard = botw.find(event => event.botwTier === "standard" || event.id === "botw-standard") || null;
-  return [elite, standard].filter(Boolean);
-}
-
-function renderSelectedAdminMode() {
-  const isBotwHub = selectedEventId === "botw-current";
-  const botwHub = document.getElementById("botwAdminHub");
-  const standardEditor = document.getElementById("standardEventEditor");
-  const standardDrops = document.getElementById("standardDropsEditor");
-
-  if (botwHub) botwHub.style.display = isBotwHub ? "block" : "none";
-  if (standardEditor) standardEditor.style.display = isBotwHub ? "none" : "block";
-  if (standardDrops) standardDrops.style.display = isBotwHub ? "none" : "block";
-
-  if (isBotwHub) {
-    renderBotwAdminHub();
-    return;
-  }
-
-  populateEventFields();
-  loadAdminDrops();
-}
-
-function renderBotwRewardTextarea(event, kind) {
-  normalizeRewards(event);
-  return JSON.stringify(event.rewards?.[kind] || [], null, 2);
-}
-
-function parseBotwRewardTextarea(value, fallback) {
-  if (!value.trim()) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    alert("One of the BOTW reward boxes has invalid JSON. Nothing was saved.");
-    throw new Error("Invalid reward JSON");
-  }
-}
-
-function renderBotwAdminHub() {
-  const grid = document.getElementById("botwAdminGrid");
-  if (!grid) return;
-
-  const events = getBotwAdminEvents();
-  if (!events.length) {
-    grid.innerHTML = `<p class="admin-muted">No BOTW events found.</p>`;
-    return;
-  }
-
-  grid.innerHTML = events.map(event => {
-    const tier = getBotwTierLabel(event) || "BOTW";
-    normalizeRewards(event);
-    return `
-      <article class="botw-admin-tier-card" data-botw-admin-card="${escapeHtml(event.id)}">
-        <div class="botw-tier-header">
-          <p class="eyebrow">BOTW ${escapeHtml(tier)}</p>
-          <h3>${escapeHtml(event.title || `Boss of the Week - ${tier}`)}</h3>
-          <small>${event.active ? "Active" : "Inactive"}</small>
-        </div>
-
-        <div class="admin-field">
-          <label>WOM Competition ID</label>
-          <input type="text" data-botw-field="womCompetitionId" value="${escapeHtml(event.womCompetitionId || "")}" placeholder="Example: 138731" />
-        </div>
-
-        <div class="admin-field">
-          <label>Description</label>
-          <textarea rows="3" data-botw-field="description">${escapeHtml(event.description || "")}</textarea>
-        </div>
-
-        <div class="admin-toggle-row compact">
-          <label><input type="checkbox" data-botw-field="active" ${event.active ? "checked" : ""} /> Active</label>
-          <label><input type="checkbox" data-botw-field="featured" ${event.featured ? "checked" : ""} /> Featured</label>
-          <label><input type="checkbox" data-botw-field="dropsEnabled" ${event.dropsEnabled ? "checked" : ""} /> Drops Enabled</label>
-        </div>
-
-        <div class="admin-field">
-          <label>Placement Rewards</label>
-          <textarea rows="6" data-botw-field="placementRewards">${escapeHtml(renderBotwRewardTextarea(event, "placement"))}</textarea>
-        </div>
-
-        <div class="admin-field">
-          <label>Participation Rewards</label>
-          <textarea rows="5" data-botw-field="participationRewards">${escapeHtml(renderBotwRewardTextarea(event, "participation"))}</textarea>
-        </div>
-
-        <div class="admin-section-header compact">
-          <h3>Drops</h3>
-          <p>Saved only for BOTW ${escapeHtml(tier)}.</p>
-        </div>
-        <div class="admin-add-row">
-          <input type="text" placeholder="Example: Primordial crystal" data-botw-drop-input="${escapeHtml(event.id)}" />
-          <button type="button" class="btn secondary" data-botw-add-drop="${escapeHtml(event.id)}">Add</button>
-        </div>
-        <div class="admin-drops-list" data-botw-drops-list="${escapeHtml(event.id)}">Loading...</div>
-
-        <div class="admin-action-row">
-          <button type="button" class="btn primary" data-botw-save="${escapeHtml(event.id)}">Save BOTW ${escapeHtml(tier)}</button>
-          <button type="button" class="btn secondary danger" data-botw-archive="${escapeHtml(event.id)}">Archive ${escapeHtml(tier)}</button>
-        </div>
-      </article>
-    `;
-  }).join("");
-
-  grid.querySelectorAll("[data-botw-save]").forEach(button => {
-    button.addEventListener("click", () => saveBotwTier(button.dataset.botwSave));
-  });
-  grid.querySelectorAll("[data-botw-archive]").forEach(button => {
-    button.addEventListener("click", () => archiveBotwTier(button.dataset.botwArchive));
-  });
-  grid.querySelectorAll("[data-botw-add-drop]").forEach(button => {
-    button.addEventListener("click", () => addBotwDrop(button.dataset.botwAddDrop));
-  });
-
-  events.forEach(event => loadBotwAdminDrops(event.id));
-}
-
-function collectBotwTierCard(eventId) {
-  const event = allEvents.find(item => item.id === eventId);
-  const card = document.querySelector(`[data-botw-admin-card="${CSS.escape(eventId)}"]`);
-  if (!event || !card) return null;
-
-  event.womCompetitionId = card.querySelector('[data-botw-field="womCompetitionId"]')?.value.trim() || null;
-  event.description = card.querySelector('[data-botw-field="description"]')?.value.trim() || "";
-  event.active = Boolean(card.querySelector('[data-botw-field="active"]')?.checked);
-  event.featured = Boolean(card.querySelector('[data-botw-field="featured"]')?.checked);
-  event.dropsEnabled = Boolean(card.querySelector('[data-botw-field="dropsEnabled"]')?.checked);
-  event.rewards = {
-    placement: parseBotwRewardTextarea(card.querySelector('[data-botw-field="placementRewards"]')?.value || "", event.rewards?.placement || []),
-    participation: parseBotwRewardTextarea(card.querySelector('[data-botw-field="participationRewards"]')?.value || "", event.rewards?.participation || [])
-  };
-  return event;
-}
-
-async function saveAllEventsFromAdmin() {
-  const response = await fetch("/api/admin/events/save", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ events: allEvents })
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || "Could not save events.");
-  }
-}
-
-async function saveBotwTier(eventId) {
-  try {
-    collectBotwTierCard(eventId);
-    await saveAllEventsFromAdmin();
-    alert("BOTW tier saved.");
-  } catch (error) {
-    if (error.message !== "Invalid reward JSON") alert(error.message);
-  }
-}
-
-async function archiveBotwTier(eventId) {
-  const event = collectBotwTierCard(eventId);
-  if (!event) return;
-  const tier = getBotwTierLabel(event) || "BOTW";
-  if (!confirm(`Archive BOTW ${tier}? This saves the current standings snapshot and marks only this tier inactive.`)) return;
-
-  const response = await fetch("/api/admin/events/archive", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event, events: allEvents })
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    alert(data.error || "Could not archive BOTW tier.");
-    return;
-  }
-
-  resetEventAfterArchive(event);
-  renderBotwAdminHub();
-  alert(`BOTW ${tier} archived and marked inactive.`);
-}
-
-async function loadBotwAdminDrops(eventId) {
-  const list = document.querySelector(`[data-botw-drops-list="${CSS.escape(eventId)}"]`);
-  if (!list) return;
-
-  const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}`);
-  const data = await response.json().catch(() => ({}));
-  const drops = data.drops || [];
-  if (!drops.length) {
-    list.textContent = "No drops added yet.";
-    return;
-  }
-
-  list.innerHTML = drops.map(drop => `
-    <div class="drop-row">
-      <span>${escapeHtml(drop.name)}</span>
-      <div class="drop-controls">
-        <button type="button" data-botw-drop-change="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="-1">−</button>
-        <strong>${escapeHtml(drop.count)}</strong>
-        <button type="button" data-botw-drop-change="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="1">+</button>
-        <button type="button" data-botw-drop-delete="${escapeHtml(eventId)}" data-drop-name="${escapeHtml(drop.name)}">Delete</button>
-      </div>
-    </div>
-  `).join("");
-
-  list.querySelectorAll("[data-botw-drop-change]").forEach(button => {
-    button.addEventListener("click", () => changeBotwDrop(button.dataset.botwDropChange, button.dataset.dropName, Number(button.dataset.direction)));
-  });
-  list.querySelectorAll("[data-botw-drop-delete]").forEach(button => {
-    button.addEventListener("click", () => deleteBotwDrop(button.dataset.botwDropDelete, button.dataset.dropName));
-  });
-}
-
-async function addBotwDrop(eventId) {
-  const input = document.querySelector(`[data-botw-drop-input="${CSS.escape(eventId)}"]`);
-  const name = input?.value.trim();
-  if (!name) return;
-  await fetch("/api/drops/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId, name })
-  });
-  input.value = "";
-  loadBotwAdminDrops(eventId);
-}
-
-async function changeBotwDrop(eventId, name, direction) {
-  const endpoint = direction > 0 ? "/api/drops/increment" : "/api/drops/decrement";
-  await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId, name })
-  });
-  loadBotwAdminDrops(eventId);
-}
-
-async function deleteBotwDrop(eventId, name) {
-  await fetch("/api/drops/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId, name })
-  });
-  loadBotwAdminDrops(eventId);
-}
-
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -1245,8 +723,6 @@ async function loadAdmin() {
   const profileSearchInput = document.getElementById("profileSearchInput");
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
-
-  setupBingoTileControls();
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -1307,7 +783,6 @@ async function loadAdmin() {
     if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
     if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
     loadBingoSettings();
-    loadBingoTileVotes();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }
@@ -1324,7 +799,7 @@ async function saveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
+  event.dropsEnabled = isClanGoalEvent(event) ? document.getElementById("eventDropsInput").checked : false;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -1363,7 +838,7 @@ async function archiveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
+  event.dropsEnabled = isClanGoalEvent(event) ? document.getElementById("eventDropsInput").checked : false;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();

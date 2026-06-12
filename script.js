@@ -1271,8 +1271,6 @@ function renderBotwTierDashboardColumn(event, standings) {
         ${renderCompetitionStats(event, standings)}
       </div>
 
-      ${event.dropsEnabled ? renderDropsPanel(`dropsList-${event.id}`) : ""}
-
       ${renderRewardsSection(event)}
 
       ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `
@@ -1302,11 +1300,7 @@ async function renderBotwDashboard(dashboard, events) {
         <div>
           <p class="eyebrow">☠️ BOTW</p>
           <h1>Boss of the Week</h1>
-          <p>Elite and Standard are tracked separately so admins can manage different WOM IDs, rewards, drops, and archives without mixing results.</p>
-        </div>
-        <div class="event-percent-box">
-          <strong>2</strong>
-          <span>Divisions</span>
+          <p>Elite and Standard competitions are displayed below.</p>
         </div>
       </div>
       <div class="event-detail-body">
@@ -1317,9 +1311,6 @@ async function renderBotwDashboard(dashboard, events) {
     </section>
   `;
 
-  botwEvents.forEach(event => {
-    if (event.dropsEnabled) loadDropsForEvent(event.id, `dropsList-${event.id}`);
-  });
 }
 
 async function loadSingleEventDashboard() {
@@ -3249,7 +3240,7 @@ async function saveCalendarEventForm(event) {
     target: (createWom || alreadyHasWom) && targetValue ? Number(targetValue) : null,
     goalKind: getCalendarCompetitionTypeForForm(),
     featured: document.getElementById("calendarFeaturedInput")?.checked === true,
-    dropsEnabled: true,
+    dropsEnabled: eventType === "clan-goal",
     status: calendarEditingEvent?.status || "scheduled"
   };
 
