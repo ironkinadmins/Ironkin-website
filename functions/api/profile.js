@@ -318,8 +318,10 @@ async function getEventPlacements(env, rsn) {
 function buildProfile({ session, record, embers, wom, placements, isOwnProfile = true }) {
   const displayName = record.displayName || getDisplayName(session);
   const rsn = record.rsn || displayName;
-  const discordAvatarUrl = record.discordAvatarUrl || getDiscordAvatarUrl(session);
-  const avatarUrl = record.adminAvatarOverride || record.customAvatarUrl || discordAvatarUrl;
+  const discordAvatarUrl = isOwnProfile
+    ? getDiscordAvatarUrl(session)
+    : record.discordAvatarUrl || getDiscordAvatarUrl(session);
+  const avatarUrl = record.adminAvatarOverride || record.customAvatarUrl || discordAvatarUrl || "assets/ironkin-emblem.png";
   const blurb = record.adminBlurbOverride || record.blurb || "";
 
   const roleIds = Array.isArray(record.roles) && record.roles.length

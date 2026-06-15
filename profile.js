@@ -44,7 +44,10 @@ function renderProfileHero(profile) {
 
   hero.innerHTML = `
     <div class="profile-identity-card">
-      <img class="profile-avatar" src="${profileEscapeHtml(profile.avatarUrl)}" alt="${profileEscapeHtml(profile.displayName)} avatar" />
+      <img class="profile-avatar"
+        src="${profileEscapeHtml(profile.avatarUrl || "assets/ironkin-emblem.png")}"
+        alt="${profileEscapeHtml(profile.displayName)} avatar"
+        onerror="this.onerror=null;this.src='assets/ironkin-emblem.png';" />
       <div class="profile-identity-copy">
         <p class="eyebrow">Ironkin Member Profile</p>
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
