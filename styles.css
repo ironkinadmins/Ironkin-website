@@ -7630,3 +7630,48 @@ a.event-hub-card.is-inactive:hover {
   background: rgba(0,0,0,0.72);
   font-size: 1rem;
 }
+
+/* 2026-06-16: Fix ship placement board to keep the normal bingo board size/format */
+#bingoTab-fleets .fleet-board {
+  width: min(760px, calc(100vw - 96px), calc(100vh - 280px)) !important;
+  min-width: 0 !important;
+  max-width: 760px !important;
+  margin: 14px auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+#bingoTab-fleets .fleet-cell.bingo-tile {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+  padding: 5px 4px 7px !important;
+  border-radius: 7px !important;
+  overflow: hidden !important;
+}
+
+#bingoTab-fleets .fleet-cell.bingo-tile img {
+  width: 30px !important;
+  height: 30px !important;
+  flex: 0 0 auto !important;
+}
+
+#bingoTab-fleets .fleet-cell.bingo-tile span:not(.bingo-qty-badge):not(.bingo-progress-badge):not(.bingo-progress-line):not(.fleet-attack-mark):not(.fleet-ship-mark) {
+  font-size: clamp(0.48rem, 0.62vw, 0.66rem) !important;
+  line-height: 1.02 !important;
+  max-width: 96% !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+#bingoTab-fleets .fleet-cell .fleet-ship-mark {
+  display: none !important;
+}
+
+#bingoTab-fleets .fleet-cell.ship {
+  background: rgba(255, 122, 26, 0.20) !important;
+  border-color: rgba(255, 180, 92, 0.75) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 92, 0.25) !important;
+}
