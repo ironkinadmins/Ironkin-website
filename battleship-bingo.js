@@ -1100,22 +1100,25 @@ function renderFleets() {
       const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
       const attacked = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
       const qty = getTileQuantity(tile);
-      const classes = ["fleet-cell"];
-      if (tile.name) classes.push("has-board-tile");
+      const classes = ["bingo-tile", "fleet-cell", tile.name ? "filled" : "empty", `status-${getTileStatus(tile)}`];
       if (ship) classes.push("ship", `ship-${ship.key}`);
       if (attacked) classes.push(attacked.result);
       if (placingTeam === team && !bingoState.teams[team].fleetConfirmed) classes.push("placing");
       const titleParts = [tile.name || `Tile ${index + 1}`];
       if (qty > 1) titleParts.push(`x${qty}`);
       if (ship) titleParts.push(ship.name);
-      const tileMarkup = tile.name ? `
-        ${tile.image ? `<img class="fleet-tile-img" src="${escapeAttr(tile.image)}" alt="" loading="lazy" />` : `<span class="fleet-tile-placeholder">${escapeHtml(tile.name.charAt(0))}</span>`}
-        ${qty > 1 ? `<span class="fleet-tile-qty">x${escapeHtml(qty)}</span>` : ""}
-        <span class="fleet-tile-name">${escapeHtml(tile.name)}</span>
-      ` : `<span class="fleet-tile-name empty">Empty</span>`;
       const attackMark = attacked ? `<span class="fleet-attack-mark">${attacked.result === "hit" ? "✹" : "•"}</span>` : "";
       const shipMark = ship ? `<span class="fleet-ship-mark">${escapeHtml(ship.name.charAt(0))}</span>` : "";
-      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${escapeAttr(titleParts.join(" • "))}">${tileMarkup}${shipMark}${attackMark}</button>`;
+      return `
+        <button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${escapeAttr(titleParts.join(" • "))}">
+          ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
+          ${getTileProgressMarkup(tile)}
+          ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name || "Tile")}" loading="lazy" />` : ""}
+          <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
+          ${shipMark}
+          ${attackMark}
+        </button>
+      `;
     }).join("");
 
     board.querySelectorAll(".fleet-cell").forEach(cell => {
