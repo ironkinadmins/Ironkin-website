@@ -33,6 +33,8 @@ let placingOrientation = "horizontal";
 let activeBoardMode = "attack";
 let activeSidebarTab = "players";
 let activeSidebarCollapsed = false;
+let draggedBoardTileIndex = null;
+let suppressTileClick = false;
 
 function createDefaultState() {
   return {
@@ -151,6 +153,106 @@ async function saveBingoState() {
 function addLog(text) {
   bingoState.log.unshift({ at: new Date().toISOString(), text });
   bingoState.log = bingoState.log.slice(0, 100);
+}
+
+function canReorderBingoBoard() {
+  return isBingoStaff && bingoState.phase === "setup" && !bingoState.locked;
+}
+
+function resetTileRuntimeProgress(tile, index) {
+  return {
+    ...tile,
+    id: index,
+    status: "open",
+    completedQuantity: 0,
+    completedBy: "",
+    completedTeam: "",
+    proofId: ""
+  };
+}
+
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+async function randomizeBingoBoard() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (!canReorderBingoBoard()) return alert("Return to unlocked Board Setup before randomizing the board.");
+
+  const currentTiles = Array.isArray(bingoState.tiles) && bingoState.tiles.length === BINGO_SIZE * BINGO_SIZE
+    ? bingoState.tiles
+    : emptyBingoBoard();
+  const filledCount = currentTiles.filter(tile => tile?.name).length;
+
+  if (!filledCount) return alert("Add or import tiles before randomizing the board.");
+  if (!confirm(`Randomize the current board layout? This will shuffle ${filledCount} filled tile${filledCount === 1 ? "" : "s"}.`)) return;
+
+  bingoState.tiles = shuffleArray(currentTiles).map(resetTileRuntimeProgress);
+  bingoState.proofs = [];
+  bingoState.attacks = [];
+  Object.keys(TEAMS).forEach(team => {
+    bingoState.teams[team].ships = normaliseShips([]);
+    bingoState.teams[team].attacks = [];
+    bingoState.teams[team].fleetConfirmed = false;
+  });
+  addLog("Board tiles were randomized by staff.");
+  await saveBingoState();
+}
+
+async function swapBingoTiles(fromIndex, toIndex) {
+  if (!canReorderBingoBoard()) return;
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex === toIndex) return;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= BINGO_SIZE * BINGO_SIZE || toIndex >= BINGO_SIZE * BINGO_SIZE) return;
+
+  const tiles = Array.isArray(bingoState.tiles) && bingoState.tiles.length === BINGO_SIZE * BINGO_SIZE
+    ? [...bingoState.tiles]
+    : emptyBingoBoard();
+  [tiles[fromIndex], tiles[toIndex]] = [tiles[toIndex], tiles[fromIndex]];
+  bingoState.tiles = tiles.map((tile, index) => ({ ...tile, id: index }));
+  addLog(`Swapped board tile ${fromIndex + 1} with tile ${toIndex + 1}.`);
+  await saveBingoState();
+}
+
+function bindBoardTileDrag(tileEl) {
+  if (!canReorderBingoBoard()) return;
+  tileEl.draggable = true;
+  tileEl.setAttribute("aria-grabbed", "false");
+  tileEl.addEventListener("dragstart", event => {
+    draggedBoardTileIndex = Number(tileEl.dataset.index);
+    suppressTileClick = true;
+    tileEl.classList.add("dragging");
+    tileEl.setAttribute("aria-grabbed", "true");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", String(draggedBoardTileIndex));
+    }
+  });
+  tileEl.addEventListener("dragover", event => {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    tileEl.classList.add("drag-over");
+  });
+  tileEl.addEventListener("dragleave", () => {
+    tileEl.classList.remove("drag-over");
+  });
+  tileEl.addEventListener("drop", async event => {
+    event.preventDefault();
+    tileEl.classList.remove("drag-over");
+    const fromIndex = Number(event.dataTransfer?.getData("text/plain") || draggedBoardTileIndex);
+    const toIndex = Number(tileEl.dataset.index);
+    await swapBingoTiles(fromIndex, toIndex);
+  });
+  tileEl.addEventListener("dragend", () => {
+    tileEl.classList.remove("dragging");
+    tileEl.setAttribute("aria-grabbed", "false");
+    draggedBoardTileIndex = null;
+    setTimeout(() => { suppressTileClick = false; }, 0);
+  });
 }
 
 function renderAll() {
@@ -537,7 +639,7 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}">
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
@@ -548,7 +650,11 @@ function renderBingoBoard() {
   }).join("");
 
   boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
-    tile.addEventListener("click", () => openTileModal(Number(tile.dataset.index)));
+    bindBoardTileDrag(tile);
+    tile.addEventListener("click", () => {
+      if (suppressTileClick) return;
+      openTileModal(Number(tile.dataset.index));
+    });
   });
 }
 
@@ -1537,6 +1643,7 @@ function bindBingoControls() {
     if (event.target.id === "bingoHelpModal") closeBingoHelpModal();
   });
   document.getElementById("bingoImportBtn")?.addEventListener("click", openBingoImportModal);
+  document.getElementById("bingoRandomizeBoardBtn")?.addEventListener("click", randomizeBingoBoard);
   document.getElementById("closeBingoImportModal")?.addEventListener("click", closeBingoImportModal);
   document.getElementById("bingoImportModal")?.addEventListener("click", event => {
     if (event.target.id === "bingoImportModal") closeBingoImportModal();
