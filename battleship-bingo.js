@@ -65,6 +65,10 @@ function createTeam(teamKey) {
   };
 }
 
+function getTeamDisplayName(team) {
+  return (bingoState.teams?.[team]?.name || TEAMS[team]?.name || team).trim();
+}
+
 function emptyBingoBoard() {
   return Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => ({
     id: index,
@@ -321,7 +325,7 @@ function renderPhaseProgress() {
   const emberSunk = getSunkCount("ember");
   const ashSunk = getSunkCount("ash");
   if (summary) {
-    summary.textContent = `${TEAMS.ember.name}: ${emberSunk}/${SHIPS.length} enemy ships sunk. ${TEAMS.ash.name}: ${ashSunk}/${SHIPS.length} enemy ships sunk.`;
+    summary.textContent = `${getTeamDisplayName("ember")}: ${emberSunk}/${SHIPS.length} enemy ships sunk. ${getTeamDisplayName("ash")}: ${ashSunk}/${SHIPS.length} enemy ships sunk.`;
   }
 
   if (!steps) return;
@@ -1086,17 +1090,32 @@ function renderFleets() {
     const placedCount = bingoState.teams[team].ships.filter(ship => ship.cells.length === ship.size).length;
     const currentShip = placingTeam === team ? bingoState.teams[team].ships[placingShipIndex] : null;
 
+    const fleetTitle = document.getElementById(`${team}FleetTitle`);
+    if (fleetTitle) fleetTitle.textContent = bingoState.teams[team].name || TEAMS[team].name;
     if (captainLabel) captainLabel.textContent = bingoState.teams[team].captain || "Not set";
     if (placedTotal) placedTotal.textContent = `${placedCount}/${SHIPS.length} placed${bingoState.teams[team].fleetConfirmed ? " • confirmed" : ""}`;
 
     board.innerHTML = Array.from({ length: BINGO_SIZE * BINGO_SIZE }, (_, index) => {
+      const tile = bingoState.tiles?.[index] || {};
       const ship = bingoState.teams[team].ships.find(s => s.cells.includes(index));
       const attacked = bingoState.attacks.find(a => a.defendingTeam === team && a.targetIndex === index);
+      const qty = getTileQuantity(tile);
       const classes = ["fleet-cell"];
+      if (tile.name) classes.push("has-board-tile");
       if (ship) classes.push("ship", `ship-${ship.key}`);
       if (attacked) classes.push(attacked.result);
       if (placingTeam === team && !bingoState.teams[team].fleetConfirmed) classes.push("placing");
-      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${ship ? escapeAttr(ship.name) : "Empty water"}">${ship ? `<span class="fleet-ship-mark">${escapeHtml(ship.name.charAt(0))}</span>` : ""}${attacked ? (attacked.result === "hit" ? "✹" : "•") : ""}</button>`;
+      const titleParts = [tile.name || `Tile ${index + 1}`];
+      if (qty > 1) titleParts.push(`x${qty}`);
+      if (ship) titleParts.push(ship.name);
+      const tileMarkup = tile.name ? `
+        ${tile.image ? `<img class="fleet-tile-img" src="${escapeAttr(tile.image)}" alt="" loading="lazy" />` : `<span class="fleet-tile-placeholder">${escapeHtml(tile.name.charAt(0))}</span>`}
+        ${qty > 1 ? `<span class="fleet-tile-qty">x${escapeHtml(qty)}</span>` : ""}
+        <span class="fleet-tile-name">${escapeHtml(tile.name)}</span>
+      ` : `<span class="fleet-tile-name empty">Empty</span>`;
+      const attackMark = attacked ? `<span class="fleet-attack-mark">${attacked.result === "hit" ? "✹" : "•"}</span>` : "";
+      const shipMark = ship ? `<span class="fleet-ship-mark">${escapeHtml(ship.name.charAt(0))}</span>` : "";
+      return `<button type="button" class="${classes.join(" ")}" data-team="${team}" data-index="${index}" title="${escapeAttr(titleParts.join(" • "))}">${tileMarkup}${shipMark}${attackMark}</button>`;
     }).join("");
 
     board.querySelectorAll(".fleet-cell").forEach(cell => {
@@ -1271,7 +1290,7 @@ async function submitProof() {
   bingoState.proofs.unshift(proof);
   bingoState.tiles[activeTileIndex].status = getTileCompletedQuantity(bingoState.tiles[activeTileIndex]) > 0 ? "partial" : "submitted";
   bingoState.tiles[activeTileIndex].proofId = proof.id;
-  addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} x${quantity} (${TEAMS[team].name}).`);
+  addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} x${quantity} (${getTeamDisplayName(team)}).`);
   await saveBingoState();
   closeTileEditor();
 }
@@ -1322,15 +1341,15 @@ function resolveAttack(proof) {
   const attack = { id: crypto.randomUUID(), attackingTeam: proof.team, defendingTeam, targetIndex, result, shipKey: ship?.key || "", at: new Date().toISOString() };
   bingoState.attacks.push(attack);
   bingoState.teams[proof.team].attacks.push(attack);
-  addLog(`${TEAMS[proof.team].name} fired at ${TEAMS[defendingTeam].name}: ${result === "hit" ? "💥 HIT" : "🌊 MISS"}.`);
+  addLog(`${getTeamDisplayName(proof.team)} fired at ${getTeamDisplayName(defendingTeam)}: ${result === "hit" ? "💥 HIT" : "🌊 MISS"}.`);
   if (ship) {
     const allHit = ship.cells.every(cell => bingoState.attacks.some(a => a.defendingTeam === defendingTeam && a.targetIndex === cell && a.result === "hit"));
     if (allHit && !ship.sunk) {
       ship.sunk = true;
-      addLog(`🚢 ${TEAMS[proof.team].name} sunk ${TEAMS[defendingTeam].name}'s ${ship.name}!`);
+      addLog(`🚢 ${getTeamDisplayName(proof.team)} sunk ${getTeamDisplayName(defendingTeam)}'s ${ship.name}!`);
       if (bingoState.teams[defendingTeam].ships.every(s => s.sunk)) {
         bingoState.phase = "complete";
-        addLog(`🏆 ${TEAMS[proof.team].name} wins Battleship Bingo!`);
+        addLog(`🏆 ${getTeamDisplayName(proof.team)} wins Battleship Bingo!`);
       }
     }
   }
@@ -1345,10 +1364,17 @@ function renderLog() {
 }
 
 function renderCaptains() {
-  const emberInput = document.getElementById("emberCaptainInput");
-  const ashInput = document.getElementById("ashCaptainInput");
-  if (emberInput && document.activeElement !== emberInput) emberInput.value = bingoState.teams?.ember?.captain || "";
-  if (ashInput && document.activeElement !== ashInput) ashInput.value = bingoState.teams?.ash?.captain || "";
+  Object.keys(TEAMS).forEach(team => {
+    const teamState = bingoState.teams?.[team] || {};
+    const captainInput = document.getElementById(`${team}CaptainInput`);
+    const teamNameInput = document.getElementById(`${team}TeamNameInput`);
+    const cardTitle = document.getElementById(`${team}CaptainCardTitle`);
+    const currentName = (teamState.name || TEAMS[team].name).trim();
+
+    if (captainInput && document.activeElement !== captainInput) captainInput.value = teamState.captain || "";
+    if (teamNameInput && document.activeElement !== teamNameInput) teamNameInput.value = currentName;
+    if (cardTitle) cardTitle.textContent = currentName;
+  });
 }
 
 function updateAdminButtons() {
@@ -1766,6 +1792,20 @@ function bindBingoControls() {
 
       bingoState.teams[team].captain = captain;
       addLog(`${bingoState.teams[team].name} captain assigned: ${captain}.`);
+      await saveBingoState();
+    });
+  });
+
+  document.querySelectorAll(".bingo-save-team-name-btn").forEach(button => {
+    button.addEventListener("click", async () => {
+      if (!isBingoStaff) return alert("Staff only.");
+      const team = button.dataset.team;
+      const input = document.getElementById(`${team}TeamNameInput`);
+      const newName = (input?.value || "").trim() || TEAMS[team].name;
+      const oldName = bingoState.teams[team]?.name || TEAMS[team].name;
+
+      bingoState.teams[team].name = newName;
+      if (newName !== oldName) addLog(`${oldName} renamed to ${newName}.`);
       await saveBingoState();
     });
   });

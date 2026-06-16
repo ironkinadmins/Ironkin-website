@@ -137,7 +137,12 @@
       <div class="bingo-captains-wrap">
         <div class="bingo-captain-grid">
           <div class="bingo-captain-card">
-            <h3>Team 1</h3>
+            <h3 id="emberCaptainCardTitle">Ember Fleet</h3>
+            <label for="emberTeamNameInput">Team Name</label>
+            <div class="bingo-captain-row">
+              <input id="emberTeamNameInput" type="text" placeholder="Ember Fleet" />
+              <button class="btn secondary bingo-save-team-name-btn" type="button" data-team="ember">Save Name</button>
+            </div>
             <label for="emberCaptainInput">Captain</label>
             <div class="bingo-captain-row">
               <input id="emberCaptainInput" type="text" placeholder="Enter captain name" />
@@ -146,7 +151,12 @@
           </div>
 
           <div class="bingo-captain-card">
-            <h3>Team 2</h3>
+            <h3 id="ashCaptainCardTitle">Ash Fleet</h3>
+            <label for="ashTeamNameInput">Team Name</label>
+            <div class="bingo-captain-row">
+              <input id="ashTeamNameInput" type="text" placeholder="Ash Fleet" />
+              <button class="btn secondary bingo-save-team-name-btn" type="button" data-team="ash">Save Name</button>
+            </div>
             <label for="ashCaptainInput">Captain</label>
             <div class="bingo-captain-row">
               <input id="ashCaptainInput" type="text" placeholder="Enter captain name" />
@@ -166,7 +176,7 @@
         <div class="bingo-card fleet-placement-card">
           <div class="bingo-section-heading">
             <div>
-              <h2>Ember Fleet</h2>
+              <h2 id="emberFleetTitle">Ember Fleet</h2>
               <p>Captain: <span id="emberFleetCaptainLabel">Not set</span></p>
             </div>
             <div class="fleet-placement-total" id="emberFleetPlacedTotal">0/6 placed</div>
@@ -178,7 +188,7 @@
         <div class="bingo-card fleet-placement-card">
           <div class="bingo-section-heading">
             <div>
-              <h2>Ash Fleet</h2>
+              <h2 id="ashFleetTitle">Ash Fleet</h2>
               <p>Captain: <span id="ashFleetCaptainLabel">Not set</span></p>
             </div>
             <div class="fleet-placement-total" id="ashFleetPlacedTotal">0/6 placed</div>
@@ -373,6 +383,6 @@ Enhanced crystal weapon seed - 1</pre>
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js?v=20260615-randomize-drag-swap"></script>
+  <script src="battleship-bingo.js?v=20260616-fleet-tiles-team-names"></script>
 </body>
 </html>
