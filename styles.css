@@ -6642,16 +6642,22 @@ a.event-hub-card.is-inactive:hover {
 }
 
 .calendar-check-card {
-  align-self: end;
-  display: flex !important;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 10px !important;
-  min-height: 46px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(0,0,0,0.18);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 0;
+  border:none;
+  background:transparent;
+  min-height:auto;
+  border-radius:0;
+}
+.calendar-check-card input{
+  width:auto;
+  margin:0;
+  flex:0 0 auto;
+}
+.calendar-check-card span{
+  font-weight:600;
 }
 
 .calendar-check-card input {
