@@ -8306,3 +8306,115 @@ body.calendar-modal-active {
     padding: 12px 18px 14px;
   }
 }
+
+/* Calendar modal compact desktop layout: fit full form without inner scrollbar */
+@media (min-width: 861px) {
+  .calendar-admin-sidebar.open {
+    overflow: hidden !important;
+    align-items: center !important;
+    padding: 10px !important;
+  }
+
+  .calendar-sidebar-form {
+    width: min(1120px, calc(100vw - 36px)) !important;
+    max-height: calc(100vh - 24px) !important;
+    overflow: visible !important;
+    padding: 16px 20px 0 !important;
+    row-gap: 10px !important;
+    column-gap: 16px !important;
+  }
+
+  .calendar-modal-form-header {
+    margin-bottom: 0 !important;
+  }
+
+  .calendar-modal-form-header .eyebrow {
+    margin-bottom: 2px !important;
+  }
+
+  .calendar-modal-form-header h2 {
+    margin: 0 0 2px !important;
+    font-size: 1.45rem !important;
+  }
+
+  .calendar-modal-form-header .admin-muted {
+    margin: 0 !important;
+  }
+
+  .calendar-timezone-note {
+    margin-top: 8px !important;
+    padding: 9px 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  .calendar-sidebar-form > label {
+    gap: 5px !important;
+  }
+
+  .calendar-sidebar-form > label > span,
+  .calendar-sidebar-split label > span {
+    line-height: 1.15 !important;
+  }
+
+  .calendar-sidebar-form input,
+  .calendar-sidebar-form select,
+  .calendar-sidebar-form textarea {
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarEventTemplateInput) {
+    grid-column: 1 / 2 !important;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarEventTypeInput) {
+    grid-column: 2 / 3 !important;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarEventTitleInput) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarEventDescriptionInput) textarea {
+    min-height: 64px !important;
+    height: 64px !important;
+    resize: vertical;
+  }
+
+  .calendar-sidebar-split {
+    gap: 10px !important;
+  }
+
+  .calendar-time-control {
+    grid-template-columns: minmax(0, 1fr) 64px !important;
+    gap: 7px !important;
+  }
+
+  .calendar-extra-options {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    align-self: end !important;
+  }
+
+  .calendar-extra-options-title {
+    margin: 0 !important;
+    font-size: 0.68rem !important;
+  }
+
+  .calendar-extra-options .calendar-check-card,
+  .calendar-wom-panel .calendar-check-card {
+    padding: 0 !important;
+    gap: 9px !important;
+  }
+
+  .calendar-form-status {
+    min-height: 18px !important;
+    margin: 0 !important;
+  }
+
+  .calendar-sidebar-form > .admin-action-row {
+    position: static !important;
+    margin: 2px -20px 0 !important;
+    padding: 10px 20px 12px !important;
+  }
+}
