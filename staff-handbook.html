@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ironkin Staff Handbook</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
+  <link rel="stylesheet" href="styles.css?v=20260620-staff-handbook" />
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="handbook-page" id="staffHandbookApp">
+    <section class="handbook-hero">
+      <p class="eyebrow">Ironkin Staff Resource</p>
+      <h1>Staff Handbook</h1>
+      <p>A quick-reference guide for moderators, event staff, and leadership. Use this page when creating events, running competitions, reviewing submissions, managing Bingo, or troubleshooting website/Discord automation.</p>
+      <div id="handbookAccessNotice" class="handbook-access-note">Checking staff access...</div>
+    </section>
+
+    <section id="handbookContent" class="handbook-layout" style="display:none;">
+      <aside class="handbook-sidebar" aria-label="Handbook sections">
+        <a href="#quick-start">Quick Start</a>
+        <a href="#event-types">Event Types</a>
+        <a href="#calendar-events">Calendar & Events</a>
+        <a href="#discord-announcements">Discord Announcements</a>
+        <a href="#sotw">SOTW</a>
+        <a href="#botw">BOTW</a>
+        <a href="#clan-goals">Clan Goals</a>
+        <a href="#bingo">Battleship Bingo</a>
+        <a href="#giveaways">Giveaways</a>
+        <a href="#embers">Embers</a>
+        <a href="#profiles">Profiles</a>
+        <a href="#archives">Archives</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+      </aside>
+
+      <div class="handbook-content">
+        <article id="quick-start" class="handbook-card">
+          <p class="eyebrow">Start Here</p>
+          <h2>🧭 Staff Quick Start</h2>
+          <p>This site should be the source of truth for Ironkin events. Create events on the website first, then verify they appear in Discord and on the public pages.</p>
+          <div class="handbook-checklist">
+            <h3>General Staff Checklist</h3>
+            <ol>
+              <li>Sign in with Discord.</li>
+              <li>Confirm the staff-only Admin link appears in the top navigation.</li>
+              <li>Use <strong>Admin Dashboard</strong> for WOM events, Bingo controls, drops, and profile overrides.</li>
+              <li>Use <strong>Calendar</strong> for scheduled clan activities, Discord event announcements, and reminders.</li>
+              <li>After saving anything, open the public page and confirm it looks correct.</li>
+              <li>When a Discord post is expected, check the Discord channel after saving.</li>
+            </ol>
+          </div>
+          <div class="handbook-tip"><strong>Staff habit:</strong> never assume an event is live because it saved. Always verify the Calendar, Events page, and Discord post.</div>
+        </article>
+
+        <article id="event-types" class="handbook-card">
+          <p class="eyebrow">Reference</p>
+          <h2>📌 Event Types</h2>
+          <div class="handbook-grid two-col">
+            <section>
+              <h3>🏆 Skill of the Week</h3>
+              <p>Competition based on Wise Old Man XP gained. Uses a WOM Competition ID and displays XP standings.</p>
+            </section>
+            <section>
+              <h3>⚔️ Boss of the Week</h3>
+              <p>Competition based on boss kill count gained. Supports the current unified BOTW dashboard and division labels when configured.</p>
+            </section>
+            <section>
+              <h3>🎯 Clan Goal</h3>
+              <p>Clan-wide target such as total KC. Can include milestones, placement rewards, and participation rewards.</p>
+            </section>
+            <section>
+              <h3>👥 Clan Mass</h3>
+              <p>Scheduled gathering or group PvM/skilling event. Usually uses calendar timing and RSVP-style reactions in Discord.</p>
+            </section>
+            <section>
+              <h3>🎁 Giveaway</h3>
+              <p>Guess the KC / item giveaway style event with member submissions and staff controls.</p>
+            </section>
+            <section>
+              <h3>📅 Normal Event</h3>
+              <p>General scheduled events that need Discord announcements, reminders, and member interest reactions.</p>
+            </section>
+          </div>
+        </article>
+
+        <article id="calendar-events" class="handbook-card">
+          <p class="eyebrow">Work Instruction</p>
+          <h2>📅 Creating Calendar Events</h2>
+          <ol class="handbook-steps">
+            <li>Open <strong>Calendar</strong>.</li>
+            <li>Click a day on the calendar, or use the staff create button/panel.</li>
+            <li>Choose the event type.</li>
+            <li>Enter the event title, description, start date/time, and end date/time.</li>
+            <li>Use Eastern Time when entering the event time unless the page specifically tells you otherwise.</li>
+            <li>For WOM events, add or confirm the WOM Competition ID from the Admin Dashboard.</li>
+            <li>Save the event.</li>
+            <li>Refresh or revisit the Calendar and confirm the event appears on the correct day.</li>
+            <li>Open the Events page and confirm the event card routes correctly.</li>
+          </ol>
+          <h3>Multi-Day Event Rules</h3>
+          <ul>
+            <li>First day should show as the event beginning.</li>
+            <li>Middle days show the event title.</li>
+            <li>Final day should show as the event ending.</li>
+            <li>For SOTW, BOTW, and Clan Goals, avoid treating every day as a separate reminder event.</li>
+          </ul>
+          <div class="handbook-warning"><strong>Before posting:</strong> double-check spelling, date, time, and event type. Discord announcements may ping everyone depending on the event configuration.</div>
+        </article>
+
+        <article id="discord-announcements" class="handbook-card">
+          <p class="eyebrow">Automation</p>
+          <h2>📢 Discord Announcements & Reminders</h2>
+          <p>The website build includes Discord calendar announcement and reminder support. This is intended so members can follow events directly in Discord even if they do not visit the website.</p>
+          <h3>Normal Events</h3>
+          <ol class="handbook-steps">
+            <li>Create the event on the Calendar.</li>
+            <li>Confirm the Discord announcement appears.</li>
+            <li>Check that member reaction options are present when the event is RSVP-style.</li>
+            <li>Confirm reminders are scheduled.</li>
+            <li>At the event time, confirm the start notification posts.</li>
+            <li>After the event ends, confirm the end notification posts.</li>
+          </ol>
+          <h3>SOTW / BOTW / Clan Goal Reminder Style</h3>
+          <ul>
+            <li>These events usually do not need RSVP reactions because members participate at their own pace.</li>
+            <li>They should not send daily reminders for every day of a multi-day event.</li>
+            <li>Use start, ending-soon, and end messaging instead.</li>
+            <li>The day-before-ending reminder is used for BOTW, SOTW, and Clan Goals.</li>
+          </ul>
+          <h3>Verification Checklist</h3>
+          <div class="handbook-checklist">
+            <ol>
+              <li>Discord post appeared in the correct channel.</li>
+              <li>Event title is correct.</li>
+              <li>Time displays correctly for Discord users.</li>
+              <li>Footer reminds members that times are shown in their local timezone.</li>
+              <li>Ping behavior is intentional.</li>
+            </ol>
+          </div>
+        </article>
+
+        <article id="sotw" class="handbook-card">
+          <p class="eyebrow">Competition</p>
+          <h2>🏆 Running Skill of the Week</h2>
+          <h3>Create / Configure</h3>
+          <ol class="handbook-steps">
+            <li>Create the WOM competition on Wise Old Man.</li>
+            <li>Copy the WOM Competition ID.</li>
+            <li>Open <strong>Admin Dashboard → Events</strong>.</li>
+            <li>Select the SOTW event.</li>
+            <li>Paste the WOM Competition ID.</li>
+            <li>Click <strong>Preview</strong> to confirm the correct WOM competition loads.</li>
+            <li>Add the Ironkin description, rewards, participation tiers, and active status.</li>
+            <li>Save.</li>
+            <li>Open the public event page and confirm standings load.</li>
+          </ol>
+          <h3>What to Monitor</h3>
+          <ul>
+            <li>Total XP gained.</li>
+            <li>Active competitors.</li>
+            <li>Highest gain.</li>
+            <li>Top placements for final rewards.</li>
+          </ul>
+          <h3>Ending SOTW</h3>
+          <ol class="handbook-steps">
+            <li>Confirm the WOM competition has ended.</li>
+            <li>Record final placements.</li>
+            <li>Award Embers according to the event reward table.</li>
+            <li>Archive the event from the Admin Dashboard.</li>
+            <li>Post winners in Discord.</li>
+          </ol>
+        </article>
+
+        <article id="botw" class="handbook-card">
+          <p class="eyebrow">Competition</p>
+          <h2>⚔️ Running Boss of the Week</h2>
+          <ol class="handbook-steps">
+            <li>Create the BOTW competition in Wise Old Man.</li>
+            <li>Copy the WOM Competition ID.</li>
+            <li>Open <strong>Admin Dashboard → Events</strong>.</li>
+            <li>Select BOTW.</li>
+            <li>Paste the WOM ID and click Preview.</li>
+            <li>Confirm the boss, metric, start date, and end date are correct.</li>
+            <li>Add placement and participation rewards.</li>
+            <li>Save and verify the public BOTW page.</li>
+          </ol>
+          <h3>BOTW Staff Notes</h3>
+          <ul>
+            <li>Use the unified BOTW dashboard when multiple BOTW divisions are active.</li>
+            <li>Confirm Standard and Elite information is not mixed up.</li>
+            <li>Drops are not required for the newer BOTW flow unless leadership specifically re-enables them.</li>
+          </ul>
+        </article>
+
+        <article id="clan-goals" class="handbook-card">
+          <p class="eyebrow">Clan Activity</p>
+          <h2>🎯 Running Clan Goals</h2>
+          <ol class="handbook-steps">
+            <li>Open <strong>Admin Dashboard → Events</strong>.</li>
+            <li>Select the Clan Goal event.</li>
+            <li>Enter the WOM Competition ID if the goal is WOM-tracked.</li>
+            <li>Enter the target KC / XP.</li>
+            <li>Add milestones such as 25%, 50%, 75%, and 100%.</li>
+            <li>Add placement rewards and participation rewards.</li>
+            <li>Set the event as active.</li>
+            <li>Save.</li>
+            <li>Confirm the homepage featured card and event page display the correct goal progress.</li>
+          </ol>
+          <h3>Milestone Examples</h3>
+          <ul>
+            <li>25% — Clan Mass</li>
+            <li>50% — Bond</li>
+            <li>75% — Custom Title + Icon</li>
+            <li>100% — Bond</li>
+          </ul>
+          <div class="handbook-tip"><strong>Featured logic:</strong> if no manual featured event is selected, active Clan Goals have high priority on the homepage.</div>
+        </article>
+
+        <article id="bingo" class="handbook-card">
+          <p class="eyebrow">Major Event</p>
+          <h2>🚢 Battleship Bingo</h2>
+          <h3>Before Registration Opens</h3>
+          <ol class="handbook-steps">
+            <li>Open <strong>Admin Dashboard → Bingo</strong>.</li>
+            <li>Set the display title and description.</li>
+            <li>Set the registration deadline.</li>
+            <li>Confirm Team 1 and Team 2 names.</li>
+            <li>Enable Bingo visibility only when the page should be public.</li>
+            <li>Save Bingo settings.</li>
+            <li>Open the signup page and confirm the public text looks correct.</li>
+          </ol>
+          <h3>Opening Registration</h3>
+          <ol class="handbook-steps">
+            <li>Click <strong>Open Registration</strong>.</li>
+            <li>Confirm the signup page allows members to join.</li>
+            <li>Monitor team balance.</li>
+            <li>Move members manually only if needed.</li>
+            <li>Do not start the board until leadership confirms registration is finished.</li>
+          </ol>
+          <h3>Starting the Event</h3>
+          <ol class="handbook-steps">
+            <li>Click <strong>Start Event / Lock Signups</strong>.</li>
+            <li>Confirm registration is locked.</li>
+            <li>Confirm board view is enabled.</li>
+            <li>Open <strong>View Board</strong>.</li>
+            <li>Confirm the board tiles are visible and the teams are correct.</li>
+          </ol>
+          <h3>Fleet / Board Management</h3>
+          <ul>
+            <li>Board uses a 10 × 10 layout.</li>
+            <li>Ships should be placed before live attacks begin.</li>
+            <li>Keep ship placement hidden from the opposing team.</li>
+            <li>Use board randomization only before the event starts unless leadership approves a reset.</li>
+            <li>Confirm tiles remain consistent after randomizing or editing.</li>
+          </ul>
+          <h3>Reviewing Bingo Proofs</h3>
+          <ol class="handbook-steps">
+            <li>Open pending submissions.</li>
+            <li>Check the submitted proof image.</li>
+            <li>Confirm the player is signed up and on the correct team.</li>
+            <li>Confirm the drop/item matches a live tile.</li>
+            <li>Approve if valid.</li>
+            <li>Reject if invalid and provide a clear reason where possible.</li>
+            <li>After approval, verify the board updates correctly as hit/miss/sunk.</li>
+          </ol>
+          <div class="handbook-warning"><strong>Important:</strong> Bingo approvals affect the board state. Do not approve a proof unless the item, player, and tile are correct.</div>
+        </article>
+
+        <article id="giveaways" class="handbook-card">
+          <p class="eyebrow">Member Activity</p>
+          <h2>🎁 Giveaways / Guess the KC</h2>
+          <ol class="handbook-steps">
+            <li>Open <strong>Giveaways</strong>.</li>
+            <li>Use the staff Admin tab.</li>
+            <li>Enter giveaway title, host, drop/item, description, and closing time.</li>
+            <li>Choose whether it is open or scheduled.</li>
+            <li>Save.</li>
+            <li>Confirm members can submit one guess.</li>
+            <li>At close, mark completed and determine the closest winner.</li>
+            <li>Announce winner and award any required Embers/prizes.</li>
+          </ol>
+          <h3>Staff Controls</h3>
+          <ul>
+            <li>Manually add a member guess when needed.</li>
+            <li>Delete invalid submissions.</li>
+            <li>Mark giveaway complete.</li>
+            <li>Use the website submission list as the source of truth.</li>
+          </ul>
+        </article>
+
+        <article id="embers" class="handbook-card">
+          <p class="eyebrow">Rewards</p>
+          <h2>🔥 Embers</h2>
+          <p>Embers are Ironkin's reward currency. Staff should award Embers only when the reward is valid and documented.</p>
+          <ol class="handbook-steps">
+            <li>Confirm the member completed the requirement.</li>
+            <li>Confirm the correct Ember amount from the event rules.</li>
+            <li>Award Embers using the approved Discord/bot process or website process currently used by leadership.</li>
+            <li>Record or link proof when applicable.</li>
+            <li>React or mark the original submission as completed so other staff know it was handled.</li>
+          </ol>
+          <h3>Examples of Ember Sources</h3>
+          <ul>
+            <li>SOTW/BOTW placements.</li>
+            <li>Participation thresholds.</li>
+            <li>Clan Goal milestones.</li>
+            <li>Approved submissions.</li>
+            <li>Special events or leadership-approved bonuses.</li>
+          </ul>
+        </article>
+
+        <article id="profiles" class="handbook-card">
+          <p class="eyebrow">Members</p>
+          <h2>👤 Member Profiles & User Management</h2>
+          <ol class="handbook-steps">
+            <li>Open <strong>Admin Dashboard → User Management</strong>.</li>
+            <li>Search by Discord nickname, RSN, or Discord ID.</li>
+            <li>Open the member record.</li>
+            <li>Update only what is needed: profile blurb, avatar URL, display rank label, or other allowed profile fields.</li>
+            <li>Save.</li>
+            <li>Open the public profile and verify the change.</li>
+          </ol>
+          <h3>When to Override a Profile</h3>
+          <ul>
+            <li>Profile picture or blurb breaks clan standards.</li>
+            <li>Rank label is wrong or needs correction.</li>
+            <li>Display name/RSN needs cleanup.</li>
+            <li>Leadership requests a correction.</li>
+          </ul>
+          <div class="handbook-tip"><strong>Standard:</strong> keep RSNs and profile content clean and aligned with Jagex and Ironkin rules.</div>
+        </article>
+
+        <article id="archives" class="handbook-card">
+          <p class="eyebrow">Records</p>
+          <h2>📦 Archives & Hall of Flame</h2>
+          <h3>Archiving Events</h3>
+          <ol class="handbook-steps">
+            <li>Confirm the event is complete.</li>
+            <li>Confirm final standings and rewards are recorded.</li>
+            <li>Open Admin Dashboard.</li>
+            <li>Select the completed event.</li>
+            <li>Use <strong>End Event + Send to Archive</strong>.</li>
+            <li>Open Archive and confirm it appears correctly.</li>
+          </ol>
+          <h3>Hall of Flame</h3>
+          <ul>
+            <li>Use Hall of Flame for major winners, records, champions, and historic achievements.</li>
+            <li>Verify the achievement before adding or announcing it.</li>
+            <li>Keep naming consistent with the member's Discord nickname / RSN format.</li>
+          </ul>
+        </article>
+
+        <article id="troubleshooting" class="handbook-card">
+          <p class="eyebrow">Common Fixes</p>
+          <h2>🛠️ Troubleshooting</h2>
+          <div class="handbook-grid two-col">
+            <section>
+              <h3>Event does not show on Calendar</h3>
+              <ol>
+                <li>Confirm the save completed.</li>
+                <li>Check the start/end dates.</li>
+                <li>Refresh the page.</li>
+                <li>Confirm the event is not archived/cancelled.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>WOM standings do not load</h3>
+              <ol>
+                <li>Check the WOM Competition ID.</li>
+                <li>Click Preview in Admin.</li>
+                <li>Confirm WOM is available.</li>
+                <li>Try again later if WOM rate-limits or errors.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>Discord announcement missing</h3>
+              <ol>
+                <li>Confirm the event saved.</li>
+                <li>Check the configured Discord channel.</li>
+                <li>Confirm the integration/cron is deployed.</li>
+                <li>Check whether the event type is supposed to announce.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>Bingo signup issues</h3>
+              <ol>
+                <li>Confirm Bingo is active/visible.</li>
+                <li>Confirm registration is open.</li>
+                <li>Confirm the registration deadline has not passed.</li>
+                <li>Confirm the member is signed in with Discord.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>Bingo board issues</h3>
+              <ol>
+                <li>Confirm board view is enabled.</li>
+                <li>Check team names and ship placement.</li>
+                <li>Verify the board was not randomized after launch.</li>
+                <li>Refresh and check again before making changes.</li>
+              </ol>
+            </section>
+            <section>
+              <h3>Profile/admin access missing</h3>
+              <ol>
+                <li>Confirm user signed in with Discord.</li>
+                <li>Confirm user is in the Ironkin Discord.</li>
+                <li>Confirm user has the required staff role.</li>
+                <li>Log out and sign in again if roles changed recently.</li>
+              </ol>
+            </section>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Staff-only internal handbook.</p>
+  </footer>
+
+  <script src="script.js?v=20260620-staff-handbook"></script>
+  <script src="staff-handbook.js?v=20260620-staff-handbook"></script>
+</body>
+</html>

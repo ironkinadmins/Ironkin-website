@@ -541,6 +541,7 @@ async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
   const adminNavLink = document.getElementById("adminNavLink");
+  const staffHandbookNavLink = document.getElementById("staffHandbookNavLink");
   const profileNavLink = document.getElementById("profileNavLink");
 
   if (!loginBtn) return;
@@ -568,8 +569,9 @@ async function loadDiscordUser() {
       profileNavLink.style.display = "none";
     }
 
-    if (isStaffUser(data.user) && adminNavLink) {
-      adminNavLink.style.display = "inline-block";
+    if (isStaffUser(data.user)) {
+      if (staffHandbookNavLink) staffHandbookNavLink.style.display = "inline-block";
+      if (adminNavLink) adminNavLink.style.display = "inline-block";
     }
 
     if (logoutBtn) {
