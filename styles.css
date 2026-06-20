@@ -8163,3 +8163,146 @@ body.calendar-modal-active {
   flex:1;
   text-align:left;
 }
+
+/* Calendar event modal UX: wider, two-column, no hidden save buttons */
+.calendar-admin-sidebar.open {
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+}
+
+.calendar-sidebar-form {
+  width: min(1080px, calc(100vw - 40px)) !important;
+  max-height: min(90vh, 920px) !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 18px;
+  row-gap: 14px;
+  overflow: auto !important;
+  padding: 24px !important;
+}
+
+.calendar-sidebar-form > .calendar-modal-form-header,
+.calendar-sidebar-form > .calendar-timezone-note,
+.calendar-sidebar-form > .calendar-wom-panel,
+.calendar-sidebar-form > .calendar-form-status,
+.calendar-sidebar-form > .admin-action-row {
+  grid-column: 1 / -1;
+}
+
+.calendar-sidebar-form > label,
+.calendar-sidebar-form > .calendar-sidebar-split,
+.calendar-sidebar-form > .calendar-extra-options {
+  min-width: 0;
+}
+
+.calendar-sidebar-form > label {
+  display: grid;
+  gap: 7px;
+}
+
+.calendar-sidebar-form > label:has(#calendarEventTitleInput),
+.calendar-sidebar-form > label:has(#calendarEventDescriptionInput) {
+  grid-column: 1 / -1;
+}
+
+.calendar-sidebar-form > label:has(#calendarEventDescriptionInput) textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.calendar-sidebar-split {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.7fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.calendar-sidebar-split label {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.calendar-time-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 8px;
+}
+
+.calendar-extra-options {
+  align-self: start;
+  margin-top: 0 !important;
+  padding: 14px;
+  border: 1px solid rgba(255, 122, 26, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 122, 26, 0.055);
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.calendar-extra-options-title {
+  margin-bottom: 2px;
+}
+
+.calendar-extra-options .calendar-check-card,
+.calendar-wom-panel .calendar-check-card {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) !important;
+  align-items: center !important;
+  justify-content: start !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 2px 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  text-align: left !important;
+}
+
+.calendar-extra-options .calendar-check-card input[type="checkbox"],
+.calendar-wom-panel .calendar-check-card input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  justify-self: start !important;
+  align-self: center !important;
+}
+
+.calendar-extra-options .calendar-check-card span,
+.calendar-wom-panel .calendar-check-card span {
+  display: block !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.calendar-sidebar-form > .admin-action-row {
+  position: sticky;
+  bottom: -24px;
+  z-index: 3;
+  margin: 4px -24px -24px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid rgba(255, 122, 26, 0.18);
+  background: linear-gradient(180deg, rgba(20, 12, 9, 0.9), rgba(20, 12, 9, 0.98));
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 860px) {
+  .calendar-sidebar-form {
+    width: min(720px, calc(100vw - 24px)) !important;
+    max-height: 94vh !important;
+    grid-template-columns: 1fr;
+    padding: 18px !important;
+  }
+
+  .calendar-sidebar-split {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-sidebar-form > .admin-action-row {
+    bottom: -18px;
+    margin: 4px -18px -18px;
+    padding: 12px 18px 14px;
+  }
+}
