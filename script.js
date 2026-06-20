@@ -1143,8 +1143,8 @@ async function loadEventsHub() {
   try {
     const events = await fetchCurrentEvents();
 
-    grid.className = "calendar-grid";
-  grid.innerHTML = "";
+    grid.className = "event-hub-grid";
+    grid.innerHTML = "";
 
     if (!events.length) {
       const empty = document.createElement("p");
@@ -1747,8 +1747,8 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
 
-    grid.className = "calendar-grid";
-  grid.innerHTML = "";
+    grid.className = "archive-grid";
+    grid.innerHTML = "";
 
     if (!archive.length) {
       grid.innerHTML = `
