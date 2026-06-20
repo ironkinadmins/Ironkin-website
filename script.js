@@ -3390,16 +3390,200 @@ function getCalendarWomMetricForForm() {
 }
 
 
-const CALENDAR_EVENT_TEMPLATES = {
-  "botw-elite": { title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
-  "botw-standard": { title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
-  sotw: { title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
-  "clan-goal": { title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: false },
-  mass: { title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true },
-  giveaway: { title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false, discord: true },
-  challenge: { title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false, discord: true },
-  "clog-week": { title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false, discord: true }
+const DEFAULT_CALENDAR_EVENT_TEMPLATES = {
+  "botw-elite": { label: "BOTW Elite", title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
+  "botw-standard": { label: "BOTW Standard", title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
+  sotw: { label: "SOTW", title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
+  "clan-goal": { label: "Clan Goal", title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: false, description: "" },
+  mass: { label: "Clan Mass", title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true, description: "" },
+  giveaway: { label: "Giveaway", title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false, discord: true, description: "" },
+  challenge: { label: "Photo/Clan Challenge", title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false, discord: true, description: "" },
+  "clog-week": { label: "CLog Week", title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false, discord: true, description: "" }
 };
+
+let CALENDAR_EVENT_TEMPLATES = { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
+let calendarTemplateEditorSelectedKey = "";
+
+function normalizeCalendarTemplateKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function normalizeCalendarTemplate(value = {}, fallbackKey = "") {
+  const label = String(value.label || value.name || value.title || fallbackKey || "Template").trim();
+  const key = normalizeCalendarTemplateKey(value.key || fallbackKey || label);
+  return {
+    key,
+    label,
+    title: String(value.title || label || "Event").trim(),
+    type: String(value.type || value.eventType || "normal").trim() || "normal",
+    start: String(value.start || "7:00").trim(),
+    end: String(value.end || "8:00").trim(),
+    durationDays: Math.max(0, Math.min(Number(value.durationDays || 0), 365)),
+    wom: value.wom === true,
+    discord: value.discord === true,
+    description: String(value.description || "").trim()
+  };
+}
+
+function getCalendarTemplatesPayload() {
+  return Object.entries(CALENDAR_EVENT_TEMPLATES).reduce((map, [key, value]) => {
+    const normalized = normalizeCalendarTemplate(value, key);
+    if (normalized.key) map[normalized.key] = normalized;
+    return map;
+  }, {});
+}
+
+function renderCalendarTemplateOptions() {
+  const select = document.getElementById("calendarEventTemplateInput");
+  if (!select) return;
+  const selected = select.value;
+  select.innerHTML = `<option value="">No template</option>`;
+  Object.entries(CALENDAR_EVENT_TEMPLATES).forEach(([key, template]) => {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = template.label || template.title || key;
+    select.appendChild(option);
+  });
+  if ([...select.options].some(option => option.value === selected)) select.value = selected;
+}
+
+async function loadCalendarEventTemplates() {
+  try {
+    const response = await fetch("/api/admin/calendar/templates", { credentials: "include" });
+    if (!response.ok) throw new Error("Could not load templates.");
+    const data = await response.json();
+    CALENDAR_EVENT_TEMPLATES = data.templates && typeof data.templates === "object"
+      ? data.templates
+      : { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
+  } catch {
+    CALENDAR_EVENT_TEMPLATES = { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
+  }
+  renderCalendarTemplateOptions();
+}
+
+async function saveCalendarEventTemplates() {
+  const status = document.getElementById("calendarTemplateManagerStatus");
+  if (status) status.textContent = "Saving templates...";
+  const response = await fetch("/api/admin/calendar/templates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ templates: getCalendarTemplatesPayload() })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Could not save templates.");
+  CALENDAR_EVENT_TEMPLATES = data.templates || getCalendarTemplatesPayload();
+  renderCalendarTemplateOptions();
+  renderCalendarTemplateManager();
+  if (status) status.textContent = "Templates saved.";
+}
+
+function openCalendarTemplateManager() {
+  const panel = document.getElementById("calendarTemplateManagerPanel");
+  if (!panel) return;
+  panel.hidden = false;
+  panel.classList.add("open");
+  renderCalendarTemplateManager();
+}
+
+function closeCalendarTemplateManager() {
+  const panel = document.getElementById("calendarTemplateManagerPanel");
+  if (!panel) return;
+  panel.classList.remove("open");
+  panel.hidden = true;
+}
+
+function renderCalendarTemplateManager() {
+  const list = document.getElementById("calendarTemplateList");
+  if (!list) return;
+  const entries = Object.entries(CALENDAR_EVENT_TEMPLATES);
+  if (!calendarTemplateEditorSelectedKey || !CALENDAR_EVENT_TEMPLATES[calendarTemplateEditorSelectedKey]) {
+    calendarTemplateEditorSelectedKey = entries[0]?.[0] || "";
+  }
+
+  list.innerHTML = "";
+  entries.forEach(([key, template]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `calendar-template-list-item${key === calendarTemplateEditorSelectedKey ? " active" : ""}`;
+    button.textContent = template.label || template.title || key;
+    button.addEventListener("click", () => {
+      calendarTemplateEditorSelectedKey = key;
+      renderCalendarTemplateManager();
+    });
+    list.appendChild(button);
+  });
+
+  fillCalendarTemplateEditor(calendarTemplateEditorSelectedKey);
+}
+
+function fillCalendarTemplateEditor(key) {
+  const template = CALENDAR_EVENT_TEMPLATES[key] || normalizeCalendarTemplate({}, key);
+  const setValue = (id, value) => {
+    const field = document.getElementById(id);
+    if (field) field.value = value ?? "";
+  };
+  setValue("templateEditorLabel", template.label || "");
+  setValue("templateEditorKey", key || template.key || "");
+  setValue("templateEditorTitle", template.title || "");
+  setValue("templateEditorType", template.type || "normal");
+  setValue("templateEditorDurationDays", template.durationDays || 0);
+  setValue("templateEditorStart", template.start || "7:00");
+  setValue("templateEditorEnd", template.end || "8:00");
+  setValue("templateEditorDescription", template.description || "");
+  const wom = document.getElementById("templateEditorWom");
+  const discord = document.getElementById("templateEditorDiscord");
+  if (wom) wom.checked = template.wom === true;
+  if (discord) discord.checked = template.discord === true;
+}
+
+function readCalendarTemplateEditor() {
+  const label = document.getElementById("templateEditorLabel")?.value || "";
+  const key = normalizeCalendarTemplateKey(document.getElementById("templateEditorKey")?.value || label);
+  const template = normalizeCalendarTemplate({
+    key,
+    label,
+    title: document.getElementById("templateEditorTitle")?.value || label,
+    type: document.getElementById("templateEditorType")?.value || "normal",
+    durationDays: document.getElementById("templateEditorDurationDays")?.value || 0,
+    start: document.getElementById("templateEditorStart")?.value || "7:00",
+    end: document.getElementById("templateEditorEnd")?.value || "8:00",
+    description: document.getElementById("templateEditorDescription")?.value || "",
+    wom: document.getElementById("templateEditorWom")?.checked === true,
+    discord: document.getElementById("templateEditorDiscord")?.checked === true
+  }, key);
+  return { key, template };
+}
+
+async function handleCalendarTemplateEditorSubmit(event) {
+  event.preventDefault();
+  const { key, template } = readCalendarTemplateEditor();
+  if (!key) {
+    const status = document.getElementById("calendarTemplateManagerStatus");
+    if (status) status.textContent = "Template key is required.";
+    return;
+  }
+
+  if (calendarTemplateEditorSelectedKey && calendarTemplateEditorSelectedKey !== key) {
+    delete CALENDAR_EVENT_TEMPLATES[calendarTemplateEditorSelectedKey];
+  }
+
+  CALENDAR_EVENT_TEMPLATES[key] = template;
+  calendarTemplateEditorSelectedKey = key;
+  try {
+    await saveCalendarEventTemplates();
+  } catch (error) {
+    const status = document.getElementById("calendarTemplateManagerStatus");
+    if (status) status.textContent = error.message || "Could not save templates.";
+  }
+}
+
 
 function addDaysToDateKey(dateKey, days) {
   const date = new Date(`${dateKey}T12:00:00`);
@@ -3416,6 +3600,7 @@ function applyCalendarTemplate() {
   const startDate = document.getElementById("calendarEventStartDateInput")?.value || calendarSelectedDate || getDateOnlyKey(new Date().toISOString());
   const titleInput = document.getElementById("calendarEventTitleInput");
   const typeInput = document.getElementById("calendarEventTypeInput");
+  const descriptionInput = document.getElementById("calendarEventDescriptionInput");
   const startTime = document.getElementById("calendarEventStartTimeInput");
   const endTime = document.getElementById("calendarEventEndTimeInput");
   const endDate = document.getElementById("calendarEventEndDateInput");
@@ -3423,12 +3608,13 @@ function applyCalendarTemplate() {
   const createDiscordEvent = document.getElementById("calendarCreateDiscordEventInput");
   const multiDayInput = document.getElementById("calendarMultiDayInput");
 
-  if (titleInput && !titleInput.value.trim()) titleInput.value = template.title;
-  if (typeInput) typeInput.value = template.type;
-  if (startTime) startTime.value = template.start;
-  if (endTime) endTime.value = template.end;
-  if (endDate) endDate.value = addDaysToDateKey(startDate, template.durationDays);
-  if (createWom) createWom.checked = template.wom;
+  if (titleInput && !titleInput.value.trim()) titleInput.value = template.title || template.label || "";
+  if (descriptionInput && !descriptionInput.value.trim() && template.description) descriptionInput.value = template.description;
+  if (typeInput) typeInput.value = template.type || "normal";
+  if (startTime) startTime.value = template.start || "7:00";
+  if (endTime) endTime.value = template.end || "8:00";
+  if (endDate) endDate.value = addDaysToDateKey(startDate, Number(template.durationDays || 0));
+  if (createWom) createWom.checked = template.wom === true;
   if (createDiscordEvent) createDiscordEvent.checked = template.discord === true;
   if (multiDayInput) multiDayInput.checked = Number(template.durationDays || 0) > 0;
   setCalendarAdvancedOptionsOpen(template.wom === true || template.discord === true);
@@ -3844,10 +4030,12 @@ async function setupCalendarAdminTools() {
   calendarCurrentUserIsStaff = isStaffUser(user);
   panel.hidden = !calendarCurrentUserIsStaff;
   document.getElementById("calendarQuickCreateBtn")?.toggleAttribute("hidden", !calendarCurrentUserIsStaff);
+  document.getElementById("calendarManageTemplatesBtn")?.toggleAttribute("hidden", !calendarCurrentUserIsStaff);
   renderCalendarHealthCheck();
 
   if (!calendarCurrentUserIsStaff) return;
 
+  await loadCalendarEventTemplates();
   fillCalendarMetricDropdowns();
 
   selectCalendarAdminDate();
@@ -3855,6 +4043,41 @@ async function setupCalendarAdminTools() {
   document.getElementById("cancelCalendarFormBtn")?.addEventListener("click", () => { clearCalendarEventForm(); closeCalendarEventForm(); });
   document.getElementById("closeCalendarEventFormBtn")?.addEventListener("click", () => { clearCalendarEventForm(); closeCalendarEventForm(); });
   document.getElementById("calendarQuickCreateBtn")?.addEventListener("click", () => { selectCalendarAdminDate(); openCalendarEventForm(); });
+  document.getElementById("calendarManageTemplatesBtn")?.addEventListener("click", openCalendarTemplateManager);
+  document.getElementById("closeCalendarTemplateManagerBtn")?.addEventListener("click", closeCalendarTemplateManager);
+  document.getElementById("addCalendarTemplateBtn")?.addEventListener("click", () => {
+    const baseKey = "new-template";
+    let key = baseKey;
+    let counter = 2;
+    while (CALENDAR_EVENT_TEMPLATES[key]) key = `${baseKey}-${counter++}`;
+    CALENDAR_EVENT_TEMPLATES[key] = normalizeCalendarTemplate({ key, label: "New Template", title: "New Event" }, key);
+    calendarTemplateEditorSelectedKey = key;
+    renderCalendarTemplateManager();
+  });
+  document.getElementById("deleteCalendarTemplateBtn")?.addEventListener("click", async () => {
+    if (!calendarTemplateEditorSelectedKey) return;
+    if (!confirm("Delete this event template?")) return;
+    delete CALENDAR_EVENT_TEMPLATES[calendarTemplateEditorSelectedKey];
+    calendarTemplateEditorSelectedKey = Object.keys(CALENDAR_EVENT_TEMPLATES)[0] || "";
+    try {
+      await saveCalendarEventTemplates();
+    } catch (error) {
+      const status = document.getElementById("calendarTemplateManagerStatus");
+      if (status) status.textContent = error.message || "Could not delete template.";
+    }
+  });
+  document.getElementById("resetCalendarTemplatesBtn")?.addEventListener("click", async () => {
+    if (!confirm("Reset all templates to the default Ironkin set?")) return;
+    CALENDAR_EVENT_TEMPLATES = { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
+    calendarTemplateEditorSelectedKey = Object.keys(CALENDAR_EVENT_TEMPLATES)[0] || "";
+    try {
+      await saveCalendarEventTemplates();
+    } catch (error) {
+      const status = document.getElementById("calendarTemplateManagerStatus");
+      if (status) status.textContent = error.message || "Could not reset templates.";
+    }
+  });
+  document.getElementById("calendarTemplateEditorForm")?.addEventListener("submit", handleCalendarTemplateEditorSubmit);
   document.getElementById("calendarEventTemplateInput")?.addEventListener("change", applyCalendarTemplate);
   document.querySelectorAll("[data-calendar-view]").forEach(button => {
     button.addEventListener("click", () => {

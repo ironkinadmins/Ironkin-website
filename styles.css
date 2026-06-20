@@ -8431,7 +8431,8 @@ body.calendar-modal-active {
 }
 
 .calendar-template-type-row {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 540px;
 }
 
 .calendar-date-time-row {
@@ -8558,5 +8559,129 @@ body.calendar-modal-active {
 
   .calendar-end-date-field {
     max-width: none;
+  }
+}
+
+
+/* Editable calendar templates */
+.calendar-template-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(8px);
+}
+
+.calendar-template-modal[hidden] {
+  display: none !important;
+}
+
+.calendar-template-manager {
+  width: min(980px, calc(100vw - 32px));
+  max-height: 94vh;
+  overflow: auto;
+  border: 1px solid rgba(255, 122, 26, 0.24);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(33, 19, 12, 0.98), rgba(15, 10, 8, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  padding: 20px;
+}
+
+.calendar-template-manager-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.calendar-template-list-card,
+.calendar-template-editor {
+  border: 1px solid rgba(255, 122, 26, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.calendar-template-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-template-list-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.btn.small {
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+
+.calendar-template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-template-list-item {
+  width: 100%;
+  border: 1px solid rgba(255, 122, 26, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 800;
+  text-align: left;
+  padding: 10px 12px;
+}
+
+.calendar-template-list-item:hover,
+.calendar-template-list-item.active {
+  border-color: rgba(255, 122, 26, 0.65);
+  background: rgba(255, 122, 26, 0.13);
+  color: var(--ember);
+}
+
+.calendar-template-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.calendar-template-editor label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.calendar-template-editor input,
+.calendar-template-editor select,
+.calendar-template-editor textarea {
+  width: 100%;
+}
+
+.calendar-template-flags {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.calendar-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (max-width: 820px) {
+  .calendar-template-manager-grid,
+  .calendar-template-editor {
+    grid-template-columns: 1fr;
   }
 }

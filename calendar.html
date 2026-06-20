@@ -31,11 +31,106 @@
       <div class="calendar-toolbar-actions">
         <button class="btn secondary calendar-view-toggle active" type="button" data-calendar-view="month">Month</button>
         <button class="btn secondary calendar-view-toggle" type="button" data-calendar-view="agenda">Agenda</button>
+        <button class="btn secondary" type="button" id="calendarManageTemplatesBtn" hidden>Manage Templates</button>
         <button class="btn primary" type="button" id="calendarQuickCreateBtn" hidden>+ Create Event</button>
       </div>
     </div>
 
     <section class="calendar-health-card" id="calendarHealthCheck" hidden></section>
+
+
+    <aside class="calendar-template-modal" id="calendarTemplateManagerPanel" hidden>
+      <div class="calendar-template-manager">
+        <div class="calendar-modal-form-header">
+          <div>
+            <p class="eyebrow">Calendar Settings</p>
+            <h2>Manage Event Templates</h2>
+            <p class="admin-muted">Edit template defaults used when creating calendar events.</p>
+          </div>
+          <button class="calendar-modal-close" type="button" id="closeCalendarTemplateManagerBtn" aria-label="Close template manager">×</button>
+        </div>
+
+        <div class="calendar-template-manager-grid">
+          <section class="calendar-template-list-card">
+            <div class="calendar-template-list-header">
+              <h3>Templates</h3>
+              <button class="btn secondary small" type="button" id="addCalendarTemplateBtn">+ Add</button>
+            </div>
+            <div class="calendar-template-list" id="calendarTemplateList"></div>
+          </section>
+
+          <form class="calendar-template-editor" id="calendarTemplateEditorForm">
+            <label>
+              <span>Template Name</span>
+              <input id="templateEditorLabel" type="text" placeholder="Clan Mass" required />
+            </label>
+
+            <label>
+              <span>Template Key</span>
+              <input id="templateEditorKey" type="text" placeholder="clan-mass" required />
+            </label>
+
+            <label class="calendar-field-wide">
+              <span>Default Title</span>
+              <input id="templateEditorTitle" type="text" placeholder="Vet'ion Mass" />
+            </label>
+
+            <label>
+              <span>Internal Type</span>
+              <select id="templateEditorType">
+                <option value="normal">Normal Event</option>
+                <option value="mass">Clan Mass</option>
+                <option value="giveaway">Giveaway</option>
+                <option value="challenge">Challenge</option>
+                <option value="sotw">SOTW</option>
+                <option value="botw-elite">BOTW Elite</option>
+                <option value="botw-standard">BOTW Standard</option>
+                <option value="clan-goal">Clan Goal</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Duration Days</span>
+              <input id="templateEditorDurationDays" type="number" min="0" max="365" step="1" value="0" />
+            </label>
+
+            <label>
+              <span>Start Time</span>
+              <input id="templateEditorStart" type="text" placeholder="7:00" />
+            </label>
+
+            <label>
+              <span>End Time</span>
+              <input id="templateEditorEnd" type="text" placeholder="8:00" />
+            </label>
+
+            <label class="calendar-field-wide">
+              <span>Default Description</span>
+              <textarea id="templateEditorDescription" rows="3" placeholder="Optional default description"></textarea>
+            </label>
+
+            <div class="calendar-template-flags calendar-field-wide">
+              <label class="calendar-check-card">
+                <input id="templateEditorWom" type="checkbox" />
+                <span>Create WOM by default</span>
+              </label>
+              <label class="calendar-check-card">
+                <input id="templateEditorDiscord" type="checkbox" />
+                <span>Create Discord Event by default</span>
+              </label>
+            </div>
+
+            <div class="calendar-template-actions calendar-field-wide">
+              <button class="btn primary" type="submit">Save Template</button>
+              <button class="btn secondary" type="button" id="deleteCalendarTemplateBtn">Delete</button>
+              <button class="btn secondary" type="button" id="resetCalendarTemplatesBtn">Reset Defaults</button>
+            </div>
+
+            <p class="calendar-form-status" id="calendarTemplateManagerStatus"></p>
+          </form>
+        </div>
+      </div>
+    </aside>
 
 
 
@@ -57,30 +152,9 @@
               <span>Template</span>
               <select id="calendarEventTemplateInput">
                 <option value="">No template</option>
-                <option value="botw-elite">BOTW Elite</option>
-                <option value="botw-standard">BOTW Standard</option>
-                <option value="sotw">SOTW</option>
-                <option value="clan-goal">Clan Goal</option>
-                <option value="mass">Clan Mass</option>
-                <option value="giveaway">Giveaway</option>
-                <option value="challenge">Photo/Clan Challenge</option>
-                <option value="clog-week">CLog Week</option>
               </select>
             </label>
-
-            <label>
-              <span>Event Type</span>
-              <select id="calendarEventTypeInput">
-                <option value="normal">Normal Event</option>
-                <option value="mass">Clan Mass</option>
-                <option value="giveaway">Giveaway</option>
-                <option value="challenge">Challenge</option>
-                <option value="sotw">Skill of the Week</option>
-                <option value="botw-elite">Boss of the Week - Elite</option>
-                <option value="botw-standard">Boss of the Week - Standard</option>
-                <option value="clan-goal">Clan Goal</option>
-              </select>
-            </label>
+            <input id="calendarEventTypeInput" type="hidden" value="normal" />
           </div>
 
           <label class="calendar-field-wide">
