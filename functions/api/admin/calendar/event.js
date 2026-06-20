@@ -231,29 +231,67 @@ function formatSeshTime(value) {
   return new Intl.DateTimeFormat("en-US", { timeZone: IRONKIN_ADMIN_TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true }).format(date);
 }
 
+function formatSeshDateTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: IRONKIN_ADMIN_TIME_ZONE,
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short"
+  }).format(date);
+}
+
+function formatSeshDuration(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+    return "Enter an end time in Sesh if needed";
+  }
+
+  const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days) parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  if (hours) parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  if (minutes) parts.push(`${minutes} minute${minutes === 1 ? "" : "s"}`);
+  return parts.join(" ") || "Less than 1 minute";
+}
+
 async function sendSeshSetupMessage(env, event) {
   const channelId = "1404563373651267727";
   if (!env.DISCORD_BOT_TOKEN || !channelId) return false;
 
-  const seshCommand = `/event create title: ${event.title} date: ${formatSeshDate(event.start)} time: ${formatSeshTime(event.start)} timezone: America/Toronto`;
   const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+  const startDateTime = formatSeshDateTime(event.start);
+  const duration = formatSeshDuration(event.start, event.end);
 
   const payload = {
     content: "📅 Sesh event setup requested",
     embeds: [{
       title: "📅 Create this event in Sesh",
       color: 0xff7a1a,
+      description: event.description || "Use Sesh's `/create` command and enter the details below.",
       fields: [
+        { name: "Use Sesh Command", value: "`/create`", inline: false },
         { name: "Title", value: event.title || "Untitled Event", inline: false },
         { name: "Type", value: getLabelForType(event.eventType, event.botwTier), inline: true },
         { name: "Date", value: formatSeshDate(event.start), inline: true },
         { name: "Start", value: `${formatSeshTime(event.start)} ET`, inline: true },
         { name: "End", value: `${formatSeshTime(event.end)} ET`, inline: true },
-        { name: "Calendar", value: `${siteUrl}/calendar`, inline: false },
-        { name: "Suggested Sesh Command", value: `\`\`\`\n${seshCommand}\n\`\`\``, inline: false }
+        { name: "Datetime for Sesh", value: startDateTime, inline: false },
+        { name: "Duration", value: duration, inline: true },
+        { name: "Timezone", value: "America/Toronto", inline: true },
+        { name: "Calendar", value: `${siteUrl}/calendar`, inline: false }
       ],
-      description: event.description || undefined,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      footer: { text: "Open Discord's Sesh /create command, then copy these values into the command fields." }
     }]
   };
 

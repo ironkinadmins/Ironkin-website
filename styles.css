@@ -8022,3 +8022,97 @@ body.bingo-ships #bingoTab-fleets .fleet-cell.ship {
     padding: 18px;
   }
 }
+
+/* Calendar UX finish: full-width modal editor, contained day cells, no side scroll */
+.calendar-workspace {
+  display: block !important;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+}
+
+.calendar-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden !important;
+}
+
+.calendar-grid,
+.calendar-weekdays {
+  min-width: 0;
+  width: 100%;
+}
+
+.calendar-day {
+  min-width: 0 !important;
+  max-width: 100%;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.calendar-events {
+  min-width: 0 !important;
+  max-width: 100%;
+  overflow: hidden !important;
+}
+
+.calendar-event,
+.calendar-more-events {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+.calendar-admin-sidebar {
+  display: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1300;
+  width: 100vw !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  max-height: none !important;
+  overflow: auto !important;
+  padding: 18px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  box-shadow: none !important;
+}
+
+.calendar-admin-sidebar.open {
+  display: grid !important;
+  place-items: center;
+}
+
+.calendar-sidebar-form {
+  width: min(860px, calc(100vw - 28px)) !important;
+  max-height: 92vh;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+body.calendar-modal-active {
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .calendar-card {
+    padding: 14px;
+  }
+  .calendar-weekdays span {
+    padding: 6px 2px;
+    font-size: 0.78rem;
+  }
+  .calendar-day {
+    min-height: 92px;
+    padding: 6px;
+  }
+  .calendar-event,
+  .calendar-more-events {
+    font-size: 0.68rem;
+    padding: 4px 5px;
+  }
+}
