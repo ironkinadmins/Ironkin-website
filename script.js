@@ -3763,9 +3763,13 @@ async function saveCalendarEventForm(event) {
   const discordEventWarning = data.discordScheduledEvent && data.discordScheduledEvent.synced === false
     ? ` Discord scheduled event was not created: ${data.discordScheduledEvent.reason || "check bot permissions/settings"}.`
     : "";
+  const announcementMessage = data.event?.discordAnnouncementMessageId ? " Announcement posted." : "";
+  const announcementWarning = data.discordAnnouncement && data.discordAnnouncement.synced === false
+    ? ` Announcement was not posted: ${data.discordAnnouncement.reason || "check bot permissions/settings"}.`
+    : "";
   const message = data.event?.womCompetitionId
-    ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} linked.${discordEventMessage}${discordEventWarning} Discord calendar board will sync in the background.`
-    : `Event saved instantly.${discordEventMessage}${discordEventWarning} Discord calendar board will sync in the background.`;
+    ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} linked.${discordEventMessage}${announcementMessage}${discordEventWarning}${announcementWarning} Discord calendar board will sync in the background.`
+    : `Event saved instantly.${discordEventMessage}${announcementMessage}${discordEventWarning}${announcementWarning} Discord calendar board will sync in the background.`;
 
   clearCalendarEventForm();
   closeCalendarEventForm();

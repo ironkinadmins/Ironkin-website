@@ -393,6 +393,153 @@ async function deleteDiscordScheduledEvent(env, event) {
   return true;
 }
 
+
+const EVENT_ANNOUNCEMENT_CHANNEL_ID = "1368582354960121927";
+const RSVP_REACTIONS = ["✅", "❔", "❌"];
+
+function isProgressionEvent(event) {
+  const type = String(event?.eventType || event?.category || "").toLowerCase();
+  return type === "sotw" || type === "botw" || type === "botw-elite" || type === "botw-standard" || type.startsWith("clan-goal");
+}
+
+function isMultiDayEvent(event) {
+  const start = new Date(event?.start);
+  const end = new Date(event?.end);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return false;
+  return end.getTime() - start.getTime() > 24 * 60 * 60 * 1000;
+}
+
+function shouldAddRsvpReactions(event) {
+  if (isProgressionEvent(event)) return false;
+  if (isMultiDayEvent(event)) return false;
+  const type = String(event?.eventType || event?.category || "normal").toLowerCase();
+  return ["normal", "mass", "giveaway", "challenge", "photo-challenge", "clan-mass"].includes(type);
+}
+
+function formatDiscordDate(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: IRONKIN_ADMIN_TIME_ZONE,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+}
+
+function formatDiscordTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: IRONKIN_ADMIN_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short"
+  }).format(date);
+}
+
+function getDiscordScheduledEventLink(env, event) {
+  const scheduledId = cleanText(event?.discordScheduledEventId);
+  const guildId = cleanText(env.DISCORD_GUILD_ID);
+  if (!scheduledId || !guildId) return "";
+  return `https://discord.com/events/${guildId}/${scheduledId}`;
+}
+
+function buildEventAnnouncementPayload(env, event, mode = "created") {
+  const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+  const isUpdate = mode === "updated";
+  const isCancel = mode === "cancelled";
+  const scheduledLink = getDiscordScheduledEventLink(env, event);
+  const titlePrefix = isCancel ? "❌ Event Cancelled" : (isUpdate ? "⚠️ Event Updated" : "📅 New Ironkin Event");
+  const descriptionParts = [];
+  if (event.description) descriptionParts.push(truncateDiscordText(event.description, 800));
+  if (shouldAddRsvpReactions(event) && !isCancel) {
+    descriptionParts.push("React below:\n✅ Interested\n❔ Maybe\n❌ Can't attend");
+  }
+
+  const fields = [
+    { name: "Event", value: event.title || "Untitled Event", inline: false },
+    { name: "Type", value: getLabelForType(event.eventType, event.botwTier), inline: true },
+    { name: "Date", value: formatDiscordDate(event.start), inline: true },
+    { name: "Time", value: `${formatDiscordTime(event.start)} - ${formatDiscordTime(event.end)}`, inline: false },
+    { name: "Calendar", value: `${siteUrl}/calendar`, inline: false }
+  ];
+
+  if (scheduledLink) {
+    fields.splice(4, 0, { name: "Discord Event", value: scheduledLink, inline: false });
+  }
+
+  return {
+    content: isCancel ? "@everyone" : "@everyone",
+    allowed_mentions: { parse: ["everyone"] },
+    embeds: [{
+      title: titlePrefix,
+      color: isCancel ? 0xb91c1c : (isUpdate ? 0xf59e0b : 0xff7a1a),
+      description: descriptionParts.join("\n\n") || (isCancel ? "This event has been cancelled." : "A new event has been added to the Ironkin calendar."),
+      fields,
+      timestamp: new Date().toISOString(),
+      footer: { text: "Ironkin Calendar" }
+    }]
+  };
+}
+
+async function addRsvpReactions(env, channelId, messageId) {
+  if (!env.DISCORD_BOT_TOKEN || !channelId || !messageId) return false;
+  for (const reaction of RSVP_REACTIONS) {
+    const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(reaction)}/@me`, {
+      method: "PUT",
+      headers: { "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}` }
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      console.warn("Discord RSVP reaction failed", reaction, response.status, data);
+    }
+  }
+  return true;
+}
+
+async function upsertEventAnnouncement(env, event, mode = "created") {
+  if (!env.DISCORD_BOT_TOKEN) return { event, synced: false, reason: "Missing DISCORD_BOT_TOKEN" };
+
+  const channelId = EVENT_ANNOUNCEMENT_CHANNEL_ID;
+  const messageId = cleanText(event.discordAnnouncementMessageId);
+  const payload = buildEventAnnouncementPayload(env, event, mode);
+  const url = messageId
+    ? `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`
+    : `https://discord.com/api/v10/channels/${channelId}/messages`;
+
+  const response = await fetch(url, {
+    method: messageId ? "PATCH" : "POST",
+    headers: {
+      "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.warn("Discord event announcement failed", response.status, data);
+    return { event, synced: false, reason: data.message || data.error || "Discord event announcement failed" };
+  }
+
+  const updatedEvent = {
+    ...event,
+    discordAnnouncementChannelId: channelId,
+    discordAnnouncementMessageId: String(data.id || messageId),
+    discordAnnouncementSyncedAt: new Date().toISOString(),
+    discordAnnouncementStatus: mode
+  };
+
+  if (!messageId && shouldAddRsvpReactions(updatedEvent)) {
+    await addRsvpReactions(env, channelId, updatedEvent.discordAnnouncementMessageId);
+  }
+
+  return { event: updatedEvent, synced: true };
+}
+
 async function getCustomCalendarEvents(env) {
   return getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
 }
@@ -588,6 +735,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
 
     await deleteActiveEvent(env, deletedEvent);
     await deleteDiscordScheduledEvent(env, deletedEvent);
+    await upsertEventAnnouncement(env, { ...deletedEvent, status: "cancelled" }, "cancelled").catch(() => null);
 
     const discordSync = mirrorCalendarEventDelete(env, deletedEvent);
     if (typeof waitUntil === "function") waitUntil(discordSync);
@@ -695,11 +843,19 @@ export async function onRequestPost({ request, env, waitUntil }) {
       primaryEvent = discordScheduledEventResult.event;
     }
 
+    const announcementResult = await upsertEventAnnouncement(env, primaryEvent, isEditingExisting ? "updated" : "created");
+    primaryEvent = announcementResult.event;
+
     const recurrenceEvents = isEditingExisting ? [primaryEvent] : getRecurrenceInstances(primaryEvent, recurrence).map((item, index) => ({
       ...item,
       discordScheduledEventId: index === 0 ? item.discordScheduledEventId : null,
       discordScheduledEventSyncedAt: index === 0 ? item.discordScheduledEventSyncedAt : null,
-      discordScheduledEventStatus: index === 0 ? item.discordScheduledEventStatus : null
+      discordScheduledEventStatus: index === 0 ? item.discordScheduledEventStatus : null,
+      discordAnnouncementChannelId: index === 0 ? item.discordAnnouncementChannelId : null,
+      discordAnnouncementMessageId: index === 0 ? item.discordAnnouncementMessageId : null,
+      discordAnnouncementSyncedAt: index === 0 ? item.discordAnnouncementSyncedAt : null,
+      discordAnnouncementStatus: index === 0 ? item.discordAnnouncementStatus : null,
+      reminderFlags: index === 0 ? item.reminderFlags : {}
     }));
 
     const { savedEvents } = recurrenceEvents.length > 1
@@ -727,6 +883,9 @@ export async function onRequestPost({ request, env, waitUntil }) {
       events: savedEvents,
       discordScheduledEvent: discordScheduledEventResult
         ? { synced: discordScheduledEventResult.synced, reason: discordScheduledEventResult.reason || "" }
+        : null,
+      discordAnnouncement: announcementResult
+        ? { synced: announcementResult.synced, reason: announcementResult.reason || "" }
         : null
     });
   } catch (error) {
