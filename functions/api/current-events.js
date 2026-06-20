@@ -111,12 +111,25 @@ function normalizeBotwEvents(events) {
   return withoutLegacy;
 }
 
+function isCurrentEventActive(event, now = Date.now()) {
+  if (!event || event.active !== true) return false;
+
+  const start = event.startDate ? new Date(event.startDate).getTime() : null;
+  const end = event.endDate ? new Date(event.endDate).getTime() : null;
+
+  if (start && end && Number.isFinite(start) && Number.isFinite(end)) {
+    return start <= now && end >= now;
+  }
+
+  // Legacy/manual safety: keep undated events only if they are explicitly active and linked to WOM.
+  // This prevents old default placeholders from becoming the current event.
+  return Boolean(event.womCompetitionId);
+}
+
 export async function onRequestGet({ env }) {
   const saved = await env.DROPS_KV.get("events:active");
-
-  const events = normalizeBotwEvents(saved
-    ? JSON.parse(saved)
-    : DEFAULT_EVENTS);
+  const rawEvents = saved ? JSON.parse(saved) : [];
+  const events = normalizeBotwEvents(rawEvents).filter(event => isCurrentEventActive(event));
 
   return Response.json({
     active: events.length > 0,

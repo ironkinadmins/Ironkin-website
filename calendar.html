@@ -18,26 +18,54 @@
       <p>Upcoming clan events, masses, giveaways, competitions, and deadlines.</p>
     </section>
 
-    <div class="calendar-filters" id="calendarFilters">
-      <button class="active" data-filter="all">All</button>
-      <button data-filter="sotw">SOTW</button>
-      <button data-filter="botw">BOTW</button>
-      <button data-filter="mass">Masses</button>
-      <button data-filter="giveaway">Giveaways</button>
-      <button data-filter="challenge">Challenges</button>
+    <div class="calendar-toolbar">
+      <div class="calendar-filters" id="calendarFilters">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="sotw">SOTW</button>
+        <button data-filter="botw">BOTW</button>
+        <button data-filter="mass">Masses</button>
+        <button data-filter="giveaway">Giveaways</button>
+        <button data-filter="challenge">Challenges</button>
+      </div>
+
+      <div class="calendar-toolbar-actions">
+        <button class="btn secondary calendar-view-toggle active" type="button" data-calendar-view="month">Month</button>
+        <button class="btn secondary calendar-view-toggle" type="button" data-calendar-view="agenda">Agenda</button>
+        <button class="btn primary" type="button" id="calendarQuickCreateBtn" hidden>+ Create Event</button>
+      </div>
     </div>
+
+    <section class="calendar-health-card" id="calendarHealthCheck" hidden></section>
 
 
 
     <div class="calendar-workspace">
       <aside class="calendar-admin-sidebar" id="calendarAdminPanel" hidden>
         <form class="calendar-sidebar-form" id="calendarEventForm">
-          <div>
-            <p class="eyebrow">Staff Calendar Admin</p>
-            <h2 id="calendarAdminFormTitle">Create Event</h2>
-            <p class="admin-muted">Click any day on the calendar to fill the date, or set it manually below.</p>
-            <p class="calendar-timezone-note">🕒 Enter all admin times in Eastern Time (ET). Members will see Discord times in their own local timezone.</p>
+          <div class="calendar-modal-form-header">
+            <div>
+              <p class="eyebrow">Staff Calendar Admin</p>
+              <h2 id="calendarAdminFormTitle">Create Event</h2>
+              <p class="admin-muted">Click a day, drag-select multiple days, or choose a template below.</p>
+              <p class="calendar-timezone-note">🕒 Enter all admin times in Eastern Time (ET). Members will see Discord times in their own local timezone.</p>
+            </div>
+            <button class="calendar-modal-close" type="button" id="closeCalendarEventFormBtn" aria-label="Close event form">×</button>
           </div>
+
+          <label>
+            <span>Template</span>
+            <select id="calendarEventTemplateInput">
+              <option value="">No template</option>
+              <option value="botw-elite">BOTW Elite</option>
+              <option value="botw-standard">BOTW Standard</option>
+              <option value="sotw">SOTW</option>
+              <option value="clan-goal">Clan Goal</option>
+              <option value="mass">Clan Mass</option>
+              <option value="giveaway">Giveaway</option>
+              <option value="challenge">Photo/Clan Challenge</option>
+              <option value="clog-week">CLog Week</option>
+            </select>
+          </label>
 
           <label>
             <span>Title</span>
@@ -96,9 +124,25 @@
           </label>
 
 
+          <label>
+            <span>Recurring</span>
+            <select id="calendarRecurringInput">
+              <option value="none">Does not repeat</option>
+              <option value="weekly-4">Weekly for 4 weeks</option>
+              <option value="weekly-8">Weekly for 8 weeks</option>
+              <option value="biweekly-4">Every 2 weeks for 4 events</option>
+              <option value="monthly-3">Monthly for 3 months</option>
+            </select>
+          </label>
+
           <label class="calendar-check-card">
             <input id="calendarCreateWomInput" type="checkbox" />
             <span>Also create a Wise Old Man competition for this event</span>
+          </label>
+
+          <label class="calendar-check-card">
+            <input id="calendarSeshSetupInput" type="checkbox" />
+            <span>Send Discord Event Setup Message</span>
           </label>
 
           <div class="calendar-wom-panel" id="calendarWomPanel" hidden>
@@ -139,6 +183,7 @@
           <div class="admin-action-row">
             <button type="submit" class="btn primary">Save Event</button>
             <button type="button" class="btn secondary" id="clearCalendarEventBtn">Clear</button>
+            <button type="button" class="btn secondary" id="cancelCalendarFormBtn">Cancel</button>
           </div>
         </form>
       </aside>
@@ -146,7 +191,10 @@
       <section class="calendar-card">
       <div class="calendar-header">
         <button id="prevMonthBtn">←</button>
-        <h2 id="calendarMonthTitle">Loading...</h2>
+        <div class="calendar-title-wrap">
+          <h2 id="calendarMonthTitle">Loading...</h2>
+          <span id="calendarMonthCount" class="calendar-month-count"></span>
+        </div>
         <button id="nextMonthBtn">→</button>
       </div>
 

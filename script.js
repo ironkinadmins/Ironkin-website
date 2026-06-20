@@ -1143,7 +1143,8 @@ async function loadEventsHub() {
   try {
     const events = await fetchCurrentEvents();
 
-    grid.innerHTML = "";
+    grid.className = "calendar-grid";
+  grid.innerHTML = "";
 
     if (!events.length) {
       const empty = document.createElement("p");
@@ -1746,7 +1747,8 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
 
-    grid.innerHTML = "";
+    grid.className = "calendar-grid";
+  grid.innerHTML = "";
 
     if (!archive.length) {
       grid.innerHTML = `
@@ -2331,6 +2333,9 @@ loadRecordsPage();
 
 let calendarDate = new Date();
 let calendarEventsCache = [];
+let calendarView = "month";
+let calendarDragStartDate = null;
+let calendarDragEndDate = null;
 let resolvedSingleEventDropId = null;
 
 function getCalendarEventStart(event) {
@@ -2385,6 +2390,140 @@ function isCalendarEventCancelled(event) {
   return String(event?.status || "").toLowerCase() === "cancelled";
 }
 
+
+function getCalendarEventIcon(event) {
+  const type = getCalendarEventType(event);
+  const icons = {
+    sotw: "📘",
+    botw: "💀",
+    mass: "⚔️",
+    giveaway: "🎁",
+    challenge: "📸",
+    other: "📅"
+  };
+  return icons[type] || "📅";
+}
+
+function getEventsForDate(events, dateKey) {
+  return (Array.isArray(events) ? events : [])
+    .filter(event => isCalendarEventOnDate(event, dateKey))
+    .sort((a, b) => new Date(getCalendarEventStart(a) || 0) - new Date(getCalendarEventStart(b) || 0));
+}
+
+function getEventsForCurrentMonth(events) {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  return (Array.isArray(events) ? events : []).filter(event => {
+    const start = new Date(getCalendarEventStart(event));
+    const end = new Date(getCalendarEventEnd(event));
+    if (!Number.isFinite(start.getTime())) return false;
+    const monthStart = new Date(year, month, 1).getTime();
+    const monthEnd = new Date(year, month + 1, 0, 23, 59, 59).getTime();
+    const eventStart = start.getTime();
+    const eventEnd = Number.isFinite(end.getTime()) ? end.getTime() : eventStart;
+    return eventEnd >= monthStart && eventStart <= monthEnd;
+  });
+}
+
+function setCalendarMonthCount(events) {
+  const countEl = document.getElementById("calendarMonthCount");
+  if (!countEl) return;
+  const count = getEventsForCurrentMonth(events).length;
+  countEl.textContent = `${count} event${count === 1 ? "" : "s"} this month`;
+}
+
+function openCalendarEventForm() {
+  const panel = document.getElementById("calendarAdminPanel");
+  if (!panel || !calendarCurrentUserIsStaff) return;
+  panel.hidden = false;
+  panel.classList.add("open");
+  document.body.classList.add("calendar-modal-active");
+}
+
+function closeCalendarEventForm() {
+  const panel = document.getElementById("calendarAdminPanel");
+  if (!panel) return;
+  panel.classList.remove("open");
+  document.body.classList.remove("calendar-modal-active");
+}
+
+function showCalendarDayEvents(dateKey, dayEvents) {
+  closeCalendarEventDetails();
+  const backdrop = document.createElement("div");
+  backdrop.id = "calendarEventDetailsBackdrop";
+  backdrop.className = "calendar-event-details-backdrop";
+  const formattedDate = new Date(`${dateKey}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  backdrop.innerHTML = `
+    <div class="calendar-event-details-card calendar-day-events-card" role="dialog" aria-modal="true">
+      <div class="calendar-event-details-header">
+        <div>
+          <p class="eyebrow">Calendar Day</p>
+          <h2>${escapeHtml(formattedDate)}</h2>
+        </div>
+        <button class="calendar-modal-close" type="button" aria-label="Close day events">×</button>
+      </div>
+      <div class="calendar-day-event-list">
+        ${dayEvents.length ? dayEvents.map(event => `
+          <button type="button" class="calendar-day-event-row" data-event-id="${escapeHtml(event.id)}">
+            <span>${getCalendarEventIcon(event)}</span>
+            <strong>${escapeHtml(getMultiDayCalendarTitle(event, dateKey))}</strong>
+            <em>${escapeHtml(formatCalendarTime(getCalendarEventStart(event)) || "All day")}</em>
+          </button>
+        `).join("") : `<p class="admin-muted">No events on this day.</p>`}
+      </div>
+      <div class="calendar-event-details-actions">
+        ${calendarCurrentUserIsStaff ? `<button class="btn primary" id="calendarCreateFromDayBtn" type="button">Create Event</button>` : ""}
+        <button class="btn secondary" id="calendarCloseEventBtn" type="button">Close</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector(".calendar-modal-close")?.addEventListener("click", closeCalendarEventDetails);
+  backdrop.querySelector("#calendarCloseEventBtn")?.addEventListener("click", closeCalendarEventDetails);
+  backdrop.querySelector("#calendarCreateFromDayBtn")?.addEventListener("click", () => { closeCalendarEventDetails(); selectCalendarAdminDate(dateKey); });
+  backdrop.querySelectorAll("[data-event-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      const event = calendarEventsCache.find(item => item.id === button.dataset.eventId);
+      if (event) showCalendarEventDetails(event);
+    });
+  });
+  backdrop.addEventListener("click", clickEvent => {
+    if (clickEvent.target === backdrop) closeCalendarEventDetails();
+  });
+}
+
+function renderCalendarAgenda(events) {
+  const grid = document.getElementById("calendarGrid");
+  if (!grid) return;
+  const now = Date.now();
+  const upcoming = (Array.isArray(events) ? events : [])
+    .filter(event => !isCalendarEventCancelled(event))
+    .filter(event => new Date(getCalendarEventEnd(event) || getCalendarEventStart(event)).getTime() >= now - 86400000)
+    .sort((a, b) => new Date(getCalendarEventStart(a) || 0) - new Date(getCalendarEventStart(b) || 0))
+    .slice(0, 40);
+
+  grid.className = "calendar-agenda";
+  grid.innerHTML = upcoming.length ? upcoming.map(event => `
+    <button class="calendar-agenda-row calendar-event-${getCalendarEventType(event)}" type="button" data-event-id="${escapeHtml(event.id)}">
+      <span class="calendar-agenda-date">${escapeHtml(formatShortDateTime(getCalendarEventStart(event)))}</span>
+      <strong>${getCalendarEventIcon(event)} ${escapeHtml(event.title || "Untitled Event")}</strong>
+      <em>${escapeHtml(getEventTypeLabelForCalendar(event))}</em>
+    </button>
+  `).join("") : `<p class="admin-muted">No upcoming events found.</p>`;
+
+  grid.querySelectorAll("[data-event-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      const event = calendarEventsCache.find(item => item.id === button.dataset.eventId);
+      if (event) showCalendarEventDetails(event);
+    });
+  });
+}
+
+function getEventTypeLabelForCalendar(event) {
+  const type = getCalendarEventType(event);
+  const labels = { sotw: "SOTW", botw: "BOTW", mass: "Clan Mass / Goal", giveaway: "Giveaway", challenge: "Challenge", other: "Event" };
+  return labels[type] || "Event";
+}
+
 function renderCalendarMonth(events = calendarEventsCache) {
   const grid = document.getElementById("calendarGrid");
   const title = document.getElementById("calendarMonthTitle");
@@ -2407,10 +2546,18 @@ function renderCalendarMonth(events = calendarEventsCache) {
       ? safeEvents
       : safeEvents.filter(event => getCalendarEventType(event) === calendarFilter);
 
+  setCalendarMonthCount(filteredEvents);
+
+  if (calendarView === "agenda") {
+    renderCalendarAgenda(filteredEvents);
+    return;
+  }
+
   const firstDay = new Date(year, month, 1);
   const startDay = firstDay.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  grid.className = "calendar-grid";
   grid.innerHTML = "";
 
   for (let i = 0; i < startDay; i++) {
@@ -2431,6 +2578,24 @@ function renderCalendarMonth(events = calendarEventsCache) {
       cell.classList.add("calendar-staff-create");
       cell.title = "Click to create an event on this day";
       cell.addEventListener("click", () => selectCalendarAdminDate(dateKey));
+      cell.addEventListener("mousedown", event => {
+        if (event.button !== 0) return;
+        calendarDragStartDate = dateKey;
+        calendarDragEndDate = dateKey;
+      });
+      cell.addEventListener("mouseenter", () => {
+        if (calendarDragStartDate) calendarDragEndDate = dateKey;
+      });
+      cell.addEventListener("mouseup", () => {
+        if (calendarDragStartDate && calendarDragEndDate && calendarDragStartDate !== calendarDragEndDate) {
+          const ordered = [calendarDragStartDate, calendarDragEndDate].sort();
+          selectCalendarAdminDate(ordered[0]);
+          const endInput = document.getElementById("calendarEventEndDateInput");
+          if (endInput) endInput.value = ordered[1];
+        }
+        calendarDragStartDate = null;
+        calendarDragEndDate = null;
+      });
     }
 
     cell.innerHTML = `
@@ -2440,19 +2605,34 @@ function renderCalendarMonth(events = calendarEventsCache) {
 
     const eventBox = cell.querySelector(".calendar-events");
 
-    dayEvents.forEach(event => {
+    const visibleEvents = dayEvents.slice(0, 3);
+    visibleEvents.forEach(event => {
       const eventEl = document.createElement("div");
       const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
       const cancelledClass = isCalendarEventCancelled(event) ? " calendar-event-cancelled" : "";
       eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}${cancelledClass}`;
       const timeText = String(getDateOnlyKey(getCalendarEventStart(event)) || "") === dateKey ? formatCalendarTime(getCalendarEventStart(event)) : "↔";
-      eventEl.textContent = `${timeText ? `${timeText} · ` : ""}${getMultiDayCalendarTitle(event, dateKey)}`;
+      const label = `${timeText ? `${timeText} · ` : ""}${getCalendarEventIcon(event)} ${getMultiDayCalendarTitle(event, dateKey)}`;
+      eventEl.textContent = label;
+      eventEl.title = label;
       eventEl.addEventListener("click", clickEvent => {
         clickEvent.stopPropagation();
         showCalendarEventDetails(event);
       });
       eventBox.appendChild(eventEl);
     });
+
+    if (dayEvents.length > visibleEvents.length) {
+      const moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "calendar-more-events";
+      moreBtn.textContent = `+${dayEvents.length - visibleEvents.length} more`;
+      moreBtn.addEventListener("click", clickEvent => {
+        clickEvent.stopPropagation();
+        showCalendarDayEvents(dateKey, dayEvents);
+      });
+      eventBox.appendChild(moreBtn);
+    }
 
     grid.appendChild(cell);
   }
@@ -2494,6 +2674,7 @@ async function loadCalendar() {
 
     calendarEventsCache = Array.isArray(data.events) ? data.events : [];
     renderCalendarMonth(calendarEventsCache);
+    renderCalendarHealthCheck();
   } catch (error) {
     console.warn("Calendar load failed", error);
     renderCalendarMonth(calendarEventsCache);
@@ -3085,6 +3266,7 @@ function selectCalendarAdminDate(dateKey = null) {
 
   const status = document.getElementById("calendarEventFormStatus");
   if (status) status.textContent = dateKey ? `Selected ${dateKey}. Fill in the event details and save.` : "";
+  if (dateKey) openCalendarEventForm();
 }
 
 function setCalendarFormTitle(text) {
@@ -3102,6 +3284,12 @@ function clearCalendarEventForm() {
   if (status) status.textContent = "";
   setCalendarFormTitle("Create Event");
   setCalendarDateAndTime();
+  const recurringInput = document.getElementById("calendarRecurringInput");
+  const seshInput = document.getElementById("calendarSeshSetupInput");
+  const templateInput = document.getElementById("calendarEventTemplateInput");
+  if (recurringInput) recurringInput.value = "none";
+  if (seshInput) seshInput.checked = false;
+  if (templateInput) templateInput.value = "";
   updateCalendarWomFields();
 }
 
@@ -3180,6 +3368,58 @@ function getCalendarWomMetricForForm() {
   return document.getElementById("calendarBossMetricInput")?.value || "";
 }
 
+
+const CALENDAR_EVENT_TEMPLATES = {
+  "botw-elite": { title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true },
+  "botw-standard": { title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true },
+  sotw: { title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true },
+  "clan-goal": { title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true },
+  mass: { title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false },
+  giveaway: { title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false },
+  challenge: { title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false },
+  "clog-week": { title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false }
+};
+
+function addDaysToDateKey(dateKey, days) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  if (!Number.isFinite(date.getTime())) return dateKey;
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function applyCalendarTemplate() {
+  const key = document.getElementById("calendarEventTemplateInput")?.value || "";
+  const template = CALENDAR_EVENT_TEMPLATES[key];
+  if (!template) return;
+
+  const startDate = document.getElementById("calendarEventStartDateInput")?.value || calendarSelectedDate || getDateOnlyKey(new Date().toISOString());
+  const titleInput = document.getElementById("calendarEventTitleInput");
+  const typeInput = document.getElementById("calendarEventTypeInput");
+  const startTime = document.getElementById("calendarEventStartTimeInput");
+  const endTime = document.getElementById("calendarEventEndTimeInput");
+  const endDate = document.getElementById("calendarEventEndDateInput");
+  const createWom = document.getElementById("calendarCreateWomInput");
+
+  if (titleInput && !titleInput.value.trim()) titleInput.value = template.title;
+  if (typeInput) typeInput.value = template.type;
+  if (startTime) startTime.value = template.start;
+  if (endTime) endTime.value = template.end;
+  if (endDate) endDate.value = addDaysToDateKey(startDate, template.durationDays);
+  if (createWom) createWom.checked = template.wom;
+  setMeridiemValue("calendarEventStartMeridiemInput", "PM");
+  setMeridiemValue("calendarEventEndMeridiemInput", "PM");
+  updateCalendarWomFields();
+}
+
+function getCalendarRecurrenceForForm() {
+  const value = document.getElementById("calendarRecurringInput")?.value || "none";
+  if (value === "weekly-4") return { frequency: "weekly", count: 4 };
+  if (value === "weekly-8") return { frequency: "weekly", count: 8 };
+  if (value === "biweekly-4") return { frequency: "biweekly", count: 4 };
+  if (value === "monthly-3") return { frequency: "monthly", count: 3 };
+  return { frequency: "none", count: 1 };
+}
+
 function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   closeCalendarEventDetails();
   fillCalendarMetricDropdowns();
@@ -3228,6 +3468,7 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   setCalendarFormTitle(duplicate ? "Duplicate Event" : "Edit Event");
   updateCalendarWomFields();
   if (status) status.textContent = duplicate ? "Duplicating this event. Adjust anything needed, then save." : "Editing existing event. Save to update the calendar and Discord.";
+  openCalendarEventForm();
 }
 
 async function saveCalendarEventForm(event) {
@@ -3257,7 +3498,9 @@ async function saveCalendarEventForm(event) {
     goalKind: getCalendarCompetitionTypeForForm(),
     featured: document.getElementById("calendarFeaturedInput")?.checked === true,
     dropsEnabled: eventType === "clan-goal",
-    status: calendarEditingEvent?.status || "scheduled"
+    status: calendarEditingEvent?.status || "scheduled",
+    recurrence: getCalendarRecurrenceForForm(),
+    sendSeshSetupMessage: document.getElementById("calendarSeshSetupInput")?.checked === true
   };
 
   if (status) status.textContent = createWom ? "Saving event and creating WOM competition..." : (calendarEditingEventId ? "Updating event..." : "Saving event...");
@@ -3274,10 +3517,12 @@ async function saveCalendarEventForm(event) {
     return;
   }
 
-  if (data.event) {
+  const savedEvents = Array.isArray(data.events) && data.events.length ? data.events : (data.event ? [data.event] : []);
+  if (savedEvents.length) {
+    const savedIds = new Set(savedEvents.map(item => item.id));
     calendarEventsCache = [
-      ...calendarEventsCache.filter(item => item.id !== data.event.id),
-      data.event
+      ...calendarEventsCache.filter(item => !savedIds.has(item.id)),
+      ...savedEvents
     ].sort((a, b) => new Date(getCalendarEventStart(a) || 0) - new Date(getCalendarEventStart(b) || 0));
     renderCalendarMonth(calendarEventsCache);
   }
@@ -3287,6 +3532,7 @@ async function saveCalendarEventForm(event) {
     : "Event saved instantly. Discord will sync in the background.";
 
   clearCalendarEventForm();
+  closeCalendarEventForm();
   if (status) status.textContent = message;
 
   loadCalendar();
@@ -3389,6 +3635,34 @@ async function cancelCalendarEvent(eventId) {
   }
 }
 
+
+async function resendCalendarSeshSetup(eventId) {
+  const event = calendarEventsCache.find(item => item.id === eventId);
+  if (!event) return;
+  const button = document.getElementById("calendarResendSeshBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Sending...";
+  }
+  try {
+    const response = await fetch("/api/admin/calendar/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...event, createWom: false, sendSeshSetupMessage: true })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not send setup message.");
+    alert("Discord event setup message sent.");
+  } catch (error) {
+    alert(error.message || "Could not send setup message.");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Send Sesh Setup";
+    }
+  }
+}
+
 function showCalendarEventDetails(event) {
   closeCalendarEventDetails();
 
@@ -3453,7 +3727,7 @@ function showCalendarEventDetails(event) {
 
       <div class="calendar-event-details-actions">
         ${canManage ? `<button class="btn secondary" id="calendarEditEventBtn" type="button">Edit Event</button>` : ""}
-        ${canManage ? `<button class="btn secondary" id="calendarDuplicateEventBtn" type="button">Duplicate</button>` : ""}
+        ${canManage ? `<button class="btn secondary" id="calendarResendSeshBtn" type="button">Send Sesh Setup</button>` : ""}
         ${canManage && !cancelled ? `<button class="btn secondary danger" id="calendarCancelEventBtn" type="button">Cancel Event</button>` : ""}
         ${showDelete ? `<button class="btn secondary danger" id="calendarDeleteEventBtn" type="button">Delete Event</button>` : ""}
         <button class="btn primary" id="calendarCloseEventBtn" type="button">Close</button>
@@ -3470,10 +3744,45 @@ function showCalendarEventDetails(event) {
   backdrop.querySelector("#calendarDeleteEventBtn")?.addEventListener("click", () => deleteCalendarEvent(event.id));
   backdrop.querySelector("#calendarCancelEventBtn")?.addEventListener("click", () => cancelCalendarEvent(event.id));
   backdrop.querySelector("#calendarEditEventBtn")?.addEventListener("click", () => setCalendarEventFormFromEvent(event));
-  backdrop.querySelector("#calendarDuplicateEventBtn")?.addEventListener("click", () => setCalendarEventFormFromEvent(event, { duplicate: true }));
+  backdrop.querySelector("#calendarResendSeshBtn")?.addEventListener("click", () => resendCalendarSeshSetup(event.id));
   backdrop.addEventListener("click", clickEvent => {
     if (clickEvent.target === backdrop) closeCalendarEventDetails();
   });
+}
+
+
+async function renderCalendarHealthCheck() {
+  const card = document.getElementById("calendarHealthCheck");
+  if (!card || !calendarCurrentUserIsStaff) return;
+
+  card.hidden = false;
+  const now = Date.now();
+  const calendarActive = calendarEventsCache.filter(event => {
+    const start = new Date(getCalendarEventStart(event)).getTime();
+    const end = new Date(getCalendarEventEnd(event)).getTime();
+    return !isCalendarEventCancelled(event) && start <= now && end >= now;
+  });
+  const featured = calendarEventsCache.find(event => event.featured === true && !isCalendarEventCancelled(event));
+
+  let apiEvents = [];
+  try {
+    const response = await fetch(`/api/current-events?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    apiEvents = Array.isArray(data.events) ? data.events : [];
+  } catch {}
+
+  card.innerHTML = `
+    <div>
+      <p class="eyebrow">Current Event Health Check</p>
+      <h2>Event Sync Status</h2>
+    </div>
+    <div class="calendar-health-grid">
+      <div><span>Website current events</span><strong>${apiEvents.length || "None"}</strong></div>
+      <div><span>Calendar active now</span><strong>${calendarActive.length || "None"}</strong></div>
+      <div><span>Manual featured</span><strong>${featured ? escapeHtml(featured.title || "Untitled") : "None"}</strong></div>
+      <div><span>Next calendar event</span><strong>${escapeHtml((calendarEventsCache.find(event => new Date(getCalendarEventStart(event)).getTime() > now && !isCalendarEventCancelled(event)) || {}).title || "None")}</strong></div>
+    </div>
+  `;
 }
 
 async function setupCalendarAdminTools() {
@@ -3483,6 +3792,8 @@ async function setupCalendarAdminTools() {
   const user = await getCurrentAuthUser();
   calendarCurrentUserIsStaff = isStaffUser(user);
   panel.hidden = !calendarCurrentUserIsStaff;
+  document.getElementById("calendarQuickCreateBtn")?.toggleAttribute("hidden", !calendarCurrentUserIsStaff);
+  renderCalendarHealthCheck();
 
   if (!calendarCurrentUserIsStaff) return;
 
@@ -3490,6 +3801,18 @@ async function setupCalendarAdminTools() {
 
   selectCalendarAdminDate();
   document.getElementById("clearCalendarEventBtn")?.addEventListener("click", clearCalendarEventForm);
+  document.getElementById("cancelCalendarFormBtn")?.addEventListener("click", () => { clearCalendarEventForm(); closeCalendarEventForm(); });
+  document.getElementById("closeCalendarEventFormBtn")?.addEventListener("click", () => { clearCalendarEventForm(); closeCalendarEventForm(); });
+  document.getElementById("calendarQuickCreateBtn")?.addEventListener("click", () => { selectCalendarAdminDate(); openCalendarEventForm(); });
+  document.getElementById("calendarEventTemplateInput")?.addEventListener("change", applyCalendarTemplate);
+  document.querySelectorAll("[data-calendar-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      calendarView = button.dataset.calendarView || "month";
+      document.querySelectorAll("[data-calendar-view]").forEach(item => item.classList.remove("active"));
+      button.classList.add("active");
+      renderCalendarMonth(calendarEventsCache);
+    });
+  });
   document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarCompetitionTypeInput")?.addEventListener("change", updateCalendarWomFields);

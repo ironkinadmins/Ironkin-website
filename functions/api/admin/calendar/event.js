@@ -163,6 +163,118 @@ async function putJson(kv, key, value) {
   await kv.put(key, JSON.stringify(value));
 }
 
+function addDaysToIso(value, days) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString();
+}
+
+function addMonthsToIso(value, months) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.toISOString();
+}
+
+function getRecurrenceInstances(event, recurrence = {}) {
+  const frequency = cleanText(recurrence.frequency || recurrence.type || "none").toLowerCase();
+  const count = Math.min(Math.max(Number(recurrence.count || 1), 1), 52);
+  if (!frequency || frequency === "none" || count <= 1) return [event];
+
+  const seriesId = event.seriesId || makeId("series");
+  const instances = [];
+
+  for (let index = 0; index < count; index++) {
+    const suffix = index === 0 ? "" : `-${index + 1}`;
+    let start = event.start;
+    let end = event.end;
+
+    if (frequency === "weekly") {
+      start = addDaysToIso(event.start, index * 7);
+      end = addDaysToIso(event.end, index * 7);
+    } else if (frequency === "biweekly") {
+      start = addDaysToIso(event.start, index * 14);
+      end = addDaysToIso(event.end, index * 14);
+    } else if (frequency === "monthly") {
+      start = addMonthsToIso(event.start, index);
+      end = addMonthsToIso(event.end, index);
+    }
+
+    instances.push({
+      ...event,
+      id: index === 0 ? event.id : `${event.id}${suffix}`,
+      seriesId,
+      recurrence: { frequency, count, index: index + 1 },
+      start,
+      end,
+      createdAt: event.createdAt,
+      updatedAt: new Date().toISOString(),
+      // Only the first event should create/link WOM automatically.
+      womCompetitionId: index === 0 ? event.womCompetitionId : null,
+      featured: index === 0 ? event.featured : false
+    });
+  }
+
+  return instances;
+}
+
+function formatSeshDate(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", { timeZone: IRONKIN_ADMIN_TIME_ZONE, month: "2-digit", day: "2-digit", year: "numeric" }).format(date);
+}
+
+function formatSeshTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", { timeZone: IRONKIN_ADMIN_TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true }).format(date);
+}
+
+async function sendSeshSetupMessage(env, event) {
+  const channelId = "1404563373651267727";
+  if (!env.DISCORD_BOT_TOKEN || !channelId) return false;
+
+  const seshCommand = `/event create title: ${event.title} date: ${formatSeshDate(event.start)} time: ${formatSeshTime(event.start)} timezone: America/Toronto`;
+  const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+
+  const payload = {
+    content: "📅 Sesh event setup requested",
+    embeds: [{
+      title: "📅 Create this event in Sesh",
+      color: 0xff7a1a,
+      fields: [
+        { name: "Title", value: event.title || "Untitled Event", inline: false },
+        { name: "Type", value: getLabelForType(event.eventType, event.botwTier), inline: true },
+        { name: "Date", value: formatSeshDate(event.start), inline: true },
+        { name: "Start", value: `${formatSeshTime(event.start)} ET`, inline: true },
+        { name: "End", value: `${formatSeshTime(event.end)} ET`, inline: true },
+        { name: "Calendar", value: `${siteUrl}/calendar`, inline: false },
+        { name: "Suggested Sesh Command", value: `\`\`\`\n${seshCommand}\n\`\`\``, inline: false }
+      ],
+      description: event.description || undefined,
+      timestamp: new Date().toISOString()
+    }]
+  };
+
+  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    console.warn("Sesh setup message failed", response.status, data);
+    return false;
+  }
+
+  return true;
+}
+
 async function getCustomCalendarEvents(env) {
   return getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
 }
@@ -190,6 +302,21 @@ async function saveCustomCalendarEvent(env, event) {
   return { events, event: savedEvent };
 }
 
+async function saveCustomCalendarEvents(env, newEvents) {
+  const events = await getCustomCalendarEvents(env);
+  const ids = new Set(newEvents.map(event => event.id));
+  let merged = events.filter(item => !ids.has(item.id));
+
+  if (newEvents.some(event => event.featured === true)) {
+    merged = merged.map(item => ({ ...item, featured: false }));
+  }
+
+  merged.push(...newEvents);
+  merged.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
+  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, merged);
+  return { events: merged, savedEvents: newEvents };
+}
+
 async function deleteCustomCalendarEvent(env, eventId) {
   const events = await getCustomCalendarEvents(env);
   const event = events.find(item => item.id === eventId);
@@ -206,8 +333,14 @@ async function deleteActiveEvent(env, eventId) {
   if (!env.DROPS_KV) return;
 
   const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
-  const activeId = typeof eventId === "object" ? getActiveEventIdForCalendarEvent(eventId) : eventId;
-  const remaining = events.filter(item => item.id !== activeId);
+  const source = typeof eventId === "object" ? eventId : null;
+  const activeId = source ? getActiveEventIdForCalendarEvent(source) : eventId;
+  const remaining = events.filter(item => {
+    if (item.id === activeId) return false;
+    if (source?.id && item.calendarEventId === source.id) return false;
+    if (source?.womCompetitionId && String(item.womCompetitionId) === String(source.womCompetitionId)) return false;
+    return true;
+  });
 
   if (remaining.length !== events.length) {
     await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(remaining));
@@ -253,18 +386,22 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
     });
   }
 
-  const index = events.findIndex(item => item.id === activeEvent.id);
-  if (index >= 0) {
-    events[index] = {
-      ...events[index],
-      ...activeEvent,
-      milestones: Array.isArray(events[index].milestones) ? events[index].milestones : activeEvent.milestones
-    };
-  } else {
-    events.push(activeEvent);
-  }
+  const cleanedEvents = events.filter(item => {
+    if (item.id === activeEvent.id) return false;
+    if (item.calendarEventId && item.calendarEventId === activeEvent.calendarEventId) return false;
+    if (String(item.womCompetitionId || "") === String(activeEvent.womCompetitionId || "")) return false;
 
-  await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(events));
+    const currentType = String(item.type || "");
+    const nextType = String(activeEvent.type || "");
+    if (nextType.startsWith("clan-goal") && currentType.startsWith("clan-goal")) return false;
+    if (nextType === "sotw" && currentType === "sotw") return false;
+    if (nextType === "botw" && currentType === "botw" && item.botwTier === activeEvent.botwTier) return false;
+
+    return true;
+  });
+
+  cleanedEvents.push(activeEvent);
+  await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(cleanedEvents));
 }
 
 async function createWomCompetition(env, event) {
@@ -355,6 +492,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
   try {
     const body = await request.json().catch(() => ({}));
     const createWomRequested = body.createWom === true;
+    const sendSeshSetupRequested = body.sendSeshSetupMessage === true;
+    const recurrence = body.recurrence || {};
     const events = await getCustomCalendarEvents(env);
     const existing = cleanText(body.id) ? events.find(item => item.id === cleanText(body.id)) : null;
 
@@ -410,7 +549,13 @@ export async function onRequestPost({ request, env, waitUntil }) {
       event.womCreatedAt = new Date().toISOString();
     }
 
-    const { event: savedEvent } = await saveCustomCalendarEvent(env, event);
+    const isEditingExisting = Boolean(existing);
+    const recurrenceEvents = isEditingExisting ? [event] : getRecurrenceInstances(event, recurrence);
+    const { savedEvents } = recurrenceEvents.length > 1
+      ? await saveCustomCalendarEvents(env, recurrenceEvents)
+      : { savedEvents: [(await saveCustomCalendarEvent(env, event)).event] };
+
+    const savedEvent = savedEvents[0];
 
     if (savedEvent.status === "cancelled") await deleteActiveEvent(env, savedEvent);
     else if (savedEvent.womCompetitionId) await addOrUpdateActiveEvent(env, savedEvent);
@@ -419,10 +564,17 @@ export async function onRequestPost({ request, env, waitUntil }) {
       ? mirrorCalendarEventCancel(env, savedEvent)
       : mirrorCalendarEventCreate(env, savedEvent);
 
-    if (typeof waitUntil === "function") waitUntil(discordSync);
-    else await discordSync.catch(() => null);
+    const seshSetupSync = sendSeshSetupRequested
+      ? sendSeshSetupMessage(env, savedEvent)
+      : Promise.resolve(false);
 
-    return Response.json({ success: true, event: savedEvent });
+    if (typeof waitUntil === "function") {
+      waitUntil(Promise.allSettled([discordSync, seshSetupSync]));
+    } else {
+      await Promise.allSettled([discordSync, seshSetupSync]);
+    }
+
+    return Response.json({ success: true, event: savedEvent, events: savedEvents });
   } catch (error) {
     return Response.json({ error: error.message || "Could not save calendar event." }, { status: 500 });
   }

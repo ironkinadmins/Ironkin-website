@@ -132,8 +132,10 @@ function featuredPriorityScore(event, now = Date.now()) {
 }
 
 function chooseFeaturedEvent(events) {
+  const now = Date.now();
   const list = (Array.isArray(events) ? events : [])
-    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled");
+    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled")
+    .filter(event => isActiveByDates(event, now) || isUpcomingByDates(event, now));
 
   const manual = list.find(event => event.featured === true);
   if (manual) return manual;
@@ -141,7 +143,7 @@ function chooseFeaturedEvent(events) {
   return list
     .slice()
     .sort((a, b) => {
-      const scoreDiff = featuredPriorityScore(a) - featuredPriorityScore(b);
+      const scoreDiff = featuredPriorityScore(a, now) - featuredPriorityScore(b, now);
       if (scoreDiff !== 0) return scoreDiff;
 
       const aStart = getEventStartTime(a) ?? Number.MAX_SAFE_INTEGER;
@@ -347,28 +349,11 @@ export async function syncDiscordCalendarBoard(env) {
 }
 
 export async function mirrorCalendarEventCreate(env, event) {
-  if (!hasDiscordConfig(env)) return;
+  if (!hasDiscordConfig(env)) return event;
 
   try {
-    let updatedEvent = event;
-
-    if (String(event?.status || "").toLowerCase() === "cancelled") {
-      await mirrorCalendarEventCancel(env, event);
-      return event;
-    }
-
-    if (event.discordScheduledEventId) {
-      await updateDiscordScheduledEvent(env, event);
-    } else {
-      const scheduledEvent = await createDiscordScheduledEvent(env, event);
-      if (scheduledEvent?.id) {
-        updatedEvent = { ...event, discordScheduledEventId: String(scheduledEvent.id) };
-        await saveDiscordScheduledEventId(env, event.id, scheduledEvent.id);
-      }
-    }
-
     await syncDiscordCalendarBoard(env);
-    return updatedEvent;
+    return event;
   } catch (error) {
     console.warn("Discord calendar create/update mirror failed", error?.message || error);
     return event;
@@ -379,7 +364,6 @@ export async function mirrorCalendarEventCancel(env, event) {
   if (!hasDiscordConfig(env)) return;
 
   try {
-    await deleteDiscordScheduledEvent(env, event?.discordScheduledEventId);
     await syncDiscordCalendarBoard(env);
   } catch (error) {
     console.warn("Discord calendar cancel mirror failed", error?.message || error);
@@ -390,7 +374,6 @@ export async function mirrorCalendarEventDelete(env, event) {
   if (!hasDiscordConfig(env)) return;
 
   try {
-    await deleteDiscordScheduledEvent(env, event?.discordScheduledEventId);
     await syncDiscordCalendarBoard(env);
   } catch (error) {
     console.warn("Discord calendar delete mirror failed", error?.message || error);
