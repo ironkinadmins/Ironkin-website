@@ -52,41 +52,45 @@
             <button class="calendar-modal-close" type="button" id="closeCalendarEventFormBtn" aria-label="Close event form">×</button>
           </div>
 
-          <label>
-            <span>Template</span>
-            <select id="calendarEventTemplateInput">
-              <option value="">No template</option>
-              <option value="botw-elite">BOTW Elite</option>
-              <option value="botw-standard">BOTW Standard</option>
-              <option value="sotw">SOTW</option>
-              <option value="clan-goal">Clan Goal</option>
-              <option value="mass">Clan Mass</option>
-              <option value="giveaway">Giveaway</option>
-              <option value="challenge">Photo/Clan Challenge</option>
-              <option value="clog-week">CLog Week</option>
-            </select>
-          </label>
+          <div class="calendar-modal-row calendar-template-type-row">
+            <label>
+              <span>Template</span>
+              <select id="calendarEventTemplateInput">
+                <option value="">No template</option>
+                <option value="botw-elite">BOTW Elite</option>
+                <option value="botw-standard">BOTW Standard</option>
+                <option value="sotw">SOTW</option>
+                <option value="clan-goal">Clan Goal</option>
+                <option value="mass">Clan Mass</option>
+                <option value="giveaway">Giveaway</option>
+                <option value="challenge">Photo/Clan Challenge</option>
+                <option value="clog-week">CLog Week</option>
+              </select>
+            </label>
 
-          <label>
+            <label>
+              <span>Event Type</span>
+              <select id="calendarEventTypeInput">
+                <option value="normal">Normal Event</option>
+                <option value="mass">Clan Mass</option>
+                <option value="giveaway">Giveaway</option>
+                <option value="challenge">Challenge</option>
+                <option value="sotw">Skill of the Week</option>
+                <option value="botw-elite">Boss of the Week - Elite</option>
+                <option value="botw-standard">Boss of the Week - Standard</option>
+                <option value="clan-goal">Clan Goal</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="calendar-field-wide">
             <span>Title</span>
             <input id="calendarEventTitleInput" type="text" required placeholder="Example: Vet'ion Clan Goal" />
           </label>
 
-          <label>
-            <span>Event Type</span>
-            <select id="calendarEventTypeInput">
-              <option value="normal">Normal Event</option>
-              <option value="mass">Clan Mass</option>
-              <option value="sotw">Skill of the Week</option>
-              <option value="botw-elite">Boss of the Week - Elite</option>
-              <option value="botw-standard">Boss of the Week - Standard</option>
-              <option value="clan-goal">Clan Goal</option>
-            </select>
-          </label>
-
-          <div class="calendar-sidebar-split">
+          <div class="calendar-modal-row calendar-date-time-row">
             <label>
-              <span>Start Date</span>
+              <span>Date</span>
               <input id="calendarEventStartDateInput" type="date" required />
             </label>
             <label>
@@ -98,13 +102,6 @@
                   <option value="PM" selected>PM</option>
                 </select>
               </div>
-            </label>
-          </div>
-
-          <div class="calendar-sidebar-split">
-            <label>
-              <span>End Date</span>
-              <input id="calendarEventEndDateInput" type="date" required />
             </label>
             <label>
               <span>End Time</span>
@@ -118,16 +115,25 @@
             </label>
           </div>
 
-          <label>
-            <span>Description</span>
-            <textarea id="calendarEventDescriptionInput" rows="4" placeholder="Optional event details"></textarea>
+          <label class="calendar-check-card calendar-multiday-option">
+            <input id="calendarMultiDayInput" type="checkbox" />
+            <span>Multi-day Event</span>
           </label>
 
+          <label class="calendar-end-date-field" id="calendarEndDateField" hidden>
+            <span>End Date</span>
+            <input id="calendarEventEndDateInput" type="date" required />
+          </label>
+
+          <label class="calendar-field-wide">
+            <span>Description</span>
+            <textarea id="calendarEventDescriptionInput" rows="3" placeholder="Optional event details"></textarea>
+          </label>
 
           <label>
-            <span>Recurring</span>
+            <span>Repeat</span>
             <select id="calendarRecurringInput">
-              <option value="none">Does not repeat</option>
+              <option value="none">None</option>
               <option value="weekly-4">Weekly for 4 weeks</option>
               <option value="weekly-8">Weekly for 8 weeks</option>
               <option value="biweekly-4">Every 2 weeks for 4 events</option>
@@ -135,16 +141,20 @@
             </select>
           </label>
 
-          <div class="calendar-extra-options"><div class="calendar-extra-options-title">Extra Options</div><label class="calendar-check-card">
-            <input id="calendarCreateWomInput" type="checkbox" />
-            <span>Also create a Wise Old Man competition for this event</span>
-          </label>
+          <details class="calendar-advanced-options">
+            <summary>Advanced Options</summary>
+            <div class="calendar-advanced-options-body">
+              <label class="calendar-check-card">
+                <input id="calendarCreateWomInput" type="checkbox" />
+                <span>Create Wise Old Man competition</span>
+              </label>
 
-          <label class="calendar-check-card">
-            <input id="calendarSeshSetupInput" type="checkbox" />
-            <span>Send Discord Event Setup Message</span>
-          </label>
-          </div>
+              <label class="calendar-check-card">
+                <input id="calendarCreateDiscordEventInput" type="checkbox" />
+                <span>Create Discord Scheduled Event</span>
+              </label>
+            </div>
+          </details>
 
           <div class="calendar-wom-panel" id="calendarWomPanel" hidden>
             <label id="calendarCompetitionTypeField">
@@ -181,10 +191,10 @@
 
           <p class="calendar-form-status" id="calendarEventFormStatus"></p>
 
-          <div class="admin-action-row">
+          <div class="admin-action-row calendar-form-actions">
             <button type="submit" class="btn primary">Save Event</button>
-            <button type="button" class="btn secondary" id="clearCalendarEventBtn">Clear</button>
-            <button type="button" class="btn secondary" id="cancelCalendarFormBtn">Cancel</button>
+            <button type="button" class="calendar-text-action" id="clearCalendarEventBtn">Clear</button>
+            <button type="button" class="calendar-text-action" id="cancelCalendarFormBtn">Cancel</button>
           </div>
         </form>
       </aside>

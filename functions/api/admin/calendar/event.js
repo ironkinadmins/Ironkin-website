@@ -313,6 +313,86 @@ async function sendSeshSetupMessage(env, event) {
   return true;
 }
 
+
+function truncateDiscordText(value, max = 1000) {
+  const text = cleanText(value);
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function getDiscordScheduledEventLocation(env, event) {
+  return cleanText(event.location) || cleanText(env.DISCORD_EVENT_LOCATION, "Ironkin Discord");
+}
+
+function getDiscordScheduledEventPayload(env, event) {
+  return {
+    name: truncateDiscordText(event.title || "Ironkin Event", 100),
+    description: truncateDiscordText(event.description || `${getLabelForType(event.eventType, event.botwTier)} on the Ironkin calendar.`, 1000),
+    privacy_level: 2,
+    entity_type: 3,
+    scheduled_start_time: event.start,
+    scheduled_end_time: event.end,
+    entity_metadata: {
+      location: getDiscordScheduledEventLocation(env, event)
+    }
+  };
+}
+
+async function upsertDiscordScheduledEvent(env, event) {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return { event, synced: false, reason: "Missing DISCORD_BOT_TOKEN or DISCORD_GUILD_ID" };
+  if (!event.start || !event.end) return { event, synced: false, reason: "Missing event start or end" };
+
+  const payload = getDiscordScheduledEventPayload(env, event);
+  const existingId = cleanText(event.discordScheduledEventId);
+  const url = existingId
+    ? `https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${existingId}`
+    : `https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/scheduled-events`;
+
+  const response = await fetch(url, {
+    method: existingId ? "PATCH" : "POST",
+    headers: {
+      "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.warn("Discord scheduled event sync failed", response.status, data);
+    return { event, synced: false, reason: data.message || data.error || "Discord scheduled event sync failed" };
+  }
+
+  return {
+    event: {
+      ...event,
+      discordScheduledEventId: String(data.id || existingId),
+      discordScheduledEventSyncedAt: new Date().toISOString(),
+      discordScheduledEventStatus: "scheduled"
+    },
+    synced: true
+  };
+}
+
+async function deleteDiscordScheduledEvent(env, event) {
+  const eventId = cleanText(event?.discordScheduledEventId);
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID || !eventId) return false;
+
+  const response = await fetch(`https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${eventId}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`
+    }
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const data = await response.json().catch(() => ({}));
+    console.warn("Discord scheduled event delete failed", response.status, data);
+    return false;
+  }
+
+  return true;
+}
+
 async function getCustomCalendarEvents(env) {
   return getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
 }
@@ -507,6 +587,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
     }
 
     await deleteActiveEvent(env, deletedEvent);
+    await deleteDiscordScheduledEvent(env, deletedEvent);
 
     const discordSync = mirrorCalendarEventDelete(env, deletedEvent);
     if (typeof waitUntil === "function") waitUntil(discordSync);
@@ -530,7 +611,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
   try {
     const body = await request.json().catch(() => ({}));
     const createWomRequested = body.createWom === true;
-    const sendSeshSetupRequested = body.sendSeshSetupMessage === true;
+    const createDiscordScheduledEventRequested = body.createDiscordScheduledEvent === true;
+    const removeDiscordScheduledEventRequested = body.removeDiscordScheduledEvent === true;
     const recurrence = body.recurrence || {};
     const events = await getCustomCalendarEvents(env);
     const existing = cleanText(body.id) ? events.find(item => item.id === cleanText(body.id)) : null;
@@ -557,6 +639,9 @@ export async function onRequestPost({ request, env, waitUntil }) {
       womMetric: cleanText(body.womMetric) || cleanText(existing?.womMetric),
       womCompetitionId: cleanText(body.womCompetitionId) || cleanText(existing?.womCompetitionId) || null,
       status: cleanText(body.status, existing?.status || "scheduled"),
+      discordScheduledEventId: cleanText(body.discordScheduledEventId) || cleanText(existing?.discordScheduledEventId) || null,
+      discordScheduledEventSyncedAt: cleanText(existing?.discordScheduledEventSyncedAt) || null,
+      discordScheduledEventStatus: cleanText(existing?.discordScheduledEventStatus) || null,
       createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -588,10 +673,38 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
 
     const isEditingExisting = Boolean(existing);
-    const recurrenceEvents = isEditingExisting ? [event] : getRecurrenceInstances(event, recurrence);
+    let primaryEvent = event;
+    let discordScheduledEventResult = null;
+
+    if (removeDiscordScheduledEventRequested && primaryEvent.discordScheduledEventId) {
+      await deleteDiscordScheduledEvent(env, primaryEvent);
+      primaryEvent = {
+        ...primaryEvent,
+        discordScheduledEventId: null,
+        discordScheduledEventStatus: "removed",
+        discordScheduledEventSyncedAt: new Date().toISOString()
+      };
+    } else if (primaryEvent.status === "cancelled" && primaryEvent.discordScheduledEventId) {
+      await deleteDiscordScheduledEvent(env, primaryEvent);
+      primaryEvent = {
+        ...primaryEvent,
+        discordScheduledEventStatus: "cancelled"
+      };
+    } else if (createDiscordScheduledEventRequested || primaryEvent.discordScheduledEventId) {
+      discordScheduledEventResult = await upsertDiscordScheduledEvent(env, primaryEvent);
+      primaryEvent = discordScheduledEventResult.event;
+    }
+
+    const recurrenceEvents = isEditingExisting ? [primaryEvent] : getRecurrenceInstances(primaryEvent, recurrence).map((item, index) => ({
+      ...item,
+      discordScheduledEventId: index === 0 ? item.discordScheduledEventId : null,
+      discordScheduledEventSyncedAt: index === 0 ? item.discordScheduledEventSyncedAt : null,
+      discordScheduledEventStatus: index === 0 ? item.discordScheduledEventStatus : null
+    }));
+
     const { savedEvents } = recurrenceEvents.length > 1
       ? await saveCustomCalendarEvents(env, recurrenceEvents)
-      : { savedEvents: [(await saveCustomCalendarEvent(env, event)).event] };
+      : { savedEvents: [(await saveCustomCalendarEvent(env, primaryEvent)).event] };
 
     const savedEvent = savedEvents[0];
 
@@ -602,17 +715,20 @@ export async function onRequestPost({ request, env, waitUntil }) {
       ? mirrorCalendarEventCancel(env, savedEvent)
       : mirrorCalendarEventCreate(env, savedEvent);
 
-    const seshSetupSync = sendSeshSetupRequested
-      ? sendSeshSetupMessage(env, savedEvent)
-      : Promise.resolve(false);
-
     if (typeof waitUntil === "function") {
-      waitUntil(Promise.allSettled([discordSync, seshSetupSync]));
+      waitUntil(Promise.allSettled([discordSync]));
     } else {
-      await Promise.allSettled([discordSync, seshSetupSync]);
+      await Promise.allSettled([discordSync]);
     }
 
-    return Response.json({ success: true, event: savedEvent, events: savedEvents });
+    return Response.json({
+      success: true,
+      event: savedEvent,
+      events: savedEvents,
+      discordScheduledEvent: discordScheduledEventResult
+        ? { synced: discordScheduledEventResult.synced, reason: discordScheduledEventResult.reason || "" }
+        : null
+    });
   } catch (error) {
     return Response.json({ error: error.message || "Could not save calendar event." }, { status: 500 });
   }

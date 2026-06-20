@@ -8418,3 +8418,145 @@ body.calendar-modal-active {
     padding: 10px 20px 12px !important;
   }
 }
+
+/* Event creation modal UX overhaul */
+.calendar-sidebar-form {
+  width: min(1120px, calc(100vw - 32px)) !important;
+}
+
+.calendar-modal-row {
+  display: grid;
+  gap: 14px;
+  grid-column: 1 / -1;
+}
+
+.calendar-template-type-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.calendar-date-time-row {
+  grid-template-columns: minmax(190px, 1fr) minmax(190px, 0.75fr) minmax(190px, 0.75fr);
+  align-items: end;
+}
+
+.calendar-modal-row label,
+.calendar-end-date-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.calendar-field-wide,
+.calendar-end-date-field,
+.calendar-multiday-option,
+.calendar-advanced-options {
+  grid-column: 1 / -1;
+}
+
+.calendar-multiday-option {
+  margin: -4px 0 0;
+  max-width: max-content;
+}
+
+.calendar-end-date-field {
+  max-width: 360px;
+}
+
+.calendar-advanced-options {
+  border: 1px solid rgba(255, 122, 26, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 122, 26, 0.055);
+  overflow: hidden;
+}
+
+.calendar-advanced-options summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: var(--ember);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  list-style-position: inside;
+}
+
+.calendar-advanced-options-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.calendar-advanced-options .calendar-check-card,
+.calendar-multiday-option.calendar-check-card {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  min-height: 0 !important;
+}
+
+.calendar-advanced-options .calendar-check-card input,
+.calendar-multiday-option.calendar-check-card input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+}
+
+.calendar-form-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 14px;
+}
+
+.calendar-text-action {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px 2px;
+}
+
+.calendar-text-action:hover {
+  color: var(--ember);
+  text-decoration: underline;
+}
+
+@media (min-width: 861px) {
+  .calendar-sidebar-form > label:has(#calendarEventTemplateInput),
+  .calendar-sidebar-form > label:has(#calendarEventTypeInput) {
+    grid-column: auto !important;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarRecurringInput) {
+    grid-column: 1 / 2 !important;
+  }
+
+  .calendar-advanced-options {
+    grid-column: 2 / 3 !important;
+    align-self: end;
+  }
+
+  .calendar-sidebar-form > label:has(#calendarEventDescriptionInput) textarea {
+    min-height: 58px !important;
+    height: 58px !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .calendar-template-type-row,
+  .calendar-date-time-row {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-end-date-field {
+    max-width: none;
+  }
+}

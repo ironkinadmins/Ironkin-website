@@ -3285,11 +3285,14 @@ function clearCalendarEventForm() {
   setCalendarFormTitle("Create Event");
   setCalendarDateAndTime();
   const recurringInput = document.getElementById("calendarRecurringInput");
-  const seshInput = document.getElementById("calendarSeshSetupInput");
+  const discordEventInput = document.getElementById("calendarCreateDiscordEventInput");
   const templateInput = document.getElementById("calendarEventTemplateInput");
+  const multiDayInput = document.getElementById("calendarMultiDayInput");
   if (recurringInput) recurringInput.value = "none";
-  if (seshInput) seshInput.checked = false;
+  if (discordEventInput) discordEventInput.checked = false;
   if (templateInput) templateInput.value = "";
+  if (multiDayInput) multiDayInput.checked = false;
+  updateCalendarMultiDayFields();
   updateCalendarWomFields();
 }
 
@@ -3314,6 +3317,24 @@ function getCalendarEventTypeInputValue(event) {
     return event?.botwTier === "standard" ? "botw-standard" : "botw-elite";
   }
   return type;
+}
+
+
+function updateCalendarMultiDayFields() {
+  const multiDayInput = document.getElementById("calendarMultiDayInput");
+  const endDateField = document.getElementById("calendarEndDateField");
+  const startDateInput = document.getElementById("calendarEventStartDateInput");
+  const endDateInput = document.getElementById("calendarEventEndDateInput");
+  const isMultiDay = multiDayInput?.checked === true;
+
+  if (endDateField) endDateField.hidden = !isMultiDay;
+  if (endDateInput) endDateInput.required = isMultiDay;
+  if (!isMultiDay && startDateInput && endDateInput) endDateInput.value = startDateInput.value;
+}
+
+function setCalendarAdvancedOptionsOpen(open = false) {
+  const advanced = document.querySelector(".calendar-advanced-options");
+  if (advanced) advanced.open = open;
 }
 
 function updateCalendarWomFields() {
@@ -3370,14 +3391,14 @@ function getCalendarWomMetricForForm() {
 
 
 const CALENDAR_EVENT_TEMPLATES = {
-  "botw-elite": { title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true },
-  "botw-standard": { title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true },
-  sotw: { title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true },
-  "clan-goal": { title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true },
-  mass: { title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false },
-  giveaway: { title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false },
-  challenge: { title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false },
-  "clog-week": { title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false }
+  "botw-elite": { title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
+  "botw-standard": { title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
+  sotw: { title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false },
+  "clan-goal": { title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: false },
+  mass: { title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true },
+  giveaway: { title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false, discord: true },
+  challenge: { title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false, discord: true },
+  "clog-week": { title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false, discord: true }
 };
 
 function addDaysToDateKey(dateKey, days) {
@@ -3399,6 +3420,8 @@ function applyCalendarTemplate() {
   const endTime = document.getElementById("calendarEventEndTimeInput");
   const endDate = document.getElementById("calendarEventEndDateInput");
   const createWom = document.getElementById("calendarCreateWomInput");
+  const createDiscordEvent = document.getElementById("calendarCreateDiscordEventInput");
+  const multiDayInput = document.getElementById("calendarMultiDayInput");
 
   if (titleInput && !titleInput.value.trim()) titleInput.value = template.title;
   if (typeInput) typeInput.value = template.type;
@@ -3406,6 +3429,10 @@ function applyCalendarTemplate() {
   if (endTime) endTime.value = template.end;
   if (endDate) endDate.value = addDaysToDateKey(startDate, template.durationDays);
   if (createWom) createWom.checked = template.wom;
+  if (createDiscordEvent) createDiscordEvent.checked = template.discord === true;
+  if (multiDayInput) multiDayInput.checked = Number(template.durationDays || 0) > 0;
+  setCalendarAdvancedOptionsOpen(template.wom === true || template.discord === true);
+  updateCalendarMultiDayFields();
   setMeridiemValue("calendarEventStartMeridiemInput", "PM");
   setMeridiemValue("calendarEventEndMeridiemInput", "PM");
   updateCalendarWomFields();
@@ -3431,6 +3458,8 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   const typeInput = document.getElementById("calendarEventTypeInput");
   const descInput = document.getElementById("calendarEventDescriptionInput");
   const createWomInput = document.getElementById("calendarCreateWomInput");
+  const createDiscordEventInput = document.getElementById("calendarCreateDiscordEventInput");
+  const multiDayInput = document.getElementById("calendarMultiDayInput");
   const featuredInput = document.getElementById("calendarFeaturedInput");
   const targetInput = document.getElementById("calendarTargetInput");
   const skillInput = document.getElementById("calendarSkillMetricInput");
@@ -3450,6 +3479,8 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   if (featuredInput) featuredInput.checked = event.featured === true;
   if (targetInput) targetInput.value = event.target || "";
   if (createWomInput) createWomInput.checked = duplicate ? false : Boolean(event.womCompetitionId);
+  if (createDiscordEventInput) createDiscordEventInput.checked = duplicate ? false : Boolean(event.discordScheduledEventId);
+  setCalendarAdvancedOptionsOpen(Boolean(event.womCompetitionId || event.discordScheduledEventId));
 
   const goalKind = event.goalKind || (event.eventType === "sotw" ? "skill-xp" : "boss-kc");
   if (competitionInput) competitionInput.value = goalKind;
@@ -3462,6 +3493,8 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   if (startTimeInput) startTimeInput.value = start.time;
   if (startMeridiemInput) startMeridiemInput.value = start.meridiem;
   if (endDateInput) endDateInput.value = end.date;
+  if (multiDayInput) multiDayInput.checked = start.date !== end.date;
+  updateCalendarMultiDayFields();
   if (endTimeInput) endTimeInput.value = end.time;
   if (endMeridiemInput) endMeridiemInput.value = end.meridiem;
 
@@ -3480,6 +3513,12 @@ async function saveCalendarEventForm(event) {
   const targetValue = document.getElementById("calendarTargetInput")?.value || "";
   const alreadyHasWom = Boolean(calendarEditingEvent?.womCompetitionId);
   const createWom = createWomInput?.checked === true && !alreadyHasWom;
+  const isMultiDay = document.getElementById("calendarMultiDayInput")?.checked === true;
+  if (!isMultiDay) {
+    const startDateValue = document.getElementById("calendarEventStartDateInput")?.value || "";
+    const endDateInput = document.getElementById("calendarEventEndDateInput");
+    if (endDateInput) endDateInput.value = startDateValue;
+  }
 
   const payload = {
     id: calendarEditingEventId || undefined,
@@ -3500,10 +3539,17 @@ async function saveCalendarEventForm(event) {
     dropsEnabled: eventType === "clan-goal",
     status: calendarEditingEvent?.status || "scheduled",
     recurrence: getCalendarRecurrenceForForm(),
-    sendSeshSetupMessage: document.getElementById("calendarSeshSetupInput")?.checked === true
+    createDiscordScheduledEvent: document.getElementById("calendarCreateDiscordEventInput")?.checked === true,
+    removeDiscordScheduledEvent: document.getElementById("calendarCreateDiscordEventInput")?.checked !== true && Boolean(calendarEditingEvent?.discordScheduledEventId),
+    discordScheduledEventId: calendarEditingEvent?.discordScheduledEventId || ""
   };
 
-  if (status) status.textContent = createWom ? "Saving event and creating WOM competition..." : (calendarEditingEventId ? "Updating event..." : "Saving event...");
+  const createDiscordScheduledEvent = document.getElementById("calendarCreateDiscordEventInput")?.checked === true;
+  if (status) {
+    status.textContent = createWom
+      ? "Saving event and creating WOM competition..."
+      : (createDiscordScheduledEvent ? "Saving event and creating Discord scheduled event..." : (calendarEditingEventId ? "Updating event..." : "Saving event..."));
+  }
 
   const response = await fetch("/api/admin/calendar/event", {
     method: "POST",
@@ -3527,9 +3573,13 @@ async function saveCalendarEventForm(event) {
     renderCalendarMonth(calendarEventsCache);
   }
 
+  const discordEventMessage = data.event?.discordScheduledEventId ? " Discord scheduled event linked." : "";
+  const discordEventWarning = data.discordScheduledEvent && data.discordScheduledEvent.synced === false
+    ? ` Discord scheduled event was not created: ${data.discordScheduledEvent.reason || "check bot permissions/settings"}.`
+    : "";
   const message = data.event?.womCompetitionId
-    ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} linked. Discord will sync in the background.`
-    : "Event saved instantly. Discord will sync in the background.";
+    ? `Event saved instantly. WOM competition #${data.event.womCompetitionId} linked.${discordEventMessage}${discordEventWarning} Discord calendar board will sync in the background.`
+    : `Event saved instantly.${discordEventMessage}${discordEventWarning} Discord calendar board will sync in the background.`;
 
   clearCalendarEventForm();
   closeCalendarEventForm();
@@ -3636,29 +3686,30 @@ async function cancelCalendarEvent(eventId) {
 }
 
 
-async function resendCalendarSeshSetup(eventId) {
+async function syncCalendarDiscordScheduledEvent(eventId) {
   const event = calendarEventsCache.find(item => item.id === eventId);
   if (!event) return;
-  const button = document.getElementById("calendarResendSeshBtn");
+  const button = document.getElementById("calendarSyncDiscordEventBtn");
   if (button) {
     button.disabled = true;
-    button.textContent = "Sending...";
+    button.textContent = "Syncing...";
   }
   try {
     const response = await fetch("/api/admin/calendar/event", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...event, createWom: false, sendSeshSetupMessage: true })
+      body: JSON.stringify({ ...event, createWom: false, createDiscordScheduledEvent: true })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not send setup message.");
-    alert("Discord event setup message sent.");
+    if (!response.ok) throw new Error(data.error || "Could not sync Discord scheduled event.");
+    alert(data.event?.discordScheduledEventId ? "Discord scheduled event synced." : "Event saved, but no Discord scheduled event ID was returned.");
+    loadCalendar();
   } catch (error) {
-    alert(error.message || "Could not send setup message.");
+    alert(error.message || "Could not sync Discord scheduled event.");
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = "Send Sesh Setup";
+      button.textContent = event.discordScheduledEventId ? "Update Discord Event" : "Create Discord Event";
     }
   }
 }
@@ -3727,7 +3778,7 @@ function showCalendarEventDetails(event) {
 
       <div class="calendar-event-details-actions">
         ${canManage ? `<button class="btn secondary" id="calendarEditEventBtn" type="button">Edit Event</button>` : ""}
-        ${canManage ? `<button class="btn secondary" id="calendarResendSeshBtn" type="button">Send Sesh Setup</button>` : ""}
+        ${canManage ? `<button class="btn secondary" id="calendarSyncDiscordEventBtn" type="button">${event.discordScheduledEventId ? "Update Discord Event" : "Create Discord Event"}</button>` : ""}
         ${canManage && !cancelled ? `<button class="btn secondary danger" id="calendarCancelEventBtn" type="button">Cancel Event</button>` : ""}
         ${showDelete ? `<button class="btn secondary danger" id="calendarDeleteEventBtn" type="button">Delete Event</button>` : ""}
         <button class="btn primary" id="calendarCloseEventBtn" type="button">Close</button>
@@ -3744,7 +3795,7 @@ function showCalendarEventDetails(event) {
   backdrop.querySelector("#calendarDeleteEventBtn")?.addEventListener("click", () => deleteCalendarEvent(event.id));
   backdrop.querySelector("#calendarCancelEventBtn")?.addEventListener("click", () => cancelCalendarEvent(event.id));
   backdrop.querySelector("#calendarEditEventBtn")?.addEventListener("click", () => setCalendarEventFormFromEvent(event));
-  backdrop.querySelector("#calendarResendSeshBtn")?.addEventListener("click", () => resendCalendarSeshSetup(event.id));
+  backdrop.querySelector("#calendarSyncDiscordEventBtn")?.addEventListener("click", () => syncCalendarDiscordScheduledEvent(event.id));
   backdrop.addEventListener("click", clickEvent => {
     if (clickEvent.target === backdrop) closeCalendarEventDetails();
   });
@@ -3815,6 +3866,8 @@ async function setupCalendarAdminTools() {
   });
   document.getElementById("calendarCreateWomInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventTypeInput")?.addEventListener("change", updateCalendarWomFields);
+  document.getElementById("calendarMultiDayInput")?.addEventListener("change", updateCalendarMultiDayFields);
+  document.getElementById("calendarEventStartDateInput")?.addEventListener("change", updateCalendarMultiDayFields);
   document.getElementById("calendarCompetitionTypeInput")?.addEventListener("change", updateCalendarWomFields);
   document.getElementById("calendarEventStartTimeInput")?.addEventListener("blur", () => normalizeCalendarTimeInput("calendarEventStartTimeInput", "calendarEventStartMeridiemInput"));
   document.getElementById("calendarEventEndTimeInput")?.addEventListener("blur", () => normalizeCalendarTimeInput("calendarEventEndTimeInput", "calendarEventEndMeridiemInput"));
