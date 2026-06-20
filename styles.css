@@ -8122,3 +8122,44 @@ body.calendar-modal-active {
     padding: 4px 5px;
   }
 }
+
+
+.calendar-extra-options{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.calendar-extra-options-title{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--accent-color,#ff9d3b);
+  font-weight:700;
+}
+
+.calendar-check-card{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  width:100%;
+  padding:0;
+  border:none;
+  background:transparent;
+  min-height:auto;
+  border-radius:0;
+}
+
+.calendar-check-card input{
+  width:18px;
+  height:18px;
+  margin:0;
+  flex:0 0 auto;
+}
+
+.calendar-check-card span{
+  flex:1;
+  text-align:left;
+}
