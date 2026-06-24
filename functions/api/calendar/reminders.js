@@ -45,28 +45,22 @@ function getLabelForType(type, botwTier = "") {
   return "Event";
 }
 
-function formatDiscordDate(value) {
+function toDiscordTimestamp(value, style = "f") {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "TBD";
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: IRONKIN_ADMIN_TIME_ZONE,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  }).format(date);
+  return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
 }
 
-function formatDiscordTime(value) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "TBD";
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: IRONKIN_ADMIN_TIME_ZONE,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZoneName: "short"
-  }).format(date);
+function formatDiscordDate(value) {
+  return toDiscordTimestamp(value, "D");
+}
+
+function formatDiscordTimeRange(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const startText = Number.isFinite(start.getTime()) ? toDiscordTimestamp(startValue, "F") : "TBD";
+  const endText = Number.isFinite(end.getTime()) ? toDiscordTimestamp(endValue, "t") : "TBD";
+  return `${startText} - ${endText}`;
 }
 
 function isDue(triggerMs, nowMs) {
@@ -110,7 +104,7 @@ function buildReminderPayload(env, event, reminder) {
 
   const fields = [
     { name: "Date", value: formatDiscordDate(event.start), inline: true },
-    { name: "Time", value: `${formatDiscordTime(event.start)} - ${formatDiscordTime(event.end)}`, inline: true },
+    { name: "Time", value: formatDiscordTimeRange(event.start, event.end), inline: true },
     { name: "Calendar", value: `${siteUrl}/calendar`, inline: false }
   ];
   if (announcementLink) fields.push({ name: "Original Announcement", value: announcementLink, inline: false });
