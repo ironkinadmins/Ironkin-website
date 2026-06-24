@@ -373,7 +373,7 @@ async function deleteDiscordScheduledEvent(env, event) {
 
 
 const EVENT_ANNOUNCEMENT_CHANNEL_ID = "1368582354960121927";
-const RSVP_REACTIONS = ["✅", "❔", "❌"];
+const RSVP_REACTIONS = ["✅", "❓", "❌"];
 
 function isProgressionEvent(event) {
   const type = String(event?.eventType || event?.category || "").toLowerCase();
@@ -394,28 +394,22 @@ function shouldAddRsvpReactions(event) {
   return ["normal", "mass", "giveaway", "challenge", "photo-challenge", "clan-mass"].includes(type);
 }
 
-function formatDiscordDate(value) {
+function toDiscordTimestamp(value, style = "f") {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "TBD";
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: IRONKIN_ADMIN_TIME_ZONE,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  }).format(date);
+  return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
 }
 
-function formatDiscordTime(value) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "TBD";
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: IRONKIN_ADMIN_TIME_ZONE,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZoneName: "short"
-  }).format(date);
+function formatDiscordDate(value) {
+  return toDiscordTimestamp(value, "D");
+}
+
+function formatDiscordTimeRange(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  const startText = Number.isFinite(start.getTime()) ? toDiscordTimestamp(startValue, "F") : "TBD";
+  const endText = Number.isFinite(end.getTime()) ? toDiscordTimestamp(endValue, "t") : "TBD";
+  return `${startText} - ${endText}`;
 }
 
 function getDiscordScheduledEventLink(env, event) {
@@ -434,14 +428,14 @@ function buildEventAnnouncementPayload(env, event, mode = "created") {
   const descriptionParts = [];
   if (event.description) descriptionParts.push(truncateDiscordText(event.description, 800));
   if (shouldAddRsvpReactions(event) && !isCancel) {
-    descriptionParts.push("React below:\n✅ Interested\n❔ Maybe\n❌ Can't attend");
+    descriptionParts.push("React below:\n✅ Interested\n❓ Maybe\n❌ Can't attend");
   }
 
   const fields = [
     { name: "Event", value: event.title || "Untitled Event", inline: false },
     { name: "Type", value: getLabelForType(event.eventType, event.botwTier), inline: true },
     { name: "Date", value: formatDiscordDate(event.start), inline: true },
-    { name: "Time", value: `${formatDiscordTime(event.start)} - ${formatDiscordTime(event.end)}`, inline: false },
+    { name: "Time", value: formatDiscordTimeRange(event.start, event.end), inline: false },
     { name: "Calendar", value: `${siteUrl}/calendar`, inline: false }
   ];
 
@@ -471,8 +465,8 @@ async function addRsvpReactions(env, channelId, messageId) {
       headers: { "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}` }
     });
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      console.warn("Discord RSVP reaction failed", reaction, response.status, data);
+      const text = await response.text().catch(() => "");
+      console.warn("Discord RSVP reaction failed", reaction, response.status, text);
     }
   }
   return true;
