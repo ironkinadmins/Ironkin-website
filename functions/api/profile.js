@@ -1,11 +1,6 @@
+import { getSession, isStaffSession } from "./_auth.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 const WOM_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
-
 const CLAN_RANKS = [
   { id: "1366076296399949926", name: "Prospect" },
   { id: "1365446145051987970", name: "Initiate" },
@@ -31,22 +26,6 @@ function getHighestRank(roleIds, ranks) {
  const roles=roleIds||[];
  for(let i=ranks.length-1;i>=0;i--){ if(roles.includes(ranks[i].id)) return ranks[i].name;}
  return null;
-}
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(session) {
-  return Boolean(session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId)));
 }
 
 function getDisplayName(session) {
@@ -371,7 +350,7 @@ const displayRank =
 }
 
 export async function onRequestGet({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
   if (!session) {
     return Response.json({ error: "Please sign in with Discord first." }, { status: 401 });
@@ -416,7 +395,7 @@ export async function onRequestGet({ request, env }) {
 
     return Response.json({
       signedIn: true,
-      isStaff: isStaff(session),
+      isStaff: isStaffSession(session),
       profile: buildProfile({
         session,
         record,
@@ -456,7 +435,7 @@ export async function onRequestGet({ request, env }) {
 
   return Response.json({
     signedIn: true,
-    isStaff: isStaff(session),
+    isStaff: isStaffSession(session),
     profile: buildProfile({
       session,
       record,
@@ -469,7 +448,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
   if (!session) {
     return Response.json({ error: "Please sign in with Discord first." }, { status: 401 });

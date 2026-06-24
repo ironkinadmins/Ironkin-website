@@ -1,4 +1,4 @@
-const STAFF_ROLE_IDS = ["1364734283356569620", "1365445491776815104"];
+import { getSession, isStaffSession } from "../_auth.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
@@ -9,18 +9,6 @@ const SHIP_TEMPLATES = [
   { key: "destroyer", name: "Destroyer", size: 3 },
   { key: "patrol", name: "Patrol Boat", size: 2 }
 ];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-  try { return JSON.parse(atob(match[1])); } catch { return null; }
-}
-
-function isStaff(request) {
-  const session = getSession(request);
-  return session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId));
-}
 
 function emptyTiles() {
   return Array.from({ length: MAX_TILES }, (_, index) => ({
@@ -174,7 +162,7 @@ export async function onRequestGet({ env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 

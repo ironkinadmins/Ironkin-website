@@ -1,25 +1,5 @@
+import { getSession, isStaffSession } from "../../_auth.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(session) {
-  return Boolean(session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId)));
-}
-
 function safeJsonParse(value, fallback) {
   try {
     return value ? JSON.parse(value) : fallback;
@@ -48,9 +28,9 @@ async function saveProfileRecord(env, discordId, record) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
-  if (!session || !isStaff(session)) {
+  if (!session || !isStaffSession(session)) {
     return Response.json({ error: "Only staff can update member profiles." }, { status: 403 });
   }
 

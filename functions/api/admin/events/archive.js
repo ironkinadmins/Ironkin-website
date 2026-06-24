@@ -1,29 +1,4 @@
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(request) {
-  const session = getSession(request);
-
-  return session?.roles?.some(roleId =>
-    STAFF_ROLE_IDS.includes(roleId)
-  );
-}
-
+import { getSession, isStaffSession } from "../../_auth.js";
 function normalizePlayerName(player) {
   return (
     player?.displayName ||
@@ -126,7 +101,7 @@ async function fetchStandingsSnapshot(event) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json(
       { error: "Staff only." },
       { status: 403 }

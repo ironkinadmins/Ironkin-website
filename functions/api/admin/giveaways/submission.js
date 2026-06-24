@@ -1,17 +1,5 @@
+import { getSession, isStaffSession } from "../../_auth.js";
 const GIVEAWAYS_KEY = "giveaways:kc";
-const STAFF_ROLE_IDS = ["1364734283356569620", "1365445491776815104"];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-  try { return JSON.parse(atob(match[1])); } catch { return null; }
-}
-
-function isStaffSession(session) {
-  return Boolean(session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId)));
-}
-
 function cleanText(value, fallback = "", max = 300) {
   const text = String(value || "").trim().slice(0, max);
   return text || fallback;
@@ -48,7 +36,7 @@ function publicGiveaway(giveaway, includeSubmissions = false) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
   if (!isStaffSession(session)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
@@ -117,7 +105,7 @@ export async function onRequestPost({ request, env }) {
 
 
 export async function onRequestDelete({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
   if (!isStaffSession(session)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }

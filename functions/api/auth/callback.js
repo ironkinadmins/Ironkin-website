@@ -1,7 +1,16 @@
+import { createSessionCookie } from "../_auth.js";
 export async function onRequestGet({ request, env }) {
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state") || "";
+  const requestCookie = request.headers.get("Cookie") || "";
+  const expectedState = requestCookie.match(/ironkin_oauth_state=([^;]+)/)?.[1] || "";
+
+  if (!state || !expectedState || state !== expectedState) {
+    return new Response("Invalid Discord OAuth state", { status: 400 });
+  }
+
   const redirectUri =
     env.DISCORD_REDIRECT_URI ||
     `${url.origin}/api/auth/callback`;
@@ -77,15 +86,21 @@ export async function onRequestGet({ request, env }) {
     roles: guildMember?.roles || []
   };
 
-  const cookie =
-    btoa(JSON.stringify(session));
+  const sessionCookie =
+    await createSessionCookie(session, env);
+
+  const headers = new Headers({ Location: "/" });
+  headers.append(
+    "Set-Cookie",
+    `ironkin_session=${encodeURIComponent(sessionCookie)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
+  );
+  headers.append(
+    "Set-Cookie",
+    "ironkin_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
+  );
 
   return new Response(null, {
     status: 302,
-    headers: {
-      Location: "/",
-      "Set-Cookie":
-        `ironkin_session=${cookie}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
-    }
+    headers
   });
 }

@@ -1,27 +1,5 @@
+import { getSession, isStaffSession } from "../../_auth.js";
 const SIGNUPS_KEY = "bingo:signups";
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(session) {
-  return Boolean(
-    session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId))
-  );
-}
-
 async function getSignups(env) {
   const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
   const signups = raw ? JSON.parse(raw) : [];
@@ -29,9 +7,9 @@ async function getSignups(env) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
-  if (!isStaff(session)) {
+  if (!isStaffSession(session)) {
     return Response.json(
       { error: "Staff only." },
       { status: 403 }

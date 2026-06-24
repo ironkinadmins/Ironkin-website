@@ -1,30 +1,8 @@
+import { getSession, isStaffSession } from "../../_auth.js";
 import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, mirrorCalendarEventCancel } from "../../../_discordCalendar.js";
-
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
 
 const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
 const ACTIVE_EVENTS_KEY = "events:active";
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(request) {
-  const session = getSession(request);
-  return session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId));
-}
 
 function cleanText(value, fallback = "") {
   return String(value || fallback).trim();
@@ -708,7 +686,7 @@ async function createWomCompetition(env, event) {
 }
 
 export async function onRequestDelete({ request, env, waitUntil }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
@@ -748,7 +726,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
 }
 
 export async function onRequestPost({ request, env, waitUntil }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 

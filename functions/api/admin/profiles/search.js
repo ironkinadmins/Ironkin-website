@@ -1,16 +1,5 @@
+import { getSession, isStaffSession } from "../../_auth.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
 
 function safeJsonParse(value, fallback) {
   try {
@@ -57,7 +46,7 @@ async function getSupabaseBalances(env) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
   if (!session) {
     return Response.json({ error: "Please sign in to search member profiles." }, { status: 401 });

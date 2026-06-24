@@ -1,8 +1,4 @@
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
+import { getSession, isStaffSession } from "../../_auth.js";
 const EVENT_TEMPLATES_KEY = "calendar:event-templates";
 
 const DEFAULT_TEMPLATES = {
@@ -15,23 +11,6 @@ const DEFAULT_TEMPLATES = {
   challenge: { key: "challenge", label: "Photo/Clan Challenge", title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false, discord: true, description: "" },
   "clog-week": { key: "clog-week", label: "CLog Week", title: "CLog Week", type: "normal", start: "7:00", end: "7:00", durationDays: 7, wom: false, discord: true, description: "" }
 };
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(request) {
-  const session = getSession(request);
-  return session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId));
-}
 
 function normalizeKey(value) {
   return String(value || "")
@@ -93,7 +72,7 @@ async function getTemplates(env) {
 }
 
 export async function onRequestGet({ request, env }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff access required." }, { status: 403 });
   }
 
@@ -102,7 +81,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!isStaff(request)) {
+  if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff access required." }, { status: 403 });
   }
 

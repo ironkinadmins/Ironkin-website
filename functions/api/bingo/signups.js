@@ -1,27 +1,5 @@
+import { getSession, isStaffSession } from "../_auth.js";
 const SIGNUPS_KEY = "bingo:signups";
-const STAFF_ROLE_IDS = [
-  "1364734283356569620",
-  "1365445491776815104"
-];
-
-function getSession(request) {
-  const cookie = request.headers.get("Cookie") || "";
-  const match = cookie.match(/ironkin_session=([^;]+)/);
-  if (!match) return null;
-
-  try {
-    return JSON.parse(atob(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-function isStaff(session) {
-  return Boolean(
-    session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId))
-  );
-}
-
 function getDisplayName(session) {
   return (
     session?.nick ||
@@ -100,7 +78,7 @@ function publicSignup(signup) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
   const [signups, settings] = await Promise.all([
     getSignups(env),
     getBingoSettings(env)
@@ -113,7 +91,7 @@ export async function onRequestGet({ request, env }) {
   return Response.json({
     signedIn: Boolean(session),
     inGuild: session?.inGuild === true,
-    isStaff: isStaff(session),
+    isStaff: isStaffSession(session),
     currentUser: session ? {
       discordId: session.id,
       displayName: getDisplayName(session),
@@ -129,7 +107,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
   if (!session) {
     return Response.json(
@@ -194,7 +172,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
-  const session = getSession(request);
+  const session = await getSession(request, env);
 
   if (!session) {
     return Response.json(
@@ -221,14 +199,14 @@ const [signups, settings] = await Promise.all([
   getBingoSettings(env)
 ]);
 
-  if (removingSomeoneElse && !isStaff(session)) {
+  if (removingSomeoneElse && !isStaffSession(session)) {
     return Response.json(
       { error: "Only staff can remove another member from Bingo." },
       { status: 403 }
     );
   }
 
-  if (!removingSomeoneElse && !isStaff(session) && settings.signupOpen !== true) {
+  if (!removingSomeoneElse && !isStaffSession(session) && settings.signupOpen !== true) {
     return Response.json(
       { error: "Registration is locked, so members can no longer leave the team." },
       { status: 403 }
