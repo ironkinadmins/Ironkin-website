@@ -155,6 +155,19 @@ export async function processCalendarReminders(env) {
     const flags = event.reminderFlags && typeof event.reminderFlags === "object" ? event.reminderFlags : {};
     for (const reminder of getReminderPlan(event)) {
       if (flags[reminder.key]) continue;
+      for (const reminder of reminders) {
+  console.log({
+    title: event.title,
+    reminder: reminder.key,
+    trigger: new Date(reminder.triggerMs).toISOString(),
+    now: new Date(now).toISOString(),
+    due: isDue(reminder.triggerMs, now),
+  });
+
+  if (!isDue(reminder.triggerMs, now)) continue;
+
+  // send reminder...
+}
       if (!isDue(reminder.triggerMs, now)) continue;
       const ok = await sendDiscordMessage(env, buildReminderPayload(env, event, reminder));
       if (ok) {
