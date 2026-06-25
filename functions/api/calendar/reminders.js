@@ -150,34 +150,41 @@ export async function processCalendarReminders(env) {
   let changed = false;
   let sent = 0;
 
-  for (const event of events) {
-    if (!event || String(event.status || "scheduled").toLowerCase() === "cancelled") continue;
-    const flags = event.reminderFlags && typeof event.reminderFlags === "object" ? event.reminderFlags : {};
-    for (const reminder of getReminderPlan(event)) {
-      if (flags[reminder.key]) continue;
-      for (const reminder of reminders) {
-  console.log({
-    title: event.title,
-    reminder: reminder.key,
-    trigger: new Date(reminder.triggerMs).toISOString(),
-    now: new Date(now).toISOString(),
-    due: isDue(reminder.triggerMs, now),
-  });
+ for (const event of events) {
+  if (!event || String(event.status || "scheduled").toLowerCase() === "cancelled") continue;
 
-  if (!isDue(reminder.triggerMs, now)) continue;
+  const flags = event.reminderFlags && typeof event.reminderFlags === "object"
+    ? event.reminderFlags
+    : {};
 
-  // send reminder...
-}
-      if (!isDue(reminder.triggerMs, now)) continue;
-      const ok = await sendDiscordMessage(env, buildReminderPayload(env, event, reminder));
-      if (ok) {
-        flags[reminder.key] = new Date().toISOString();
-        event.reminderFlags = flags;
-        changed = true;
-        sent += 1;
-      }
+  for (const reminder of getReminderPlan(event)) {
+    if (flags[reminder.key]) continue;
+
+    console.log({
+      title: event.title,
+      reminder: reminder.key,
+      triggerMs: reminder.triggerMs,
+      trigger: reminder.triggerMs ? new Date(reminder.triggerMs).toISOString() : null,
+      nowMs: now,
+      now: new Date(now).toISOString(),
+      differenceMinutes: reminder.triggerMs
+        ? Math.round((now - reminder.triggerMs) / 60000)
+        : null,
+      due: reminder.triggerMs ? isDue(reminder.triggerMs, now) : false,
+    });
+
+    if (!isDue(reminder.triggerMs, now)) continue;
+
+    const ok = await sendDiscordMessage(env, buildReminderPayload(env, event, reminder));
+
+    if (ok) {
+      flags[reminder.key] = new Date().toISOString();
+      event.reminderFlags = flags;
+      changed = true;
+      sent += 1;
     }
   }
+}
 
   if (changed) {
     events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
