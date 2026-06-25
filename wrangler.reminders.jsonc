@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ironkin-calendar-reminders",
+  "main": "workers/calendar-reminder-cron.js",
+  "compatibility_date": "2026-05-26",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
