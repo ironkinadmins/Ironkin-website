@@ -4,7 +4,7 @@
   "main": "workers/calendar-reminder-cron.js",
   "compatibility_date": "2026-05-26",
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["*/10 * * * *"]
   },
   "observability": {
     "enabled": true
