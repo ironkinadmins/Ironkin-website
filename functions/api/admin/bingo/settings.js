@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   signupOpen: false,
   enableViewEvent: false,
   registrationEndsAt: "",
+  boardRevealAt: "",
   teamOneName: "Team 1",
   teamTwoName: "Team 2"
 };
@@ -40,6 +41,7 @@ export async function onRequestPost({ request, env }) {
     signupOpen: body.signupOpen === true,
     enableViewEvent: body.enableViewEvent === true,
     registrationEndsAt: cleanDateTime(body.registrationEndsAt),
+    boardRevealAt: cleanDateTime(body.boardRevealAt),
     teamOneName: cleanString(body.teamOneName, DEFAULT_SETTINGS.teamOneName, 40),
     teamTwoName: cleanString(body.teamTwoName, DEFAULT_SETTINGS.teamTwoName, 40)
   };

@@ -19,9 +19,9 @@ async function saveSignups(env, signups) {
   await env.DROPS_KV.put(SIGNUPS_KEY, JSON.stringify(signups));
 }
 
-function hasRegistrationDeadlinePassed(registrationEndsAt) {
-  if (!registrationEndsAt) return false;
-  const deadline = new Date(registrationEndsAt);
+function hasDeadlinePassed(value) {
+  if (!value) return false;
+  const deadline = new Date(value);
   return Number.isFinite(deadline.getTime()) && deadline.getTime() <= Date.now();
 }
 
@@ -29,6 +29,7 @@ async function getBingoSettings(env) {
   const raw = await env.DROPS_KV.get("bingo:settings");
   const parsed = raw ? JSON.parse(raw) : {};
   const registrationEndsAt = typeof parsed.registrationEndsAt === "string" ? parsed.registrationEndsAt : "";
+  const boardRevealAt = typeof parsed.boardRevealAt === "string" ? parsed.boardRevealAt : "";
 
   let enableViewEvent =
     typeof parsed.enableViewEvent === "boolean"
@@ -39,8 +40,11 @@ async function getBingoSettings(env) {
       ? parsed.signupOpen
       : parsed.active === true && enableViewEvent !== true;
 
-  if (parsed.active === true && signupOpen === true && hasRegistrationDeadlinePassed(registrationEndsAt)) {
+  if (parsed.active === true && signupOpen === true && hasDeadlinePassed(registrationEndsAt)) {
     signupOpen = false;
+  }
+
+  if (parsed.active === true && enableViewEvent !== true && hasDeadlinePassed(boardRevealAt)) {
     enableViewEvent = true;
   }
 
@@ -51,6 +55,7 @@ async function getBingoSettings(env) {
     signupOpen,
     enableViewEvent,
     registrationEndsAt,
+    boardRevealAt,
     teamOneName: parsed.teamOneName || "Team 1",
     teamTwoName: parsed.teamTwoName || "Team 2"
   };

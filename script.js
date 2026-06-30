@@ -1029,9 +1029,9 @@ async function fetchBingoSettings() {
       throw new Error(data.error || "Could not load Bingo settings.");
     }
 
-    return data.settings || { active: false, signupOpen: false, enableViewEvent: false };
+    return data.settings || { active: false, signupOpen: false, enableViewEvent: false, boardRevealAt: "" };
   } catch {
-    return { active: false, signupOpen: false, enableViewEvent: false };
+    return { active: false, signupOpen: false, enableViewEvent: false, boardRevealAt: "" };
   }
 }
 

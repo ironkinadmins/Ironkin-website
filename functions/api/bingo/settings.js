@@ -5,18 +5,20 @@ const DEFAULT_SETTINGS = {
   signupOpen: false,
   enableViewEvent: false,
   registrationEndsAt: "",
+  boardRevealAt: "",
   teamOneName: "Team 1",
   teamTwoName: "Team 2"
 };
 
-function hasRegistrationDeadlinePassed(registrationEndsAt) {
-  if (!registrationEndsAt) return false;
-  const deadline = new Date(registrationEndsAt);
+function hasDeadlinePassed(value) {
+  if (!value) return false;
+  const deadline = new Date(value);
   return Number.isFinite(deadline.getTime()) && deadline.getTime() <= Date.now();
 }
 
 function normalizeSettings(parsed = {}) {
   const registrationEndsAt = typeof parsed.registrationEndsAt === "string" ? parsed.registrationEndsAt : "";
+  const boardRevealAt = typeof parsed.boardRevealAt === "string" ? parsed.boardRevealAt : "";
 
   let enableViewEvent =
     typeof parsed.enableViewEvent === "boolean"
@@ -28,8 +30,11 @@ function normalizeSettings(parsed = {}) {
       ? parsed.signupOpen
       : parsed.active === true && enableViewEvent !== true;
 
-  if (parsed.active === true && signupOpen === true && hasRegistrationDeadlinePassed(registrationEndsAt)) {
+  if (parsed.active === true && signupOpen === true && hasDeadlinePassed(registrationEndsAt)) {
     signupOpen = false;
+  }
+
+  if (parsed.active === true && enableViewEvent !== true && hasDeadlinePassed(boardRevealAt)) {
     enableViewEvent = true;
   }
 
@@ -37,6 +42,7 @@ function normalizeSettings(parsed = {}) {
     ...DEFAULT_SETTINGS,
     ...parsed,
     registrationEndsAt,
+    boardRevealAt,
     teamOneName: parsed.teamOneName || DEFAULT_SETTINGS.teamOneName,
     teamTwoName: parsed.teamTwoName || DEFAULT_SETTINGS.teamTwoName,
     signupOpen,

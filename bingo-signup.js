@@ -19,6 +19,7 @@ let bingoSignupState = {
     signupOpen: false,
     enableViewEvent: false,
     registrationEndsAt: "",
+    boardRevealAt: "",
     teamOneName: "Team 1",
     teamTwoName: "Team 2",
     title: "Battleship Bingo",
@@ -312,7 +313,7 @@ async function loadBingoSignups() {
       currentUser: data.currentUser,
       currentSignup: data.currentSignup,
       signups: Array.isArray(data.signups) ? data.signups : [],
-      settings: data.settings || { active: false, signupOpen: false, enableViewEvent: false, registrationEndsAt: "", teamOneName: "Team 1", teamTwoName: "Team 2" }
+      settings: data.settings || { active: false, signupOpen: false, enableViewEvent: false, registrationEndsAt: "", boardRevealAt: "", teamOneName: "Team 1", teamTwoName: "Team 2" }
     };
 
     const currentName = String(bingoSignupState.currentUser?.displayName || "");
@@ -455,6 +456,7 @@ async function saveBingoMode(mode) {
     signupOpen: mode === "registration",
     enableViewEvent: mode === "started",
     registrationEndsAt: settings.registrationEndsAt || "",
+    boardRevealAt: settings.boardRevealAt || "",
     teamOneName: settings.teamOneName || "Team 1",
     teamTwoName: settings.teamTwoName || "Team 2"
   };

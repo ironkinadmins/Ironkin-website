@@ -513,6 +513,7 @@ async function loadBingoSettings() {
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
   const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
+  const boardRevealAtInput = document.getElementById("bingoBoardRevealAtInput");
   const teamOneNameInput = document.getElementById("bingoTeamOneNameInput");
   const teamTwoNameInput = document.getElementById("bingoTeamTwoNameInput");
 
@@ -526,6 +527,7 @@ async function loadBingoSettings() {
     signupOpenInput.checked = settings.signupOpen === true;
     viewEventInput.checked = settings.enableViewEvent === true;
     if (registrationEndsAtInput) registrationEndsAtInput.value = toDateTimeLocalValue(settings.registrationEndsAt);
+    if (boardRevealAtInput) boardRevealAtInput.value = toDateTimeLocalValue(settings.boardRevealAt);
     if (teamOneNameInput) teamOneNameInput.value = settings.teamOneName || "Team 1";
     if (teamTwoNameInput) teamTwoNameInput.value = settings.teamTwoName || "Team 2";
   } catch (error) {
@@ -541,6 +543,7 @@ async function saveBingoSettings() {
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
   const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
+  const boardRevealAtInput = document.getElementById("bingoBoardRevealAtInput");
   const teamOneNameInput = document.getElementById("bingoTeamOneNameInput");
   const teamTwoNameInput = document.getElementById("bingoTeamTwoNameInput");
   const status = document.getElementById("bingoSettingsStatus");
@@ -557,6 +560,7 @@ async function saveBingoSettings() {
       signupOpen: signupOpenInput.checked,
       enableViewEvent: viewEventInput.checked,
       registrationEndsAt: fromDateTimeLocalValue(registrationEndsAtInput?.value || ""),
+      boardRevealAt: fromDateTimeLocalValue(boardRevealAtInput?.value || ""),
       teamOneName: teamOneNameInput?.value.trim() || "Team 1",
       teamTwoName: teamTwoNameInput?.value.trim() || "Team 2"
     })

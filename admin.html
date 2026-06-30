@@ -159,7 +159,13 @@
         <div class="admin-field">
           <label for="bingoRegistrationEndsAtInput">Registration Deadline</label>
           <input id="bingoRegistrationEndsAtInput" type="datetime-local" />
-          <small class="admin-muted">When this passes, signups lock and the Events page routes to the board.</small>
+          <small class="admin-muted">When this passes, signups lock only. The board stays hidden until the Board Reveal time or manual start.</small>
+        </div>
+
+        <div class="admin-field">
+          <label for="bingoBoardRevealAtInput">Board Reveal Time</label>
+          <input id="bingoBoardRevealAtInput" type="datetime-local" />
+          <small class="admin-muted">When this passes, the board becomes viewable automatically.</small>
         </div>
 
         <div class="admin-field">
