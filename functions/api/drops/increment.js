@@ -1,7 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
-function getDropListKey(eventId) {
-  return `drops:${eventId}`;
-}
+import { getDropListKey, readDropsWithClanGoalFallback } from "./_dropKeys.js";
 
 export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
@@ -23,10 +21,9 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const key = getDropListKey(eventId);
-
-  const value = await env.DROPS_KV.get(key);
-  const drops = value ? JSON.parse(value) : [];
+  const result = await readDropsWithClanGoalFallback(env, eventId);
+  const key = result.key || getDropListKey(eventId);
+  const drops = result.drops || [];
 
   let drop = drops.find(item => item.name === name);
 

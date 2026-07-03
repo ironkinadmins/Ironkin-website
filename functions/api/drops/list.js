@@ -1,6 +1,4 @@
-function getDropListKey(eventId) {
-  return `drops:${eventId}`;
-}
+import { getDropListKey, readDropsWithClanGoalFallback } from "./_dropKeys.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -9,13 +7,11 @@ export async function onRequestGet({ request, env }) {
     url.searchParams.get("eventId") ||
     "global";
 
-  const key = getDropListKey(eventId);
-
-  const value = await env.DROPS_KV.get(key);
-  const drops = value ? JSON.parse(value) : [];
+  const result = await readDropsWithClanGoalFallback(env, eventId);
 
   return Response.json({
-    eventId,
-    drops
+    eventId: result.eventId,
+    drops: result.drops,
+    migratedFrom: result.migratedFrom || null
   });
 }

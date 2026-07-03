@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../../_auth.js";
+import { readDropsWithClanGoalFallback } from "../../drops/_dropKeys.js";
 function normalizePlayerName(player) {
   return (
     player?.displayName ||
@@ -120,8 +121,8 @@ export async function onRequestPost({ request, env }) {
   }
 
   const standings = await fetchStandingsSnapshot(event);
-  const dropsValue = await env.DROPS_KV.get(`drops:${event.id}`);
-  const drops = dropsValue ? JSON.parse(dropsValue) : [];
+  const dropsResult = await readDropsWithClanGoalFallback(env, event.id);
+  const drops = dropsResult.drops || [];
 
   const standingsRows =
     standings?.standings?.length

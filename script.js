@@ -1367,7 +1367,7 @@ async function loadSingleEventDashboard() {
       return;
     }
 
-    resolvedSingleEventDropId = event.id || eventId;
+    resolvedSingleEventDropId = isClanGoalEvent(event) ? "clan-goal" : (event.id || eventId);
 
     const standings = await fetchEventStandings(event).catch(() => null);
     const eventHasNotStarted = isBeforeEventStart(standings, event);
@@ -1702,6 +1702,29 @@ function renderArchivedTopFive(entry) {
     .join("");
 }
 
+
+function renderArchivedDrops(entry) {
+  const drops = Array.isArray(entry?.drops)
+    ? entry.drops.filter(drop => Number(drop?.count || 0) > 0)
+    : [];
+
+  if (!drops.length) return "";
+
+  return `
+    <div class="archive-drops-list">
+      <h3>Unique Drops Received</h3>
+      ${drops
+        .map(drop => `
+          <div class="archive-result-row">
+            <strong>${escapeHtml(drop.name)}</strong>
+            <span>x${formatNumber(drop.count)}</span>
+          </div>
+        `)
+        .join("")}
+    </div>
+  `;
+}
+
 async function fetchArchive() {
   const response = await fetch("/api/archive/list");
   const data = await response.json();
@@ -1783,6 +1806,8 @@ async function loadArchivePage() {
         <div class="archive-results-list">
           ${renderArchivedTopFive(entry)}
         </div>
+
+        ${renderArchivedDrops(entry)}
 
         <div class="archive-card-actions">
           ${
