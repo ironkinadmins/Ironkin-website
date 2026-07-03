@@ -121,7 +121,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const standings = await fetchStandingsSnapshot(event);
-  const dropsResult = await readDropsWithClanGoalFallback(env, event.id);
+  const dropsResult = await readDropsWithClanGoalFallback(env, event, { isClanGoal: String(event?.type || "").includes("clan-goal") });
   const drops = dropsResult.drops || [];
 
   const standingsRows =
