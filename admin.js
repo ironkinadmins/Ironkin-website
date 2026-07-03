@@ -2,7 +2,7 @@ let selectedEventId = null;
 let allEvents = [];
 
 async function fetchEvents() {
-  const response = await fetch("/api/current-events");
+  const response = await fetch("/api/admin/events/list", { cache: "no-store" });
   const data = await response.json();
 
   if (!response.ok) {
