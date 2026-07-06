@@ -31,6 +31,7 @@ let placingTeam = null;
 let placingShipIndex = 0;
 let placingOrientation = "horizontal";
 let activeBoardMode = "attack";
+let activeBingoTab = "board";
 let activeSidebarTab = "players";
 let activeSidebarCollapsed = false;
 let draggedBoardTileIndex = null;
@@ -306,10 +307,7 @@ function renderAll() {
 
   renderStatus();
   renderPhaseProgress();
-  if (bingoState.phase === "setup") setBingoTab("board");
-  if (bingoState.phase === "captains") setBingoTab("captains");
-  if (bingoState.phase === "ships") setBingoTab("fleets");
-  if (bingoState.phase === "active" || bingoState.phase === "complete") setBingoTab("board");
+  syncBingoTabForPhase();
   renderScore();
   renderActiveGameHeader();
   renderActiveGameSidebar();
@@ -1456,7 +1454,28 @@ function updateAdminButtons() {
   }
 }
 
+function syncBingoTabForPhase() {
+  if (bingoState.phase === "setup") {
+    // Staff can inspect Captains/Fleets/Proofs/Log while the board is still unlocked.
+    // Non-staff should stay on the board view during setup/reveal prep.
+    if (!isBingoStaff) setBingoTab("board");
+    else if (!activeBingoTab) setBingoTab("board");
+    else setBingoTab(activeBingoTab);
+    return;
+  }
+  if (bingoState.phase === "captains") setBingoTab("captains");
+  if (bingoState.phase === "ships") setBingoTab("fleets");
+  if (bingoState.phase === "active" || bingoState.phase === "complete") setBingoTab("board");
+}
+
+function openFleetsAsAdmin() {
+  if (!isBingoStaff) return alert("Staff only.");
+  setBingoTab("fleets");
+  renderFleets();
+}
+
 function setBingoTab(tabName) {
+  activeBingoTab = tabName;
   document.body.dataset.bingoTab = tabName;
   document.querySelectorAll("[data-bingo-tab]").forEach(button => {
     button.classList.toggle("active", button.dataset.bingoTab === tabName);
@@ -1706,6 +1725,7 @@ function bindBingoControls() {
   document.getElementById("activeResetProgressBtn")?.addEventListener("click", resetProgressFromMenu);
   document.getElementById("activeResetBoardBtn")?.addEventListener("click", () => document.getElementById("bingoClearBoardBtn")?.click());
   document.getElementById("activeViewSettingsBtn")?.addEventListener("click", openBingoHelpModal);
+  document.getElementById("bingoViewFleetsBtn")?.addEventListener("click", openFleetsAsAdmin);
   document.getElementById("bingoPhaseActionBtn")?.addEventListener("click", handlePhaseAction);
   document.getElementById("attackBoardBtn")?.addEventListener("click", () => { activeBoardMode = "attack"; renderBingoBoard(); });
   document.getElementById("yourWatersBtn")?.addEventListener("click", () => { activeBoardMode = "waters"; renderBingoBoard(); });
