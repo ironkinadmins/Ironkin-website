@@ -8889,3 +8889,16 @@ body.calendar-modal-active {
 .bingo-hidden-card span {
   color: var(--muted, #aeb7c2);
 }
+
+/* Fleets placement screen must never expose bingo tile images/names. */
+#bingoTab-fleets .fleet-hidden-cell {
+  background: rgba(8, 10, 13, 0.82);
+  border-color: rgba(255, 180, 92, 0.18);
+}
+
+#bingoTab-fleets .fleet-hidden-cell img,
+#bingoTab-fleets .fleet-hidden-cell .bingo-qty-badge,
+#bingoTab-fleets .fleet-hidden-cell .bingo-progress-badge,
+#bingoTab-fleets .fleet-hidden-cell .bingo-progress-line {
+  display: none !important;
+}
