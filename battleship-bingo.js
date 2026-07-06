@@ -957,7 +957,7 @@ function toggleShipOrientation() {
 }
 
 function removeSelectedShip() {
-  if (!isBingoStaff || bingoState.phase !== "ships" || !placingTeam) return;
+  if (!canEditFleetsWhileUnlocked() || !placingTeam) return;
   const ship = bingoState.teams[placingTeam]?.ships?.[placingShipIndex];
   if (!ship) return;
   if (!ship.cells.length) {
@@ -972,7 +972,7 @@ function removeSelectedShip() {
 }
 
 async function confirmCurrentFleet() {
-  if (!isBingoStaff || bingoState.phase !== "ships" || !placingTeam) return;
+  if (!canEditFleetsWhileUnlocked() || !placingTeam) return;
   const team = bingoState.teams[placingTeam];
   if (!team.ships.every(ship => ship.cells.length === ship.size)) {
     alert("Place all ships for this fleet before confirming.");
@@ -991,11 +991,15 @@ function allFleetsConfirmed() {
   return Object.values(bingoState.teams).every(team => team.fleetConfirmed);
 }
 
+function canEditFleetsWhileUnlocked() {
+  return isBingoStaff && (bingoState.phase === "ships" || bingoState.phase === "setup");
+}
+
 function renderShipPlacementToolbar() {
   const toolbar = document.getElementById("shipPlacementToolbar");
   if (!toolbar) return;
 
-  if (bingoState.phase !== "ships") {
+  if (!canEditFleetsWhileUnlocked()) {
     toolbar.innerHTML = `
       <div class="ship-placement-toolbar-card muted">
         <strong>Ship Placement</strong>
@@ -1196,7 +1200,7 @@ function clearShipPreview(team) {
 
 function showShipPreview(team, startIndex) {
   clearShipPreview(team);
-  if (bingoState.phase !== "ships" || placingTeam !== team || bingoState.teams[team].fleetConfirmed) return;
+  if (!canEditFleetsWhileUnlocked() || placingTeam !== team || bingoState.teams[team].fleetConfirmed) return;
   const ship = bingoState.teams[team].ships[placingShipIndex];
   if (!ship) return;
   const cells = getShipCells(startIndex, ship.size, placingOrientation);
@@ -1210,7 +1214,7 @@ function showShipPreview(team, startIndex) {
 }
 
 function handleFleetCellClick(team, startIndex) {
-  if (!isBingoStaff || bingoState.phase !== "ships" || placingTeam !== team) return;
+  if (!canEditFleetsWhileUnlocked() || placingTeam !== team) return;
   if (bingoState.teams[team].fleetConfirmed) {
     alert("This fleet layout is already confirmed. Remove confirmation by unlocking/resetting ship placement before editing.");
     return;
@@ -1943,7 +1947,7 @@ function bindBingoControls() {
     if (event.key?.toLowerCase() !== "r") return;
     const tag = document.activeElement?.tagName?.toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select") return;
-    if (bingoState.phase !== "ships") return;
+    if (!canEditFleetsWhileUnlocked()) return;
     event.preventDefault();
     toggleShipOrientation();
   });
@@ -1951,7 +1955,7 @@ function bindBingoControls() {
   document.querySelectorAll(".bingo-place-btn").forEach(button => {
     button.addEventListener("click", () => {
       if (!isBingoStaff) return alert("Staff only.");
-      if (bingoState.phase !== "ships") return alert("Continue to Ship Placement before placing ships.");
+      if (!canEditFleetsWhileUnlocked()) return alert("Only staff can place ships before the board is locked.");
       placingTeam = button.dataset.team;
       placingShipIndex = bingoState.teams[placingTeam].ships.findIndex(ship => ship.cells.length !== ship.size);
       if (placingShipIndex < 0) {
