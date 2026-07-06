@@ -142,9 +142,41 @@ function sanitiseState(body) {
   };
 }
 
-export async function onRequestGet({ env }) {
+function isBoardFullyRevealed(state) {
+  return ["active", "complete"].includes(state?.phase);
+}
+
+function publicWaitingState(state) {
+  const base = defaultState();
+  return {
+    ...base,
+    version: state?.version || 2,
+    size: BINGO_SIZE,
+    phase: state?.phase || "setup",
+    locked: Boolean(state?.locked),
+    updatedAt: state?.updatedAt || new Date().toISOString(),
+    boardHidden: true,
+    boardHiddenReason: "The Battleship Bingo board has not been revealed yet.",
+    tiles: emptyTiles(),
+    teams: {
+      ember: { ...base.teams.ember, name: clampString(state?.teams?.ember?.name || "Ember Fleet", 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false },
+      ash: { ...base.teams.ash, name: clampString(state?.teams?.ash?.name || "Ash Fleet", 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false }
+    },
+    proofs: [],
+    attacks: [],
+    log: []
+  };
+}
+
+function publicStateForRequest(state, isStaff) {
+  if (isStaff || isBoardFullyRevealed(state)) return state;
+  return publicWaitingState(state);
+}
+
+export async function onRequestGet({ request, env }) {
+  const isStaff = isStaffSession(await getSession(request, env));
   const saved = await env.DROPS_KV.get("bingo:state:v2");
-  if (saved) return Response.json(JSON.parse(saved));
+  if (saved) return Response.json(publicStateForRequest(JSON.parse(saved), isStaff));
 
   const oldSaved = await env.DROPS_KV.get("bingo:board");
   if (oldSaved) {
@@ -155,10 +187,10 @@ export async function onRequestGet({ env }) {
     }
     migrated.locked = Boolean(old.locked);
     migrated.updatedAt = old.updatedAt || new Date().toISOString();
-    return Response.json(migrated);
+    return Response.json(publicStateForRequest(migrated, isStaff));
   }
 
-  return Response.json(defaultState());
+  return Response.json(publicStateForRequest(defaultState(), isStaff));
 }
 
 export async function onRequestPost({ request, env }) {

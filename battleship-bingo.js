@@ -259,7 +259,51 @@ function bindBoardTileDrag(tileEl) {
   });
 }
 
+function boardIsHiddenForVisitor() {
+  return Boolean(bingoState?.boardHidden) && !isBingoStaff;
+}
+
+function renderHiddenBoardNotice() {
+  renderStatus();
+  const panels = document.querySelectorAll(".bingo-tab-panel");
+  panels.forEach(panel => panel.classList.toggle("active", panel.id === "bingoTab-board"));
+  document.querySelectorAll("[data-bingo-tab]").forEach(button => {
+    button.classList.toggle("active", button.dataset.bingoTab === "board");
+    button.style.display = button.dataset.bingoTab === "board" ? "" : "none";
+  });
+
+  const activeHeader = document.getElementById("activeGameHeader");
+  if (activeHeader) activeHeader.style.display = "none";
+  const activeSidebar = document.getElementById("activeGameSidebar");
+  if (activeSidebar) activeSidebar.style.display = "none";
+  const sidePanel = document.querySelector(".bingo-side-panel");
+  if (sidePanel) sidePanel.style.display = "none";
+  const toolbar = document.querySelector(".bingo-board-toolbar");
+  if (toolbar) toolbar.style.display = "none";
+
+  const boardEl = document.getElementById("bingoBoard");
+  if (boardEl) {
+    boardEl.className = "bingo-board bingo-board-hidden-notice";
+    boardEl.innerHTML = `
+      <div class="bingo-hidden-card">
+        <strong>Board hidden until reveal</strong>
+        <span>The Battleship Bingo board is not public yet. Check back once staff fully reveals the board.</span>
+      </div>`;
+  }
+}
+
 function renderAll() {
+  if (boardIsHiddenForVisitor()) {
+    renderHiddenBoardNotice();
+    return;
+  }
+
+  document.querySelectorAll("[data-bingo-tab]").forEach(button => { button.style.display = ""; });
+  const sidePanel = document.querySelector(".bingo-side-panel");
+  if (sidePanel) sidePanel.style.display = "";
+  const toolbar = document.querySelector(".bingo-board-toolbar");
+  if (toolbar) toolbar.style.display = "";
+
   renderStatus();
   renderPhaseProgress();
   if (bingoState.phase === "setup") setBingoTab("board");
@@ -289,9 +333,13 @@ function renderStatus() {
 
   const phaseLabel = getPhaseLabel();
 
-  if (title) title.textContent = `Current Phase: ${phaseLabel}`;
+  if (title) title.textContent = boardIsHiddenForVisitor() ? "Battleship Bingo board hidden" : `Current Phase: ${phaseLabel}`;
 
   if (text) {
+    if (boardIsHiddenForVisitor()) {
+      text.textContent = "The board will only be visible to members once staff fully reveals it.";
+      return;
+    }
     text.textContent = bingoState.phase === "setup"
       ? "Build the 10×10 board, then lock it to assign captains."
       : bingoState.phase === "captains"
