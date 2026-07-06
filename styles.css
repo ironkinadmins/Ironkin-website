@@ -8902,3 +8902,89 @@ body.calendar-modal-active {
 #bingoTab-fleets .fleet-hidden-cell .bingo-progress-line {
   display: none !important;
 }
+
+
+/* 2026-07-06: FINAL fleet placement privacy fix.
+   The Fleets tab must be a blank hidden placement grid, not the bingo board. */
+#bingoTab-fleets .fleet-board {
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  width: min(760px, calc(100vw - 96px)) !important;
+  max-width: 760px !important;
+  min-width: 0 !important;
+  margin: 14px auto !important;
+}
+
+#bingoTab-fleets .fleet-cell {
+  position: relative !important;
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 180, 92, 0.22) !important;
+  background: rgba(5, 8, 12, 0.88) !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+}
+
+#bingoTab-fleets .fleet-cell.ship {
+  background: rgba(255, 122, 26, 0.22) !important;
+  border-color: rgba(255, 180, 92, 0.8) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 180, 92, 0.28) !important;
+}
+
+#bingoTab-fleets .fleet-cell.preview-valid {
+  background: rgba(255, 180, 92, 0.32) !important;
+  border-color: rgba(255, 220, 142, 0.95) !important;
+}
+
+#bingoTab-fleets .fleet-cell.preview-invalid {
+  background: rgba(255, 64, 64, 0.28) !important;
+  border-color: rgba(255, 96, 96, 0.95) !important;
+}
+
+#bingoTab-fleets .fleet-cell img,
+#bingoTab-fleets .fleet-cell .bingo-qty-badge,
+#bingoTab-fleets .fleet-cell .bingo-progress-badge,
+#bingoTab-fleets .fleet-cell .bingo-progress-line,
+#bingoTab-fleets .fleet-cell span:not(.fleet-ship-mark):not(.fleet-attack-mark),
+#bingoTab-fleets .fleet-cell small,
+#bingoTab-fleets .fleet-cell em {
+  display: none !important;
+}
+
+#bingoTab-fleets .fleet-ship-mark {
+  position: absolute !important;
+  inset: 50% auto auto 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 999px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  background: rgba(255, 180, 92, 0.95) !important;
+  color: #1b0d04 !important;
+  font-weight: 1000 !important;
+  font-size: 0.78rem !important;
+}
+
+#bingoTab-fleets .fleet-attack-mark {
+  position: absolute !important;
+  inset: 50% auto auto 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  background: rgba(0,0,0,0.78) !important;
+  color: #fff !important;
+  font-weight: 1000 !important;
+}
+
+@media (max-width: 720px) {
+  #bingoTab-fleets .fleet-board {
+    width: 100% !important;
+  }
+}
