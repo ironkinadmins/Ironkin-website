@@ -50,6 +50,47 @@ function safeJsonParse(value, fallback) {
   }
 }
 
+function randomApiKey() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return `ik_${Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function upsertPluginApiKey(env, record) {
+  if (record.pluginApiKey) {
+    await env.DROPS_KV.put(`plugin-api-key:${record.pluginApiKey}`, JSON.stringify({
+      discordId: record.discordId,
+      displayName: record.displayName || "Unknown member",
+      username: record.username || "",
+      rsn: record.rsn || record.displayName || "",
+      updatedAt: new Date().toISOString()
+    }));
+    return record.pluginApiKey;
+  }
+
+  const pluginApiKey = randomApiKey();
+  record.pluginApiKey = pluginApiKey;
+  record.pluginApiKeyCreatedAt = new Date().toISOString();
+  await env.DROPS_KV.put(`plugin-api-key:${pluginApiKey}`, JSON.stringify({
+    discordId: record.discordId,
+    displayName: record.displayName || "Unknown member",
+    username: record.username || "",
+    rsn: record.rsn || record.displayName || "",
+    updatedAt: new Date().toISOString()
+  }));
+  return pluginApiKey;
+}
+
+async function rotatePluginApiKey(env, record) {
+  if (record.pluginApiKey) {
+    await env.DROPS_KV.delete(`plugin-api-key:${record.pluginApiKey}`);
+  }
+  record.pluginApiKey = randomApiKey();
+  record.pluginApiKeyCreatedAt = new Date().toISOString();
+  await upsertPluginApiKey(env, record);
+  return record.pluginApiKey;
+}
+
 async function getProfileRecord(env, discordId) {
   if (!discordId) return {};
   const raw = await env.DROPS_KV.get(`member-profile:${discordId}`);
@@ -345,7 +386,12 @@ const displayRank =
     embers,
     wom,
     placements,
-    isOwnProfile
+    isOwnProfile,
+    plugin: isOwnProfile ? {
+      apiKey: record.pluginApiKey || "",
+      serverUrl: "https://ironkinclan.com",
+      bingoId: "battleship-bingo"
+    } : null
   };
 }
 
@@ -385,6 +431,7 @@ export async function onRequestGet({ request, env }) {
       memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
       lastSeenAt: new Date().toISOString()
     };
+    await upsertPluginApiKey(env, record);
     await saveProfileRecord(env, session.id, record);
 
     const [embers, wom, placements] = await Promise.all([
@@ -457,6 +504,7 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const customAvatarUrl = String(body.customAvatarUrl || "").trim();
   const blurb = String(body.blurb || "").trim().slice(0, 250);
+  const regeneratePluginApiKey = body.regeneratePluginApiKey === true;
   const displayName = getDisplayName(session);
 
   const existing = await getProfileRecord(env, session.id);
@@ -477,8 +525,16 @@ export async function onRequestPost({ request, env }) {
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
     blurb,
+    pluginApiKey: existing.pluginApiKey || "",
+    pluginApiKeyCreatedAt: existing.pluginApiKeyCreatedAt || null,
     updatedAt: new Date().toISOString()
   };
+
+  if (regeneratePluginApiKey) {
+    await rotatePluginApiKey(env, next);
+  } else {
+    await upsertPluginApiKey(env, next);
+  }
 
   await saveProfileRecord(env, session.id, next);
 

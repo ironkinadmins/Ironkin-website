@@ -45,6 +45,35 @@
           <p class="admin-muted">Discord avatar is used by default. Add a custom avatar URL or short blurb if you want.</p>
         </div>
 
+
+        <div class="profile-plugin-card" id="profilePluginCard" style="display:none;">
+          <div class="profile-section-header">
+            <p class="eyebrow">RuneLite Plugin</p>
+            <h3>Plugin API Key</h3>
+            <p class="admin-muted">Use this in the Ironkin RuneLite plugin. Keep it private.</p>
+          </div>
+          <div class="admin-form-grid single-column">
+            <div class="admin-field admin-field-wide">
+              <label for="profilePluginServerInput">Server URL</label>
+              <input id="profilePluginServerInput" type="text" readonly value="https://ironkinclan.com" />
+            </div>
+            <div class="admin-field admin-field-wide">
+              <label for="profilePluginBingoInput">Bingo ID</label>
+              <input id="profilePluginBingoInput" type="text" readonly value="battleship-bingo" />
+            </div>
+            <div class="admin-field admin-field-wide">
+              <label for="profilePluginApiKeyInput">API Key</label>
+              <div class="profile-api-key-row">
+                <input id="profilePluginApiKeyInput" type="password" readonly />
+                <button type="button" class="btn secondary" id="showPluginApiKeyBtn">Show</button>
+                <button type="button" class="btn secondary" id="copyPluginApiKeyBtn">Copy</button>
+                <button type="button" class="btn secondary danger" id="regeneratePluginApiKeyBtn">Regenerate</button>
+              </div>
+            </div>
+          </div>
+          <p class="admin-muted" id="profilePluginStatus"></p>
+        </div>
+
         <div class="admin-form-grid single-column">
           <div class="admin-field admin-field-wide">
             <label for="profileAvatarInput">Custom Avatar URL</label>

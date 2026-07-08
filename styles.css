@@ -8988,3 +8988,30 @@ body.calendar-modal-active {
     width: 100% !important;
   }
 }
+
+
+.profile-api-key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.profile-plugin-card {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.btn.danger,
+.btn.secondary.danger {
+  border-color: rgba(255, 108, 108, 0.45);
+}
+
+@media (max-width: 760px) {
+  .profile-api-key-row {
+    grid-template-columns: 1fr;
+  }
+}

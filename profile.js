@@ -150,6 +150,71 @@ function populateProfileForm(profile) {
   if (blurbInput) blurbInput.value = profile.ownBlurb || "";
 }
 
+
+function renderPluginApiKey(profile) {
+  const card = document.getElementById("profilePluginCard");
+  const keyInput = document.getElementById("profilePluginApiKeyInput");
+  const serverInput = document.getElementById("profilePluginServerInput");
+  const bingoInput = document.getElementById("profilePluginBingoInput");
+
+  if (!card || profile.isOwnProfile === false) return;
+
+  const plugin = profile.plugin || {};
+  card.style.display = "";
+  if (keyInput) keyInput.value = plugin.apiKey || "";
+  if (serverInput) serverInput.value = plugin.serverUrl || "https://ironkinclan.com";
+  if (bingoInput) bingoInput.value = plugin.bingoId || "battleship-bingo";
+}
+
+async function copyPluginApiKey() {
+  const input = document.getElementById("profilePluginApiKeyInput");
+  const status = document.getElementById("profilePluginStatus");
+  const key = input?.value || "";
+
+  if (!key) {
+    if (status) status.textContent = "No plugin API key found.";
+    return;
+  }
+
+  await navigator.clipboard.writeText(key);
+  if (status) status.textContent = "Plugin API key copied.";
+}
+
+function togglePluginApiKeyVisibility() {
+  const input = document.getElementById("profilePluginApiKeyInput");
+  const button = document.getElementById("showPluginApiKeyBtn");
+  if (!input) return;
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  if (button) button.textContent = showing ? "Show" : "Hide";
+}
+
+async function regeneratePluginApiKey() {
+  if (!confirm("Regenerate your plugin API key? Your old key will stop working immediately.")) return;
+
+  const status = document.getElementById("profilePluginStatus");
+  if (status) status.textContent = "Regenerating plugin API key...";
+
+  const response = await fetch("/api/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customAvatarUrl: document.getElementById("profileAvatarInput")?.value.trim() || "",
+      blurb: document.getElementById("profileBlurbInput")?.value.trim() || "",
+      regeneratePluginApiKey: true
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (status) status.textContent = data.error || "Could not regenerate API key.";
+    return;
+  }
+
+  renderProfile(data.profile);
+  if (status) status.textContent = "Plugin API key regenerated. Update RuneLite with the new key.";
+}
+
 function renderProfile(profile) {
   currentProfile = profile;
   const grid = document.getElementById("profileGrid");
@@ -159,6 +224,7 @@ function renderProfile(profile) {
   renderWomStats(profile);
   renderEmbers(profile);
   renderEventRecord(profile);
+  renderPluginApiKey(profile);
   const settingsCard = document.querySelector(".profile-settings-card");
   if (settingsCard) {
     settingsCard.style.display = profile.isOwnProfile === false ? "none" : "";
@@ -228,5 +294,10 @@ async function saveProfile() {
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.getElementById("saveProfileBtn");
   if (saveBtn) saveBtn.addEventListener("click", saveProfile);
+
+  document.getElementById("copyPluginApiKeyBtn")?.addEventListener("click", copyPluginApiKey);
+  document.getElementById("showPluginApiKeyBtn")?.addEventListener("click", togglePluginApiKeyVisibility);
+  document.getElementById("regeneratePluginApiKeyBtn")?.addEventListener("click", regeneratePluginApiKey);
+
   loadProfile();
 });
