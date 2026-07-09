@@ -595,16 +595,23 @@ function renderProofGroup(title, proofs, allowActions) {
     </section>`;
 }
 
-function renderCompactProof(proof, allowActions) {
+function getProofTileName(proof) {
   const tile = bingoState.tiles[proof.tileIndex] || {};
+  return proof.tileName || tile.name || (proof.isTest ? "Plugin Test" : `Tile ${proof.tileIndex + 1}`);
+}
+
+function renderCompactProof(proof, allowActions) {
   return `
-    <div class="active-proof-row status-${escapeAttr(proof.status)}">
-      <strong>${escapeHtml(tile.name || `Tile ${proof.tileIndex + 1}`)} ${proof.quantity > 1 ? `<small>x${escapeHtml(proof.quantity)}</small>` : ""}</strong>
-      <span>${escapeHtml(proof.player || "Unknown")} • ${escapeHtml(TEAMS[proof.team]?.name || proof.team)}</span>
-      ${allowActions && isBingoStaff ? `
+    <div class="active-proof-row status-${escapeAttr(proof.status)} ${proof.isTest ? "is-test-proof" : ""}">
+      <strong>${escapeHtml(getProofTileName(proof))} ${proof.quantity > 1 ? `<small>x${escapeHtml(proof.quantity)}</small>` : ""}</strong>
+      <span>${escapeHtml(proof.player || "Unknown")} • ${proof.isTest ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)}</span>
+      ${isBingoStaff && (allowActions || proof.isTest) ? `
         <div class="proof-actions compact">
-          <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
-          <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
+          ${allowActions ? `
+            <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
+            <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
+          ` : ""}
+          ${proof.isTest ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
         </div>` : ""}
     </div>`;
 }
@@ -1301,21 +1308,24 @@ function renderProofs() {
     const required = getTileQuantity(tile);
     const completed = Math.min(getTileCompletedQuantity(tile), required);
     const remaining = Math.max(0, required - completed);
-    const progressText = required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile";
+    const progressText = proof.isTest ? "Plugin connectivity test proof" : (required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile");
     return `
-      <div class="proof-card status-${escapeAttr(proof.status)}">
+      <div class="proof-card status-${escapeAttr(proof.status)} ${proof.isTest ? "is-test-proof" : ""}">
         <div>
-          <strong>${escapeHtml(tile.name || `Tile ${proof.tileIndex + 1}`)} ${qty > 1 ? `<small>x${escapeHtml(qty)}</small>` : ""}</strong>
-          <span>${escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
+          <strong>${escapeHtml(getProofTileName(proof))} ${qty > 1 ? `<small>x${escapeHtml(qty)}</small>` : ""}</strong>
+          <span>${proof.isTest ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
           <p>${escapeHtml(progressText)}</p>
           ${proof.note ? `<p>${escapeHtml(proof.note)}</p>` : ""}
           ${proof.url ? `<a href="${escapeAttr(proof.url)}" target="_blank" rel="noopener">Open proof</a>` : ""}
         </div>
         <em>${escapeHtml(proof.status)}</em>
-        ${isBingoStaff && proof.status === "pending" ? `
+        ${isBingoStaff && (proof.status === "pending" || proof.isTest) ? `
           <div class="proof-actions">
-            <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
-            <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
+            ${proof.status === "pending" ? `
+              <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
+              <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
+            ` : ""}
+            ${proof.isTest ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
           </div>` : ""}
       </div>`;
   }).join("");
@@ -1347,8 +1357,28 @@ async function submitProof() {
 }
 
 async function reviewProof(proofId, action) {
-  const proof = bingoState.proofs.find(p => p.id === proofId);
-  if (!proof || proof.status !== "pending") return;
+  const proofIndex = bingoState.proofs.findIndex(p => p.id === proofId);
+  const proof = proofIndex >= 0 ? bingoState.proofs[proofIndex] : null;
+  if (!proof) return;
+
+  if (action === "delete") {
+    if (!proof.isTest) return alert("Only plugin test proofs can be deleted from here.");
+    if (!confirm("Delete this plugin test proof?")) return;
+    bingoState.proofs.splice(proofIndex, 1);
+    addLog(`Deleted plugin test proof for ${proof.player || "Unknown"}.`);
+    await saveBingoState();
+    return;
+  }
+
+  if (proof.status !== "pending") return;
+
+  if (proof.isTest) {
+    proof.status = action === "reject" ? "rejected" : "approved";
+    addLog(`${proof.status === "approved" ? "Approved" : "Rejected"} plugin test proof for ${proof.player || "Unknown"}.`);
+    await saveBingoState();
+    return;
+  }
+
   const tile = bingoState.tiles[proof.tileIndex];
   if (!tile) return;
 

@@ -148,7 +148,7 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
   const reviewUrl = `${origin}/battleship-bingo.html`;
   const isTest = Boolean(proof.isTest || proof.bingoId === TEST_BINGO_ID);
 
-  const title = isTest ? "🔧 Plugin Test Proof Pending" : "📥 New Bingo Proof Pending";
+  const title = isTest ? "Plugin Test Proof Pending" : "New Bingo Proof Pending";
   const tileLine = details.tileName || proof.tileName || (Number.isInteger(proof.tileIndex) && proof.tileIndex >= 0 ? `Tile ${proof.tileIndex + 1}` : "Plugin Test");
   const itemLine = details.itemName || (proof.itemid ? `Item ID ${proof.itemid}` : "Unknown item");
 
@@ -156,11 +156,12 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
     `<@&${councilRoleId}>`,
     "",
     `**${title}**`,
-    `👤 **Player:** ${proof.player || "Unknown"}`,
-    `🎲 **Bingo:** ${proof.bingoId || "Unknown"}`,
-    `🎯 **Tile:** ${tileLine}`,
-    `📦 **Item:** ${itemLine}`,
-    `🔎 **Review:** ${reviewUrl}`
+    "",
+    `Player: ${proof.player || "Unknown"}`,
+    `Tile: ${tileLine}`,
+    `Item: ${itemLine}`,
+    "",
+    `Review: ${reviewUrl}`
   ].join("\n");
 
   try {
@@ -246,7 +247,7 @@ export async function onRequestPost(context) {
       team: "ember",
       player: pluginUser?.displayName || username || "Plugin Tester",
       url: proofUrl,
-      note: `TEST ONLY - RuneLite plugin proof upload. Item ID: ${itemId}. Loot username: ${username}.`,
+      note: `RuneLite plugin test proof. Item ID: ${itemId}. Loot username: ${username}.`,
       quantity: 1,
       status: "pending",
       createdAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString(),
