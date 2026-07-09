@@ -141,7 +141,7 @@ function appendLog(board, text) {
 
 async function notifyPendingProofDiscord(env, request, proof, details = {}) {
   const webhookUrl = env.DISCORD_PROOF_WEBHOOK_URL;
-  if (!webhookUrl) return;
+  if (!webhookUrl) return "";
 
   const councilRoleId = env.COUNCIL_MEMBER_ROLE_ID || "1515576495844757524";
   const origin = getOrigin(request);
@@ -165,7 +165,8 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
   ].join("\n");
 
   try {
-    await fetch(webhookUrl, {
+    const separator = webhookUrl.includes("?") ? "&" : "?";
+    const response = await fetch(`${webhookUrl}${separator}wait=true`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -176,8 +177,17 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
         }
       })
     });
+
+    if (!response.ok) {
+      console.warn("Failed to send pending proof Discord notification", response.status, await response.text());
+      return "";
+    }
+
+    const message = await response.json().catch(() => null);
+    return message?.id || "";
   } catch (error) {
     console.warn("Failed to send pending proof Discord notification", error);
+    return "";
   }
 }
 
@@ -260,8 +270,9 @@ export async function onRequestPost(context) {
     board.proofs.unshift(proof);
     board.proofs = board.proofs.slice(0, 300);
     appendLog(board, `${proof.player} submitted a RuneLite plugin test proof.`);
+    const discordMessageId = await notifyPendingProofDiscord(env, request, proof, { tileName: proof.tileName, itemName: "Bones" });
+    if (discordMessageId) proof.discordMessageId = discordMessageId;
     await saveBoard(env, board);
-    await notifyPendingProofDiscord(env, request, proof, { tileName: proof.tileName, itemName: "Bones" });
 
     return Response.json({
       success: true,
@@ -321,11 +332,12 @@ export async function onRequestPost(context) {
   tile.proofId = proofId;
   appendLog(board, `${player} auto-submitted plugin proof for ${tile.name || `Tile ${match.tileIndex + 1}`}.`);
 
-  await saveBoard(env, board);
-  await notifyPendingProofDiscord(env, request, proof, {
+  const discordMessageId = await notifyPendingProofDiscord(env, request, proof, {
     tileName: tile.name || `Tile ${match.tileIndex + 1}`,
     itemName: tile.name || `Item ID ${itemId}`
   });
+  if (discordMessageId) proof.discordMessageId = discordMessageId;
+  await saveBoard(env, board);
 
   return Response.json({
     success: true,

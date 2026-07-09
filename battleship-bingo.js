@@ -1372,6 +1372,19 @@ async function submitProof() {
   closeTileEditor();
 }
 
+
+async function updateDiscordProofMessage(proofId, status) {
+  try {
+    await fetch("/api/bingo/proof-discord", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proofId, action: status })
+    });
+  } catch (error) {
+    console.warn("Could not update Discord proof notification", error);
+  }
+}
+
 async function reviewProof(proofId, action) {
   const proofIndex = bingoState.proofs.findIndex(p => p.id === proofId);
   const proof = proofIndex >= 0 ? bingoState.proofs[proofIndex] : null;
@@ -1382,6 +1395,7 @@ async function reviewProof(proofId, action) {
   if (action === "delete") {
     if (!isTestProof) return alert("Only plugin test proofs can be deleted from here.");
     if (!confirm("Delete this plugin test proof?")) return;
+    await updateDiscordProofMessage(proof.id, "deleted");
     bingoState.proofs.splice(proofIndex, 1);
     addLog(`Deleted plugin test proof for ${proof.player || "Unknown"}.`);
     await saveBingoState();
@@ -1395,6 +1409,7 @@ async function reviewProof(proofId, action) {
     proof.status = action === "reject" ? "rejected" : "approved";
     addLog(`${proof.status === "approved" ? "Approved" : "Rejected"} plugin test proof for ${proof.player || "Unknown"}.`);
     await saveBingoState();
+    await updateDiscordProofMessage(proof.id, proof.status);
     return;
   }
 
@@ -1407,6 +1422,7 @@ async function reviewProof(proofId, action) {
     tile.status = completed > 0 ? "partial" : "open";
     addLog(`Rejected proof for ${tile.name || "a tile"} by ${proof.player}.`);
     await saveBingoState();
+    await updateDiscordProofMessage(proof.id, "rejected");
     return;
   }
 
@@ -1430,6 +1446,7 @@ async function reviewProof(proofId, action) {
   }
 
   await saveBingoState();
+  await updateDiscordProofMessage(proof.id, "approved");
 }
 
 function resolveAttack(proof) {

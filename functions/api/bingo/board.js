@@ -124,7 +124,15 @@ function sanitiseState(body) {
       note: clampString(proof.note, 300),
       quantity: Math.max(1, Number.parseInt(proof.quantity ?? proof.qty ?? 1, 10) || 1),
       status: ["pending", "approved", "rejected"].includes(proof.status) ? proof.status : "pending",
-      createdAt: clampString(proof.createdAt, 80) || new Date().toISOString()
+      createdAt: clampString(proof.createdAt, 80) || new Date().toISOString(),
+      bingoId: clampString(proof.bingoId, 80),
+      isTest: Boolean(proof.isTest),
+      tileName: clampString(proof.tileName, 120),
+      source: clampString(proof.source, 80),
+      itemid: Number.isInteger(Number(proof.itemid)) ? Number(proof.itemid) : undefined,
+      submittedByDiscordId: clampString(proof.submittedByDiscordId, 80),
+      discordMessageId: clampString(proof.discordMessageId, 80),
+      discordMessageUpdatedAt: clampString(proof.discordMessageUpdatedAt, 80)
     })) : [],
     attacks: Array.isArray(body.attacks) ? body.attacks.slice(0, 300).map(attack => ({
       id: clampString(attack.id, 80),
