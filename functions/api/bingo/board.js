@@ -181,6 +181,119 @@ function publicStateForRequest(state, isStaff) {
   return publicWaitingState(state);
 }
 
+
+function cleanWebhookBase(url) {
+  return String(url || "").split("?")[0].replace(/\/+$/, "");
+}
+
+function isPluginTestProof(proof) {
+  const note = String(proof?.note || "").toLowerCase();
+  const tileName = String(proof?.tileName || "").toLowerCase();
+  const bingoId = String(proof?.bingoId || "").toLowerCase();
+  return Boolean(
+    proof?.isTest ||
+    bingoId === "test-bingo" ||
+    tileName.includes("plugin test") ||
+    note.includes("plugin test") ||
+    note.includes("test only") ||
+    note.includes("runelite plugin proof upload")
+  );
+}
+
+function discordProofColor(action) {
+  if (action === "approved") return 0x2ecc71;
+  if (action === "rejected") return 0xe74c3c;
+  if (action === "deleted") return 0x95a5a6;
+  return 0xf1c40f;
+}
+
+function getDiscordTileName(state, proof) {
+  if (proof?.tileName) return proof.tileName;
+  const tileIndex = Number(proof?.tileIndex);
+  if (Number.isInteger(tileIndex) && tileIndex >= 0) {
+    return state?.tiles?.[tileIndex]?.name || `Tile ${tileIndex + 1}`;
+  }
+  return isPluginTestProof(proof) ? "Plugin Test - Bones" : "Unknown tile";
+}
+
+function getDiscordItemName(state, proof) {
+  if (isPluginTestProof(proof)) return "Bones";
+  const tileIndex = Number(proof?.tileIndex);
+  if (Number.isInteger(tileIndex) && tileIndex >= 0 && state?.tiles?.[tileIndex]?.name) return state.tiles[tileIndex].name;
+  return proof?.itemid ? `Item ID ${proof.itemid}` : "Unknown item";
+}
+
+function buildDiscordProofEmbed(state, proof, action, request) {
+  const status = action.charAt(0).toUpperCase() + action.slice(1);
+  const titleBase = isPluginTestProof(proof) ? "Plugin Test Proof" : "Bingo Proof";
+  const origin = request ? new URL(request.url).origin : "https://ironkinclan.com";
+  return {
+    title: `${titleBase} ${status}`,
+    color: discordProofColor(action),
+    fields: [
+      { name: "Player", value: clampString(proof?.player || "Unknown", 100) || "Unknown", inline: true },
+      { name: "Tile", value: clampString(getDiscordTileName(state, proof), 120) || "Unknown tile", inline: true },
+      { name: "Item", value: clampString(getDiscordItemName(state, proof), 120) || "Unknown item", inline: true },
+      { name: "Status", value: status, inline: true },
+      { name: "Review", value: `${origin}/battleship-bingo.html`, inline: false }
+    ],
+    footer: { text: `Proof ID: ${proof?.id || "Unknown"}` },
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function editDiscordProofMessage(env, request, state, proof, action) {
+  const webhookUrl = cleanWebhookBase(env.DISCORD_PROOF_WEBHOOK_URL);
+  if (!webhookUrl || !proof?.discordMessageId) return false;
+
+  const response = await fetch(`${webhookUrl}/messages/${encodeURIComponent(proof.discordMessageId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      content: "",
+      embeds: [buildDiscordProofEmbed(state, proof, action, request)],
+      allowed_mentions: { parse: [] }
+    })
+  });
+
+  if (!response.ok) {
+    console.warn("Discord proof status update failed", response.status, await response.text());
+    return false;
+  }
+
+  return true;
+}
+
+async function updateDiscordMessagesForProofChanges(env, request, previousState, nextState) {
+  const previousProofs = Array.isArray(previousState?.proofs) ? previousState.proofs : [];
+  const nextProofs = Array.isArray(nextState?.proofs) ? nextState.proofs : [];
+  const nextById = new Map(nextProofs.map(proof => [proof.id, proof]));
+  let changed = false;
+
+  for (const oldProof of previousProofs) {
+    if (!oldProof?.id || !oldProof.discordMessageId) continue;
+    const newProof = nextById.get(oldProof.id);
+
+    if (!newProof) {
+      const ok = await editDiscordProofMessage(env, request, previousState, oldProof, "deleted");
+      if (ok) changed = true;
+      continue;
+    }
+
+    const oldStatus = String(oldProof.status || "pending").toLowerCase();
+    const newStatus = String(newProof.status || "pending").toLowerCase();
+    if (oldStatus !== newStatus && ["approved", "rejected"].includes(newStatus)) {
+      const ok = await editDiscordProofMessage(env, request, nextState, newProof, newStatus);
+      if (ok) {
+        newProof.discordMessageUpdatedAt = new Date().toISOString();
+        changed = true;
+      }
+    }
+  }
+
+  return changed;
+}
+
 export async function onRequestGet({ request, env }) {
   const isStaff = isStaffSession(await getSession(request, env));
   const saved = await env.DROPS_KV.get("bingo:state:v2");
@@ -206,8 +319,18 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
+  const previousRaw = await env.DROPS_KV.get("bingo:state:v2");
+  const previousState = previousRaw ? JSON.parse(previousRaw) : defaultState();
   const body = await request.json();
   const state = sanitiseState(body || {});
+
+  // Keep Discord proof notifications in sync from the same server-side save
+  // that approves/rejects/deletes proofs. This avoids relying on a separate
+  // browser follow-up request after the proof status changes.
+  await updateDiscordMessagesForProofChanges(env, request, previousState, state).catch(error => {
+    console.warn("Could not update Discord proof notification", error);
+  });
+
   await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
   return Response.json(state);
 }
