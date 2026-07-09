@@ -328,8 +328,6 @@ const TILE_ITEM_IDS = {
     29007
   ],
   "any cox unique": [
-  21034, 
-  21079, 
   21000, 
   21012, 
   21015, 
