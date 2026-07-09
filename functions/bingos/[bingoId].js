@@ -3,7 +3,11 @@ const SIGNUPS_KEY = "bingo:signups";
 const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
 
 const TEST_BINGO_ID = "test-bingo";
+// Permanent RuneLite plugin connectivity/proof-flow test.
+// Bones = Item ID 526. Members set Bingo ID to test-bingo, pick up Bones,
+// and staff should see a pending test proof without affecting the live board.
 const TEST_BINGO_ITEMS = [{ id: 526 }];
+const TEST_BINGO_ITEM_IDS = new Set(TEST_BINGO_ITEMS.map(item => item.id));
 
 // Website-only compatibility layer for the current RuneLite plugin.
 // Add board aliases here when a tile is not a direct item name or when it means several items.
@@ -200,9 +204,6 @@ export async function onRequestPost(context) {
   const { request, params, env } = context;
   const bingoId = String(params.bingoId || "").trim();
   const pluginUser = pluginUserFromContext(context);
-  if (bingoId === TEST_BINGO_ID) {
-    return Response.json({ success: true, message: "Plugin test successful" });
-  }
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
@@ -219,6 +220,62 @@ export async function onRequestPost(context) {
   if (!imageData) return jsonError("Missing or invalid imageData.", 400);
   if (base64ByteLength(imageData) > MAX_IMAGE_BYTES) {
     return jsonError("imageData is too large.", 413);
+  }
+
+  if (bingoId === TEST_BINGO_ID) {
+    if (!TEST_BINGO_ITEM_IDS.has(itemId)) {
+      return jsonError("That item is not tracked for the plugin test bingo. Pick up Bones.", 404);
+    }
+
+    const board = await getBoard(env) || {
+      version: 2,
+      size: 10,
+      phase: "setup",
+      locked: false,
+      tiles: [],
+      teams: {},
+      proofs: [],
+      attacks: [],
+      log: []
+    };
+    const proofId = crypto.randomUUID();
+    const proofUrl = `${getOrigin(request)}/api/bingo/proof-image?id=${encodeURIComponent(proofId)}`;
+
+    await storeProofImage(env, proofId, imageData);
+
+    const proof = {
+      id: proofId,
+      bingoId,
+      isTest: true,
+      tileIndex: -1,
+      tileName: "Plugin Test - Bones",
+      team: "ember",
+      player: pluginUser?.displayName || username || "Plugin Tester",
+      url: proofUrl,
+      note: `TEST ONLY - RuneLite plugin proof upload. Item ID: ${itemId}. Loot username: ${username}.`,
+      quantity: 1,
+      status: "pending",
+      createdAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString(),
+      source: "runelite-plugin-test",
+      itemid: itemId,
+      submittedByDiscordId: pluginUser.discordId
+    };
+
+    board.proofs = Array.isArray(board.proofs) ? board.proofs : [];
+    board.proofs.unshift(proof);
+    board.proofs = board.proofs.slice(0, 300);
+    appendLog(board, `${proof.player} submitted a RuneLite plugin test proof.`);
+    await saveBoard(env, board);
+
+    return Response.json({
+      success: true,
+      bingoId,
+      test: true,
+      proofId,
+      itemid: itemId,
+      status: "pending",
+      message: "Plugin test proof created."
+    });
   }
 
   const board = await getBoard(env);
