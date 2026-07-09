@@ -1,3 +1,5 @@
+import { lookupTileItemIds } from "./itemLookup.js";
+
 const BOARD_KEY = "bingo:state:v2";
 const SIGNUPS_KEY = "bingo:signups";
 const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
@@ -8,38 +10,6 @@ const TEST_BINGO_ID = "test-bingo";
 // and staff should see a pending test proof without affecting the live board.
 const TEST_BINGO_ITEMS = [{ id: 526 }];
 const TEST_BINGO_ITEM_IDS = new Set(TEST_BINGO_ITEMS.map(item => item.id));
-
-// Website-only compatibility layer for the current RuneLite plugin.
-// Add board aliases here when a tile is not a direct item name or when it means several items.
-// The endpoint will also read tile.itemId / tile.itemIds / tile.items if the board stores ids later.
-const ITEM_GROUPS = {
-  "any nex unique": [26382, 26384, 26386, 26390, 26392, 26394, 26370, 26372, 26374],
-  "any dt2 unique": [28256, 28258, 28260, 28262, 28264, 28266, 28268, 28270, 28272, 28274],
-  "any virtus/vestige": [26241, 26243, 26245, 28256, 28258, 28260, 28262],
-  "any virtus/vestige/axe piece": [26241, 26243, 26245, 28256, 28258, 28260, 28262, 28264, 28266, 28268, 28270],
-  "any barrows item": [4708, 4710, 4712, 4714, 4716, 4718, 4720, 4722, 4724, 4726, 4728, 4730, 4732, 4734, 4736, 4738, 4745, 4747, 4749, 4751, 4753, 4755, 4757, 4759],
-  "barrows items": [4708, 4710, 4712, 4714, 4716, 4718, 4720, 4722, 4724, 4726, 4728, 4730, 4732, 4734, 4736, 4738, 4745, 4747, 4749, 4751, 4753, 4755, 4757, 4759],
-  "any visage": [11286, 22006, 22007, 2425],
-  "god d hide shield": [23191, 23194, 23197, 23200, 23203, 23206],
-  "god d'hide shield": [23191, 23194, 23197, 23200, 23203, 23206]
-};
-
-// Common direct-name shortcuts. Add more exact tile names here as needed.
-const ITEM_ALIASES = {
-  "dragon pickaxe": [11920],
-  "broken dragon hasta": [22963],
-  "broken dragon pickaxe": [22963],
-  "zenyte shard": [19529],
-  "berserker ring": [6737],
-  "archers ring": [6733],
-  "seers ring": [6731],
-  "warrior ring": [6735],
-  "abyssal whip": [4151],
-  "trident of the seas": [11907],
-  "magic fang": [12932],
-  "serpentine visage": [12927],
-  "tanzanite fang": [12922]
-};
 
 function jsonError(message, status = 400) {
   return Response.json({ error: message }, { status });
@@ -70,27 +40,8 @@ function uniqueIds(values) {
   return [...new Set(values.map(asPositiveInt).filter(Boolean))];
 }
 
-function idsFromTile(tile) {
-  if (!tile) return [];
-
-  const direct = [];
-  if (tile.itemId || tile.itemID || tile.itemid) direct.push(tile.itemId || tile.itemID || tile.itemid);
-  if (Array.isArray(tile.itemIds)) direct.push(...tile.itemIds);
-  if (Array.isArray(tile.itemIDs)) direct.push(...tile.itemIDs);
-  if (Array.isArray(tile.items)) {
-    tile.items.forEach(item => {
-      if (typeof item === "number" || typeof item === "string") direct.push(item);
-      else direct.push(item?.id || item?.itemId || item?.itemid);
-    });
-  }
-
-  const directIds = uniqueIds(direct);
-  if (directIds.length) return directIds;
-
-  const name = normalizeName(tile.name || tile.title || tile.label);
-  if (!name) return [];
-
-  return uniqueIds(ITEM_GROUPS[name] || ITEM_ALIASES[name] || []);
+async function idsFromTile(env, tile) {
+  return lookupTileItemIds(env, tile);
 }
 
 async function getBoard(env) {
@@ -136,13 +87,12 @@ async function getPluginMemberContext(env, pluginUser, reportedUsername) {
   };
 }
 
-function findTileForItem(board, itemId) {
+async function findTileForItem(env, board, itemId) {
   const id = asPositiveInt(itemId);
   if (!id || !Array.isArray(board?.tiles)) return null;
 
   for (const [index, tile] of board.tiles.entries()) {
-    if (!tile?.name) continue;
-    const ids = idsFromTile(tile);
+    const ids = await idsFromTile(env, tile);
     if (ids.includes(id)) {
       return { tile, tileIndex: index };
     }
@@ -151,10 +101,12 @@ function findTileForItem(board, itemId) {
   return null;
 }
 
-function getTrackedItems(board) {
+async function getTrackedItems(env, board) {
   const ids = [];
   if (Array.isArray(board?.tiles)) {
-    board.tiles.forEach(tile => ids.push(...idsFromTile(tile)));
+    for (const tile of board.tiles) {
+      ids.push(...await idsFromTile(env, tile));
+    }
   }
   return uniqueIds(ids).map(id => ({ id }));
 }
@@ -195,7 +147,7 @@ export async function onRequestGet(context) {
     return Response.json({ bingoId, items: TEST_BINGO_ITEMS });
   }
   const board = await getBoard(env);
-  const items = getTrackedItems(board);
+  const items = await getTrackedItems(env, board);
 
   return Response.json({ bingoId, items });
 }
@@ -283,7 +235,7 @@ export async function onRequestPost(context) {
     return jsonError("Bingo board is not configured.", 404);
   }
 
-  const match = findTileForItem(board, itemId);
+  const match = await findTileForItem(env, board, itemId);
   if (!match) {
     return jsonError("That item is not tracked for this bingo.", 404);
   }
