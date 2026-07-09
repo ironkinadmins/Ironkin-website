@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battleship Bingo Stats | Ironkin Clan</title>
+  <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
+  <link rel="stylesheet" href="styles.css?v=20260709-bstats-2" />
+  <style>
+    /* Scoped styles for the Battleship Bingo stats page only. */
+    main.page {
+      max-width: 920px;
+    }
+
+    .bs-summary {
+      padding: 1.4rem 1.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-total-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .bs-total-row strong {
+      font-size: 2.8rem;
+      line-height: 1;
+      color: #e8913f;
+      letter-spacing: -0.02em;
+    }
+
+    .bs-total-row span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bs-gp-row {
+      margin-top: 0.4rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bs-gp-row strong {
+      color: #e8913f;
+      font-size: 1.15rem;
+    }
+
+    .bs-meta {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin: 0.7rem 0 1rem;
+    }
+
+    .bs-toggle {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .bs-toggle button {
+      padding: 0.5rem 1.15rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .bs-toggle button.active {
+      background: #e8913f;
+      border-color: #e8913f;
+      color: #1f130b;
+      font-weight: bold;
+    }
+
+    .bs-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 0 0.75rem;
+    }
+
+    .bs-section-head h2 {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.82rem;
+      font-weight: bold;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #e8913f;
+      margin: 0;
+    }
+
+    .bs-section-hint {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .bs-legend-bar {
+      width: 64px;
+      height: 7px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #211812, #ec9245);
+    }
+
+    .bs-heat-featured {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: minmax(74px, auto);
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .bs-heat-featured .bs-cell:first-child {
+      grid-row: span 2;
+    }
+
+    .bs-heat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-cell {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.4rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      min-width: 0;
+    }
+
+    .bs-cell:hover {
+      outline: 2px solid rgba(255, 255, 255, 0.25);
+      outline-offset: -2px;
+    }
+
+    .bs-cell-name {
+      font-size: 0.82rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-cell-count {
+      font-size: 1.45rem;
+      font-weight: bold;
+      line-height: 1;
+      letter-spacing: -0.01em;
+    }
+
+    .bs-heat-featured .bs-cell:first-child .bs-cell-count {
+      font-size: 2.6rem;
+    }
+
+    .bs-cell.hot {
+      color: #1f130b;
+    }
+
+    .bs-cell.hot .bs-cell-name {
+      color: rgba(31, 19, 11, 0.85);
+    }
+
+    .bs-cell.cold {
+      color: var(--text);
+    }
+
+    .bs-cell.cold .bs-cell-name {
+      color: var(--muted);
+    }
+
+    .bs-feed {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1.5rem;
+    }
+
+    .bs-feed-row {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+    }
+
+    .bs-feed-row:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .bs-feed-rank {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: #e8913f;
+      font-size: 0.82rem;
+      min-width: 1.6rem;
+    }
+
+    .bs-feed-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-feed-gp {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.78rem;
+      min-width: 5.2rem;
+      text-align: right;
+    }
+
+    .bs-feed-pill {
+      min-width: 3.4rem;
+      text-align: center;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+
+    .bs-notice {
+      color: var(--muted);
+      text-align: center;
+      padding: 1.25rem 0;
+    }
+
+    .bs-staff-toolbar {
+      display: none;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .bs-untracked {
+      margin-top: 0.5rem;
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 108, 108, 0.35);
+      background: rgba(255, 108, 108, 0.05);
+    }
+
+    .bs-untracked p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0.2rem 0 0.5rem;
+    }
+
+    .bs-untracked-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bs-untracked-row:last-child {
+      border-bottom: none;
+    }
+
+    .bs-untracked-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-untracked-error {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .bs-set-rsn {
+      padding: 0.25rem 0.7rem;
+      font-size: 0.78rem;
+    }
+
+    @media (max-width: 760px) {
+      .bs-heat-featured {
+        grid-template-columns: 1fr;
+      }
+
+      .bs-heat-featured .bs-cell:first-child {
+        grid-row: auto;
+        min-height: 96px;
+      }
+
+      .bs-heat-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .bs-total-row strong {
+        font-size: 2.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="page">
+    <section class="page-title">
+      <p class="eyebrow">Battleship Bingo</p>
+      <h1>Boss Kills During Bingo</h1>
+      <p>
+        Every boss killed by a signed-up member since the competition started,
+        refreshed every two hours from Wise Old Man.
+      </p>
+    </section>
+
+    <div class="bs-staff-toolbar" id="bsStaffToolbar">
+      <button class="btn secondary" id="bsRefreshBtn" type="button">Refresh Next Batch</button>
+      <button class="btn secondary danger" id="bsResetBtn" type="button">Reset Baseline</button>
+    </div>
+
+    <section id="bsContent" class="bs-notice">Loading boss kill totals...</section>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="script.js?v=20260709-bstats-2"></script>
+  <script src="battleship-stats.js?v=20260709-bstats-2"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "ironkin-bingo-boss-tracker",
+  "main": "workers/bingo-boss-tracker-cron.js",
+  "compatibility_date": "2026-05-26",
+  "triggers": {
+    "crons": ["0 */2 * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

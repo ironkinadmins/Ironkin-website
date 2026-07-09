@@ -4,3 +4,6 @@
 !.dev.vars.example
 .env*
 !.env.example
+
+# local dev seed endpoint - never deploy
+functions/api/dev-seed.js
