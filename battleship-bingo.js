@@ -595,23 +595,38 @@ function renderProofGroup(title, proofs, allowActions) {
     </section>`;
 }
 
+function isPluginTestProof(proof) {
+  const note = String(proof?.note || "").toLowerCase();
+  const tileName = String(proof?.tileName || "").toLowerCase();
+  const bingoId = String(proof?.bingoId || "").toLowerCase();
+  return Boolean(
+    proof?.isTest ||
+    bingoId === "test-bingo" ||
+    tileName.includes("plugin test") ||
+    note.includes("plugin test") ||
+    note.includes("test only") ||
+    note.includes("runelite plugin proof upload")
+  );
+}
+
 function getProofTileName(proof) {
   const tile = bingoState.tiles[proof.tileIndex] || {};
-  return proof.tileName || tile.name || (proof.isTest ? "Plugin Test" : `Tile ${proof.tileIndex + 1}`);
+  return proof.tileName || tile.name || (isPluginTestProof(proof) ? "Plugin Test" : `Tile ${proof.tileIndex + 1}`);
 }
 
 function renderCompactProof(proof, allowActions) {
+  const isTestProof = isPluginTestProof(proof);
   return `
-    <div class="active-proof-row status-${escapeAttr(proof.status)} ${proof.isTest ? "is-test-proof" : ""}">
+    <div class="active-proof-row status-${escapeAttr(proof.status)} ${isTestProof ? "is-test-proof" : ""}">
       <strong>${escapeHtml(getProofTileName(proof))} ${proof.quantity > 1 ? `<small>x${escapeHtml(proof.quantity)}</small>` : ""}</strong>
-      <span>${escapeHtml(proof.player || "Unknown")} • ${proof.isTest ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)}</span>
-      ${isBingoStaff && (allowActions || proof.isTest) ? `
+      <span>${escapeHtml(proof.player || "Unknown")} • ${isTestProof ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)}</span>
+      ${isBingoStaff && (allowActions || isTestProof) ? `
         <div class="proof-actions compact">
-          ${allowActions ? `
+          ${allowActions && proof.status === "pending" ? `
             <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
             <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
           ` : ""}
-          ${proof.isTest ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
+          ${isTestProof ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
         </div>` : ""}
     </div>`;
 }
@@ -1304,28 +1319,29 @@ function renderProofs() {
   }
   list.innerHTML = bingoState.proofs.map(proof => {
     const tile = bingoState.tiles[proof.tileIndex] || {};
+    const isTestProof = isPluginTestProof(proof);
     const qty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
     const required = getTileQuantity(tile);
     const completed = Math.min(getTileCompletedQuantity(tile), required);
     const remaining = Math.max(0, required - completed);
-    const progressText = proof.isTest ? "Plugin connectivity test proof" : (required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile");
+    const progressText = isTestProof ? "Plugin connectivity test proof" : (required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile");
     return `
-      <div class="proof-card status-${escapeAttr(proof.status)} ${proof.isTest ? "is-test-proof" : ""}">
+      <div class="proof-card status-${escapeAttr(proof.status)} ${isTestProof ? "is-test-proof" : ""}">
         <div>
           <strong>${escapeHtml(getProofTileName(proof))} ${qty > 1 ? `<small>x${escapeHtml(qty)}</small>` : ""}</strong>
-          <span>${proof.isTest ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
+          <span>${isTestProof ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
           <p>${escapeHtml(progressText)}</p>
           ${proof.note ? `<p>${escapeHtml(proof.note)}</p>` : ""}
           ${proof.url ? `<a href="${escapeAttr(proof.url)}" target="_blank" rel="noopener">Open proof</a>` : ""}
         </div>
         <em>${escapeHtml(proof.status)}</em>
-        ${isBingoStaff && (proof.status === "pending" || proof.isTest) ? `
+        ${isBingoStaff && (proof.status === "pending" || isTestProof) ? `
           <div class="proof-actions">
             ${proof.status === "pending" ? `
               <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
               <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
             ` : ""}
-            ${proof.isTest ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
+            ${isTestProof ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
           </div>` : ""}
       </div>`;
   }).join("");
@@ -1361,8 +1377,10 @@ async function reviewProof(proofId, action) {
   const proof = proofIndex >= 0 ? bingoState.proofs[proofIndex] : null;
   if (!proof) return;
 
+  const isTestProof = isPluginTestProof(proof);
+
   if (action === "delete") {
-    if (!proof.isTest) return alert("Only plugin test proofs can be deleted from here.");
+    if (!isTestProof) return alert("Only plugin test proofs can be deleted from here.");
     if (!confirm("Delete this plugin test proof?")) return;
     bingoState.proofs.splice(proofIndex, 1);
     addLog(`Deleted plugin test proof for ${proof.player || "Unknown"}.`);
@@ -1372,7 +1390,8 @@ async function reviewProof(proofId, action) {
 
   if (proof.status !== "pending") return;
 
-  if (proof.isTest) {
+  if (isTestProof) {
+    proof.isTest = true;
     proof.status = action === "reject" ? "rejected" : "approved";
     addLog(`${proof.status === "approved" ? "Approved" : "Rejected"} plugin test proof for ${proof.player || "Unknown"}.`);
     await saveBingoState();
