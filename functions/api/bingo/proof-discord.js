@@ -40,25 +40,34 @@ function getItemName(state, proof) {
   return proof?.itemid ? `Item ID ${proof.itemid}` : "Unknown item";
 }
 
-function statusTitle(proof, action) {
-  const isTest = isPluginTestProof(proof);
-  if (action === "approved") return isTest ? "Plugin Test Proof Approved" : "Bingo Proof Approved";
-  if (action === "rejected") return isTest ? "Plugin Test Proof Rejected" : "Bingo Proof Rejected";
-  if (action === "deleted") return isTest ? "Plugin Test Proof Deleted" : "Bingo Proof Deleted";
-  return isTest ? "Plugin Test Proof Updated" : "Bingo Proof Updated";
+function proofEmbedColor(action) {
+  if (action === "approved") return 0x2ecc71;
+  if (action === "rejected") return 0xe74c3c;
+  if (action === "deleted") return 0x95a5a6;
+  return 0xf1c40f;
 }
 
-function buildUpdatedContent(state, proof, action) {
-  return [
-    `**${statusTitle(proof, action)}**`,
-    "",
-    `Player: ${proof?.player || "Unknown"}`,
-    `Tile: ${getTileName(state, proof)}`,
-    `Item: ${getItemName(state, proof)}`,
-    `Status: ${action.charAt(0).toUpperCase()}${action.slice(1)}`,
-    "",
-    `Review: https://ironkinclan.com/battleship-bingo.html`
-  ].join("\n");
+function statusTitle(proof, action) {
+  const isTest = isPluginTestProof(proof);
+  const status = action.charAt(0).toUpperCase() + action.slice(1);
+  return `${isTest ? "Plugin Test Proof" : "Bingo Proof"} ${status}`;
+}
+
+function buildStatusEmbed(state, proof, action) {
+  const status = action.charAt(0).toUpperCase() + action.slice(1);
+  return {
+    title: statusTitle(proof, action),
+    color: proofEmbedColor(action),
+    fields: [
+      { name: "Player", value: String(proof?.player || "Unknown"), inline: true },
+      { name: "Tile", value: String(getTileName(state, proof)), inline: true },
+      { name: "Item", value: String(getItemName(state, proof)), inline: true },
+      { name: "Status", value: status, inline: true },
+      { name: "Review", value: "https://ironkinclan.com/battleship-bingo.html", inline: false }
+    ],
+    footer: { text: `Proof ID: ${proof?.id || "Unknown"}` },
+    timestamp: new Date().toISOString()
+  };
 }
 
 async function getState(env) {
@@ -96,7 +105,8 @@ export async function onRequestPost({ request, env }) {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      content: buildUpdatedContent(state, proof, action),
+      content: "",
+      embeds: [buildStatusEmbed(state, proof, action)],
       allowed_mentions: { parse: [] }
     })
   });

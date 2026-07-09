@@ -139,30 +139,43 @@ function appendLog(board, text) {
   board.log = Array.isArray(board.log) ? [entry, ...board.log].slice(0, 120) : [entry];
 }
 
+function proofEmbedColor(status) {
+  if (status === "approved") return 0x2ecc71;
+  if (status === "rejected") return 0xe74c3c;
+  if (status === "deleted") return 0x95a5a6;
+  return 0xf1c40f;
+}
+
+function buildProofEmbed(proof, details = {}, status = "pending", request = null) {
+  const origin = request ? getOrigin(request) : "https://ironkinclan.com";
+  const reviewUrl = `${origin}/battleship-bingo.html`;
+  const isTest = Boolean(proof.isTest || proof.bingoId === TEST_BINGO_ID);
+  const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+  const titleBase = isTest ? "Plugin Test Proof" : "Bingo Proof";
+  const title = `${titleBase} ${statusText}`;
+  const tileName = details.tileName || proof.tileName || (Number.isInteger(proof.tileIndex) && proof.tileIndex >= 0 ? `Tile ${proof.tileIndex + 1}` : "Unknown tile");
+  const itemName = details.itemName || (proof.itemid ? `Item ID ${proof.itemid}` : "Unknown item");
+
+  return {
+    title,
+    color: proofEmbedColor(status),
+    fields: [
+      { name: "Player", value: String(proof.player || "Unknown"), inline: true },
+      { name: "Tile", value: String(tileName), inline: true },
+      { name: "Item", value: String(itemName), inline: true },
+      { name: "Status", value: statusText, inline: true },
+      { name: "Review", value: reviewUrl, inline: false }
+    ],
+    footer: { text: `Proof ID: ${proof.id}` },
+    timestamp: new Date().toISOString()
+  };
+}
+
 async function notifyPendingProofDiscord(env, request, proof, details = {}) {
   const webhookUrl = env.DISCORD_PROOF_WEBHOOK_URL;
   if (!webhookUrl) return "";
 
   const councilRoleId = env.COUNCIL_MEMBER_ROLE_ID || "1515576495844757524";
-  const origin = getOrigin(request);
-  const reviewUrl = `${origin}/battleship-bingo.html`;
-  const isTest = Boolean(proof.isTest || proof.bingoId === TEST_BINGO_ID);
-
-  const title = isTest ? "Plugin Test Proof Pending" : "New Bingo Proof Pending";
-  const tileLine = details.tileName || proof.tileName || (Number.isInteger(proof.tileIndex) && proof.tileIndex >= 0 ? `Tile ${proof.tileIndex + 1}` : "Plugin Test");
-  const itemLine = details.itemName || (proof.itemid ? `Item ID ${proof.itemid}` : "Unknown item");
-
-  const content = [
-    `<@&${councilRoleId}>`,
-    "",
-    `**${title}**`,
-    "",
-    `Player: ${proof.player || "Unknown"}`,
-    `Tile: ${tileLine}`,
-    `Item: ${itemLine}`,
-    "",
-    `Review: ${reviewUrl}`
-  ].join("\n");
 
   try {
     const separator = webhookUrl.includes("?") ? "&" : "?";
@@ -170,7 +183,8 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content,
+        content: `<@&${councilRoleId}>`,
+        embeds: [buildProofEmbed(proof, details, "pending", request)],
         allowed_mentions: {
           parse: [],
           roles: [councilRoleId]
@@ -190,7 +204,6 @@ async function notifyPendingProofDiscord(env, request, proof, details = {}) {
     return "";
   }
 }
-
 
 export async function onRequestGet(context) {
   const { params, env } = context;
