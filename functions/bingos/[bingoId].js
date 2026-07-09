@@ -139,6 +139,48 @@ function appendLog(board, text) {
   board.log = Array.isArray(board.log) ? [entry, ...board.log].slice(0, 120) : [entry];
 }
 
+async function notifyPendingProofDiscord(env, request, proof, details = {}) {
+  const webhookUrl = env.DISCORD_PROOF_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const councilRoleId = env.COUNCIL_MEMBER_ROLE_ID || "1515576495844757524";
+  const origin = getOrigin(request);
+  const reviewUrl = `${origin}/battleship-bingo.html`;
+  const isTest = Boolean(proof.isTest || proof.bingoId === TEST_BINGO_ID);
+
+  const title = isTest ? "🔧 Plugin Test Proof Pending" : "📥 New Bingo Proof Pending";
+  const tileLine = details.tileName || proof.tileName || (Number.isInteger(proof.tileIndex) && proof.tileIndex >= 0 ? `Tile ${proof.tileIndex + 1}` : "Plugin Test");
+  const itemLine = details.itemName || (proof.itemid ? `Item ID ${proof.itemid}` : "Unknown item");
+
+  const content = [
+    `<@&${councilRoleId}>`,
+    "",
+    `**${title}**`,
+    `👤 **Player:** ${proof.player || "Unknown"}`,
+    `🎲 **Bingo:** ${proof.bingoId || "Unknown"}`,
+    `🎯 **Tile:** ${tileLine}`,
+    `📦 **Item:** ${itemLine}`,
+    `🔎 **Review:** ${reviewUrl}`
+  ].join("\n");
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content,
+        allowed_mentions: {
+          parse: [],
+          roles: [councilRoleId]
+        }
+      })
+    });
+  } catch (error) {
+    console.warn("Failed to send pending proof Discord notification", error);
+  }
+}
+
+
 export async function onRequestGet(context) {
   const { params, env } = context;
   const bingoId = String(params.bingoId || "").trim();
@@ -218,6 +260,7 @@ export async function onRequestPost(context) {
     board.proofs = board.proofs.slice(0, 300);
     appendLog(board, `${proof.player} submitted a RuneLite plugin test proof.`);
     await saveBoard(env, board);
+    await notifyPendingProofDiscord(env, request, proof, { tileName: proof.tileName, itemName: "Bones" });
 
     return Response.json({
       success: true,
@@ -278,6 +321,10 @@ export async function onRequestPost(context) {
   appendLog(board, `${player} auto-submitted plugin proof for ${tile.name || `Tile ${match.tileIndex + 1}`}.`);
 
   await saveBoard(env, board);
+  await notifyPendingProofDiscord(env, request, proof, {
+    tileName: tile.name || `Tile ${match.tileIndex + 1}`,
+    itemName: tile.name || `Item ID ${itemId}`
+  });
 
   return Response.json({
     success: true,
