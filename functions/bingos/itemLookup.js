@@ -342,7 +342,7 @@ const TILE_ITEM_IDS = {
   20997, 
   20849,
   22386
-]
+],
   "any dt2 unique": [
     26241,
     26243,
