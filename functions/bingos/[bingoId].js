@@ -2,6 +2,9 @@ const BOARD_KEY = "bingo:state:v2";
 const SIGNUPS_KEY = "bingo:signups";
 const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
 
+const TEST_BINGO_ID = "test-bingo";
+const TEST_BINGO_ITEMS = [{ id: 526 }];
+
 // Website-only compatibility layer for the current RuneLite plugin.
 // Add board aliases here when a tile is not a direct item name or when it means several items.
 // The endpoint will also read tile.itemId / tile.itemIds / tile.items if the board stores ids later.
@@ -184,6 +187,9 @@ export async function onRequestGet(context) {
   const { params, env } = context;
   const bingoId = String(params.bingoId || "").trim();
 
+  if (bingoId === TEST_BINGO_ID) {
+    return Response.json({ bingoId, items: TEST_BINGO_ITEMS });
+  }
   const board = await getBoard(env);
   const items = getTrackedItems(board);
 
@@ -194,6 +200,9 @@ export async function onRequestPost(context) {
   const { request, params, env } = context;
   const bingoId = String(params.bingoId || "").trim();
   const pluginUser = pluginUserFromContext(context);
+  if (bingoId === TEST_BINGO_ID) {
+    return Response.json({ success: true, message: "Plugin test successful" });
+  }
 
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
