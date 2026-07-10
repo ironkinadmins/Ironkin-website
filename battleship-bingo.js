@@ -821,7 +821,7 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile, team))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
