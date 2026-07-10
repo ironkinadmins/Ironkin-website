@@ -165,8 +165,10 @@ async function loadBingoState() {
       throw new Error(data.error || "Could not load board.");
     }
     const data = await response.json();
-    if (!isBingoStaff && ["ember", "ash"].includes(data.viewerTeam)) {
+    if (["ember", "ash"].includes(data.viewerTeam)) {
       currentUserBingoTeam = data.viewerTeam;
+      const teamSelect = document.getElementById("proofTeamSelect");
+      if (teamSelect) teamSelect.value = currentUserBingoTeam;
     }
     bingoState = normaliseState(data);
     renderAll();
@@ -806,7 +808,9 @@ function renderBoardToolbar() {
   if (activeControls) activeControls.style.display = isActive ? "flex" : "none";
   if (proofTeamSelect) {
     proofTeamSelect.style.display = isActive && isBingoStaff ? "" : "none";
-    if (!isBingoStaff && currentUserBingoTeam) proofTeamSelect.value = currentUserBingoTeam;
+    if (currentUserBingoTeam && !proofTeamSelect.dataset.userChanged) {
+      proofTeamSelect.value = currentUserBingoTeam;
+    }
   }
   if (attackBtn) attackBtn.classList.toggle("active", activeBoardMode === "attack");
   if (watersBtn) watersBtn.classList.toggle("active", activeBoardMode === "waters");
@@ -1867,7 +1871,10 @@ function bindBingoControls() {
   document.getElementById("attackBoardBtn")?.addEventListener("click", () => { activeBoardMode = "attack"; renderBingoBoard(); });
   document.getElementById("yourWatersBtn")?.addEventListener("click", () => { activeBoardMode = "waters"; renderBingoBoard(); });
   document.getElementById("openProofTileSelectorBtn")?.addEventListener("click", openProofTileSelector);
-  document.getElementById("proofTeamSelect")?.addEventListener("change", () => renderBingoBoard());
+  document.getElementById("proofTeamSelect")?.addEventListener("change", event => {
+    event.currentTarget.dataset.userChanged = "true";
+    renderBingoBoard();
+  });
   document.getElementById("closeProofTileModal")?.addEventListener("click", closeProofTileSelector);
   document.getElementById("proofTileModal")?.addEventListener("click", event => {
     if (event.target.id === "proofTileModal") closeProofTileSelector();

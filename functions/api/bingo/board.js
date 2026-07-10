@@ -246,7 +246,8 @@ function redactOpponentFleet(state, memberTeam) {
 }
 
 function publicStateForRequest(state, isStaff, memberTeam = null) {
-  if (isStaff) return state;
+  const viewerTeam = memberTeam === "team2" ? "ash" : memberTeam === "team1" ? "ember" : null;
+  if (isStaff) return { ...state, viewerTeam };
   if (!isBoardFullyRevealed(state)) return publicWaitingState(state);
   return redactOpponentFleet(state, memberTeam);
 }
@@ -374,18 +375,15 @@ export async function onRequestGet({ request, env }) {
   }
 
   const isStaff = isStaffSession(session);
-  let memberTeam = null;
-  if (!isStaff) {
-    const signupsRaw = await env.DROPS_KV.get("bingo:signups");
-    const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
-    const signup = Array.isArray(signups) ? signups.find(item => item.discordId === session.id) : null;
-    memberTeam = rosterTeamForSession(session, signup);
-    if (!memberTeam) {
-      return Response.json(
-        { error: "You are not assigned to a Battleship Bingo team." },
-        { status: 403, headers: { "Cache-Control": "no-store" } }
-      );
-    }
+  const signupsRaw = await env.DROPS_KV.get("bingo:signups");
+  const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
+  const signup = Array.isArray(signups) ? signups.find(item => item.discordId === session.id) : null;
+  const memberTeam = rosterTeamForSession(session, signup);
+  if (!isStaff && !memberTeam) {
+    return Response.json(
+      { error: "You are not assigned to a Battleship Bingo team." },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   const saved = await env.DROPS_KV.get("bingo:state:v2");
