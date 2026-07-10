@@ -25,6 +25,7 @@ const DEFAULT_ITEMS = [
 
 let bingoState = createDefaultState();
 let isBingoStaff = false;
+let isBingoSignedIn = false;
 let activeTileIndex = null;
 let wikiSearchTimer = null;
 let placingTeam = null;
@@ -117,26 +118,61 @@ function normaliseShips(ships) {
 
 async function checkBingoStaff() {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch("/api/auth/me", { cache: "no-store" });
     const data = await response.json();
     const roles = data?.user?.roles || [];
-    isBingoStaff = Boolean(data.signedIn && roles.some(role => STAFF_ROLE_IDS.includes(role)));
+    isBingoSignedIn = data?.signedIn === true;
+    isBingoStaff = Boolean(isBingoSignedIn && roles.some(role => STAFF_ROLE_IDS.includes(role)));
   } catch {
+    isBingoSignedIn = false;
     isBingoStaff = false;
   }
   document.getElementById("bingoAdminActions")?.style.setProperty("display", isBingoStaff ? "block" : "none");
   document.getElementById("activeGameAdminActions")?.style.setProperty("display", isBingoStaff ? "block" : "none");
+  return isBingoSignedIn;
 }
 
 async function loadBingoState() {
+  if (!isBingoSignedIn) {
+    showBingoLoginRequired();
+    return;
+  }
+
   try {
-    const response = await fetch("/api/bingo/board");
+    const response = await fetch("/api/bingo/board", { cache: "no-store" });
+    if (response.status === 401) {
+      isBingoSignedIn = false;
+      showBingoLoginRequired();
+      return;
+    }
     if (!response.ok) throw new Error("Could not load board.");
     bingoState = normaliseState(await response.json());
+    renderAll();
   } catch {
+    // Never load a cached board for a logged-out user. Local storage is only
+    // an editing fallback after a valid signed-in session has been confirmed.
+    if (!isBingoSignedIn) {
+      showBingoLoginRequired();
+      return;
+    }
     bingoState = normaliseState(JSON.parse(localStorage.getItem("ironkin:bingo:state") || "null"));
+    renderAll();
   }
-  renderAll();
+}
+
+function showBingoLoginRequired() {
+  const page = document.querySelector("main.bingo-page");
+  if (!page) return;
+  page.innerHTML = `
+    <section class="bingo-status-card" style="margin-top:2rem;">
+      <div>
+        <strong>Sign in required</strong>
+        <span>You must be signed in with Discord to view Battleship Bingo.</span>
+      </div>
+      <div class="bingo-status-actions">
+        <a class="btn primary" href="/api/auth/login">Sign in with Discord</a>
+      </div>
+    </section>`;
 }
 
 async function saveBingoState() {
@@ -2047,7 +2083,11 @@ function escapeAttr(value) {
 }
 
 (async function initBingo() {
+  const signedIn = await checkBingoStaff();
+  if (!signedIn) {
+    showBingoLoginRequired();
+    return;
+  }
   bindBingoControls();
-  await checkBingoStaff();
   await loadBingoState();
 })();

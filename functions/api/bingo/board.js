@@ -295,7 +295,15 @@ async function updateDiscordMessagesForProofChanges(env, request, previousState,
 }
 
 export async function onRequestGet({ request, env }) {
-  const isStaff = isStaffSession(await getSession(request, env));
+  const session = await getSession(request, env);
+  if (!session) {
+    return Response.json(
+      { error: "Sign in with Discord to view Battleship Bingo." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  const isStaff = isStaffSession(session);
   const saved = await env.DROPS_KV.get("bingo:state:v2");
   if (saved) return Response.json(publicStateForRequest(JSON.parse(saved), isStaff));
 

@@ -18,7 +18,15 @@ function hasValidSecret(request, env) {
   return provided === expected;
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+  const session = await getSession(request, env);
+  if (!session) {
+    return Response.json(
+      { error: "Sign in with Discord to view Battleship Bingo stats." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const [state, settings] = await Promise.all([
     getTrackerState(env),
     getTrackerSettings(env)
