@@ -50,7 +50,7 @@ const TEAM_TWO_MEMBERS = [
   "Mahorraga",
   "nihaowdi",
   "Noxyy",
-  Noxvyre,
+  "Noxvyre",
   "of skies",
   "of skys",
   "Rad Effects",
