@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
+import { TEAM_ONE_NAME, TEAM_TWO_NAME, rosterTeamForSession, rosterTeamForName } from "./_teams.js";
 const SIGNUPS_KEY = "bingo:signups";
 function getDisplayName(session) {
   return (
@@ -56,8 +57,8 @@ async function getBingoSettings(env) {
     enableViewEvent,
     registrationEndsAt,
     boardRevealAt,
-    teamOneName: parsed.teamOneName || "Team 1",
-    teamTwoName: parsed.teamTwoName || "Team 2"
+    teamOneName: TEAM_ONE_NAME,
+    teamTwoName: TEAM_TWO_NAME
   };
 }
 
@@ -88,6 +89,16 @@ export async function onRequestGet({ request, env }) {
     getSignups(env),
     getBingoSettings(env)
   ]);
+
+  let changed = false;
+  for (const signup of signups) {
+    const rosterTeam = rosterTeamForName(signup.displayName) || rosterTeamForName(signup.username);
+    if (rosterTeam && signup.team !== rosterTeam) {
+      signup.team = rosterTeam;
+      changed = true;
+    }
+  }
+  if (changed) await saveSignups(env, signups);
 
   signups.sort((a, b) =>
     String(a.displayName || "").localeCompare(String(b.displayName || ""))
@@ -138,6 +149,7 @@ export async function onRequestPost({ request, env }) {
     existing.displayName = getDisplayName(session);
     existing.username = session.username;
     existing.avatar = session.avatar;
+    existing.team = rosterTeamForSession(session, existing) || existing.team;
 
     await saveSignups(env, signups);
 
@@ -162,7 +174,7 @@ export async function onRequestPost({ request, env }) {
     username: session.username,
     displayName: getDisplayName(session),
     avatar: session.avatar,
-    team: chooseBalancedTeam(signups),
+    team: rosterTeamForSession(session) || chooseBalancedTeam(signups),
     signedUpAt: new Date().toISOString()
   };
 

@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
+import { TEAM_ONE_NAME, TEAM_TWO_NAME, rosterTeamForSession } from "./_teams.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
@@ -44,8 +45,8 @@ function defaultState() {
     updatedAt: new Date().toISOString(),
     tiles: emptyTiles(),
     teams: {
-      ember: defaultTeam("ember", "Ember Fleet"),
-      ash: defaultTeam("ash", "Ash Fleet")
+      ember: defaultTeam("ember", TEAM_ONE_NAME),
+      ash: defaultTeam("ash", TEAM_TWO_NAME)
     },
     proofs: [],
     attacks: [],
@@ -98,7 +99,7 @@ function sanitiseState(body) {
         ...base.teams.ember,
         ...(body.teams?.ember || {}),
         key: "ember",
-        name: clampString(body.teams?.ember?.name || "Ember Fleet", 80),
+        name: clampString(body.teams?.ember?.name || TEAM_ONE_NAME, 80),
         captain: clampString(body.teams?.ember?.captain, 80),
         ships: cleanShips(body.teams?.ember?.ships),
         attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : [],
@@ -108,7 +109,7 @@ function sanitiseState(body) {
         ...base.teams.ash,
         ...(body.teams?.ash || {}),
         key: "ash",
-        name: clampString(body.teams?.ash?.name || "Ash Fleet", 80),
+        name: clampString(body.teams?.ash?.name || TEAM_TWO_NAME, 80),
         captain: clampString(body.teams?.ash?.captain, 80),
         ships: cleanShips(body.teams?.ash?.ships),
         attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : [],
@@ -167,8 +168,8 @@ function publicWaitingState(state) {
     boardHiddenReason: "The Battleship Bingo board has not been revealed yet.",
     tiles: emptyTiles(),
     teams: {
-      ember: { ...base.teams.ember, name: clampString(state?.teams?.ember?.name || "Ember Fleet", 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false },
-      ash: { ...base.teams.ash, name: clampString(state?.teams?.ash?.name || "Ash Fleet", 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false }
+      ember: { ...base.teams.ember, name: clampString(state?.teams?.ember?.name || TEAM_ONE_NAME, 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false },
+      ash: { ...base.teams.ash, name: clampString(state?.teams?.ash?.name || TEAM_TWO_NAME, 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false }
     },
     proofs: [],
     attacks: [],
@@ -176,9 +177,29 @@ function publicWaitingState(state) {
   };
 }
 
-function publicStateForRequest(state, isStaff) {
-  if (isStaff || isBoardFullyRevealed(state)) return state;
-  return publicWaitingState(state);
+function redactOpponentFleet(state, memberTeam) {
+  if (!memberTeam) return publicWaitingState(state);
+  const ownKey = memberTeam === "team2" ? "ash" : "ember";
+  const opponentKey = ownKey === "ember" ? "ash" : "ember";
+  return {
+    ...state,
+    viewerTeam: ownKey,
+    teams: {
+      ...state.teams,
+      [ownKey]: { ...state.teams[ownKey] },
+      [opponentKey]: {
+        ...state.teams[opponentKey],
+        ships: cleanShips([])
+      }
+    },
+    proofs: Array.isArray(state.proofs) ? state.proofs.filter(proof => proof.team === ownKey) : []
+  };
+}
+
+function publicStateForRequest(state, isStaff, memberTeam = null) {
+  if (isStaff) return state;
+  if (!isBoardFullyRevealed(state)) return publicWaitingState(state);
+  return redactOpponentFleet(state, memberTeam);
 }
 
 
@@ -304,8 +325,26 @@ export async function onRequestGet({ request, env }) {
   }
 
   const isStaff = isStaffSession(session);
+  let memberTeam = null;
+  if (!isStaff) {
+    const signupsRaw = await env.DROPS_KV.get("bingo:signups");
+    const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
+    const signup = Array.isArray(signups) ? signups.find(item => item.discordId === session.id) : null;
+    memberTeam = rosterTeamForSession(session, signup);
+    if (!memberTeam) {
+      return Response.json(
+        { error: "You are not assigned to a Battleship Bingo team." },
+        { status: 403, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+  }
+
   const saved = await env.DROPS_KV.get("bingo:state:v2");
-  if (saved) return Response.json(publicStateForRequest(JSON.parse(saved), isStaff));
+  if (saved) {
+    return Response.json(publicStateForRequest(JSON.parse(saved), isStaff, memberTeam), {
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
 
   const oldSaved = await env.DROPS_KV.get("bingo:board");
   if (oldSaved) {
@@ -316,10 +355,14 @@ export async function onRequestGet({ request, env }) {
     }
     migrated.locked = Boolean(old.locked);
     migrated.updatedAt = old.updatedAt || new Date().toISOString();
-    return Response.json(publicStateForRequest(migrated, isStaff));
+    return Response.json(publicStateForRequest(migrated, isStaff, memberTeam), {
+      headers: { "Cache-Control": "no-store" }
+    });
   }
 
-  return Response.json(publicStateForRequest(defaultState(), isStaff));
+  return Response.json(publicStateForRequest(defaultState(), isStaff, memberTeam), {
+    headers: { "Cache-Control": "no-store" }
+  });
 }
 
 export async function onRequestPost({ request, env }) {

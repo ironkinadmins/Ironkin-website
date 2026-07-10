@@ -9,8 +9,8 @@ const SHIPS = [
   { key: "patrol", name: "Patrol Boat", size: 2 }
 ];
 const TEAMS = {
-  ember: { name: "Ember Fleet", emoji: "🔥" },
-  ash: { name: "Ash Fleet", emoji: "⚓" }
+  ember: { name: "Apey's Apes", emoji: "🦍" },
+  ash: { name: "The Harambe Hunters", emoji: "⚓" }
 };
 const DEFAULT_ITEMS = [
   { name: "Abyssal whip", image: "https://oldschool.runescape.wiki/images/thumb/Abyssal_whip_detail.png/64px-Abyssal_whip_detail.png" },
@@ -26,6 +26,7 @@ const DEFAULT_ITEMS = [
 let bingoState = createDefaultState();
 let isBingoStaff = false;
 let isBingoSignedIn = false;
+let currentUserBingoTeam = null;
 let activeTileIndex = null;
 let wikiSearchTimer = null;
 let placingTeam = null;
@@ -132,6 +133,19 @@ async function checkBingoStaff() {
   return isBingoSignedIn;
 }
 
+async function loadCurrentUserBingoTeam() {
+  try {
+    const response = await fetch("/api/bingo/signups", { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const team = data?.currentSignup?.team;
+    currentUserBingoTeam = team === "team2" ? "ash" : team === "team1" ? "ember" : null;
+  } catch {
+    currentUserBingoTeam = null;
+  }
+  return currentUserBingoTeam;
+}
+
 async function loadBingoState() {
   if (!isBingoSignedIn) {
     showBingoLoginRequired();
@@ -145,18 +159,32 @@ async function loadBingoState() {
       showBingoLoginRequired();
       return;
     }
-    if (!response.ok) throw new Error("Could not load board.");
-    bingoState = normaliseState(await response.json());
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Could not load board.");
+    }
+    const data = await response.json();
+    if (!isBingoStaff && ["ember", "ash"].includes(data.viewerTeam)) {
+      currentUserBingoTeam = data.viewerTeam;
+    }
+    bingoState = normaliseState(data);
     renderAll();
-  } catch {
-    // Never load a cached board for a logged-out user. Local storage is only
-    // an editing fallback after a valid signed-in session has been confirmed.
-    if (!isBingoSignedIn) {
-      showBingoLoginRequired();
+  } catch (error) {
+    if (isBingoStaff) {
+      bingoState = normaliseState(JSON.parse(localStorage.getItem("ironkin:bingo:state") || "null"));
+      renderAll();
       return;
     }
-    bingoState = normaliseState(JSON.parse(localStorage.getItem("ironkin:bingo:state") || "null"));
-    renderAll();
+    const page = document.querySelector("main.bingo-page");
+    if (page) {
+      page.innerHTML = `
+        <section class="bingo-status-card" style="margin-top:2rem;">
+          <div>
+            <strong>Team access unavailable</strong>
+            <span>${escapeHtml(error?.message || "Your Battleship Bingo team could not be confirmed.")}</span>
+          </div>
+        </section>`;
+    }
   }
 }
 
@@ -775,7 +803,10 @@ function renderBoardToolbar() {
   const isActive = bingoState.phase === "active" || bingoState.phase === "complete";
 
   if (activeControls) activeControls.style.display = isActive ? "flex" : "none";
-  if (proofTeamSelect) proofTeamSelect.style.display = isActive ? "" : "none";
+  if (proofTeamSelect) {
+    proofTeamSelect.style.display = isActive && isBingoStaff ? "" : "none";
+    if (!isBingoStaff && currentUserBingoTeam) proofTeamSelect.value = currentUserBingoTeam;
+  }
   if (attackBtn) attackBtn.classList.toggle("active", activeBoardMode === "attack");
   if (watersBtn) watersBtn.classList.toggle("active", activeBoardMode === "waters");
 
@@ -793,6 +824,7 @@ function renderBoardToolbar() {
 }
 
 function getSelectedProofTeam() {
+  if (!isBingoStaff && currentUserBingoTeam) return currentUserBingoTeam;
   const selected = document.getElementById("proofTeamSelect")?.value;
   return selected === "ash" ? "ash" : "ember";
 }
@@ -1388,7 +1420,7 @@ function renderProofs() {
 
 async function submitProof() {
   if (activeTileIndex === null) return;
-  const team = document.getElementById("proofTeamSelect").value;
+  const team = getSelectedProofTeam();
   const player = document.getElementById("proofPlayerInput").value.trim();
   const url = document.getElementById("proofUrlInput").value.trim();
   const note = document.getElementById("proofNoteInput").value.trim();
@@ -2089,5 +2121,6 @@ function escapeAttr(value) {
     return;
   }
   bindBingoControls();
+  await loadCurrentUserBingoTeam();
   await loadBingoState();
 })();
