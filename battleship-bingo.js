@@ -95,19 +95,20 @@ function normaliseState(data) {
     : base.tiles;
   while (tiles.length < BINGO_SIZE * BINGO_SIZE) tiles.push({ ...base.tiles[tiles.length], id: tiles.length });
 
-  return {
+  const normalised = {
     ...base,
     ...data,
     size: BINGO_SIZE,
     tiles,
     teams: {
-      ember: { ...base.teams.ember, ...(data.teams?.ember || {}), ships: normaliseShips(data.teams?.ember?.ships) },
-      ash: { ...base.teams.ash, ...(data.teams?.ash || {}), ships: normaliseShips(data.teams?.ash?.ships) }
+      ember: { ...base.teams.ember, ...(data.teams?.ember || {}), key: "ember", name: TEAMS.ember.name, ships: normaliseShips(data.teams?.ember?.ships) },
+      ash: { ...base.teams.ash, ...(data.teams?.ash || {}), key: "ash", name: TEAMS.ash.name, ships: normaliseShips(data.teams?.ash?.ships) }
     },
     proofs: Array.isArray(data.proofs) ? data.proofs : [],
     attacks: Array.isArray(data.attacks) ? data.attacks : [],
     log: Array.isArray(data.log) && data.log.length ? data.log : base.log
   };
+  return normalised;
 }
 
 function normaliseShips(ships) {
@@ -816,8 +817,8 @@ function renderBoardToolbar() {
     const team = getSelectedProofTeam();
     const opponent = getOpponent(team);
     boardToolbarText.innerHTML = activeBoardMode === "attack"
-      ? `<strong>Attacking ${escapeHtml(bingoState.teams[opponent]?.name || TEAMS[opponent].name)}'s Waters</strong>`
-      : `<strong>${escapeHtml(bingoState.teams[team]?.name || TEAMS[team].name)}'s Waters</strong>`;
+      ? `<strong>Attacking ${escapeHtml(TEAMS[opponent].name)}'s Waters</strong>`
+      : `<strong>${escapeHtml(TEAMS[team].name)}'s Waters</strong>`;
   } else {
     boardToolbarText.innerHTML = `<strong>Board Setup</strong><span>Click a tile to edit it. When done, lock the board and assign captains.</span>`;
   }

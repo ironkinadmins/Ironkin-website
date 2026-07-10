@@ -99,7 +99,7 @@ function sanitiseState(body) {
         ...base.teams.ember,
         ...(body.teams?.ember || {}),
         key: "ember",
-        name: clampString(body.teams?.ember?.name || TEAM_ONE_NAME, 80),
+        name: TEAM_ONE_NAME,
         captain: clampString(body.teams?.ember?.captain, 80),
         ships: cleanShips(body.teams?.ember?.ships),
         attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : [],
@@ -109,7 +109,7 @@ function sanitiseState(body) {
         ...base.teams.ash,
         ...(body.teams?.ash || {}),
         key: "ash",
-        name: clampString(body.teams?.ash?.name || TEAM_TWO_NAME, 80),
+        name: TEAM_TWO_NAME,
         captain: clampString(body.teams?.ash?.captain, 80),
         ships: cleanShips(body.teams?.ash?.ships),
         attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : [],
@@ -151,6 +151,55 @@ function sanitiseState(body) {
   };
 }
 
+
+function swapTeamKey(value) {
+  return value === "ember" ? "ash" : value === "ash" ? "ember" : value;
+}
+
+function looksLikeApeys(name) {
+  return /apey/i.test(String(name || ""));
+}
+
+function looksLikeHarambe(name) {
+  return /harambe/i.test(String(name || ""));
+}
+
+// Older saves could have the two named teams stored in the opposite internal slots.
+// This migrates the COMPLETE team state (fleets, captains, proofs and attacks), then
+// permanently fixes ember = Apey's Apes and ash = The Harambe Hunters.
+function canonicaliseTeamSlots(inputState) {
+  const state = sanitiseState(inputState || {});
+  const emberName = inputState?.teams?.ember?.name || state.teams.ember.name;
+  const ashName = inputState?.teams?.ash?.name || state.teams.ash.name;
+  const reversed = looksLikeHarambe(emberName) || looksLikeApeys(ashName);
+
+  if (reversed) {
+    const oldEmber = state.teams.ember;
+    const oldAsh = state.teams.ash;
+    state.teams.ember = { ...oldAsh, key: "ember", name: TEAM_ONE_NAME };
+    state.teams.ash = { ...oldEmber, key: "ash", name: TEAM_TWO_NAME };
+
+    state.proofs = state.proofs.map(proof => ({ ...proof, team: swapTeamKey(proof.team) }));
+    state.attacks = state.attacks.map(attack => ({
+      ...attack,
+      attackingTeam: swapTeamKey(attack.attackingTeam),
+      defendingTeam: swapTeamKey(attack.defendingTeam)
+    }));
+    state.tiles = state.tiles.map(tile => ({
+      ...tile,
+      completedTeam: swapTeamKey(tile.completedTeam)
+    }));
+  }
+
+  state.teams.ember.name = TEAM_ONE_NAME;
+  state.teams.ash.name = TEAM_TWO_NAME;
+  state.teams.ember.key = "ember";
+  state.teams.ash.key = "ash";
+  state.teams.ember.attacks = state.attacks.filter(attack => attack.attackingTeam === "ember");
+  state.teams.ash.attacks = state.attacks.filter(attack => attack.attackingTeam === "ash");
+  return state;
+}
+
 function isBoardFullyRevealed(state) {
   return ["active", "complete"].includes(state?.phase);
 }
@@ -168,8 +217,8 @@ function publicWaitingState(state) {
     boardHiddenReason: "The Battleship Bingo board has not been revealed yet.",
     tiles: emptyTiles(),
     teams: {
-      ember: { ...base.teams.ember, name: clampString(state?.teams?.ember?.name || TEAM_ONE_NAME, 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false },
-      ash: { ...base.teams.ash, name: clampString(state?.teams?.ash?.name || TEAM_TWO_NAME, 80), captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false }
+      ember: { ...base.teams.ember, name: TEAM_ONE_NAME, captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false },
+      ash: { ...base.teams.ash, name: TEAM_TWO_NAME, captain: "", ships: cleanShips([]), attacks: [], fleetConfirmed: false }
     },
     proofs: [],
     attacks: [],
@@ -341,7 +390,13 @@ export async function onRequestGet({ request, env }) {
 
   const saved = await env.DROPS_KV.get("bingo:state:v2");
   if (saved) {
-    return Response.json(publicStateForRequest(JSON.parse(saved), isStaff, memberTeam), {
+    const rawState = JSON.parse(saved);
+    const state = canonicaliseTeamSlots(rawState);
+    // Persist the migration once so every later request uses the same team slots.
+    if (JSON.stringify(rawState) !== JSON.stringify(state)) {
+      await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+    }
+    return Response.json(publicStateForRequest(state, isStaff, memberTeam), {
       headers: { "Cache-Control": "no-store" }
     });
   }
@@ -373,7 +428,7 @@ export async function onRequestPost({ request, env }) {
   const previousRaw = await env.DROPS_KV.get("bingo:state:v2");
   const previousState = previousRaw ? JSON.parse(previousRaw) : defaultState();
   const body = await request.json();
-  const state = sanitiseState(body || {});
+  const state = canonicaliseTeamSlots(body || {});
 
   // Keep Discord proof notifications in sync from the same server-side save
   // that approves/rejects/deletes proofs. This avoids relying on a separate

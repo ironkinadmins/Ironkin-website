@@ -52,5 +52,22 @@ export async function onRequest(context) {
     return Response.redirect(homeUrl.toString(), 302);
   }
 
-  return next();
+  const response = await next();
+
+  // Prevent browsers and edge caches from keeping an older Battleship Bingo page.
+  // The HTML will therefore pick up the newest versioned JavaScript automatically,
+  // without requiring every player to perform a hard refresh.
+  if (signedInOnly) {
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  }
+
+  return response;
 }
