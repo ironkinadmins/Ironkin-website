@@ -21,7 +21,11 @@ function emptyTiles() {
     status: "open",
     completedBy: "",
     completedTeam: "",
-    proofId: ""
+    proofId: "",
+    teamProgress: {
+      ember: { completedQuantity: 0, status: "open", completedBy: "", proofId: "" },
+      ash: { completedQuantity: 0, status: "open", completedBy: "", proofId: "" }
+    }
   }));
 }
 
@@ -68,6 +72,32 @@ function cleanShips(ships) {
   });
 }
 
+function cleanTeamProgress(tile) {
+  const result = {};
+  for (const team of ["ember", "ash"]) {
+    const source = tile?.teamProgress?.[team] || {};
+    result[team] = {
+      completedQuantity: Math.max(0, Number.parseInt(source.completedQuantity ?? 0, 10) || 0),
+      status: ["open", "submitted", "partial", "approved", "rejected"].includes(source.status) ? source.status : "open",
+      completedBy: clampString(source.completedBy, 100),
+      proofId: clampString(source.proofId, 80)
+    };
+  }
+
+  // One-time migration from the former globally shared tile progress.
+  const legacyTeam = tile?.completedTeam === "ash" ? "ash" : tile?.completedTeam === "ember" ? "ember" : null;
+  const legacyCompleted = Math.max(0, Number.parseInt(tile?.completedQuantity ?? tile?.completedQty ?? tile?.progress ?? 0, 10) || 0);
+  if (legacyTeam && legacyCompleted > 0 && !tile?.teamProgress?.[legacyTeam]) {
+    result[legacyTeam] = {
+      completedQuantity: legacyCompleted,
+      status: ["open", "submitted", "partial", "approved", "rejected"].includes(tile.status) ? tile.status : "partial",
+      completedBy: clampString(tile.completedBy, 100),
+      proofId: clampString(tile.proofId, 80)
+    };
+  }
+  return result;
+}
+
 function sanitiseState(body) {
   const base = defaultState();
   const tiles = Array.isArray(body.tiles) ? body.tiles : [];
@@ -82,7 +112,8 @@ function sanitiseState(body) {
       status: ["open", "submitted", "partial", "approved", "rejected"].includes(tile.status) ? tile.status : "open",
       completedBy: clampString(tile.completedBy, 100),
       completedTeam: ["ember", "ash"].includes(tile.completedTeam) ? tile.completedTeam : "",
-      proofId: clampString(tile.proofId, 80)
+      proofId: clampString(tile.proofId, 80),
+      teamProgress: cleanTeamProgress(tile)
     };
   });
 
@@ -187,7 +218,11 @@ function canonicaliseTeamSlots(inputState) {
     }));
     state.tiles = state.tiles.map(tile => ({
       ...tile,
-      completedTeam: swapTeamKey(tile.completedTeam)
+      completedTeam: swapTeamKey(tile.completedTeam),
+      teamProgress: {
+        ember: { ...(tile.teamProgress?.ash || {}) },
+        ash: { ...(tile.teamProgress?.ember || {}) }
+      }
     }));
   }
 

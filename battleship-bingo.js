@@ -82,8 +82,43 @@ function emptyBingoBoard() {
     status: "open",
     completedBy: "",
     completedTeam: "",
-    proofId: ""
+    proofId: "",
+    teamProgress: {
+      ember: { completedQuantity: 0, status: "open", completedBy: "", proofId: "" },
+      ash: { completedQuantity: 0, status: "open", completedBy: "", proofId: "" }
+    }
   }));
+}
+
+function emptyTeamProgress() {
+  return { completedQuantity: 0, status: "open", completedBy: "", proofId: "" };
+}
+
+function normaliseTileProgress(tile) {
+  const progress = {
+    ember: { ...emptyTeamProgress(), ...(tile?.teamProgress?.ember || {}) },
+    ash: { ...emptyTeamProgress(), ...(tile?.teamProgress?.ash || {}) }
+  };
+
+  // Migrate older shared progress to only the team that earned it.
+  const legacyTeam = tile?.completedTeam === "ash" ? "ash" : tile?.completedTeam === "ember" ? "ember" : null;
+  const legacyCompleted = Math.max(0, Number.parseInt(tile?.completedQuantity ?? tile?.completedQty ?? tile?.progress ?? 0, 10) || 0);
+  if (legacyTeam && legacyCompleted > 0 && !tile?.teamProgress?.[legacyTeam]) {
+    progress[legacyTeam] = {
+      completedQuantity: legacyCompleted,
+      status: tile?.status || (legacyCompleted > 0 ? "partial" : "open"),
+      completedBy: tile?.completedBy || "",
+      proofId: tile?.proofId || ""
+    };
+  }
+
+  for (const team of ["ember", "ash"]) {
+    progress[team].completedQuantity = Math.max(0, Number.parseInt(progress[team].completedQuantity ?? 0, 10) || 0);
+    progress[team].status = ["open", "submitted", "partial", "approved", "rejected"].includes(progress[team].status) ? progress[team].status : "open";
+    progress[team].completedBy = String(progress[team].completedBy || "");
+    progress[team].proofId = String(progress[team].proofId || "");
+  }
+  return progress;
 }
 
 function normaliseState(data) {
@@ -91,7 +126,7 @@ function normaliseState(data) {
   if (!data || typeof data !== "object") return base;
   const size = Number(data.size || BINGO_SIZE);
   const tiles = Array.isArray(data.tiles) && data.tiles.length
-    ? data.tiles.slice(0, BINGO_SIZE * BINGO_SIZE).map((tile, index) => ({ ...base.tiles[index], ...tile, id: index }))
+    ? data.tiles.slice(0, BINGO_SIZE * BINGO_SIZE).map((tile, index) => ({ ...base.tiles[index], ...tile, id: index, teamProgress: normaliseTileProgress(tile) }))
     : base.tiles;
   while (tiles.length < BINGO_SIZE * BINGO_SIZE) tiles.push({ ...base.tiles[tiles.length], id: tiles.length });
 
@@ -239,7 +274,8 @@ function resetTileRuntimeProgress(tile, index) {
     completedQuantity: 0,
     completedBy: "",
     completedTeam: "",
-    proofId: ""
+    proofId: "",
+    teamProgress: { ember: emptyTeamProgress(), ash: emptyTeamProgress() }
   };
 }
 
@@ -488,7 +524,7 @@ function renderScore() {
 
     const attackHits = bingoState.attacks.filter(a => a.attackingTeam === team && a.result === "hit").length;
     const attackMisses = bingoState.attacks.filter(a => a.attackingTeam === team && a.result === "miss").length;
-    const approved = bingoState.tiles.filter(t => t.completedTeam === team && t.status === "approved").length;
+    const approved = bingoState.tiles.filter(t => getTileStatus(t, team) === "approved").length;
     return `
       <div class="bingo-score-card ${team}">
         <span>${TEAMS[team].emoji}</span>
@@ -727,36 +763,43 @@ function getTileQuantity(tile) {
   return Math.max(1, Number.parseInt(raw, 10) || 1);
 }
 
-function getTileCompletedQuantity(tile) {
-  const raw = tile?.completedQuantity ?? tile?.completedQty ?? tile?.progress ?? 0;
+function getTileTeamProgress(tile, team = getSelectedProofTeam()) {
+  const key = team === "ash" ? "ash" : "ember";
+  if (!tile.teamProgress) tile.teamProgress = normaliseTileProgress(tile);
+  if (!tile.teamProgress[key]) tile.teamProgress[key] = emptyTeamProgress();
+  return tile.teamProgress[key];
+}
+
+function getTileCompletedQuantity(tile, team = getSelectedProofTeam()) {
+  const raw = getTileTeamProgress(tile, team).completedQuantity ?? 0;
   return Math.max(0, Number.parseInt(raw, 10) || 0);
 }
 
-function getTileRemainingQuantity(tile) {
-  return Math.max(0, getTileQuantity(tile) - getTileCompletedQuantity(tile));
+function getTileRemainingQuantity(tile, team = getSelectedProofTeam()) {
+  return Math.max(0, getTileQuantity(tile) - getTileCompletedQuantity(tile, team));
 }
 
-function getTileProgressMarkup(tile) {
+function getTileProgressMarkup(tile, team = getSelectedProofTeam()) {
   const required = getTileQuantity(tile);
-  const completed = Math.min(getTileCompletedQuantity(tile), required);
+  const completed = Math.min(getTileCompletedQuantity(tile, team), required);
   if (!tile?.name || required <= 1 || completed <= 0) return "";
   const percent = Math.max(0, Math.min(100, Math.round((completed / required) * 100)));
   return `<span class="bingo-progress-line" aria-label="${escapeAttr(completed)} of ${escapeAttr(required)} complete"><i style="width:${escapeAttr(percent)}%"></i></span>`;
 }
 
-function getTileProgressTitle(tile) {
+function getTileProgressTitle(tile, team = getSelectedProofTeam()) {
   const required = getTileQuantity(tile);
-  const completed = Math.min(getTileCompletedQuantity(tile), required);
+  const completed = Math.min(getTileCompletedQuantity(tile, team), required);
   if (!tile?.name || required <= 1) return tile?.name || "Empty";
   return `${tile.name} — ${completed}/${required} complete`;
 }
 
-function getTileStatus(tile) {
+function getTileStatus(tile, team = getSelectedProofTeam()) {
   const required = getTileQuantity(tile);
-  const completed = getTileCompletedQuantity(tile);
+  const completed = getTileCompletedQuantity(tile, team);
   if (completed >= required && tile?.name) return "approved";
   if (completed > 0) return "partial";
-  return tile?.status || "open";
+  return getTileTeamProgress(tile, team).status || "open";
 }
 
 function renderBingoBoard() {
@@ -778,7 +821,7 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile, team))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
@@ -864,7 +907,7 @@ function renderActiveGameBoard(boardEl) {
           <span class="water-drop-bg">
             ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
             ${tile.name ? `<small>${escapeHtml(tile.name)}</small>` : ""}
-            ${getTileProgressMarkup(tile)}
+            ${getTileProgressMarkup(tile, team)}
           </span>
           ${ship ? `<span class="water-ship-cell">${escapeHtml(ship.name.charAt(0))}</span>` : ""}
           ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "✹" : "•"}</strong>` : ""}
@@ -882,12 +925,12 @@ function renderActiveGameBoard(boardEl) {
       classes.push(`attack-${attack.result}`);
       if (isLatestAttack(attack)) classes.push("recent-attack");
     }
-    const tileStatus = getTileStatus(tile);
+    const tileStatus = getTileStatus(tile, team);
     if (tileStatus && tileStatus !== "open") classes.push(`status-${tileStatus}`);
     return `
-      <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${tile.name ? "" : "disabled"}>
+      <button class="${classes.join(" ")}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile, team))}" ${tile.name ? "" : "disabled"}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
-        ${getTileProgressMarkup(tile)}
+        ${getTileProgressMarkup(tile, team)}
         ${attack ? `<strong class="attack-marker">${attack.result === "hit" ? "HIT" : "MISS"}</strong>` : ""}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
         <span>${tile.name ? escapeHtml(tile.name) : "Empty"}</span>
@@ -1395,7 +1438,7 @@ function renderProofs() {
     const isTestProof = isPluginTestProof(proof);
     const qty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
     const required = getTileQuantity(tile);
-    const completed = Math.min(getTileCompletedQuantity(tile), required);
+    const completed = Math.min(getTileCompletedQuantity(tile, proof.team), required);
     const remaining = Math.max(0, required - completed);
     const progressText = isTestProof ? "Plugin connectivity test proof" : (required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile");
     return `
@@ -1430,7 +1473,7 @@ async function submitProof() {
   const url = document.getElementById("proofUrlInput").value.trim();
   const note = document.getElementById("proofNoteInput").value.trim();
   const tile = bingoState.tiles[activeTileIndex] || {};
-  const remaining = Math.max(1, getTileRemainingQuantity(tile) || 1);
+  const remaining = Math.max(1, getTileRemainingQuantity(tile, team) || 1);
   const quantity = Math.max(1, Math.min(remaining, Number.parseInt(document.getElementById("proofQuantityInput")?.value || "1", 10) || 1));
   if (!player || !url) {
     alert("Add your player name and a proof link.");
@@ -1438,8 +1481,9 @@ async function submitProof() {
   }
   const proof = { id: crypto.randomUUID(), tileIndex: activeTileIndex, team, player, url, note, quantity, status: "pending", createdAt: new Date().toISOString() };
   bingoState.proofs.unshift(proof);
-  bingoState.tiles[activeTileIndex].status = getTileCompletedQuantity(bingoState.tiles[activeTileIndex]) > 0 ? "partial" : "submitted";
-  bingoState.tiles[activeTileIndex].proofId = proof.id;
+  const progress = getTileTeamProgress(bingoState.tiles[activeTileIndex], team);
+  progress.status = getTileCompletedQuantity(bingoState.tiles[activeTileIndex], team) > 0 ? "partial" : "submitted";
+  progress.proofId = proof.id;
   addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} x${quantity} (${getTeamDisplayName(team)}).`);
   await saveBingoState();
   closeTileEditor();
@@ -1491,8 +1535,9 @@ async function reviewProof(proofId, action) {
 
   if (action === "reject") {
     proof.status = "rejected";
-    const completed = getTileCompletedQuantity(tile);
-    tile.status = completed > 0 ? "partial" : "open";
+    const progress = getTileTeamProgress(tile, proof.team);
+    const completed = getTileCompletedQuantity(tile, proof.team);
+    progress.status = completed > 0 ? "partial" : "open";
     addLog(`Rejected proof for ${tile.name || "a tile"} by ${proof.player}.`);
     await saveBingoState();
     await updateDiscordProofMessage(proof.id, "rejected");
@@ -1501,20 +1546,20 @@ async function reviewProof(proofId, action) {
 
   proof.status = "approved";
   const required = getTileQuantity(tile);
-  const before = getTileCompletedQuantity(tile);
+  const before = getTileCompletedQuantity(tile, proof.team);
   const approvedQty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
   const after = Math.min(required, before + approvedQty);
-  tile.completedQuantity = after;
-  tile.completedBy = proof.player;
-  tile.completedTeam = proof.team;
-  tile.proofId = proof.id;
+  const progress = getTileTeamProgress(tile, proof.team);
+  progress.completedQuantity = after;
+  progress.completedBy = proof.player;
+  progress.proofId = proof.id;
 
   if (after >= required) {
-    tile.status = "approved";
+    progress.status = "approved";
     addLog(`Approved proof for ${tile.name} by ${proof.player}. Tile complete (${after}/${required}).`);
     resolveAttack(proof);
   } else {
-    tile.status = "partial";
+    progress.status = "partial";
     addLog(`Approved proof for ${tile.name} by ${proof.player}. Progress ${after}/${required}.`);
   }
 
@@ -1719,7 +1764,8 @@ async function importBingoList() {
       status: "open",
       completedBy: "",
       completedTeam: "",
-      proofId: ""
+      proofId: "",
+      teamProgress: { ember: emptyTeamProgress(), ash: emptyTeamProgress() }
     };
   }
 
@@ -1829,7 +1875,7 @@ async function unlockFleetsFromMenu() {
 async function resetProgressFromMenu() {
   if (!isBingoStaff) return alert("Staff only.");
   if (!confirm("Reset all proofs, attacks, ship hits, and tile progress?")) return;
-  bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedBy: "", completedTeam: "", proofId: "" }));
+  bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedBy: "", completedTeam: "", proofId: "", teamProgress: { ember: emptyTeamProgress(), ash: emptyTeamProgress() } }));
   bingoState.proofs = [];
   bingoState.attacks = [];
   Object.keys(TEAMS).forEach(team => {
@@ -1915,7 +1961,8 @@ function bindBingoControls() {
       status: "open",
       completedBy: "",
       completedTeam: "",
-      proofId: ""
+      proofId: "",
+      teamProgress: { ember: emptyTeamProgress(), ash: emptyTeamProgress() }
     };
     await saveBingoState();
     closeTileEditor();
@@ -1929,7 +1976,7 @@ function bindBingoControls() {
   document.getElementById("submitProofBtn")?.addEventListener("click", submitProof);
   document.getElementById("bingoResetProgressBtn")?.addEventListener("click", async () => {
     if (!confirm("Reset all proofs, attacks, ship hits, and tile progress?")) return;
-    bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedQuantity: 0, completedBy: "", completedTeam: "", proofId: "" }));
+    bingoState.tiles = bingoState.tiles.map(tile => ({ ...tile, status: "open", completedQuantity: 0, completedBy: "", completedTeam: "", proofId: "", teamProgress: { ember: emptyTeamProgress(), ash: emptyTeamProgress() } }));
     bingoState.proofs = [];
     bingoState.attacks = [];
     Object.keys(TEAMS).forEach(team => bingoState.teams[team].ships.forEach(ship => ship.sunk = false));

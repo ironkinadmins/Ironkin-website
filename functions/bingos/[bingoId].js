@@ -87,6 +87,32 @@ async function getPluginMemberContext(env, pluginUser, reportedUsername) {
   };
 }
 
+function ensureTileTeamProgress(tile) {
+  tile.teamProgress = tile.teamProgress || {};
+  for (const team of ["ember", "ash"]) {
+    tile.teamProgress[team] = {
+      completedQuantity: 0,
+      status: "open",
+      completedBy: "",
+      proofId: "",
+      ...(tile.teamProgress[team] || {})
+    };
+  }
+
+  const legacyTeam = tile.completedTeam === "ash" ? "ash" : tile.completedTeam === "ember" ? "ember" : null;
+  const legacyCompleted = Math.max(0, Number.parseInt(tile.completedQuantity ?? 0, 10) || 0);
+  if (legacyTeam && legacyCompleted > 0 && !tile.__legacyProgressMigrated && Number(tile.teamProgress[legacyTeam].completedQuantity || 0) === 0) {
+    tile.teamProgress[legacyTeam] = {
+      completedQuantity: legacyCompleted,
+      status: tile.status || "partial",
+      completedBy: tile.completedBy || "",
+      proofId: tile.proofId || ""
+    };
+    tile.__legacyProgressMigrated = true;
+  }
+  return tile.teamProgress;
+}
+
 async function findTileForItem(env, board, itemId) {
   const id = asPositiveInt(itemId);
   if (!id || !Array.isArray(board?.tiles)) return null;
@@ -315,7 +341,8 @@ export async function onRequestPost(context) {
 
   const tile = board.tiles[match.tileIndex];
   const required = Math.max(1, Number.parseInt(tile.quantity ?? tile.qty ?? 1, 10) || 1);
-  const completed = Math.max(0, Number.parseInt(tile.completedQuantity ?? 0, 10) || 0);
+  const teamProgress = ensureTileTeamProgress(tile)[team];
+  const completed = Math.max(0, Number.parseInt(teamProgress.completedQuantity ?? 0, 10) || 0);
   const remaining = Math.max(1, required - completed);
   const proofId = crypto.randomUUID();
   const proofUrl = `${getOrigin(request)}/api/bingo/proof-image?id=${encodeURIComponent(proofId)}`;
@@ -341,8 +368,8 @@ export async function onRequestPost(context) {
   board.proofs = Array.isArray(board.proofs) ? board.proofs : [];
   board.proofs.unshift(proof);
   board.proofs = board.proofs.slice(0, 300);
-  tile.status = tile.status === "approved" ? "approved" : "submitted";
-  tile.proofId = proofId;
+  teamProgress.status = teamProgress.status === "approved" ? "approved" : (completed > 0 ? "partial" : "submitted");
+  teamProgress.proofId = proofId;
   appendLog(board, `${player} auto-submitted plugin proof for ${tile.name || `Tile ${match.tileIndex + 1}`}.`);
 
   const discordMessageId = await notifyPendingProofDiscord(env, request, proof, {
