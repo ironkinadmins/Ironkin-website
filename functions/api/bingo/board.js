@@ -1,6 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "./_teams.js";
-import { boardKeyForAccessTeam, getAccessConfig, getTeamAccess } from "./_teamAccess.js";
+import { boardTeam as boardKeyForAccessTeam, getConfig as getAccessConfig, getTeamSession as getTeamAccess } from "./_teamAccess.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
