@@ -28,6 +28,8 @@ let isBingoStaff = false;
 let isBingoSignedIn = false;
 let currentUserBingoTeam = null;
 let bingoAccessInfo = null;
+const bingoQuery = new URLSearchParams(window.location.search);
+const forcedAccessTeam = bingoQuery.get("teamView") === "1" ? (bingoQuery.get("team") === "team2" ? "team2" : "team1") : null;
 let activeTileIndex = null;
 let wikiSearchTimer = null;
 let placingTeam = null;
@@ -185,7 +187,8 @@ async function loadCurrentUserBingoTeam() {
 
 async function loadBingoState() {
   try {
-    const response = await fetch("/api/bingo/board", { cache: "no-store" });
+    const boardUrl = forcedAccessTeam ? `/api/bingo/board?teamView=${encodeURIComponent(forcedAccessTeam)}` : "/api/bingo/board";
+    const response = await fetch(boardUrl, { cache: "no-store" });
     if (response.status === 401) {
       showTeamAccessGate(bingoAccessInfo);
       return;
@@ -2204,24 +2207,27 @@ function showTeamAccessGate(info = null) {
     team1: { name: "Team 1", passwordSet: false },
     team2: { name: "Team 2", passwordSet: false }
   };
-  const requestedTeam = new URLSearchParams(window.location.search).get("team") === "team2" ? "team2" : "team1";
+  const requestedTeam = forcedAccessTeam || (new URLSearchParams(window.location.search).get("team") === "team2" ? "team2" : "team1");
   const hiddenTeam = document.getElementById("bingoTeamAccessTeam");
   if (hiddenTeam) hiddenTeam.value = requestedTeam;
   const choices = document.getElementById("bingoTeamAccessChoices");
   if (choices) {
-    choices.innerHTML = ["team1", "team2"].map((key) => `
-      <button type="button" class="bingo-team-choice ${key === requestedTeam ? "active" : ""}" data-access-team="${key}">
+    const keys = forcedAccessTeam ? [forcedAccessTeam] : ["team1", "team2"];
+    choices.innerHTML = keys.map((key) => `
+      <button type="button" class="bingo-team-choice ${key === requestedTeam ? "active" : ""}" data-access-team="${key}" ${forcedAccessTeam ? "disabled" : ""}>
         <strong>${key === "team1" ? "Team 1" : "Team 2"}</strong>
         <span>${escapeHtml(teams[key]?.name || key)}</span>
         ${teams[key]?.passwordSet ? "" : "<small>Password not set yet</small>"}
       </button>`).join("");
-    choices.querySelectorAll("[data-access-team]").forEach(button => {
-      button.addEventListener("click", () => {
-        document.getElementById("bingoTeamAccessTeam").value = button.dataset.accessTeam;
-        choices.querySelectorAll(".bingo-team-choice").forEach(item => item.classList.toggle("active", item === button));
-        document.getElementById("bingoTeamPassword")?.focus();
+    if (!forcedAccessTeam) {
+      choices.querySelectorAll("[data-access-team]").forEach(button => {
+        button.addEventListener("click", () => {
+          document.getElementById("bingoTeamAccessTeam").value = button.dataset.accessTeam;
+          choices.querySelectorAll(".bingo-team-choice").forEach(item => item.classList.toggle("active", item === button));
+          document.getElementById("bingoTeamPassword")?.focus();
+        });
       });
-    });
+    }
   }
 }
 
@@ -2360,6 +2366,16 @@ async function applyManualAttackResult(result) {
   bindBingoControls();
   bindTeamAccessControls();
   bingoAccessInfo = await loadTeamAccessInfo();
+  if (forcedAccessTeam) {
+    if (bingoAccessInfo?.team !== forcedAccessTeam) {
+      showTeamAccessGate(bingoAccessInfo);
+      return;
+    }
+    currentUserBingoTeam = forcedAccessTeam === "team2" ? "ash" : "ember";
+    hideTeamAccessGate();
+    await loadBingoState();
+    return;
+  }
   if (isBingoStaff) {
     hideTeamAccessGate();
     await loadBingoState();

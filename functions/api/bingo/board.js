@@ -406,7 +406,9 @@ export async function onRequestGet({ request, env }) {
   const isStaff = isStaffSession(session);
   const accessTeam = await getTeamAccess(request, env);
   const viewerBoardKey = boardKeyForAccessTeam(accessTeam);
-  if (!isStaff && !viewerBoardKey) {
+  const requestedTeamView = new URL(request.url).searchParams.get("teamView");
+  const forceTeamView = requestedTeamView === "team1" || requestedTeamView === "team2";
+  if ((forceTeamView && accessTeam !== requestedTeamView) || (!isStaff && !viewerBoardKey)) {
     return Response.json(
       { error: "Enter your team password to view Battleship Bingo." },
       { status: 401, headers: { "Cache-Control": "no-store" } }
@@ -414,7 +416,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   const config = await getAccessConfig(env);
-  const memberTeam = viewerBoardKey === "ash" ? "team2" : viewerBoardKey === "ember" ? "team1" : null;
+  const memberTeam = forceTeamView ? requestedTeamView : (viewerBoardKey === "ash" ? "team2" : viewerBoardKey === "ember" ? "team1" : null);
   const applyNames = state => {
     state.teams.ember.name = config.team1.name;
     state.teams.ash.name = config.team2.name;
@@ -428,7 +430,7 @@ export async function onRequestGet({ request, env }) {
     if (JSON.stringify(rawState) !== JSON.stringify(state)) {
       await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
     }
-    return Response.json(publicStateForRequest(state, isStaff, memberTeam), {
+    return Response.json(publicStateForRequest(state, forceTeamView ? false : isStaff, memberTeam), {
       headers: { "Cache-Control": "no-store" }
     });
   }
