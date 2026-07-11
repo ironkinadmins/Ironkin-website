@@ -72,6 +72,7 @@
     const attack = attackAt(index, isAttackView ? "out" : "in") || null;
     const ship = isAttackView ? null : state.ownTeam.ships.find(item => item.cells.includes(index)) || null;
     const percent = Math.round((completed / required) * 100);
+    const showProgress = isAttackView;
     const canSubmit = Boolean(isAttackView && tile.name && state.phase === "active" && !isComplete);
 
     return {
@@ -80,25 +81,26 @@
       required,
       completed,
       percent,
+      showProgress,
       isComplete,
       isPartial,
       attack,
       ship,
       canSubmit,
       title: tile.name
-        ? `${tile.name}${required > 1 ? ` — ${completed}/${required} complete` : isComplete ? " — completed" : ""}`
+        ? `${tile.name}${showProgress && required > 1 ? ` — ${completed}/${required} complete` : showProgress && isComplete ? " — completed" : ""}`
         : "Empty"
     };
   }
 
   function renderTile(model) {
-    const { tile, index, required, completed, percent, isComplete, isPartial, attack, ship, canSubmit, title } = model;
+    const { tile, index, required, completed, percent, showProgress, isComplete, isPartial, attack, ship, canSubmit, title } = model;
     const classes = [
       "team-tile",
       tile.name ? "" : "empty",
       attack?.result || "",
       ship ? "ship" : "",
-      isPartial ? "progress-partial" : ""
+      showProgress && isPartial ? "progress-partial" : ""
     ].filter(Boolean).join(" ");
 
     const quantityBadge = required > 1 ? `<small class="qty-badge">x${required}</small>` : "";
@@ -106,7 +108,7 @@
       ? `<b class="status-badge">${attack.result === "hit" ? "HIT" : "MISS"}</b>`
       : "";
     const image = tile.image ? `<img src="${esc(tile.image)}" alt="">` : "";
-    const progressMarkup = required > 1 && completed > 0
+    const progressMarkup = showProgress && required > 1 && completed > 0
       ? `<span class="team-progress-count">${completed}/${required}</span><span class="team-progress-line" aria-label="${completed} of ${required} complete"><i style="width:${percent}%"></i></span>`
       : "";
     return `<button class="${classes}" data-index="${index}" type="button" ${canSubmit ? "" : "disabled"} title="${esc(title)}">${quantityBadge}${attackBadge}${image}<span class="tile-name">${esc(tile.name || "Empty")}</span>${progressMarkup}</button>`;
@@ -121,9 +123,17 @@
       : `${state.ownTeam.name}'s Waters`;
 
     const board = $("teamBoard");
+    board.dataset.view = isAttackView ? "attack" : "waters";
+    board.classList.toggle("is-attack-view", isAttackView);
+    board.classList.toggle("is-waters-view", !isAttackView);
     board.innerHTML = state.tiles
       .map((tile, index) => renderTile(buildTileViewModel(tile, index, isAttackView)))
       .join("");
+
+    // Defensive cleanup: progress belongs only on the attacking team's board.
+    if (!isAttackView) {
+      board.querySelectorAll(".team-progress-count,.team-progress-line").forEach(element => element.remove());
+    }
 
     if (isAttackView) {
       board.querySelectorAll("button:not([disabled])").forEach(button => {
