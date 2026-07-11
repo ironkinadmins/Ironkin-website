@@ -1,27 +1,27 @@
-const ACCESS_COOKIE = "ironkin_bingo_team";
-const ACCESS_TTL_SECONDS = 60 * 60 * 24 * 14;
-const ACCESS_KEY = "bingo:team-access:v1";
-const LOGIN_WINDOW_SECONDS = 15 * 60;
-const LOGIN_MAX_ATTEMPTS = 8;
-const PBKDF2_ITERATIONS = 100000;
-const PBKDF2_MAX_ITERATIONS = 100000;
-function clamp(value,max=120){return String(value||"").trim().slice(0,max)}
-function getCookie(request,name){const cookie=request.headers.get("Cookie")||"";const match=cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));return match?decodeURIComponent(match[1]):""}
-function toBase64Url(buffer){let binary="";for(const byte of new Uint8Array(buffer))binary+=String.fromCharCode(byte);return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}
-async function hmac(payload,secret){if(!secret)throw new Error("SESSION_SECRET is not configured.");const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return toBase64Url(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(payload)))}
-function constantTimeEqual(a,b){if(!a||!b||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i+=1)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0}
-async function hashPassword(password,salt,iterations=PBKDF2_ITERATIONS){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(String(password)),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations,hash:"SHA-256"},key,256);return toBase64Url(bits)}
-export function defaultAccessConfig(){return{team1:{name:"Apey's Apes",salt:"",passwordHash:"",passwordVersion:0,iterations:PBKDF2_ITERATIONS},team2:{name:"The Harambe Hunters",salt:"",passwordHash:"",passwordVersion:0,iterations:PBKDF2_ITERATIONS},updatedAt:new Date().toISOString()}}
-export async function getAccessConfig(env){const raw=await env.DROPS_KV.get(ACCESS_KEY);if(!raw)return defaultAccessConfig();try{const parsed=JSON.parse(raw);const base=defaultAccessConfig();const normaliseTeam=key=>({...base[key],...(parsed[key]||{}),name:clamp(parsed[key]?.name||base[key].name,80),passwordVersion:Math.max(0,Number.parseInt(parsed[key]?.passwordVersion??0,10)||0),iterations:Math.min(PBKDF2_MAX_ITERATIONS,Math.max(1,Number.parseInt(parsed[key]?.iterations??PBKDF2_ITERATIONS,10)||PBKDF2_ITERATIONS))});return{team1:normaliseTeam("team1"),team2:normaliseTeam("team2"),updatedAt:parsed.updatedAt||base.updatedAt}}catch{return defaultAccessConfig()}}
-export async function saveAccessConfig(env,config){config.updatedAt=new Date().toISOString();await env.DROPS_KV.put(ACCESS_KEY,JSON.stringify(config))}
-export async function setTeamPassword(config,team,password){if(!["team1","team2"].includes(team))throw new Error("Invalid team.");const cleanPassword=String(password||"");if(!cleanPassword)return;if(cleanPassword.length<10)throw new Error("Team passwords must be at least 10 characters.");if(cleanPassword.length>128)throw new Error("Team passwords cannot exceed 128 characters.");const salt=toBase64Url(crypto.getRandomValues(new Uint8Array(24)));config[team].salt=salt;config[team].iterations=PBKDF2_ITERATIONS;config[team].passwordHash=await hashPassword(cleanPassword,salt,PBKDF2_ITERATIONS);config[team].passwordVersion=(Number(config[team].passwordVersion)||0)+1}
-export async function verifyTeamPassword(config,team,password){const entry=config?.[team];if(!entry?.salt||!entry?.passwordHash)return false;const actual=await hashPassword(String(password||""),entry.salt,entry.iterations||PBKDF2_ITERATIONS);return constantTimeEqual(actual,entry.passwordHash)}
-export async function createTeamAccessCookie(team,env,config){const payload=btoa(JSON.stringify({team,version:Number(config?.[team]?.passwordVersion||0),exp:Date.now()+ACCESS_TTL_SECONDS*1000}));const signature=await hmac(payload,env.SESSION_SECRET);return`${ACCESS_COOKIE}=${encodeURIComponent(`${payload}.${signature}`)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${ACCESS_TTL_SECONDS}`}
-export function clearTeamAccessCookie(){return`${ACCESS_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`}
-export async function getTeamAccess(request,env){const raw=getCookie(request,ACCESS_COOKIE);const[payload,signature]=raw.split(".");if(!payload||!signature)return null;try{const expected=await hmac(payload,env.SESSION_SECRET);if(!constantTimeEqual(signature,expected))return null;const data=JSON.parse(atob(payload));if(!["team1","team2"].includes(data.team)||Number(data.exp)<Date.now())return null;const config=await getAccessConfig(env);if(!config[data.team]?.passwordHash)return null;if(Number(data.version)!==Number(config[data.team].passwordVersion))return null;return data.team}catch{return null}}
-function clientAddress(request){return clamp(request.headers.get("CF-Connecting-IP")||request.headers.get("X-Forwarded-For")?.split(",")[0]||"unknown",80)}
-function loginRateKey(request,team){return`bingo:team-login-rate:${team}:${clientAddress(request)}`}
-export async function checkLoginRateLimit(request,env,team){const key=loginRateKey(request,team);const raw=await env.DROPS_KV.get(key);const attempts=Math.max(0,Number.parseInt(raw||"0",10)||0);return{allowed:attempts<LOGIN_MAX_ATTEMPTS,key}}
-export async function recordFailedLogin(env,key){const raw=await env.DROPS_KV.get(key);const attempts=Math.max(0,Number.parseInt(raw||"0",10)||0)+1;await env.DROPS_KV.put(key,String(attempts),{expirationTtl:LOGIN_WINDOW_SECONDS})}
-export async function clearFailedLogins(env,key){await env.DROPS_KV.delete(key)}
-export function boardKeyForAccessTeam(team){return team==="team2"?"ash":team==="team1"?"ember":null}
+const COOKIE = "ironkin_bingo_team";
+const CONFIG_KEY = "bingo:team-access:v2";
+const TTL = 60 * 60 * 24 * 14;
+const ITERATIONS = 100000;
+const MAX_ATTEMPTS = 8;
+const WINDOW = 15 * 60;
+const enc = new TextEncoder();
+
+function b64url(bytes) { let s=""; for (const b of new Uint8Array(bytes)) s+=String.fromCharCode(b); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,""); }
+function cookieValue(request,name){const raw=request.headers.get("Cookie")||"";const m=raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));return m?decodeURIComponent(m[1]):"";}
+function equal(a,b){if(!a||!b||a.length!==b.length)return false;let n=0;for(let i=0;i<a.length;i++)n|=a.charCodeAt(i)^b.charCodeAt(i);return n===0;}
+async function hmac(text,secret){if(!secret)throw new Error("SESSION_SECRET is not configured.");const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64url(await crypto.subtle.sign("HMAC",key,enc.encode(text)));}
+async function derive(password,salt,iterations=ITERATIONS){const key=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:enc.encode(salt),iterations:Math.min(ITERATIONS,Math.max(1,Number(iterations)||ITERATIONS))},key,256);return b64url(bits);}
+function cleanName(v,f){return String(v||f).trim().slice(0,80)||f;}
+export function defaultConfig(){return{team1:{name:"Apey's Apes",salt:"",hash:"",version:0,iterations:ITERATIONS},team2:{name:"The Harambe Hunters",salt:"",hash:"",version:0,iterations:ITERATIONS},updatedAt:new Date().toISOString()};}
+export async function getConfig(env){const raw=await env.DROPS_KV.get(CONFIG_KEY);if(!raw)return defaultConfig();try{const p=JSON.parse(raw),b=defaultConfig();for(const t of ["team1","team2"]){b[t]={...b[t],...(p[t]||{}),name:cleanName(p[t]?.name,b[t].name),iterations:Math.min(ITERATIONS,Math.max(1,Number(p[t]?.iterations)||ITERATIONS)),version:Math.max(0,Number(p[t]?.version)||0)};}b.updatedAt=p.updatedAt||b.updatedAt;return b;}catch{return defaultConfig();}}
+export async function saveConfig(env,c){c.updatedAt=new Date().toISOString();await env.DROPS_KV.put(CONFIG_KEY,JSON.stringify(c));}
+export async function setPassword(c,team,password){if(!["team1","team2"].includes(team))throw new Error("Invalid team.");password=String(password||"");if(password.length<10)throw new Error("Passwords must be at least 10 characters.");if(password.length>128)throw new Error("Passwords cannot exceed 128 characters.");const salt=b64url(crypto.getRandomValues(new Uint8Array(24)));c[team].salt=salt;c[team].hash=await derive(password,salt);c[team].iterations=ITERATIONS;c[team].version=(Number(c[team].version)||0)+1;}
+export async function verifyPassword(c,team,password){const x=c?.[team];if(!x?.salt||!x?.hash)return false;return equal(await derive(String(password||""),x.salt,x.iterations),x.hash);}
+export async function makeCookie(team,env,c){const payload=btoa(JSON.stringify({team,version:c[team].version,exp:Date.now()+TTL*1000}));const sig=await hmac(payload,env.SESSION_SECRET);return`${COOKIE}=${encodeURIComponent(payload+"."+sig)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${TTL}`;}
+export function clearCookie(){return`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;}
+export async function getTeamSession(request,env){const raw=cookieValue(request,COOKIE);const [payload,sig]=raw.split(".");if(!payload||!sig)return null;try{if(!equal(sig,await hmac(payload,env.SESSION_SECRET)))return null;const d=JSON.parse(atob(payload));if(!["team1","team2"].includes(d.team)||Number(d.exp)<Date.now())return null;const c=await getConfig(env);if(!c[d.team].hash||Number(d.version)!==Number(c[d.team].version))return null;return d.team;}catch{return null;}}
+export function boardTeam(team){return team==="team1"?"ember":team==="team2"?"ash":null;}
+function ip(request){return String(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,80);}
+export async function rateStatus(request,env,team){const key=`bingo:team-login:${team}:${ip(request)}`;const n=Number(await env.DROPS_KV.get(key)||0);return{key,allowed:n<MAX_ATTEMPTS};}
+export async function failRate(env,key){const n=Number(await env.DROPS_KV.get(key)||0)+1;await env.DROPS_KV.put(key,String(n),{expirationTtl:WINDOW});}
+export async function clearRate(env,key){await env.DROPS_KV.delete(key);}

@@ -1,0 +1,7 @@
+(() => {
+  const $=id=>document.getElementById(id), dialog=$("teamAccessDialog");
+  async function request(url,options={}){const r=await fetch(url,{cache:"no-store",...options});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed.");return d;}
+  async function open(){try{const d=await request("/api/admin/bingo/team-access");$("team1AccessName").value=d.team1.name;$("team2AccessName").value=d.team2.name;$("team1AccessPassword").value="";$("team2AccessPassword").value="";$("team1PasswordStatus").textContent=d.team1.passwordSet?"Password is set.":"No password set yet.";$("team2PasswordStatus").textContent=d.team2.passwordSet?"Password is set.":"No password set yet.";$("teamAccessError").textContent="";dialog.showModal();}catch(e){alert(e.message);}}
+  $("teamAccessSettingsBtn")?.addEventListener("click",open);$("activeTeamAccessSettingsBtn")?.addEventListener("click",open);$("closeTeamAccessDialog")?.addEventListener("click",()=>dialog.close());
+  $("teamAccessForm")?.addEventListener("submit",async e=>{e.preventDefault();$("teamAccessError").textContent="";try{await request("/api/admin/bingo/team-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({team1Name:$("team1AccessName").value,team2Name:$("team2AccessName").value,team1Password:$("team1AccessPassword").value,team2Password:$("team2AccessPassword").value})});dialog.close();alert("Team access settings saved. Any changed password invalidated old team sessions.");}catch(err){$("teamAccessError").textContent=err.message;}});
+})();
