@@ -47,8 +47,27 @@
   background:rgba(0,25,50,.96);
 }
 
-/* Own-fleet indicator: a small letter badge, not a full-tile overlay. */
-.team-tile.ship{background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%)}.team-tile .ship-badge{position:absolute;left:4px;bottom:5px;z-index:8;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:rgba(222,214,205,.92);color:#24170e;font-size:.66rem;font-weight:1000;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+/* Your Waters: own ship tiles use a neutral grey treatment with no ship letters. */
+.team-tile.ship {
+  background: linear-gradient(180deg, #36393d 0%, #24272a 100%);
+  border-color: #777d84;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.team-tile.ship img {
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.55));
+}
+
+/* Battleship result states always override the grey ship styling. */
+.team-tile.ship.hit {
+  background: linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
+  border-color: #ff4d4f;
+  box-shadow: 0 0 8px rgba(255,77,79,.45);
+}
+.team-tile.ship.miss {
+  background: linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
+  border-color: #3da9fc;
+  box-shadow: 0 0 8px rgba(61,169,252,.45);
+}
 
 /* Per-team quantity progress. The API only returns the signed-in team's progress. */
 .team-tile.partial,.team-tile.complete{background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%)}.team-tile .team-progress-count{position:absolute;right:5px;bottom:6px;z-index:8;display:block;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.84);color:#fff;font-size:.56rem;line-height:1.1;font-weight:900;pointer-events:none}.team-tile .team-progress-line{position:absolute;left:5px;right:5px;bottom:2px;z-index:7;display:block;height:3px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.18);pointer-events:none}.team-tile .team-progress-line i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff7a1a,#ffd2ad)}
@@ -82,3 +101,6 @@
   border:2px solid #26a7ff;
   box-shadow:0 0 0 1px rgba(38,167,255,.48),0 0 12px rgba(38,167,255,.58),inset 0 0 0 1px rgba(255,255,255,.08);
 }
+
+/* Ship letters intentionally removed from private team boards. */
+.team-tile .ship-badge{display:none!important}

@@ -109,11 +109,7 @@
     const progressMarkup = required > 1 && completed > 0
       ? `<span class="team-progress-count">${completed}/${required}</span><span class="team-progress-line" aria-label="${completed} of ${required} complete"><i style="width:${percent}%"></i></span>`
       : "";
-    const shipBadge = ship
-      ? `<b class="ship-badge" title="${esc(ship.name)}">${esc(ship.name.charAt(0))}</b>`
-      : "";
-
-    return `<button class="${classes}" data-index="${index}" type="button" ${canSubmit ? "" : "disabled"} title="${esc(title)}">${quantityBadge}${attackBadge}${image}<span class="tile-name">${esc(tile.name || "Empty")}</span>${progressMarkup}${shipBadge}</button>`;
+    return `<button class="${classes}" data-index="${index}" type="button" ${canSubmit ? "" : "disabled"} title="${esc(title)}">${quantityBadge}${attackBadge}${image}<span class="tile-name">${esc(tile.name || "Empty")}</span>${progressMarkup}</button>`;
   }
 
   function render() {
