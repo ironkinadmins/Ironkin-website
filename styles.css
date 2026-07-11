@@ -9015,3 +9015,46 @@ body.calendar-modal-active {
     grid-template-columns: 1fr;
   }
 }
+
+/* Admin Battleship repair context menu */
+.admin-attack-context-menu {
+  position: fixed;
+  z-index: 10000;
+  display: none;
+  width: min(320px, calc(100vw - 16px));
+  padding: 10px;
+  border: 1px solid rgba(255, 134, 27, 0.55);
+  border-radius: 14px;
+  background: rgba(17, 12, 9, 0.98);
+  color: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.admin-attack-context-menu.show { display: block; }
+.admin-attack-context-title {
+  padding: 7px 8px 10px;
+  font-weight: 900;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.admin-attack-context-team { padding: 10px 8px 4px; }
+.admin-attack-context-team strong { display: block; margin-bottom: 7px; }
+.admin-attack-context-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.admin-attack-context-actions button {
+  border: 1px solid rgba(255, 134, 27, .35);
+  border-radius: 9px;
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  padding: 8px 6px;
+  cursor: pointer;
+  font-weight: 800;
+}
+.admin-attack-context-actions button:hover { background: rgba(255, 134, 27, .2); }
+.admin-attack-context-actions button[data-result="hit"] { border-color: rgba(255, 69, 58, .65); }
+.admin-attack-context-actions button[data-result="miss"] { border-color: rgba(74, 163, 255, .65); }
+
+/* Keep both admin and team Bingo boards centred and no wider than 980px. */
+.bingo-board {
+  width: 100%;
+  max-width: 980px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}

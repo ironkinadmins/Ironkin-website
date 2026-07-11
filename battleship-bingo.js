@@ -846,6 +846,7 @@ function renderBingoBoard() {
       if (suppressTileClick) return;
       openTileModal(Number(tile.dataset.index));
     });
+    bindAdminAttackContextMenu(tile);
   });
 }
 
@@ -950,6 +951,7 @@ function renderActiveGameBoard(boardEl) {
 
   boardEl.querySelectorAll(".bingo-tile").forEach(tile => {
     tile.addEventListener("click", () => openTileModal(Number(tile.dataset.index)));
+    bindAdminAttackContextMenu(tile);
   });
 }
 
@@ -2330,46 +2332,107 @@ function applyTeamViewVisibility() {
   if (["captains", "log"].includes(activeBingoTab)) activeBingoTab = "board";
 }
 
+let adminAttackContextMenu = null;
+
+function ensureAdminAttackContextMenu() {
+  if (adminAttackContextMenu) return adminAttackContextMenu;
+  const menu = document.createElement("div");
+  menu.id = "adminAttackContextMenu";
+  menu.className = "admin-attack-context-menu";
+  menu.setAttribute("role", "menu");
+  menu.innerHTML = `
+    <div class="admin-attack-context-title" id="adminAttackContextTitle">Tile</div>
+    <div class="admin-attack-context-team">
+      <strong id="adminAttackTeamOneName">Team 1 Attack</strong>
+      <div class="admin-attack-context-actions">
+        <button type="button" data-team="ember" data-result="hit">Hit</button>
+        <button type="button" data-team="ember" data-result="miss">Miss</button>
+        <button type="button" data-team="ember" data-result="reset">Reset</button>
+      </div>
+    </div>
+    <div class="admin-attack-context-team">
+      <strong id="adminAttackTeamTwoName">Team 2 Attack</strong>
+      <div class="admin-attack-context-actions">
+        <button type="button" data-team="ash" data-result="hit">Hit</button>
+        <button type="button" data-team="ash" data-result="miss">Miss</button>
+        <button type="button" data-team="ash" data-result="reset">Reset</button>
+      </div>
+    </div>`;
+  menu.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-team][data-result]");
+    if (!button) return;
+    const tileIndex = Number(menu.dataset.tileIndex);
+    hideAdminAttackContextMenu();
+    await saveManualAttackResult(button.dataset.team, tileIndex, button.dataset.result);
+  });
+  document.body.appendChild(menu);
+  adminAttackContextMenu = menu;
+  return menu;
+}
+
+function bindAdminAttackContextMenu(tileElement) {
+  if (!isBingoStaff || !tileElement) return;
+  tileElement.addEventListener("contextmenu", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    showAdminAttackContextMenu(event.clientX, event.clientY, Number(tileElement.dataset.index));
+  });
+}
+
+function showAdminAttackContextMenu(clientX, clientY, tileIndex) {
+  if (!isBingoStaff || !Number.isInteger(tileIndex)) return;
+  const menu = ensureAdminAttackContextMenu();
+  const tile = bingoState.tiles?.[tileIndex] || {};
+  menu.dataset.tileIndex = String(tileIndex);
+  const title = document.getElementById("adminAttackContextTitle");
+  if (title) title.textContent = `${tile.name || `Tile ${tileIndex + 1}`} — Admin Repair`;
+  const oneName = document.getElementById("adminAttackTeamOneName");
+  const twoName = document.getElementById("adminAttackTeamTwoName");
+  if (oneName) oneName.textContent = `${getTeamDisplayName("ember")} Attack`;
+  if (twoName) twoName.textContent = `${getTeamDisplayName("ash")} Attack`;
+  menu.classList.add("show");
+  const width = menu.offsetWidth || 300;
+  const height = menu.offsetHeight || 220;
+  const left = Math.max(8, Math.min(clientX, window.innerWidth - width - 8));
+  const top = Math.max(8, Math.min(clientY, window.innerHeight - height - 8));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+function hideAdminAttackContextMenu() {
+  adminAttackContextMenu?.classList.remove("show");
+}
+
+async function saveManualAttackResult(attackingTeam, targetIndex, result) {
+  if (!isBingoStaff) return;
+  const response = await fetch("/api/admin/bingo/manual-attack", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ attackingTeam, targetIndex, result })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(data.error || "Could not update the attack result.");
+    return;
+  }
+  await loadBingoState();
+}
+
 async function applyManualAttackResult(result) {
   if (!isBingoStaff || activeTileIndex === null) return;
   const attackingTeam = document.getElementById("manualAttackTeamSelect")?.value === "ash" ? "ash" : "ember";
-  const defendingTeam = getOpponent(attackingTeam);
-  const tile = bingoState.tiles[activeTileIndex];
-  if (!tile) return;
-
-  const existingIndex = bingoState.attacks.findIndex(attack => attack.attackingTeam === attackingTeam && attack.targetIndex === activeTileIndex);
-  if (result === "reset") {
-    if (existingIndex >= 0) bingoState.attacks.splice(existingIndex, 1);
-    bingoState.teams[attackingTeam].attacks = bingoState.attacks.filter(attack => attack.attackingTeam === attackingTeam);
-    const progress = getTileTeamProgress(tile, attackingTeam);
-    if (progress.completedBy === "Admin manual") Object.assign(progress, emptyTeamProgress());
-    addLog(`Admin reset ${tile.name} for ${getTeamDisplayName(attackingTeam)}.`);
-  } else {
-    const attack = {
-      id: existingIndex >= 0 ? bingoState.attacks[existingIndex].id : crypto.randomUUID(),
-      attackingTeam, defendingTeam, targetIndex: activeTileIndex, result,
-      shipKey: result === "hit" ? (bingoState.teams[defendingTeam].ships.find(ship => ship.cells.includes(activeTileIndex))?.key || "") : "",
-      manual: true, at: new Date().toISOString()
-    };
-    if (existingIndex >= 0) bingoState.attacks[existingIndex] = attack;
-    else bingoState.attacks.push(attack);
-    bingoState.teams[attackingTeam].attacks = bingoState.attacks.filter(item => item.attackingTeam === attackingTeam);
-    const progress = getTileTeamProgress(tile, attackingTeam);
-    progress.completedQuantity = getTileQuantity(tile);
-    progress.status = "approved";
-    progress.completedBy = "Admin manual";
-    progress.proofId = "";
-    addLog(`Admin marked ${getTeamDisplayName(attackingTeam)}'s attack on ${tile.name} as ${result.toUpperCase()}.`);
-  }
-
-  for (const team of ["ember", "ash"]) {
-    for (const ship of bingoState.teams[team].ships) {
-      ship.sunk = ship.cells.length > 0 && ship.cells.every(cell => bingoState.attacks.some(attack => attack.defendingTeam === team && attack.targetIndex === cell && attack.result === "hit"));
-    }
-  }
-  await saveBingoState();
+  await saveManualAttackResult(attackingTeam, activeTileIndex, result);
   closeTileEditor();
 }
+
+document.addEventListener("click", event => {
+  if (!event.target.closest("#adminAttackContextMenu")) hideAdminAttackContextMenu();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") hideAdminAttackContextMenu();
+});
+window.addEventListener("blur", hideAdminAttackContextMenu);
+window.addEventListener("scroll", hideAdminAttackContextMenu, true);
 
 (async function initBingo() {
   await checkBingoStaff();
