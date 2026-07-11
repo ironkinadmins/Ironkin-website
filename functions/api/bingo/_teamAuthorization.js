@@ -1,4 +1,4 @@
-import { getSession } from "../_auth.js";
+import { getSession, isStaffSession } from "../_auth.js";
 import { rosterTeamForSession } from "./_teams.js";
 
 const SIGNUPS_KEY = "bingo:signups";
@@ -26,6 +26,13 @@ async function signupForSession(session, env) {
   }
 }
 
+function assignedTeamForSession(session, signup) {
+  // The saved signup assignment is authoritative because staff can move members
+  // between teams without changing their Discord nickname/RSN.
+  if (["team1", "team2"].includes(signup?.team)) return signup.team;
+  return rosterTeamForSession(session, signup);
+}
+
 export async function getAuthorizedBingoUser(request, env) {
   const session = await getSession(request, env);
   if (!session) {
@@ -37,8 +44,10 @@ export async function getAuthorizedBingoUser(request, env) {
   }
 
   const signup = await signupForSession(session, env);
-  const team = rosterTeamForSession(session, signup);
-  if (!team) {
+  const isStaff = isStaffSession(session);
+  const team = assignedTeamForSession(session, signup);
+
+  if (!team && !isStaff) {
     return { ok: false, status: 403, error: "You are not assigned to a Bingo team." };
   }
 
@@ -47,6 +56,7 @@ export async function getAuthorizedBingoUser(request, env) {
     session,
     signup,
     team,
+    isStaff,
     displayName: displayNameForSession(session, signup)
   };
 }
@@ -54,6 +64,13 @@ export async function getAuthorizedBingoUser(request, env) {
 export async function requireBingoTeam(request, env, requiredTeam = null) {
   const user = await getAuthorizedBingoUser(request, env);
   if (!user.ok) return user;
+
+  // Staff can test either private board, but regular members remain locked to
+  // the exact team stored on their signup/roster assignment.
+  if (user.isStaff && requiredTeam && ["team1", "team2"].includes(requiredTeam)) {
+    return { ...user, team: requiredTeam };
+  }
+
   if (requiredTeam && user.team !== requiredTeam) {
     return { ok: false, status: 403, error: "You are not assigned to this Bingo team." };
   }

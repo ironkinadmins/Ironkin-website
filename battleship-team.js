@@ -20,7 +20,7 @@
   }
 
   async function session() {
-    const data = await json("/api/bingo/team-session");
+    const data = await json(`/api/bingo/team-session?team=${encodeURIComponent(accessTeam)}`);
     const info = data.teams?.[accessTeam];
     $("pageTeamName").textContent = info?.name || (accessTeam === "team1" ? "Team 1" : "Team 2");
     if (data.authorizedTeam !== accessTeam) {

@@ -1,18 +1,15 @@
 import { getTeamSession, boardTeam } from "./_teamAccess.js";
-import { getAuthorizedBingoUser } from "./_teamAuthorization.js";
+import { requireBingoTeam } from "./_teamAuthorization.js";
 
 const headers = { "Cache-Control": "no-store" };
 function text(value, max) { return String(value || "").trim().slice(0, max); }
 
 export async function onRequestPost({ request, env }) {
-  const user = await getAuthorizedBingoUser(request, env);
-  if (!user.ok) return Response.json({ error: user.error }, { status: user.status, headers });
-
   const access = await getTeamSession(request, env);
   if (!access) return Response.json({ error: "Team password required." }, { status: 401, headers });
-  if (access !== user.team) {
-    return Response.json({ error: "You are not authorized for this team board." }, { status: 403, headers });
-  }
+
+  const user = await requireBingoTeam(request, env, access);
+  if (!user.ok) return Response.json({ error: user.error }, { status: user.status, headers });
 
   const body = await request.json().catch(() => ({}));
   const tileIndex = Number(body.tileIndex);
