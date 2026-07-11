@@ -9,6 +9,22 @@
 <body>
   <div id="siteNav"></div>
 
+  <section id="bingoTeamAccess" class="bingo-team-access" style="display:none;">
+    <div class="bingo-team-access-card">
+      <p class="eyebrow">Private Team Access</p>
+      <h1>Battleship Bingo</h1>
+      <p>Choose your team and enter its password. Each team can only see its own Attack Board and Waters.</p>
+      <div id="bingoTeamAccessChoices" class="bingo-team-access-choices"></div>
+      <form id="bingoTeamAccessForm" class="bingo-team-access-form">
+        <input id="bingoTeamAccessTeam" type="hidden" value="team1" />
+        <label for="bingoTeamPassword">Team password</label>
+        <input id="bingoTeamPassword" type="password" autocomplete="current-password" required />
+        <button class="btn primary" type="submit">Enter Team Board</button>
+      </form>
+      <p id="bingoTeamAccessError" class="bingo-access-error"></p>
+    </div>
+  </section>
+
   <main class="bingo-page">
     <section class="bingo-hero">
       <div>
@@ -29,6 +45,7 @@
               <button class="btn secondary" id="bingoRandomizeBoardBtn" type="button">Randomize Board</button>
               <button class="btn secondary" id="bingoRerollBtn" type="button">Fill Demo Board</button>
               <button class="btn secondary" id="bingoViewFleetsBtn" type="button">View Fleets</button>
+              <button class="btn secondary" id="bingoTeamPasswordsBtn" type="button">Team Names & Passwords</button>
               <button class="btn secondary danger" id="bingoClearBoardBtn" type="button">Clear Board</button>
             </div>
 
@@ -174,7 +191,7 @@
       <div class="ship-placement-topbar" id="shipPlacementToolbar"></div>
 
       <div class="bingo-two-column fleet-placement-grid">
-        <div class="bingo-card fleet-placement-card">
+        <div class="bingo-card fleet-placement-card" id="emberFleetCard">
           <div class="bingo-section-heading">
             <div>
               <h2 id="emberFleetTitle">Ember Fleet</h2>
@@ -186,7 +203,7 @@
           <div class="ship-list" id="emberShipList"></div>
         </div>
 
-        <div class="bingo-card fleet-placement-card">
+        <div class="bingo-card fleet-placement-card" id="ashFleetCard">
           <div class="bingo-section-heading">
             <div>
               <h2 id="ashFleetTitle">Ash Fleet</h2>
@@ -351,6 +368,23 @@ Enhanced crystal weapon seed - 1</pre>
         </div>
       </div>
 
+      <div class="bingo-modal-section" id="staffManualOutcome" style="display:none;">
+        <h3>Admin Manual Tile Result</h3>
+        <p>Apply an attack result immediately without a proof submission.</p>
+        <div class="admin-field">
+          <label for="manualAttackTeamSelect">Attacking Team</label>
+          <select id="manualAttackTeamSelect">
+            <option value="ember">Team 1</option>
+            <option value="ash">Team 2</option>
+          </select>
+        </div>
+        <div class="bingo-manual-actions">
+          <button id="manualHitBtn" type="button" class="btn primary">Mark Hit</button>
+          <button id="manualMissBtn" type="button" class="btn secondary">Mark Miss</button>
+          <button id="manualResetBtn" type="button" class="btn secondary danger">Reset Tile</button>
+        </div>
+      </div>
+
       <div class="bingo-modal-section" id="proofSubmitSection" style="display:none;">
         <h3>Submit Proof</h3>
         <div class="admin-field">
@@ -379,11 +413,34 @@ Enhanced crystal weapon seed - 1</pre>
     </div>
   </div>
 
+  <div id="teamAccessAdminModal" class="bingo-modal" aria-hidden="true">
+    <div class="bingo-modal-card">
+      <div class="bingo-modal-header">
+        <h2>Team Names & Passwords</h2>
+        <button id="closeTeamAccessAdminModal" type="button" class="bingo-icon-btn">×</button>
+      </div>
+      <div class="bingo-modal-section">
+        <h3>Team 1</h3>
+        <div class="admin-field"><label for="team1AccessName">Team name</label><input id="team1AccessName" type="text" /></div>
+        <div class="admin-field"><label for="team1AccessPassword">New password</label><input id="team1AccessPassword" type="password" placeholder="10+ characters; blank keeps current password" /></div>
+        <small id="team1PasswordState"></small>
+      </div>
+      <div class="bingo-modal-section">
+        <h3>Team 2</h3>
+        <div class="admin-field"><label for="team2AccessName">Team name</label><input id="team2AccessName" type="text" /></div>
+        <div class="admin-field"><label for="team2AccessPassword">New password</label><input id="team2AccessPassword" type="password" placeholder="10+ characters; blank keeps current password" /></div>
+        <small id="team2PasswordState"></small>
+      </div>
+      <p class="muted-text">One shared password (minimum 10 characters) is used by everyone on each team. Changing a team name updates the board labels; the private route remains Team 1 or Team 2.</p>
+      <div class="bingo-modal-actions"><button id="saveTeamAccessAdminBtn" type="button" class="btn primary">Save Team Access</button></div>
+    </div>
+  </div>
+
   <footer>
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
   <script src="script.js"></script>
-  <script src="battleship-bingo.js?v=20260710-f5b-board-render-fix-v1"></script>
+  <script src="battleship-bingo.js?v=20260710-password-rebuild-v1"></script>
 </body>
 </html>

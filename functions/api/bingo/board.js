@@ -1,5 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
-import { TEAM_ONE_NAME, TEAM_TWO_NAME, rosterTeamForSession } from "./_teams.js";
+import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "./_teams.js";
+import { boardKeyForAccessTeam, getAccessConfig, getTeamAccess } from "./_teamAccess.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
@@ -130,7 +131,7 @@ function sanitiseState(body) {
         ...base.teams.ember,
         ...(body.teams?.ember || {}),
         key: "ember",
-        name: TEAM_ONE_NAME,
+        name: clampString(body.teams?.ember?.name || TEAM_ONE_NAME, 80),
         captain: clampString(body.teams?.ember?.captain, 80),
         ships: cleanShips(body.teams?.ember?.ships),
         attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : [],
@@ -140,7 +141,7 @@ function sanitiseState(body) {
         ...base.teams.ash,
         ...(body.teams?.ash || {}),
         key: "ash",
-        name: TEAM_TWO_NAME,
+        name: clampString(body.teams?.ash?.name || TEAM_TWO_NAME, 80),
         captain: clampString(body.teams?.ash?.captain, 80),
         ships: cleanShips(body.teams?.ash?.ships),
         attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : [],
@@ -226,8 +227,8 @@ function canonicaliseTeamSlots(inputState) {
     }));
   }
 
-  state.teams.ember.name = TEAM_ONE_NAME;
-  state.teams.ash.name = TEAM_TWO_NAME;
+  state.teams.ember.name = clampString(state.teams.ember.name || TEAM_ONE_NAME, 80);
+  state.teams.ash.name = clampString(state.teams.ash.name || TEAM_TWO_NAME, 80);
   state.teams.ember.key = "ember";
   state.teams.ash.key = "ash";
   state.teams.ember.attacks = state.attacks.filter(attack => attack.attackingTeam === "ember");
@@ -402,30 +403,28 @@ async function updateDiscordMessagesForProofChanges(env, request, previousState,
 
 export async function onRequestGet({ request, env }) {
   const session = await getSession(request, env);
-  if (!session) {
+  const isStaff = isStaffSession(session);
+  const accessTeam = await getTeamAccess(request, env);
+  const viewerBoardKey = boardKeyForAccessTeam(accessTeam);
+  if (!isStaff && !viewerBoardKey) {
     return Response.json(
-      { error: "Sign in with Discord to view Battleship Bingo." },
+      { error: "Enter your team password to view Battleship Bingo." },
       { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const isStaff = isStaffSession(session);
-  const signupsRaw = await env.DROPS_KV.get("bingo:signups");
-  const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
-  const signup = Array.isArray(signups) ? signups.find(item => item.discordId === session.id) : null;
-  const memberTeam = rosterTeamForSession(session, signup);
-  if (!isStaff && !memberTeam) {
-    return Response.json(
-      { error: "You are not assigned to a Battleship Bingo team." },
-      { status: 403, headers: { "Cache-Control": "no-store" } }
-    );
-  }
+  const config = await getAccessConfig(env);
+  const memberTeam = viewerBoardKey === "ash" ? "team2" : viewerBoardKey === "ember" ? "team1" : null;
+  const applyNames = state => {
+    state.teams.ember.name = config.team1.name;
+    state.teams.ash.name = config.team2.name;
+    return state;
+  };
 
   const saved = await env.DROPS_KV.get("bingo:state:v2");
   if (saved) {
     const rawState = JSON.parse(saved);
-    const state = canonicaliseTeamSlots(rawState);
-    // Persist the migration once so every later request uses the same team slots.
+    const state = applyNames(canonicaliseTeamSlots(rawState));
     if (JSON.stringify(rawState) !== JSON.stringify(state)) {
       await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
     }
@@ -437,7 +436,7 @@ export async function onRequestGet({ request, env }) {
   const oldSaved = await env.DROPS_KV.get("bingo:board");
   if (oldSaved) {
     const old = JSON.parse(oldSaved);
-    const migrated = defaultState();
+    const migrated = applyNames(defaultState());
     if (Array.isArray(old.tiles)) {
       migrated.tiles = emptyTiles().map((tile, index) => ({ ...tile, ...(old.tiles[index] || {}), id: index }));
     }
@@ -448,7 +447,7 @@ export async function onRequestGet({ request, env }) {
     });
   }
 
-  return Response.json(publicStateForRequest(defaultState(), isStaff, memberTeam), {
+  return Response.json(publicStateForRequest(applyNames(defaultState()), isStaff, memberTeam), {
     headers: { "Cache-Control": "no-store" }
   });
 }

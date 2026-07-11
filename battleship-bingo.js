@@ -27,6 +27,7 @@ let bingoState = createDefaultState();
 let isBingoStaff = false;
 let isBingoSignedIn = false;
 let currentUserBingoTeam = null;
+let bingoAccessInfo = null;
 let activeTileIndex = null;
 let wikiSearchTimer = null;
 let placingTeam = null;
@@ -136,8 +137,8 @@ function normaliseState(data) {
     size: BINGO_SIZE,
     tiles,
     teams: {
-      ember: { ...base.teams.ember, ...(data.teams?.ember || {}), key: "ember", name: TEAMS.ember.name, ships: normaliseShips(data.teams?.ember?.ships) },
-      ash: { ...base.teams.ash, ...(data.teams?.ash || {}), key: "ash", name: TEAMS.ash.name, ships: normaliseShips(data.teams?.ash?.ships) }
+      ember: { ...base.teams.ember, ...(data.teams?.ember || {}), key: "ember", name: data.teams?.ember?.name || TEAMS.ember.name, ships: normaliseShips(data.teams?.ember?.ships) },
+      ash: { ...base.teams.ash, ...(data.teams?.ash || {}), key: "ash", name: data.teams?.ash?.name || TEAMS.ash.name, ships: normaliseShips(data.teams?.ash?.ships) }
     },
     proofs: Array.isArray(data.proofs) ? data.proofs : [],
     attacks: Array.isArray(data.attacks) ? data.attacks : [],
@@ -183,16 +184,10 @@ async function loadCurrentUserBingoTeam() {
 }
 
 async function loadBingoState() {
-  if (!isBingoSignedIn) {
-    showBingoLoginRequired();
-    return;
-  }
-
   try {
     const response = await fetch("/api/bingo/board", { cache: "no-store" });
     if (response.status === 401) {
-      isBingoSignedIn = false;
-      showBingoLoginRequired();
+      showTeamAccessGate(bingoAccessInfo);
       return;
     }
     if (!response.ok) {
@@ -397,6 +392,7 @@ function renderHiddenBoardNotice() {
 }
 
 function renderAll() {
+  applyTeamViewVisibility();
   if (boardIsHiddenForVisitor()) {
     renderHiddenBoardNotice();
     return;
@@ -821,7 +817,7 @@ function renderBingoBoard() {
     const qty = getTileQuantity(tile);
 
     return `
-      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
+      <button class="bingo-tile ${tile.name ? "filled" : "empty"} status-${escapeAttr(getTileStatus(tile))}" type="button" data-index="${index}" title="${escapeAttr(getTileProgressTitle(tile, getSelectedProofTeam()))}" ${canReorderBingoBoard() ? 'draggable="true"' : ""}>
         ${qty > 1 ? `<span class="bingo-qty-badge">x${escapeHtml(qty)}</span>` : ""}
         ${getTileProgressMarkup(tile)}
         ${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="${escapeHtml(tile.name)}" loading="lazy" />` : ""}
@@ -864,8 +860,8 @@ function renderBoardToolbar() {
     const team = getSelectedProofTeam();
     const opponent = getOpponent(team);
     boardToolbarText.innerHTML = activeBoardMode === "attack"
-      ? `<strong>Attacking ${escapeHtml(TEAMS[opponent].name)}'s Waters</strong>`
-      : `<strong>${escapeHtml(TEAMS[team].name)}'s Waters</strong>`;
+      ? `<strong>Attacking ${escapeHtml(getTeamDisplayName(opponent))}'s Waters</strong>`
+      : `<strong>${escapeHtml(getTeamDisplayName(team))}'s Waters</strong>`;
   } else {
     boardToolbarText.innerHTML = `<strong>Board Setup</strong><span>Click a tile to edit it. When done, lock the board and assign captains.</span>`;
   }
@@ -963,6 +959,10 @@ function openTileModal(index) {
   const canEdit = isBingoStaff && bingoState.phase === "setup" && !bingoState.locked;
   const canSubmitProof = bingoState.phase === "active" && tile.name;
   document.getElementById("staffTileEditor").style.display = canEdit ? "block" : "none";
+  const manualSection = document.getElementById("staffManualOutcome");
+  if (manualSection) manualSection.style.display = isBingoStaff && (bingoState.phase === "active" || bingoState.phase === "complete") && tile.name ? "block" : "none";
+  const manualTeam = document.getElementById("manualAttackTeamSelect");
+  if (manualTeam) manualTeam.value = getSelectedProofTeam();
   document.getElementById("proofSubmitSection").style.display = canSubmitProof ? "block" : "none";
   document.getElementById("saveTileBtn").style.display = canEdit ? "inline-flex" : "none";
   document.getElementById("clearTileBtn").style.display = canEdit ? "inline-flex" : "none";
@@ -1479,14 +1479,18 @@ async function submitProof() {
     alert("Add your player name and a proof link.");
     return;
   }
-  const proof = { id: crypto.randomUUID(), tileIndex: activeTileIndex, team, player, url, note, quantity, status: "pending", createdAt: new Date().toISOString() };
-  bingoState.proofs.unshift(proof);
-  const progress = getTileTeamProgress(bingoState.tiles[activeTileIndex], team);
-  progress.status = getTileCompletedQuantity(bingoState.tiles[activeTileIndex], team) > 0 ? "partial" : "submitted";
-  progress.proofId = proof.id;
-  addLog(`${player} submitted proof for ${bingoState.tiles[activeTileIndex].name} x${quantity} (${getTeamDisplayName(team)}).`);
-  await saveBingoState();
+  const response = await fetch("/api/bingo/proofs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tileIndex: activeTileIndex, team, player, url, note, quantity })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(data.error || "Could not submit proof.");
+    return;
+  }
   closeTileEditor();
+  await loadBingoState();
 }
 
 
@@ -2066,6 +2070,16 @@ function bindBingoControls() {
       const newName = (input?.value || "").trim() || TEAMS[team].name;
       const oldName = bingoState.teams[team]?.name || TEAMS[team].name;
 
+      const response = await fetch("/api/admin/bingo/team-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          team1Name: team === "ember" ? newName : getTeamDisplayName("ember"),
+          team2Name: team === "ash" ? newName : getTeamDisplayName("ash")
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return alert(data.error || "Could not save team name.");
       bingoState.teams[team].name = newName;
       if (newName !== oldName) addLog(`${oldName} renamed to ${newName}.`);
       await saveBingoState();
@@ -2169,13 +2183,193 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, "&#096;");
 }
 
-(async function initBingo() {
-  const signedIn = await checkBingoStaff();
-  if (!signedIn) {
-    showBingoLoginRequired();
+
+
+async function loadTeamAccessInfo() {
+  try {
+    const response = await fetch("/api/bingo/team-access", { cache: "no-store" });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function showTeamAccessGate(info = null) {
+  const gate = document.getElementById("bingoTeamAccess");
+  const page = document.querySelector("main.bingo-page");
+  if (gate) gate.style.display = "grid";
+  if (page) page.style.display = "none";
+  const teams = info?.teams || {
+    team1: { name: "Team 1", passwordSet: false },
+    team2: { name: "Team 2", passwordSet: false }
+  };
+  const requestedTeam = new URLSearchParams(window.location.search).get("team") === "team2" ? "team2" : "team1";
+  const hiddenTeam = document.getElementById("bingoTeamAccessTeam");
+  if (hiddenTeam) hiddenTeam.value = requestedTeam;
+  const choices = document.getElementById("bingoTeamAccessChoices");
+  if (choices) {
+    choices.innerHTML = ["team1", "team2"].map((key) => `
+      <button type="button" class="bingo-team-choice ${key === requestedTeam ? "active" : ""}" data-access-team="${key}">
+        <strong>${key === "team1" ? "Team 1" : "Team 2"}</strong>
+        <span>${escapeHtml(teams[key]?.name || key)}</span>
+        ${teams[key]?.passwordSet ? "" : "<small>Password not set yet</small>"}
+      </button>`).join("");
+    choices.querySelectorAll("[data-access-team]").forEach(button => {
+      button.addEventListener("click", () => {
+        document.getElementById("bingoTeamAccessTeam").value = button.dataset.accessTeam;
+        choices.querySelectorAll(".bingo-team-choice").forEach(item => item.classList.toggle("active", item === button));
+        document.getElementById("bingoTeamPassword")?.focus();
+      });
+    });
+  }
+}
+
+function hideTeamAccessGate() {
+  const gate = document.getElementById("bingoTeamAccess");
+  const page = document.querySelector("main.bingo-page");
+  if (gate) gate.style.display = "none";
+  if (page) page.style.display = "block";
+}
+
+function bindTeamAccessControls() {
+  document.getElementById("bingoTeamAccessForm")?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const error = document.getElementById("bingoTeamAccessError");
+    if (error) error.textContent = "";
+    const response = await fetch("/api/bingo/team-access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        team: document.getElementById("bingoTeamAccessTeam")?.value,
+        password: document.getElementById("bingoTeamPassword")?.value || ""
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (error) error.textContent = data.error || "Could not open that team board.";
+      return;
+    }
+    bingoAccessInfo = await loadTeamAccessInfo();
+    currentUserBingoTeam = data.team === "team2" ? "ash" : "ember";
+    hideTeamAccessGate();
+    await loadBingoState();
+  });
+
+  document.getElementById("bingoTeamPasswordsBtn")?.addEventListener("click", openTeamAccessAdmin);
+  document.getElementById("closeTeamAccessAdminModal")?.addEventListener("click", closeTeamAccessAdmin);
+  document.getElementById("saveTeamAccessAdminBtn")?.addEventListener("click", saveTeamAccessAdmin);
+  document.getElementById("manualHitBtn")?.addEventListener("click", () => applyManualAttackResult("hit"));
+  document.getElementById("manualMissBtn")?.addEventListener("click", () => applyManualAttackResult("miss"));
+  document.getElementById("manualResetBtn")?.addEventListener("click", () => applyManualAttackResult("reset"));
+}
+
+async function openTeamAccessAdmin() {
+  if (!isBingoStaff) return;
+  const response = await fetch("/api/admin/bingo/team-access", { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return alert(data.error || "Could not load team access settings.");
+  document.getElementById("team1AccessName").value = data.team1?.name || getTeamDisplayName("ember");
+  document.getElementById("team2AccessName").value = data.team2?.name || getTeamDisplayName("ash");
+  document.getElementById("team1AccessPassword").value = "";
+  document.getElementById("team2AccessPassword").value = "";
+  document.getElementById("team1PasswordState").textContent = data.team1?.passwordSet ? "Password is set" : "Password has not been set";
+  document.getElementById("team2PasswordState").textContent = data.team2?.passwordSet ? "Password is set" : "Password has not been set";
+  document.getElementById("teamAccessAdminModal")?.classList.add("show");
+}
+
+function closeTeamAccessAdmin() {
+  document.getElementById("teamAccessAdminModal")?.classList.remove("show");
+}
+
+async function saveTeamAccessAdmin() {
+  const response = await fetch("/api/admin/bingo/team-access", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      team1Name: document.getElementById("team1AccessName")?.value,
+      team2Name: document.getElementById("team2AccessName")?.value,
+      team1Password: document.getElementById("team1AccessPassword")?.value,
+      team2Password: document.getElementById("team2AccessPassword")?.value
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return alert(data.error || "Could not save team access settings.");
+  closeTeamAccessAdmin();
+  await loadBingoState();
+  alert("Team names and passwords saved.");
+}
+
+function applyTeamViewVisibility() {
+  const page = document.querySelector("main.bingo-page");
+  page?.classList.toggle("is-team-view", !isBingoStaff);
+  if (isBingoStaff) {
+    document.getElementById("emberFleetCard")?.style.removeProperty("display");
+    document.getElementById("ashFleetCard")?.style.removeProperty("display");
     return;
   }
+  const own = currentUserBingoTeam;
+  document.getElementById("emberFleetCard")?.style.setProperty("display", own === "ember" ? "block" : "none");
+  document.getElementById("ashFleetCard")?.style.setProperty("display", own === "ash" ? "block" : "none");
+  if (["captains", "log"].includes(activeBingoTab)) activeBingoTab = "board";
+}
+
+async function applyManualAttackResult(result) {
+  if (!isBingoStaff || activeTileIndex === null) return;
+  const attackingTeam = document.getElementById("manualAttackTeamSelect")?.value === "ash" ? "ash" : "ember";
+  const defendingTeam = getOpponent(attackingTeam);
+  const tile = bingoState.tiles[activeTileIndex];
+  if (!tile) return;
+
+  const existingIndex = bingoState.attacks.findIndex(attack => attack.attackingTeam === attackingTeam && attack.targetIndex === activeTileIndex);
+  if (result === "reset") {
+    if (existingIndex >= 0) bingoState.attacks.splice(existingIndex, 1);
+    bingoState.teams[attackingTeam].attacks = bingoState.attacks.filter(attack => attack.attackingTeam === attackingTeam);
+    const progress = getTileTeamProgress(tile, attackingTeam);
+    if (progress.completedBy === "Admin manual") Object.assign(progress, emptyTeamProgress());
+    addLog(`Admin reset ${tile.name} for ${getTeamDisplayName(attackingTeam)}.`);
+  } else {
+    const attack = {
+      id: existingIndex >= 0 ? bingoState.attacks[existingIndex].id : crypto.randomUUID(),
+      attackingTeam, defendingTeam, targetIndex: activeTileIndex, result,
+      shipKey: result === "hit" ? (bingoState.teams[defendingTeam].ships.find(ship => ship.cells.includes(activeTileIndex))?.key || "") : "",
+      manual: true, at: new Date().toISOString()
+    };
+    if (existingIndex >= 0) bingoState.attacks[existingIndex] = attack;
+    else bingoState.attacks.push(attack);
+    bingoState.teams[attackingTeam].attacks = bingoState.attacks.filter(item => item.attackingTeam === attackingTeam);
+    const progress = getTileTeamProgress(tile, attackingTeam);
+    progress.completedQuantity = getTileQuantity(tile);
+    progress.status = "approved";
+    progress.completedBy = "Admin manual";
+    progress.proofId = "";
+    addLog(`Admin marked ${getTeamDisplayName(attackingTeam)}'s attack on ${tile.name} as ${result.toUpperCase()}.`);
+  }
+
+  for (const team of ["ember", "ash"]) {
+    for (const ship of bingoState.teams[team].ships) {
+      ship.sunk = ship.cells.length > 0 && ship.cells.every(cell => bingoState.attacks.some(attack => attack.defendingTeam === team && attack.targetIndex === cell && attack.result === "hit"));
+    }
+  }
+  await saveBingoState();
+  closeTileEditor();
+}
+
+(async function initBingo() {
+  await checkBingoStaff();
   bindBingoControls();
-  await loadCurrentUserBingoTeam();
+  bindTeamAccessControls();
+  bingoAccessInfo = await loadTeamAccessInfo();
+  if (isBingoStaff) {
+    hideTeamAccessGate();
+    await loadBingoState();
+    return;
+  }
+  if (!bingoAccessInfo?.team) {
+    showTeamAccessGate(bingoAccessInfo);
+    return;
+  }
+  currentUserBingoTeam = bingoAccessInfo.team === "team2" ? "ash" : "ember";
+  hideTeamAccessGate();
   await loadBingoState();
 })();
