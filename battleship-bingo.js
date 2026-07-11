@@ -259,8 +259,10 @@ async function saveBingoState() {
     });
     if (!response.ok) throw new Error("Save failed.");
     bingoState = normaliseState(await response.json());
-  } catch {
-    localStorage.setItem("ironkin:bingo:state", JSON.stringify(bingoState));
+  } catch (error) {
+    console.error("Could not save Bingo state", error);
+    alert("The board could not be saved to the server. Your team boards were not changed. Refresh and try again.");
+    throw error;
   }
   renderAll();
 }
@@ -2347,7 +2349,8 @@ function ensureAdminAttackContextMenu() {
       <div class="admin-attack-context-actions">
         <button type="button" data-team="ember" data-result="hit">Hit</button>
         <button type="button" data-team="ember" data-result="miss">Miss</button>
-        <button type="button" data-team="ember" data-result="reset">Reset</button>
+        <button type="button" data-team="ember" data-result="reset">Reset Attack</button>
+        <button type="button" data-team="ember" data-result="reset-progress">Reset Progress</button>
       </div>
     </div>
     <div class="admin-attack-context-team">
@@ -2355,7 +2358,8 @@ function ensureAdminAttackContextMenu() {
       <div class="admin-attack-context-actions">
         <button type="button" data-team="ash" data-result="hit">Hit</button>
         <button type="button" data-team="ash" data-result="miss">Miss</button>
-        <button type="button" data-team="ash" data-result="reset">Reset</button>
+        <button type="button" data-team="ash" data-result="reset">Reset Attack</button>
+        <button type="button" data-team="ash" data-result="reset-progress">Reset Progress</button>
       </div>
     </div>`;
   menu.addEventListener("click", async event => {
