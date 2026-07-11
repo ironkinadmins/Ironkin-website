@@ -2,3 +2,45 @@
 
 /* Keep private team boards centred and no wider than 980px. */
 .team-board{width:100%;max-width:980px;margin-left:auto;margin-right:auto}
+
+/* Per-team quantity progress. The API only returns the signed-in team's progress. */
+.team-tile.partial {
+  box-shadow: inset 0 0 0 2px rgba(255, 134, 27, 0.72);
+}
+
+.team-tile .team-progress-count {
+  position: absolute;
+  left: 5px;
+  bottom: 9px;
+  z-index: 6;
+  display: block;
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 0.58rem;
+  line-height: 1.1;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.team-tile .team-progress-line {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 3px;
+  z-index: 6;
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
+.team-tile .team-progress-line i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff7a1a, #ffcf9c);
+}
