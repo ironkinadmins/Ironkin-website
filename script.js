@@ -1041,7 +1041,7 @@ async function appendBattleshipBingoCard(grid) {
   const signupOpen = settings.signupOpen === true;
   const enableViewEvent = settings.enableViewEvent === true;
   const href = enableViewEvent
-    ? "battleship-bingo.html"
+    ? "bingo.html"
     : signupOpen
       ? "bingo-signup.html"
       : "";
@@ -1054,11 +1054,11 @@ async function appendBattleshipBingoCard(grid) {
     title: active ? (settings.title || "Battleship Bingo") : "Battleship Bingo",
     description: active
       ? enableViewEvent
-        ? "Event in progress. View the live Battleship Bingo board."
+        ? "Event in progress. Choose your private team board."
         : (settings.description || "Build a board, split into teams, claim tiles, and track summer progress.")
       : "",
     active,
-    ctaLabel: enableViewEvent ? "View Event →" : "Sign Up →"
+    ctaLabel: enableViewEvent ? "Enter Bingo →" : "Sign Up →"
   }));
 }
 
@@ -1114,8 +1114,8 @@ async function loadHomeBingoSignupBanner() {
       if (title) title.textContent = "Battleship Bingo is live";
       if (text) text.textContent = "The event has started. Jump straight to the live board.";
       if (link) {
-        link.href = "battleship-bingo.html";
-        link.textContent = "View Board";
+        link.href = "bingo.html";
+        link.textContent = "Enter Bingo";
       }
       return;
     }
