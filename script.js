@@ -1041,7 +1041,7 @@ async function appendBattleshipBingoCard(grid) {
   const signupOpen = settings.signupOpen === true;
   const enableViewEvent = settings.enableViewEvent === true;
   const href = enableViewEvent
-    ? "bingo.html"
+    ? "/bingo"
     : signupOpen
       ? "bingo-signup.html"
       : "";
@@ -1112,9 +1112,9 @@ async function loadHomeBingoSignupBanner() {
     if (settings.active === true && settings.enableViewEvent === true) {
       banner.style.display = "flex";
       if (title) title.textContent = "Battleship Bingo is live";
-      if (text) text.textContent = "The event has started. Jump straight to the live board.";
+      if (text) text.textContent = "The event has started. Choose your private team board.";
       if (link) {
-        link.href = "bingo.html";
+        link.href = "/bingo";
         link.textContent = "Enter Bingo";
       }
       return;
