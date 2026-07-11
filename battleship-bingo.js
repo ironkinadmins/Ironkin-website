@@ -29,7 +29,17 @@ let isBingoSignedIn = false;
 let currentUserBingoTeam = null;
 let bingoAccessInfo = null;
 const bingoQuery = new URLSearchParams(window.location.search);
-const forcedAccessTeam = bingoQuery.get("teamView") === "1" ? (bingoQuery.get("team") === "team2" ? "team2" : "team1") : null;
+const pageTeamView = document.body?.dataset?.teamView || "";
+const pathTeamView = /(?:^|\/)team-2(?:\.html)?\/?$/i.test(window.location.pathname)
+  ? "team2"
+  : /(?:^|\/)team-1(?:\.html)?\/?$/i.test(window.location.pathname)
+    ? "team1"
+    : "";
+const forcedAccessTeam = ["team1", "team2"].includes(pageTeamView)
+  ? pageTeamView
+  : pathTeamView || (bingoQuery.get("teamView") === "1"
+    ? (bingoQuery.get("team") === "team2" ? "team2" : "team1")
+    : null);
 let activeTileIndex = null;
 let wikiSearchTimer = null;
 let placingTeam = null;

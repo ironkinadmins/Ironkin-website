@@ -10,10 +10,17 @@ const STAFF_ONLY_PATHS = new Set([
 // These pages contain bingo board/game data and must never be available
 // to logged-out visitors. The API routes are protected separately too.
 const SIGNED_IN_ONLY_PATHS = new Set([
-  "/battleship-bingo",
-  "/battleship-bingo.html",
   "/battleship-stats",
   "/battleship-stats.html"
+]);
+
+const NO_CACHE_PATHS = new Set([
+  "/battleship-bingo",
+  "/battleship-bingo.html",
+  "/team-1",
+  "/team-1.html",
+  "/team-2",
+  "/team-2.html"
 ]);
 
 function normalizePath(pathname) {
@@ -54,10 +61,12 @@ export async function onRequest(context) {
 
   const response = await next();
 
+  const noCache = NO_CACHE_PATHS.has(normalizePath(url.pathname));
+
   // Prevent browsers and edge caches from keeping an older Battleship Bingo page.
   // The HTML will therefore pick up the newest versioned JavaScript automatically,
   // without requiring every player to perform a hard refresh.
-  if (signedInOnly) {
+  if (signedInOnly || noCache) {
     const headers = new Headers(response.headers);
     headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
     headers.set("Pragma", "no-cache");
