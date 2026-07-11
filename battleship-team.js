@@ -23,6 +23,14 @@
     const data = await json("/api/bingo/team-session");
     const info = data.teams?.[accessTeam];
     $("pageTeamName").textContent = info?.name || (accessTeam === "team1" ? "Team 1" : "Team 2");
+    if (data.authorizedTeam !== accessTeam) {
+      showLogin("You are not assigned to this Bingo team.");
+      $("teamPassword").disabled = true;
+      $("teamLoginForm").querySelector('button[type="submit"]').disabled = true;
+      return;
+    }
+    $("proofPlayer").value = data.displayName || "";
+    $("proofPlayer").readOnly = true;
     if (data.team === accessTeam) await loadBoard();
     else showLogin();
   }
@@ -194,7 +202,6 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tileIndex: Number($("proofTileIndex").value),
-          player: $("proofPlayer").value,
           url: $("proofUrl").value,
           quantity: Number($("proofQuantity").value),
           note: $("proofNote").value

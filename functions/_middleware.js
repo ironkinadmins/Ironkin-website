@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "./api/_auth.js";
+import { requireBingoTeam } from "./api/bingo/_teamAuthorization.js";
 
 const STAFF_ONLY_PATHS = new Set([
   "/admin",
@@ -11,7 +12,11 @@ const STAFF_ONLY_PATHS = new Set([
 // to logged-out visitors. The API routes are protected separately too.
 const SIGNED_IN_ONLY_PATHS = new Set([
   "/battleship-stats",
-  "/battleship-stats.html"
+  "/battleship-stats.html",
+  "/team-1",
+  "/team-1.html",
+  "/team-2",
+  "/team-2.html"
 ]);
 
 const NO_CACHE_PATHS = new Set([
@@ -57,6 +62,22 @@ export async function onRequest(context) {
     const homeUrl = new URL("/index.html", url.origin);
     homeUrl.searchParams.set("error", "staff_required");
     return Response.redirect(homeUrl.toString(), 302);
+  }
+
+  const normalizedPath = normalizePath(url.pathname);
+  const requiredTeam = normalizedPath === "/team-1" || normalizedPath === "/team-1.html"
+    ? "team1"
+    : normalizedPath === "/team-2" || normalizedPath === "/team-2.html"
+      ? "team2"
+      : null;
+
+  if (requiredTeam) {
+    const bingoUser = await requireBingoTeam(request, env, requiredTeam);
+    if (!bingoUser.ok) {
+      const homeUrl = new URL("/index.html", url.origin);
+      homeUrl.searchParams.set("error", bingoUser.status === 401 ? "signin_required" : "bingo_team_required");
+      return Response.redirect(homeUrl.toString(), 302);
+    }
   }
 
   const response = await next();
