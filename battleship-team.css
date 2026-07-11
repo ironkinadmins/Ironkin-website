@@ -55,27 +55,29 @@
 
 @media(max-width:760px){.team-board{grid-template-columns:repeat(10,64px)}.team-shell{padding-left:10px;padding-right:10px}.team-hero{align-items:start;flex-direction:column}.team-card{padding:14px}.team-tile{min-width:64px;padding:4px 4px 15px}.team-tile .tile-name{font-size:.58rem}.team-tile .status-badge{font-size:.52rem;min-width:27px;height:17px}.team-tile .qty-badge{height:18px;min-width:20px;font-size:.6rem}}
 
-/* Progress never shades, tints, dims, or recolours a tile. Progress is shown only by its count and bottom bar. */
-.team-tile.progress-complete,
-.team-tile.progress-partial,
-.team-tile.complete,
-.team-tile.partial {
+/* Completion is not shown with a checkmark, overlay, tint, or extra badge.
+   Hit/Miss and quantity progress are the only completion indicators. */
+.team-tile::before,
+.team-tile::after,
+.team-tile.progress-complete::before,
+.team-tile.progress-complete::after {
+  content: none !important;
+  display: none !important;
+}
+
+.team-tile.progress-partial {
   background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
 }
-.team-tile.progress-complete img,
 .team-tile.progress-partial img {
   opacity:1;
   filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));
 }
-/* Preserve hit/miss as the highest-priority tile state, even when progress is partial or complete. */
 .team-tile.hit,
-.team-tile.hit.progress-complete,
 .team-tile.hit.progress-partial {
   border:2px solid #ff3b30;
   box-shadow:0 0 0 1px rgba(255,59,48,.5),0 0 12px rgba(255,59,48,.62),inset 0 0 0 1px rgba(255,255,255,.08);
 }
 .team-tile.miss,
-.team-tile.miss.progress-complete,
 .team-tile.miss.progress-partial {
   border:2px solid #26a7ff;
   box-shadow:0 0 0 1px rgba(38,167,255,.48),0 0 12px rgba(38,167,255,.58),inset 0 0 0 1px rgba(255,255,255,.08);

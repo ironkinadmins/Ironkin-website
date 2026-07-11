@@ -98,7 +98,6 @@
       tile.name ? "" : "empty",
       attack?.result || "",
       ship ? "ship" : "",
-      isComplete ? "progress-complete" : "",
       isPartial ? "progress-partial" : ""
     ].filter(Boolean).join(" ");
 
@@ -109,9 +108,7 @@
     const image = tile.image ? `<img src="${esc(tile.image)}" alt="">` : "";
     const progressMarkup = required > 1 && completed > 0
       ? `<span class="team-progress-count">${completed}/${required}</span><span class="team-progress-line" aria-label="${completed} of ${required} complete"><i style="width:${percent}%"></i></span>`
-      : isComplete
-        ? `<span class="team-complete-badge" title="Completed for ${esc(state.ownTeam.name)}" aria-label="Completed">✓</span>`
-        : "";
+      : "";
     const shipBadge = ship
       ? `<b class="ship-badge" title="${esc(ship.name)}">${esc(ship.name.charAt(0))}</b>`
       : "";
