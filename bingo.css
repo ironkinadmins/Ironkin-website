@@ -96,3 +96,6 @@
     grid-template-columns: 1fr;
   }
 }
+
+.team-card:first-of-type{border-top:3px solid #ff8c2a}
+.team-card:last-of-type{border-top:3px solid #4da3ff}
