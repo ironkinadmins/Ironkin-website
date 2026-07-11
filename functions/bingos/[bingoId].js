@@ -1,5 +1,6 @@
 import { lookupTileItemIds } from "./itemLookup.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "../api/bingo/_stateIntegrity.js";
+import { sendPendingProofToDiscord } from "../api/bingo/_discordProofs.js";
 
 const BOARD_KEY = "bingo:state:v2";
 const SIGNUPS_KEY = "bingo:signups";
@@ -299,7 +300,7 @@ export async function onRequestPost(context) {
     board.proofs.unshift(proof);
     board.proofs = board.proofs.slice(0, 300);
     appendLog(board, `${proof.player} submitted a RuneLite plugin test proof.`);
-    const discordMessageId = await notifyPendingProofDiscord(env, request, proof, { tileName: proof.tileName, itemName: "Bones" });
+    const discordMessageId = await sendPendingProofToDiscord(env, board, proof);
     if (discordMessageId) proof.discordMessageId = discordMessageId;
     await saveBoard(env, board);
 
@@ -369,10 +370,7 @@ export async function onRequestPost(context) {
   teamProgress.proofId = proofId;
   appendLog(board, `${player} auto-submitted plugin proof for ${tile.name || `Tile ${match.tileIndex + 1}`}.`);
 
-  const discordMessageId = await notifyPendingProofDiscord(env, request, proof, {
-    tileName: tile.name || `Tile ${match.tileIndex + 1}`,
-    itemName: tile.name || `Item ID ${itemId}`
-  });
+  const discordMessageId = await sendPendingProofToDiscord(env, board, proof);
   if (discordMessageId) proof.discordMessageId = discordMessageId;
   await saveBoard(env, board);
 

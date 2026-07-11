@@ -1,5 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
+import { updateProofDiscordMessage } from "./_discordProofs.js";
 
 const COUNCIL_ROLE_ID = "1515576495844757524";
 
@@ -86,10 +87,6 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  const webhookUrl = cleanWebhookBase(env.DISCORD_PROOF_WEBHOOK_URL);
-  if (!webhookUrl) {
-    return Response.json({ ok: true, skipped: true, reason: "DISCORD_PROOF_WEBHOOK_URL is not configured." });
-  }
 
   const body = await request.json().catch(() => ({}));
   const proofId = clampString(body.proofId, 80);
@@ -103,18 +100,9 @@ export async function onRequestPost({ request, env }) {
   if (!proof) return Response.json({ ok: true, skipped: true, reason: "Proof not found." });
   if (!proof.discordMessageId) return Response.json({ ok: true, skipped: true, reason: "Proof has no Discord message ID." });
 
-  const response = await fetch(`${webhookUrl}/messages/${encodeURIComponent(proof.discordMessageId)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      content: "",
-      embeds: [buildStatusEmbed(state, proof, action)],
-      allowed_mentions: { parse: [] }
-    })
-  });
-
-  if (!response.ok) {
-    return Response.json({ error: "Discord message update failed.", status: response.status, body: await response.text() }, { status: 502 });
+  const updated = await updateProofDiscordMessage(env, state, proof, action, proof.reviewedBy || "", null);
+  if (!updated) {
+    return Response.json({ error: "Discord message update failed." }, { status: 502 });
   }
 
   proof.discordMessageUpdatedAt = new Date().toISOString();

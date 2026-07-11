@@ -2,6 +2,7 @@ import { getSession, isStaffSession } from "../_auth.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "./_teams.js";
 import { boardTeam as boardKeyForAccessTeam, getConfig as getAccessConfig, getTeamSession as getTeamAccess } from "./_teamAccess.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
+import { updateProofDiscordMessage } from "./_discordProofs.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
@@ -360,25 +361,8 @@ function buildDiscordProofEmbed(state, proof, action, request) {
 }
 
 async function editDiscordProofMessage(env, request, state, proof, action) {
-  const webhookUrl = cleanWebhookBase(env.DISCORD_PROOF_WEBHOOK_URL);
-  if (!webhookUrl || !proof?.discordMessageId) return false;
-
-  const response = await fetch(`${webhookUrl}/messages/${encodeURIComponent(proof.discordMessageId)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      content: "",
-      embeds: [buildDiscordProofEmbed(state, proof, action, request)],
-      allowed_mentions: { parse: [] }
-    })
-  });
-
-  if (!response.ok) {
-    console.warn("Discord proof status update failed", response.status, await response.text());
-    return false;
-  }
-
-  return true;
+  if (!proof?.discordMessageId) return false;
+  return updateProofDiscordMessage(env, state, proof, action, proof.reviewedBy || "", null);
 }
 
 async function updateDiscordMessagesForProofChanges(env, request, previousState, nextState) {
