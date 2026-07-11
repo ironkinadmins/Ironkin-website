@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../../_auth.js";
+import { enforceStateIntegrity, prepareStateForWrite } from "../../bingo/_stateIntegrity.js";
 
 const STATE_KEY = "bingo:state:v2";
 const VALID_TEAMS = new Set(["ember", "ash"]);
@@ -66,7 +67,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "The Bingo board has not been created yet." }, { status: 404, headers: noStore() });
   }
 
-  const state = JSON.parse(raw);
+  const state = enforceStateIntegrity(JSON.parse(raw));
   state.attacks = Array.isArray(state.attacks) ? state.attacks : [];
   state.log = Array.isArray(state.log) ? state.log : [];
   state.teams = state.teams || {};
@@ -102,6 +103,14 @@ export async function onRequestPost({ request, env }) {
       tile.proofId = "";
     }
 
+    // Keep proof history, but prevent approved/pending proofs from contradicting a manual zero-progress reset.
+    state.proofs = (Array.isArray(state.proofs) ? state.proofs : []).map(proof => {
+      if (proof.team === attackingTeam && Number(proof.tileIndex) === targetIndex && ["pending", "approved"].includes(proof.status)) {
+        return { ...proof, status: "rejected", resetByAdmin: true, resetAt: new Date().toISOString() };
+      }
+      return proof;
+    });
+
     // A tile with no team progress should no longer have an attack result for that team.
     removeAttack(state, attackingTeam, targetIndex);
   } else if (result === "reset") {
@@ -129,7 +138,8 @@ export async function onRequestPost({ request, env }) {
   recomputeSunkShips(state);
 
   const now = new Date().toISOString();
-  state.updatedAt = now;
+  prepareStateForWrite(state, state.stateRevision);
+  const finalNow = state.updatedAt;
   let text;
   if (result === "reset-progress") {
     text = `${adminName} reset ${attackingName}'s tile progress on ${tileName}.`;
@@ -138,9 +148,9 @@ export async function onRequestPost({ request, env }) {
   } else {
     text = `${adminName} manually marked ${attackingName}'s attack on ${defendingName} at ${tileName} as ${result.toUpperCase()}.`;
   }
-  state.log.unshift({ at: now, text });
+  state.log.unshift({ at: finalNow, text });
   state.log = state.log.slice(0, 120);
 
   await env.DROPS_KV.put(STATE_KEY, JSON.stringify(state));
-  return Response.json({ ok: true, attackingTeam, defendingTeam, targetIndex, result, updatedAt: now }, { headers: noStore() });
+  return Response.json({ ok: true, attackingTeam, defendingTeam, targetIndex, result, updatedAt: finalNow, stateRevision: state.stateRevision }, { headers: noStore() });
 }

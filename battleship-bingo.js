@@ -139,7 +139,7 @@ function normaliseState(data) {
   if (!data || typeof data !== "object") return base;
   const size = Number(data.size || BINGO_SIZE);
   const tiles = Array.isArray(data.tiles) && data.tiles.length
-    ? data.tiles.slice(0, BINGO_SIZE * BINGO_SIZE).map((tile, index) => ({ ...base.tiles[index], ...tile, id: index, teamProgress: normaliseTileProgress(tile) }))
+    ? data.tiles.slice(0, BINGO_SIZE * BINGO_SIZE).map((tile, index) => ({ ...base.tiles[index], ...tile, id: index, completedQuantity: 0, completedQty: 0, progress: 0, status: "open", completedBy: "", completedTeam: "", proofId: "", teamProgress: normaliseTileProgress(tile) }))
     : base.tiles;
   while (tiles.length < BINGO_SIZE * BINGO_SIZE) tiles.push({ ...base.tiles[tiles.length], id: tiles.length });
 
@@ -257,7 +257,10 @@ async function saveBingoState() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bingoState)
     });
-    if (!response.ok) throw new Error("Save failed.");
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Save failed.");
+    }
     bingoState = normaliseState(await response.json());
   } catch (error) {
     console.error("Could not save Bingo state", error);

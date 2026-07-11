@@ -1,6 +1,7 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "./_teams.js";
 import { boardTeam as boardKeyForAccessTeam, getConfig as getAccessConfig, getTeamSession as getTeamAccess } from "./_teamAccess.js";
+import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
 const BINGO_SIZE = 10;
 const MAX_TILES = BINGO_SIZE * BINGO_SIZE;
 const SHIP_TEMPLATES = [
@@ -44,6 +45,9 @@ function defaultTeam(key, name) {
 function defaultState() {
   return {
     version: 2,
+    schemaVersion: 3,
+    teamSlotVersion: 1,
+    stateRevision: 0,
     size: BINGO_SIZE,
     phase: "setup",
     locked: false,
@@ -109,11 +113,13 @@ function sanitiseState(body) {
       name: clampString(tile.name, 120),
       image: clampString(tile.image, 700),
       quantity: Math.max(1, Number.parseInt(tile.quantity ?? tile.qty ?? tile.quantityNeeded ?? 1, 10) || 1),
-      completedQuantity: Math.max(0, Number.parseInt(tile.completedQuantity ?? tile.completedQty ?? tile.progress ?? 0, 10) || 0),
-      status: ["open", "submitted", "partial", "approved", "rejected"].includes(tile.status) ? tile.status : "open",
-      completedBy: clampString(tile.completedBy, 100),
-      completedTeam: ["ember", "ash"].includes(tile.completedTeam) ? tile.completedTeam : "",
-      proofId: clampString(tile.proofId, 80),
+      completedQuantity: 0,
+      completedQty: 0,
+      progress: 0,
+      status: "open",
+      completedBy: "",
+      completedTeam: "",
+      proofId: "",
       teamProgress: cleanTeamProgress(tile)
     };
   });
@@ -121,6 +127,9 @@ function sanitiseState(body) {
   return {
     ...base,
     version: 2,
+    schemaVersion: 3,
+    teamSlotVersion: Number(body.teamSlotVersion) === 1 ? 1 : 0,
+    stateRevision: Math.max(0, Number.parseInt(body.stateRevision ?? 0, 10) || 0),
     size: BINGO_SIZE,
     phase: ["setup", "captains", "ships", "active", "complete"].includes(body.phase) ? body.phase : "setup",
     locked: Boolean(body.locked),
@@ -203,7 +212,7 @@ function canonicaliseTeamSlots(inputState) {
   const state = sanitiseState(inputState || {});
   const emberName = inputState?.teams?.ember?.name || state.teams.ember.name;
   const ashName = inputState?.teams?.ash?.name || state.teams.ash.name;
-  const reversed = looksLikeHarambe(emberName) || looksLikeApeys(ashName);
+  const reversed = inputState?.teamSlotVersion !== 1 && (looksLikeHarambe(emberName) || looksLikeApeys(ashName));
 
   if (reversed) {
     const oldEmber = state.teams.ember;
@@ -233,7 +242,8 @@ function canonicaliseTeamSlots(inputState) {
   state.teams.ash.key = "ash";
   state.teams.ember.attacks = state.attacks.filter(attack => attack.attackingTeam === "ember");
   state.teams.ash.attacks = state.attacks.filter(attack => attack.attackingTeam === "ash");
-  return state;
+  state.teamSlotVersion = 1;
+  return enforceStateIntegrity(state);
 }
 
 function isBoardFullyRevealed(state) {
@@ -444,7 +454,7 @@ export async function onRequestGet({ request, env }) {
     }
     migrated.locked = Boolean(old.locked);
     migrated.updatedAt = old.updatedAt || new Date().toISOString();
-    return Response.json(publicStateForRequest(migrated, isStaff, memberTeam), {
+    return Response.json(publicStateForRequest(enforceStateIntegrity(migrated), isStaff, memberTeam), {
       headers: { "Cache-Control": "no-store" }
     });
   }
@@ -460,9 +470,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   const previousRaw = await env.DROPS_KV.get("bingo:state:v2");
-  const previousState = previousRaw ? JSON.parse(previousRaw) : defaultState();
+  const previousState = enforceStateIntegrity(previousRaw ? JSON.parse(previousRaw) : defaultState());
   const body = await request.json();
-  const state = canonicaliseTeamSlots(body || {});
+  const incomingRevision = Math.max(0, Number.parseInt(body?.stateRevision ?? 0, 10) || 0);
+  if (incomingRevision !== previousState.stateRevision) {
+    return Response.json({
+      error: "The board changed after this page loaded. Refresh before saving again.",
+      code: "STALE_BOARD_STATE",
+      currentRevision: previousState.stateRevision
+    }, { status: 409, headers: { "Cache-Control": "no-store" } });
+  }
+  const state = prepareStateForWrite(canonicaliseTeamSlots(body || {}), previousState.stateRevision);
 
   // Keep Discord proof notifications in sync from the same server-side save
   // that approves/rejects/deletes proofs. This avoids relying on a separate

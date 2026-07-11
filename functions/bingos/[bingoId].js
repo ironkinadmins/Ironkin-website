@@ -1,4 +1,5 @@
 import { lookupTileItemIds } from "./itemLookup.js";
+import { enforceStateIntegrity, prepareStateForWrite } from "../api/bingo/_stateIntegrity.js";
 
 const BOARD_KEY = "bingo:state:v2";
 const SIGNUPS_KEY = "bingo:signups";
@@ -46,11 +47,12 @@ async function idsFromTile(env, tile) {
 
 async function getBoard(env) {
   const raw = await env.DROPS_KV.get(BOARD_KEY);
-  return safeJsonParse(raw, null);
+  const board = safeJsonParse(raw, null);
+  return board ? enforceStateIntegrity(board) : null;
 }
 
 async function saveBoard(env, board) {
-  board.updatedAt = new Date().toISOString();
+  prepareStateForWrite(board, board.stateRevision);
   await env.DROPS_KV.put(BOARD_KEY, JSON.stringify(board));
 }
 
@@ -67,7 +69,7 @@ function pluginUserFromContext(context) {
 function boardTeamFromSignupTeam(team) {
   if (team === "team1" || team === "ember") return "ember";
   if (team === "team2" || team === "ash") return "ash";
-  return "ember";
+  return null;
 }
 
 async function getPluginMemberContext(env, pluginUser, reportedUsername) {
@@ -97,18 +99,6 @@ function ensureTileTeamProgress(tile) {
       proofId: "",
       ...(tile.teamProgress[team] || {})
     };
-  }
-
-  const legacyTeam = tile.completedTeam === "ash" ? "ash" : tile.completedTeam === "ember" ? "ember" : null;
-  const legacyCompleted = Math.max(0, Number.parseInt(tile.completedQuantity ?? 0, 10) || 0);
-  if (legacyTeam && legacyCompleted > 0 && !tile.__legacyProgressMigrated && Number(tile.teamProgress[legacyTeam].completedQuantity || 0) === 0) {
-    tile.teamProgress[legacyTeam] = {
-      completedQuantity: legacyCompleted,
-      status: tile.status || "partial",
-      completedBy: tile.completedBy || "",
-      proofId: tile.proofId || ""
-    };
-    tile.__legacyProgressMigrated = true;
   }
   return tile.teamProgress;
 }
@@ -338,12 +328,19 @@ export async function onRequestPost(context) {
   if (!signup) {
     return jsonError("This API key is valid, but the member is not signed up for this bingo.", 403);
   }
+  if (!team) {
+    return jsonError("This member is signed up but is not assigned to Team 1 or Team 2.", 403);
+  }
 
   const tile = board.tiles[match.tileIndex];
   const required = Math.max(1, Number.parseInt(tile.quantity ?? tile.qty ?? 1, 10) || 1);
   const teamProgress = ensureTileTeamProgress(tile)[team];
   const completed = Math.max(0, Number.parseInt(teamProgress.completedQuantity ?? 0, 10) || 0);
-  const remaining = Math.max(1, required - completed);
+  const remaining = Math.max(0, required - completed);
+  if (remaining <= 0) return jsonError("That tile is already complete for this team.", 409);
+  if ((board.proofs || []).some(proof => proof.team === team && Number(proof.tileIndex) === match.tileIndex && proof.status === "pending")) {
+    return jsonError("A proof for this tile is already pending for this team.", 409);
+  }
   const proofId = crypto.randomUUID();
   const proofUrl = `${getOrigin(request)}/api/bingo/proof-image?id=${encodeURIComponent(proofId)}`;
 

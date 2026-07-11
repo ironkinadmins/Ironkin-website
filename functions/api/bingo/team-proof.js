@@ -1,5 +1,6 @@
 import { getTeamSession, boardTeam } from "./_teamAccess.js";
 import { requireBingoTeam } from "./_teamAuthorization.js";
+import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
 
 const headers = { "Cache-Control": "no-store" };
 function text(value, max) { return String(value || "").trim().slice(0, max); }
@@ -31,7 +32,7 @@ export async function onRequestPost({ request, env }) {
 
   const raw = await env.DROPS_KV.get("bingo:state:v2");
   if (!raw) return Response.json({ error: "Board not found." }, { status: 404, headers });
-  const state = JSON.parse(raw);
+  const state = enforceStateIntegrity(JSON.parse(raw));
   if (!["active", "complete"].includes(state.phase)) {
     return Response.json({ error: "Proof submissions are not open." }, { status: 409, headers });
   }
@@ -69,7 +70,7 @@ export async function onRequestPost({ request, env }) {
   tile.teamProgress[team] = { ...progress, status: completed > 0 ? "partial" : "submitted", proofId: proof.id };
   state.log = Array.isArray(state.log) ? state.log : [];
   state.log.unshift({ at: new Date().toISOString(), text: `${player} submitted proof for ${tile.name} x${proof.quantity} (${team}).` });
-  state.updatedAt = new Date().toISOString();
+  prepareStateForWrite(state, state.stateRevision);
   await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
   return Response.json({ ok: true, proof }, { headers });
 }

@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
+import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
 
 const COUNCIL_ROLE_ID = "1515576495844757524";
 
@@ -72,10 +73,11 @@ function buildStatusEmbed(state, proof, action) {
 
 async function getState(env) {
   const saved = await env.DROPS_KV.get("bingo:state:v2");
-  return saved ? JSON.parse(saved) : null;
+  return saved ? enforceStateIntegrity(JSON.parse(saved)) : null;
 }
 
 async function saveState(env, state) {
+  prepareStateForWrite(state, state.stateRevision);
   await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
 }
 
