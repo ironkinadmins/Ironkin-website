@@ -5,7 +5,12 @@ const STAFF_ONLY_PATHS = new Set([
   "/admin",
   "/admin.html",
   "/staff-handbook",
-  "/staff-handbook.html"
+  "/staff-handbook.html",
+  // The full Battleship Bingo page contains both teams, fleet placement,
+  // proof review, manual hit/miss controls, and board-write tools.
+  // It must never be served to a non-staff session.
+  "/battleship-bingo",
+  "/battleship-bingo.html"
 ]);
 
 // These pages contain bingo board/game data and must never be available
