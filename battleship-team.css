@@ -181,11 +181,12 @@
 .fleet-empty{font-size:.78rem;opacity:.7}
 
 /* The legacy setup board remains available in setup phases, but never duplicates the four-board control center during an active/completed game. */
-body.bingo-active #legacyBingoLayout{display:none!important}
+body.bingo-active #legacyBingoLayout:not(.admin-sidebar-only){display:none!important}
 
 @media(max-width:850px){.team-fleet-summary{grid-template-columns:1fr}.team-hero-actions{justify-content:flex-start}}
 
 /* Active admin view: keep the Players / Proofs / Log sidebar while hiding only the obsolete fifth board. */
+body.bingo-active #legacyBingoLayout.admin-sidebar-only{display:block!important}
 #legacyBingoLayout.admin-sidebar-only{
   display:block!important;
   margin-top:1rem;
