@@ -2327,12 +2327,36 @@ function renderAdminBoardTile(team, mode, tile, index) {
   const attackingTeam = mode === "attack" ? team : getOpponent(team);
   const attack = getAttackForTile(attackingTeam, index);
   const result = attack?.result || "";
-  const defendingShip = mode === "waters" ? (bingoState.teams?.[team]?.ships || []).find(ship => (ship.cells || []).includes(index)) : null;
+  const defendingShip = mode === "waters"
+    ? (bingoState.teams?.[team]?.ships || []).find(ship => (ship.cells || []).includes(index))
+    : null;
   const progress = mode === "attack" ? getTileCompletedQuantity(tile, team) : 0;
   const required = getTileQuantity(tile);
-  const classes = ["admin-board-tile", result, defendingShip ? "ship-cell" : "", defendingShip?.sunk ? "sunk" : ""].filter(Boolean).join(" ");
-  const label = mode === "attack" ? `${progress}/${required}${result ? ` • ${result.toUpperCase()}` : ""}` : `${defendingShip ? defendingShip.name : "Water"}${result ? ` • ${result.toUpperCase()}` : ""}`;
-  return `<button type="button" class="${classes}" data-team="${team}" data-index="${index}" data-mode="${mode}" title="${escapeAttr(tile.name || `Tile ${index + 1}`)} — ${escapeAttr(label)}" ${mode === "waters" ? "disabled" : ""}>${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="">` : ""}<span class="admin-tile-result">${escapeHtml(label)}</span></button>`;
+  const progressPercent = required > 0 ? Math.min(100, Math.round((progress / required) * 100)) : 0;
+  const isPartial = mode === "attack" && progress > 0 && progress < required;
+  const isComplete = mode === "attack" && progress >= required;
+  const classes = [
+    "admin-board-tile",
+    "team-tile",
+    tile?.name ? "" : "empty",
+    result,
+    defendingShip ? "ship" : "",
+    defendingShip?.sunk ? "sunk" : "",
+    isPartial ? "progress-partial" : "",
+    isComplete ? "progress-complete" : ""
+  ].filter(Boolean).join(" ");
+  const quantityBadge = required > 1 ? `<small class="qty-badge">x${required}</small>` : "";
+  const attackBadge = result ? `<b class="status-badge">${result.toUpperCase()}</b>` : "";
+  const shipBadge = mode === "waters" && defendingShip
+    ? `<b class="admin-ship-name${defendingShip.sunk ? " sunk" : ""}">${escapeHtml(defendingShip.name)}</b>`
+    : "";
+  const progressMarkup = mode === "attack" && required > 1 && progress > 0
+    ? `<span class="team-progress-count">${progress}/${required}</span><span class="team-progress-line" aria-label="${progress} of ${required} complete"><i style="width:${progressPercent}%"></i></span>`
+    : "";
+  const description = mode === "attack"
+    ? `${progress}/${required}${result ? ` • ${result.toUpperCase()}` : ""}`
+    : `${defendingShip ? defendingShip.name : "Water"}${result ? ` • ${result.toUpperCase()}` : ""}`;
+  return `<button type="button" class="${classes}" data-team="${team}" data-index="${index}" data-mode="${mode}" title="${escapeAttr(tile.name || `Tile ${index + 1}`)} — ${escapeAttr(description)}" ${mode === "waters" ? "disabled" : ""}>${quantityBadge}${attackBadge}${shipBadge}${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="">` : ""}<span class="tile-name">${escapeHtml(tile.name || "Empty")}</span>${progressMarkup}</button>`;
 }
 
 let adminTileActionContext = null;
