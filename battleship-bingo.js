@@ -2295,7 +2295,10 @@ function renderAdminControlCenter() {
   const legacy = document.getElementById("legacyBingoLayout");
   if (summary) summary.style.display = active ? "grid" : "none";
   if (center) center.style.display = active ? "block" : "none";
-  if (legacy) legacy.style.display = active ? "none" : "grid";
+  if (legacy) {
+    legacy.style.display = "grid";
+    legacy.classList.toggle("admin-sidebar-only", active);
+  }
   if (!active) return;
   const pending = bingoState.proofs.filter(proof => proof.status === "pending").length;
   const pendingCount = document.getElementById("pendingProofCount");
