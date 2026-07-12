@@ -144,3 +144,43 @@
 
 /* Staff-only Battleship admin control center */
 .admin-game-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1rem 0}.admin-summary-card{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:1rem 1.25rem;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,18,30,.9);color:inherit;cursor:pointer}.admin-summary-card span{opacity:.72}.admin-summary-card strong{font-size:1.05rem}.admin-board-control-center{margin:1rem 0 1.5rem}.admin-board-heading{display:flex;justify-content:space-between;gap:2rem;align-items:end;margin-bottom:1rem}.admin-board-heading h2{margin:.1rem 0}.admin-board-heading>p{max-width:620px;opacity:.75}.admin-four-boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.admin-board-card{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(8,15,26,.92);padding:1rem;min-width:0}.admin-board-card header{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:.75rem}.admin-board-card header h3{margin:0}.admin-board-card header span{font-size:.82rem;opacity:.7}.admin-board-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.admin-board-tile{position:relative;aspect-ratio:1;border:1px solid rgba(255,255,255,.08);border-radius:5px;background:rgba(255,255,255,.035);overflow:hidden;padding:0;cursor:pointer;color:inherit}.admin-board-tile img{width:100%;height:100%;object-fit:contain;padding:3px}.admin-board-tile .admin-tile-result{position:absolute;inset:auto 1px 1px 1px;font-size:.58rem;line-height:1.1;background:rgba(0,0,0,.78);border-radius:3px;padding:2px;text-align:center}.admin-board-tile.hit{outline:2px solid #ef4444;outline-offset:-2px}.admin-board-tile.miss{outline:2px solid #38bdf8;outline-offset:-2px}.admin-board-tile.ship-cell{background:rgba(245,158,11,.2)}.admin-board-tile.sunk{background:rgba(239,68,68,.3)}.admin-board-tile[disabled]{cursor:default}.admin-tile-action-dialog{width:min(560px,calc(100vw - 2rem));border:1px solid rgba(255,255,255,.14);border-radius:16px;background:#0b1320;color:#fff;padding:1.25rem}.admin-tile-action-dialog::backdrop{background:rgba(0,0,0,.72)}.admin-tile-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:1rem 0}.admin-tile-status-grid>div{padding:.8rem;border-radius:10px;background:rgba(255,255,255,.05)}.admin-tile-status-grid span{display:block;font-size:.8rem;opacity:.7}.admin-tile-action-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;margin-top:1rem}.proof-list,.bingo-log,.active-sidebar-content{max-height:70vh;overflow:auto;overscroll-behavior:contain}.proof-card{align-items:flex-start}.proof-card .proof-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .9rem;margin:.6rem 0;font-size:.88rem}.proof-card .proof-meta-grid span{opacity:.78}.proof-card .proof-image-preview{display:block;max-width:280px;max-height:180px;object-fit:contain;border-radius:8px;margin-top:.6rem}.active-proof-list{max-height:55vh;overflow:auto}@media(max-width:1050px){.admin-four-boards{grid-template-columns:1fr}.admin-board-heading{display:block}.admin-board-grid{gap:2px}}@media(max-width:650px){.admin-game-summary{grid-template-columns:1fr}.admin-tile-action-buttons{grid-template-columns:1fr}.admin-board-card{padding:.65rem}}
+
+
+/* Admin control-center boards intentionally mirror the Team 1/2 board presentation. */
+.admin-board-grid{display:grid;grid-template-columns:repeat(10,minmax(76px,1fr));gap:7px;overflow:auto;padding:2px 2px 10px}
+.admin-board-tile.team-tile{min-width:76px;border-radius:9px;padding:5px 5px 17px;background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%);border:1px solid rgba(255,132,24,.32)}
+.admin-board-tile.team-tile img{display:block;width:100%;height:59%;object-fit:contain;margin-top:2px;padding:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.admin-board-tile.team-tile .tile-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-top:1px;font-size:.66rem;line-height:1.02;font-weight:750;text-align:center;text-shadow:0 1px 2px #000}
+.admin-board-tile.team-tile.hit{outline:none;border-color:#ff3f3f;box-shadow:0 0 0 2px rgba(255,63,63,.92),0 0 12px rgba(255,63,63,.48)}
+.admin-board-tile.team-tile.miss{outline:none;border-color:#29b6ff;box-shadow:0 0 0 2px rgba(41,182,255,.92),0 0 12px rgba(41,182,255,.42)}
+.admin-board-tile.team-tile.ship{background:linear-gradient(180deg,#65686b 0%,#42464a 100%);border-color:rgba(235,235,235,.55)}
+.admin-board-tile.team-tile.ship img{opacity:.72;filter:grayscale(.25) drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.admin-board-tile.team-tile.ship.hit{background:linear-gradient(180deg,#5d4a4a 0%,#332426 100%)}
+.admin-board-tile.team-tile.ship.miss{background:linear-gradient(180deg,#465661 0%,#26343e 100%)}
+.admin-board-tile.team-tile.sunk{box-shadow:0 0 0 2px rgba(255,63,63,.95),0 0 15px rgba(255,63,63,.55)}
+.admin-ship-name{position:absolute;left:4px;right:4px;top:25px;z-index:9;padding:2px 4px;border-radius:5px;background:rgba(0,0,0,.82);color:#fff;font-size:.55rem;line-height:1.05;font-weight:900;text-align:center;text-transform:uppercase;letter-spacing:.02em;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.55)}
+.admin-ship-name.sunk{background:rgba(127,18,18,.92);color:#fff}
+.admin-board-tile.team-tile[disabled]{opacity:1}
+@media(max-width:1050px){.admin-board-grid{grid-template-columns:repeat(10,72px);gap:6px}}
+@media(max-width:650px){.admin-board-grid{grid-template-columns:repeat(10,64px)}.admin-board-tile.team-tile{min-width:64px;padding:4px 4px 15px}.admin-board-tile.team-tile .tile-name{font-size:.58rem}.admin-ship-name{top:22px;font-size:.48rem}}
+
+/* Team-page fleet status summary */
+.team-hero-actions{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;justify-content:flex-end}
+.team-fleet-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0 0 1.1rem}
+.team-fleet-card{border:1px solid rgba(249,115,22,.42);border-radius:15px;background:linear-gradient(145deg,rgba(28,13,7,.95),rgba(18,10,8,.92));padding:1rem 1.1rem;min-width:0}
+.fleet-card-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:.75rem}
+.fleet-team-icon{font-size:1.35rem;line-height:1.2}
+.fleet-team-copy h3{margin:0;color:#fff;font-size:1rem}
+.fleet-team-copy p{margin:.2rem 0 0;font-size:.8rem;opacity:.78}
+.fleet-card-top>strong{color:#ffb347;font-size:.76rem;white-space:nowrap;padding-top:.2rem}
+.fleet-card-stats{display:flex;gap:.85rem;flex-wrap:wrap;margin:.75rem 0;color:#e5e7eb;font-size:.78rem}
+.fleet-card-stats span:nth-child(1){color:#4ade80}.fleet-card-stats span:nth-child(2){color:#fb923c}.fleet-card-stats span:nth-child(3){color:#fb7185}
+.fleet-ship-tags{display:flex;gap:.42rem;flex-wrap:wrap}
+.fleet-ship-tag{display:inline-flex;align-items:center;gap:.25rem;padding:.36rem .55rem;border:1px solid rgba(249,115,22,.4);border-radius:7px;background:rgba(112,48,8,.25);font-size:.72rem;font-weight:800;color:#ffe7c2}
+.fleet-ship-tag b{color:#ffb347}.fleet-ship-tag.sunk{border-color:rgba(239,68,68,.62);background:rgba(127,29,29,.35);color:#fecaca;text-decoration:line-through}
+.fleet-empty{font-size:.78rem;opacity:.7}
+
+/* The legacy setup board remains available in setup phases, but never duplicates the four-board control center during an active/completed game. */
+body.bingo-active #legacyBingoLayout{display:none!important}
+
+@media(max-width:850px){.team-fleet-summary{grid-template-columns:1fr}.team-hero-actions{justify-content:flex-start}}
