@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   let state = null;
   let view = "attack";
+  let isStaff = false;
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -29,6 +30,12 @@
       $("teamLoginForm").querySelector('button[type="submit"]').disabled = true;
       return;
     }
+    isStaff = Boolean(data.isStaff);
+    const watersButton = $("watersViewBtn");
+    watersButton.classList.toggle("hidden", !isStaff);
+    watersButton.disabled = !isStaff;
+    if (!isStaff) view = "attack";
+
     $("proofPlayer").value = data.displayName || "";
     $("proofPlayer").readOnly = true;
     if (data.team === accessTeam) await loadBoard();
@@ -45,6 +52,11 @@
   async function loadBoard() {
     try {
       state = await json("/api/bingo/team-board");
+      isStaff = Boolean(state.isStaff);
+      const watersButton = $("watersViewBtn");
+      watersButton.classList.toggle("hidden", !isStaff);
+      watersButton.disabled = !isStaff;
+      if (!isStaff) view = "attack";
       $("loginPanel").classList.add("hidden");
       $("boardPanel").classList.remove("hidden");
       $("logoutTeamBtn").classList.remove("hidden");
@@ -123,6 +135,7 @@
   }
 
   function render() {
+    if (!isStaff && view !== "attack") view = "attack";
     const isAttackView = view === "attack";
     $("attackViewBtn").classList.toggle("active", isAttackView);
     $("watersViewBtn").classList.toggle("active", !isAttackView);
@@ -187,6 +200,7 @@
   });
 
   $("watersViewBtn").addEventListener("click", () => {
+    if (!isStaff) return;
     view = "waters";
     render();
   });
