@@ -64,13 +64,13 @@ async function resolveProofChannelId(env) {
 }
 
 export async function sendPendingProofToDiscord(env, state, proof) {
-  if (!env.DISCORD_BOT_TOKEN) return "";
+  if (!env.DISCORD_PROOF_BOT_TOKEN) return "";
   const channelId = await resolveProofChannelId(env);
   if (!channelId) return "";
   state.discordCouncilRoleId = env.COUNCIL_MEMBER_ROLE_ID || "1515576495844757524";
   const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`, {
     method: "POST",
-    headers: { "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
+    headers: { "Authorization": `Bot ${env.DISCORD_PROOF_BOT_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify(buildProofMessage(state, proof, "pending"))
   });
   if (!response.ok) {
@@ -84,10 +84,10 @@ export async function sendPendingProofToDiscord(env, state, proof) {
 }
 
 export async function updateProofDiscordMessage(env, state, proof, status, reviewer = "", attack = null) {
-  if (!env.DISCORD_BOT_TOKEN || !proof?.discordChannelId || !proof?.discordMessageId) return false;
+  if (!env.DISCORD_PROOF_BOT_TOKEN || !proof?.discordChannelId || !proof?.discordMessageId) return false;
   const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(proof.discordChannelId)}/messages/${encodeURIComponent(proof.discordMessageId)}`, {
     method: "PATCH",
-    headers: { "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
+    headers: { "Authorization": `Bot ${env.DISCORD_PROOF_BOT_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify(buildProofMessage(state, proof, status, reviewer, attack))
   });
   if (!response.ok) console.warn("Discord proof update failed", response.status, await response.text());
