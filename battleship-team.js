@@ -31,6 +31,7 @@
       return;
     }
     isStaff = Boolean(data.isStaff);
+    $("staffAdminBoardBtn")?.classList.toggle("hidden", !isStaff);
     const watersButton = $("watersViewBtn");
     watersButton.classList.toggle("hidden", !isStaff);
     watersButton.disabled = !isStaff;
@@ -53,6 +54,7 @@
     try {
       state = await json("/api/bingo/team-board");
       isStaff = Boolean(state.isStaff);
+      $("staffAdminBoardBtn")?.classList.toggle("hidden", !isStaff);
       const watersButton = $("watersViewBtn");
       watersButton.classList.toggle("hidden", !isStaff);
       watersButton.disabled = !isStaff;
@@ -64,6 +66,7 @@
       $("ownName").textContent = state.ownTeam.name;
       $("opponentName").textContent = state.opponent.name;
       $("phaseName").textContent = state.phase;
+      renderFleetSummary();
       render();
     } catch (error) {
       showLogin(error.message);
@@ -81,6 +84,39 @@
     return state.attacks.find(attack => direction === "out"
       ? attack.attackingTeam === state.viewerTeam && attack.targetIndex === index
       : attack.defendingTeam === state.viewerTeam && attack.targetIndex === index);
+  }
+
+  function fleetFor(teamKey) {
+    return state?.fleetSummary?.[teamKey] || { captain: "", hitsTaken: 0, ships: [] };
+  }
+
+  function renderFleetSummaryCard(teamKey, teamName, icon) {
+    const fleet = fleetFor(teamKey);
+    const ships = Array.isArray(fleet.ships) ? fleet.ships : [];
+    const sunk = ships.filter(ship => ship.sunk).length;
+    const afloat = Math.max(0, ships.length - sunk);
+    const hitsTaken = Math.max(0, Number(fleet.hitsTaken) || 0);
+    const captain = fleet.captain || "Not assigned";
+    const shipTags = ships.length
+      ? ships.map(ship => `<span class="fleet-ship-tag${ship.sunk ? " sunk" : ""}">${esc(ship.name || "Ship")} <b>(${Math.max(0, Number(ship.size) || 0)})</b></span>`).join("")
+      : `<span class="fleet-empty">Fleet not placed yet.</span>`;
+    return `<article class="team-fleet-card" data-team="${esc(teamKey)}"><div class="fleet-card-top"><span class="fleet-team-icon" aria-hidden="true">${icon}</span><div class="fleet-team-copy"><h3>${esc(teamName)}</h3><p>Captain: ${esc(captain)}</p></div><strong>${sunk}/${ships.length || 6} sunk</strong></div><div class="fleet-card-stats"><span>🛡 ${afloat} afloat</span><span>🔥 ${sunk} lost</span><span>💥 ${hitsTaken} hits taken</span></div><div class="fleet-ship-tags">${shipTags}</div></article>`;
+  }
+
+  function renderFleetSummary() {
+    const host = $("fleetSummary");
+    if (!host || !state) return;
+    try {
+      const ownKey = state.ownTeam?.key || state.viewerTeam;
+      const opponentKey = state.opponent?.key || (ownKey === "ember" ? "ash" : "ember");
+      host.innerHTML = [
+        renderFleetSummaryCard(ownKey, state.ownTeam?.name || "Your Team", "⚓"),
+        renderFleetSummaryCard(opponentKey, state.opponent?.name || "Opponent", "⚔")
+      ].join("");
+    } catch (error) {
+      console.error("Fleet summary render failed", error);
+      host.innerHTML = `<p class="fleet-summary-error">Fleet status could not be displayed. Refresh the page to retry.</p>`;
+    }
   }
 
   function buildTileViewModel(tile, index, isAttackView) {
