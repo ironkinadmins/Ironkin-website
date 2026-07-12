@@ -3,7 +3,7 @@ import { enforceStateIntegrity, prepareStateForWrite } from "../../bingo/_stateI
 
 const STATE_KEY = "bingo:state:v2";
 const VALID_TEAMS = new Set(["ember", "ash"]);
-const VALID_RESULTS = new Set(["hit", "miss", "reset", "reset-progress"]);
+const VALID_RESULTS = new Set(["hit", "miss", "reset", "reset-progress", "set-progress"]);
 
 function noStore(headers = {}) {
   return { "Cache-Control": "no-store", ...headers };
@@ -43,6 +43,24 @@ function removeAttack(state, attackingTeam, targetIndex) {
   ));
 }
 
+function createComputedAttack(state, attackingTeam, targetIndex, proofId = "") {
+  const defendingTeam = opponent(attackingTeam);
+  const defendingShips = Array.isArray(state.teams?.[defendingTeam]?.ships) ? state.teams[defendingTeam].ships : [];
+  const matchingShip = defendingShips.find(ship => Array.isArray(ship.cells) && ship.cells.includes(targetIndex));
+  return {
+    id: crypto.randomUUID(),
+    attackingTeam,
+    defendingTeam,
+    targetIndex,
+    result: matchingShip ? "hit" : "miss",
+    shipKey: matchingShip?.key || "",
+    source: "admin-progress",
+    manual: true,
+    proofId,
+    at: new Date().toISOString()
+  };
+}
+
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
   if (!isStaffSession(session)) {
@@ -68,6 +86,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   const state = enforceStateIntegrity(JSON.parse(raw));
+  const expectedRevision = Number.isInteger(Number(body.stateRevision)) ? Number(body.stateRevision) : null;
+  if (expectedRevision !== null && expectedRevision !== Number(state.stateRevision)) {
+    return Response.json({ error: "The board changed after this page loaded. Refresh and try again.", code: "STALE_BOARD_STATE", currentRevision: state.stateRevision }, { status: 409, headers: noStore() });
+  }
   state.attacks = Array.isArray(state.attacks) ? state.attacks : [];
   state.log = Array.isArray(state.log) ? state.log : [];
   state.teams = state.teams || {};
@@ -86,48 +108,45 @@ export async function onRequestPost({ request, env }) {
   const adminName = safeName(session.nick || session.global_name || session.username, "Staff");
 
   if (result === "reset-progress") {
-    if (!tile) {
-      return Response.json({ error: "That tile does not exist." }, { status: 404, headers: noStore() });
-    }
+    if (!tile) return Response.json({ error: "That tile does not exist." }, { status: 404, headers: noStore() });
     tile.teamProgress = tile.teamProgress || {};
     tile.teamProgress[attackingTeam] = emptyProgress();
-
-    // Clear the old globally shared fields too, preventing legacy migration from restoring the quantity.
     if (tile.completedTeam === attackingTeam) {
-      tile.completedQuantity = 0;
-      tile.completedQty = 0;
-      tile.progress = 0;
-      tile.status = "open";
-      tile.completedBy = "";
-      tile.completedTeam = "";
-      tile.proofId = "";
+      tile.completedQuantity = 0; tile.completedQty = 0; tile.progress = 0; tile.status = "open"; tile.completedBy = ""; tile.completedTeam = ""; tile.proofId = "";
     }
-
-    // Keep proof history, but prevent approved/pending proofs from contradicting a manual zero-progress reset.
     state.proofs = (Array.isArray(state.proofs) ? state.proofs : []).map(proof => {
       if (proof.team === attackingTeam && Number(proof.tileIndex) === targetIndex && ["pending", "approved"].includes(proof.status)) {
         return { ...proof, status: "rejected", resetByAdmin: true, resetAt: new Date().toISOString() };
       }
       return proof;
     });
-
-    // A tile with no team progress should no longer have an attack result for that team.
     removeAttack(state, attackingTeam, targetIndex);
+  } else if (result === "set-progress") {
+    if (!tile) return Response.json({ error: "That tile does not exist." }, { status: 404, headers: noStore() });
+    const required = Math.max(1, Number(tile.quantity) || 1);
+    const completedQuantity = Number(body.completedQuantity);
+    if (!Number.isInteger(completedQuantity) || completedQuantity < 0 || completedQuantity > required) {
+      return Response.json({ error: `Progress must be between 0 and ${required}.` }, { status: 400, headers: noStore() });
+    }
+    tile.teamProgress = tile.teamProgress || {};
+    tile.teamProgress[attackingTeam] = {
+      completedQuantity,
+      status: completedQuantity === 0 ? "open" : completedQuantity >= required ? "approved" : "partial",
+      completedBy: adminName,
+      proofId: ""
+    };
+    removeAttack(state, attackingTeam, targetIndex);
+    if (completedQuantity >= required) {
+      state.attacks.push(createComputedAttack(state, attackingTeam, targetIndex));
+    }
   } else if (result === "reset") {
     removeAttack(state, attackingTeam, targetIndex);
   } else {
     const defendingShips = Array.isArray(state.teams?.[defendingTeam]?.ships) ? state.teams[defendingTeam].ships : [];
     const matchingShip = defendingShips.find(ship => Array.isArray(ship.cells) && ship.cells.includes(targetIndex));
     const attack = {
-      id: existing?.id || crypto.randomUUID(),
-      attackingTeam,
-      defendingTeam,
-      targetIndex,
-      result,
-      shipKey: result === "hit" ? String(matchingShip?.key || "") : "",
-      source: "admin-manual",
-      manual: true,
-      at: new Date().toISOString()
+      id: existing?.id || crypto.randomUUID(), attackingTeam, defendingTeam, targetIndex, result,
+      shipKey: result === "hit" ? String(matchingShip?.key || "") : "", source: "admin-manual", manual: true, at: new Date().toISOString()
     };
     removeAttack(state, attackingTeam, targetIndex);
     state.attacks.push(attack);
@@ -143,13 +162,15 @@ export async function onRequestPost({ request, env }) {
   let text;
   if (result === "reset-progress") {
     text = `${adminName} reset ${attackingName}'s tile progress on ${tileName}.`;
+  } else if (result === "set-progress") {
+    text = `${adminName} set ${attackingName}'s progress on ${tileName} to ${Number(body.completedQuantity)}/${Math.max(1, Number(tile?.quantity) || 1)}.`;
   } else if (result === "reset") {
     text = `${adminName} reset ${attackingName}'s attack on ${tileName} (was ${previousResult}).`;
   } else {
     text = `${adminName} manually marked ${attackingName}'s attack on ${defendingName} at ${tileName} as ${result.toUpperCase()}.`;
   }
   state.log.unshift({ at: finalNow, text });
-  state.log = state.log.slice(0, 120);
+  state.log = state.log.slice(0, 2000);
 
   await env.DROPS_KV.put(STATE_KEY, JSON.stringify(state));
   return Response.json({ ok: true, attackingTeam, defendingTeam, targetIndex, result, updatedAt: finalNow, stateRevision: state.stateRevision }, { headers: noStore() });

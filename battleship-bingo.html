@@ -70,7 +70,25 @@
 
     <section class="bingo-tab-panel active" id="bingoTab-board">
       <section id="activeGameHeader" class="active-game-header" style="display:none;"></section>
-      <section class="bingo-layout">
+
+      <section id="adminGameSummary" class="admin-game-summary" style="display:none;">
+        <button type="button" id="pendingProofSummary" class="admin-summary-card">
+          <span>Pending Proofs</span><strong id="pendingProofCount">0</strong>
+        </button>
+        <button type="button" id="lastUpdateSummary" class="admin-summary-card">
+          <span>Last Board Update</span><strong id="lastBoardUpdate">—</strong>
+        </button>
+      </section>
+
+      <section id="adminBoardControlCenter" class="admin-board-control-center" style="display:none;">
+        <div class="admin-board-heading">
+          <div><p class="eyebrow">Staff Control Center</p><h2>Both Teams — Attack Boards & Waters</h2></div>
+          <p>Click any attack-board tile to set progress, hit, miss, or reset. Waters are read-only and show the defending fleet.</p>
+        </div>
+        <div id="adminFourBoards" class="admin-four-boards"></div>
+      </section>
+
+      <section class="bingo-layout" id="legacyBingoLayout">
         <div class="bingo-board-wrap">
           <div class="bingo-board-toolbar">
             <div>
@@ -108,7 +126,6 @@
                   <button id="attackBoardBtn" class="active" type="button">Attack Board</button>
                   <button id="yourWatersBtn" type="button">Your Waters</button>
                 </div>
-                <button id="openProofTileSelectorBtn" class="btn primary" type="button">Submit Proof</button>
               </div>
             </div>
           </div>
@@ -208,7 +225,7 @@
         <div class="bingo-section-heading">
           <div>
             <h2>Proof Submissions</h2>
-            <p>Staff approve/reject proofs. Approved proofs attack the opposing fleet.</p>
+            <p>Full proof details are shown below. Approvals use the same server-side hit/miss logic as Discord.</p>
           </div>
         </div>
         <div id="proofList" class="proof-list"></div>
@@ -397,12 +414,36 @@ Enhanced crystal weapon seed - 1</pre>
     </div>
   </div>
 
+  <dialog id="adminTileActionDialog" class="proof-dialog admin-tile-action-dialog">
+    <form method="dialog" id="adminTileActionForm">
+      <div class="bingo-modal-header">
+        <div><p class="eyebrow" id="adminTileTeamLabel">Team</p><h2 id="adminTileActionTitle">Tile</h2></div>
+        <button type="button" id="closeAdminTileActionDialog" class="bingo-icon-btn">×</button>
+      </div>
+      <p id="adminTileOrientationText" class="muted-text"></p>
+      <div class="admin-tile-status-grid">
+        <div><span>Current progress</span><strong id="adminTileProgressText">0/1</strong></div>
+        <div><span>Attack result</span><strong id="adminTileAttackText">Open</strong></div>
+      </div>
+      <label for="adminTileProgressInput">Set completed quantity</label>
+      <input id="adminTileProgressInput" type="number" min="0" step="1" value="0">
+      <div class="admin-tile-action-buttons">
+        <button type="button" class="btn secondary" data-admin-tile-action="set-progress">Set Progress</button>
+        <button type="button" class="btn secondary" data-admin-tile-action="hit">Mark Hit</button>
+        <button type="button" class="btn secondary" data-admin-tile-action="miss">Mark Miss</button>
+        <button type="button" class="btn secondary" data-admin-tile-action="reset">Reset Attack</button>
+        <button type="button" class="btn secondary danger" data-admin-tile-action="reset-progress">Reset Progress</button>
+      </div>
+      <p id="adminTileActionError" class="team-error" aria-live="polite"></p>
+    </form>
+  </dialog>
+
   <footer>
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
   <script src="script.js"></script>
   <script src="admin-team-access.js?v=phase1-clean-1"></script>
-  <script src="battleship-bingo.js?v=20260711-reset-progress-v2"></script>
+  <script src="battleship-bingo.js?v=20260711-admin-overhaul-v1"></script>
 </body>
 </html>

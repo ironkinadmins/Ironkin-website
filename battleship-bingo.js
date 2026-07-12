@@ -272,7 +272,7 @@ async function saveBingoState() {
 
 function addLog(text) {
   bingoState.log.unshift({ at: new Date().toISOString(), text });
-  bingoState.log = bingoState.log.slice(0, 100);
+  bingoState.log = bingoState.log.slice(0, 2000);
 }
 
 function canReorderBingoBoard() {
@@ -427,6 +427,7 @@ function renderAll() {
   syncBingoTabForPhase();
   renderScore();
   renderActiveGameHeader();
+  renderAdminControlCenter();
   renderActiveGameSidebar();
   renderBingoBoard();
   renderFleets();
@@ -693,8 +694,8 @@ function getTeamPlayers(team) {
 
 function renderActiveProofsPanel() {
   const pending = bingoState.proofs.filter(p => p.status === "pending");
-  const approved = bingoState.proofs.filter(p => p.status === "approved").slice(0, 8);
-  const rejected = bingoState.proofs.filter(p => p.status === "rejected").slice(0, 5);
+  const approved = bingoState.proofs.filter(p => p.status === "approved");
+  const rejected = bingoState.proofs.filter(p => p.status === "rejected");
   return `
     ${renderProofGroup("Pending", pending, true)}
     ${renderProofGroup("Approved", approved, false)}
@@ -743,7 +744,7 @@ function renderCompactProof(proof, allowActions) {
             <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
             <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
           ` : ""}
-          ${isTestProof ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
+          
         </div>` : ""}
     </div>`;
 }
@@ -753,7 +754,7 @@ function renderActiveLogPanel() {
     <section class="active-sidebar-section">
       <h3>Match Log <small>${bingoState.log.length}</small></h3>
       <div class="active-log-list">
-        ${bingoState.log.slice(0, 18).map(entry => `
+        ${bingoState.log.map(entry => `
           <div class="active-log-row">
             <time>${formatDateTime(entry.at)}</time>
             <span>${escapeHtml(entry.text)}</span>
@@ -1449,37 +1450,43 @@ function renderProofTileGrid() {
 function renderProofs() {
   const list = document.getElementById("proofList");
   if (!list) return;
-  if (!bingoState.proofs.length) {
+  const proofs = [...bingoState.proofs].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  if (!proofs.length) {
     list.innerHTML = `<p class="muted-text">No proofs submitted yet.</p>`;
     return;
   }
-  list.innerHTML = bingoState.proofs.map(proof => {
+  list.innerHTML = proofs.map(proof => {
     const tile = bingoState.tiles[proof.tileIndex] || {};
     const isTestProof = isPluginTestProof(proof);
     const qty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
     const required = getTileQuantity(tile);
     const completed = Math.min(getTileCompletedQuantity(tile, proof.team), required);
-    const remaining = Math.max(0, required - completed);
-    const progressText = isTestProof ? "Plugin connectivity test proof" : (required > 1 ? `${completed}/${required} complete${proof.status === "pending" ? ` • approving adds ${Math.min(qty, Math.max(1, remaining))}` : ""}` : "Single completion tile");
+    const source = proof.source || (proof.itemid ? "RuneLite plugin" : "Website");
+    const proofUrl = String(proof.url || "");
+    const imagePreview = /\.(png|jpe?g|gif|webp)(?:\?|$)/i.test(proofUrl) ? `<img class="proof-image-preview" src="${escapeAttr(proofUrl)}" alt="Proof preview" loading="lazy">` : "";
     return `
-      <div class="proof-card status-${escapeAttr(proof.status)} ${isTestProof ? "is-test-proof" : ""}">
+      <article class="proof-card status-${escapeAttr(proof.status)} ${isTestProof ? "is-test-proof" : ""}" id="proof-${escapeAttr(proof.id)}">
         <div>
-          <strong>${escapeHtml(getProofTileName(proof))} ${qty > 1 ? `<small>x${escapeHtml(qty)}</small>` : ""}</strong>
-          <span>${isTestProof ? "Plugin Test" : escapeHtml(TEAMS[proof.team]?.name || proof.team)} • ${escapeHtml(proof.player || "Unknown")}</span>
-          <p>${escapeHtml(progressText)}</p>
-          ${proof.note ? `<p>${escapeHtml(proof.note)}</p>` : ""}
-          ${proof.url ? `<a href="${escapeAttr(proof.url)}" target="_blank" rel="noopener">Open proof</a>` : ""}
+          <strong>${escapeHtml(getProofTileName(proof))} ${qty > 1 ? `<small>x${qty}</small>` : ""}</strong>
+          <div class="proof-meta-grid">
+            <span><b>Player:</b> ${escapeHtml(proof.player || "Unknown")}</span>
+            <span><b>Team:</b> ${escapeHtml(getTeamDisplayName(proof.team))}</span>
+            <span><b>Submitted:</b> ${escapeHtml(formatDateTime(proof.createdAt))}</span>
+            <span><b>Source:</b> ${escapeHtml(source)}</span>
+            <span><b>Quantity:</b> ${qty}</span>
+            <span><b>Progress:</b> ${completed}/${required}</span>
+            <span><b>Proof ID:</b> ${escapeHtml(proof.id || "—")}</span>
+            <span><b>Status:</b> ${escapeHtml(proof.status || "pending")}</span>
+            ${proof.itemid ? `<span><b>Item ID:</b> ${escapeHtml(proof.itemid)}</span>` : ""}
+            ${proof.reviewedBy ? `<span><b>Reviewed by:</b> ${escapeHtml(proof.reviewedBy)}</span>` : ""}
+            ${proof.reviewedAt ? `<span><b>Reviewed:</b> ${escapeHtml(formatDateTime(proof.reviewedAt))}</span>` : ""}
+          </div>
+          ${proof.note ? `<p><b>Note:</b> ${escapeHtml(proof.note)}</p>` : ""}
+          ${proofUrl ? `<a href="${escapeAttr(proofUrl)}" target="_blank" rel="noopener noreferrer">Open proof</a>${imagePreview}` : `<p class="muted-text">No proof URL was stored.</p>`}
         </div>
         <em>${escapeHtml(proof.status)}</em>
-        ${isBingoStaff && (proof.status === "pending" || isTestProof) ? `
-          <div class="proof-actions">
-            ${proof.status === "pending" ? `
-              <button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button>
-              <button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button>
-            ` : ""}
-            ${isTestProof ? `<button type="button" data-proof-action="delete" data-proof-id="${escapeAttr(proof.id)}">Delete</button>` : ""}
-          </div>` : ""}
-      </div>`;
+        ${isBingoStaff && proof.status === "pending" ? `<div class="proof-actions"><button type="button" data-proof-action="approve" data-proof-id="${escapeAttr(proof.id)}">Approve</button><button type="button" data-proof-action="reject" data-proof-id="${escapeAttr(proof.id)}">Reject</button></div>` : ""}
+      </article>`;
   }).join("");
   list.querySelectorAll("[data-proof-action]").forEach(button => {
     button.addEventListener("click", () => reviewProof(button.dataset.proofId, button.dataset.proofAction));
@@ -1527,68 +1534,22 @@ async function updateDiscordProofMessage(proofId, status) {
 }
 
 async function reviewProof(proofId, action) {
-  const proofIndex = bingoState.proofs.findIndex(p => p.id === proofId);
-  const proof = proofIndex >= 0 ? bingoState.proofs[proofIndex] : null;
-  if (!proof) return;
-
-  const isTestProof = isPluginTestProof(proof);
-
-  if (action === "delete") {
-    if (!isTestProof) return alert("Only plugin test proofs can be deleted from here.");
-    if (!confirm("Delete this plugin test proof?")) return;
-    await updateDiscordProofMessage(proof.id, "deleted");
-    bingoState.proofs.splice(proofIndex, 1);
-    addLog(`Deleted plugin test proof for ${proof.player || "Unknown"}.`);
-    await saveBingoState();
+  if (!isBingoStaff || !["approve", "reject"].includes(action)) return;
+  const proof = bingoState.proofs.find(item => item.id === proofId);
+  if (!proof || proof.status !== "pending") return;
+  if (!confirm(`${action === "approve" ? "Approve" : "Reject"} this proof for ${getProofTileName(proof)}?`)) return;
+  const response = await fetch("/api/admin/bingo/proof-decision", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ proofId, decision: action, stateRevision: bingoState.stateRevision })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(data.error || "Could not review the proof.");
+    if (response.status === 409) await loadBingoState();
     return;
   }
-
-  if (proof.status !== "pending") return;
-
-  if (isTestProof) {
-    proof.isTest = true;
-    proof.status = action === "reject" ? "rejected" : "approved";
-    addLog(`${proof.status === "approved" ? "Approved" : "Rejected"} plugin test proof for ${proof.player || "Unknown"}.`);
-    await saveBingoState();
-    await updateDiscordProofMessage(proof.id, proof.status);
-    return;
-  }
-
-  const tile = bingoState.tiles[proof.tileIndex];
-  if (!tile) return;
-
-  if (action === "reject") {
-    proof.status = "rejected";
-    const progress = getTileTeamProgress(tile, proof.team);
-    const completed = getTileCompletedQuantity(tile, proof.team);
-    progress.status = completed > 0 ? "partial" : "open";
-    addLog(`Rejected proof for ${tile.name || "a tile"} by ${proof.player}.`);
-    await saveBingoState();
-    await updateDiscordProofMessage(proof.id, "rejected");
-    return;
-  }
-
-  proof.status = "approved";
-  const required = getTileQuantity(tile);
-  const before = getTileCompletedQuantity(tile, proof.team);
-  const approvedQty = Math.max(1, Number.parseInt(proof.quantity || 1, 10) || 1);
-  const after = Math.min(required, before + approvedQty);
-  const progress = getTileTeamProgress(tile, proof.team);
-  progress.completedQuantity = after;
-  progress.completedBy = proof.player;
-  progress.proofId = proof.id;
-
-  if (after >= required) {
-    progress.status = "approved";
-    addLog(`Approved proof for ${tile.name} by ${proof.player}. Tile complete (${after}/${required}).`);
-    resolveAttack(proof);
-  } else {
-    progress.status = "partial";
-    addLog(`Approved proof for ${tile.name} by ${proof.player}. Progress ${after}/${required}.`);
-  }
-
-  await saveBingoState();
-  await updateDiscordProofMessage(proof.id, "approved");
+  await loadBingoState();
 }
 
 function resolveAttack(proof) {
@@ -2323,6 +2284,95 @@ async function saveTeamAccessAdmin() {
   alert("Team names and passwords saved.");
 }
 
+function getAttackForTile(attackingTeam, tileIndex) {
+  return (bingoState.attacks || []).find(attack => attack.attackingTeam === attackingTeam && Number(attack.targetIndex) === Number(tileIndex));
+}
+
+function renderAdminControlCenter() {
+  const active = isBingoStaff && ["active", "complete"].includes(bingoState.phase);
+  const summary = document.getElementById("adminGameSummary");
+  const center = document.getElementById("adminBoardControlCenter");
+  const legacy = document.getElementById("legacyBingoLayout");
+  if (summary) summary.style.display = active ? "grid" : "none";
+  if (center) center.style.display = active ? "block" : "none";
+  if (legacy) legacy.style.display = active ? "none" : "grid";
+  if (!active) return;
+  const pending = bingoState.proofs.filter(proof => proof.status === "pending").length;
+  const pendingCount = document.getElementById("pendingProofCount");
+  const lastUpdate = document.getElementById("lastBoardUpdate");
+  if (pendingCount) pendingCount.textContent = String(pending);
+  if (lastUpdate) lastUpdate.textContent = formatDateTime(bingoState.updatedAt);
+  const host = document.getElementById("adminFourBoards");
+  if (!host) return;
+  host.innerHTML = [
+    renderAdminBoardCard("ember", "attack"),
+    renderAdminBoardCard("ash", "attack"),
+    renderAdminBoardCard("ember", "waters"),
+    renderAdminBoardCard("ash", "waters")
+  ].join("");
+  host.querySelectorAll(".admin-board-tile[data-mode='attack']").forEach(button => {
+    button.addEventListener("click", () => openAdminTileDialog(button.dataset.team, Number(button.dataset.index)));
+  });
+}
+
+function renderAdminBoardCard(team, mode) {
+  const opposing = getOpponent(team);
+  const title = mode === "attack" ? `${getTeamDisplayName(team)} — Attack Board` : `${getTeamDisplayName(team)} — Your Waters`;
+  const subtitle = mode === "attack" ? `Attacks ${getTeamDisplayName(opposing)}'s fleet` : `Defends against ${getTeamDisplayName(opposing)}`;
+  const cells = bingoState.tiles.map((tile, index) => renderAdminBoardTile(team, mode, tile, index)).join("");
+  return `<section class="admin-board-card"><header><h3>${escapeHtml(title)}</h3><span>${escapeHtml(subtitle)}</span></header><div class="admin-board-grid">${cells}</div></section>`;
+}
+
+function renderAdminBoardTile(team, mode, tile, index) {
+  const attackingTeam = mode === "attack" ? team : getOpponent(team);
+  const attack = getAttackForTile(attackingTeam, index);
+  const result = attack?.result || "";
+  const defendingShip = mode === "waters" ? (bingoState.teams?.[team]?.ships || []).find(ship => (ship.cells || []).includes(index)) : null;
+  const progress = mode === "attack" ? getTileCompletedQuantity(tile, team) : 0;
+  const required = getTileQuantity(tile);
+  const classes = ["admin-board-tile", result, defendingShip ? "ship-cell" : "", defendingShip?.sunk ? "sunk" : ""].filter(Boolean).join(" ");
+  const label = mode === "attack" ? `${progress}/${required}${result ? ` • ${result.toUpperCase()}` : ""}` : `${defendingShip ? defendingShip.name : "Water"}${result ? ` • ${result.toUpperCase()}` : ""}`;
+  return `<button type="button" class="${classes}" data-team="${team}" data-index="${index}" data-mode="${mode}" title="${escapeAttr(tile.name || `Tile ${index + 1}`)} — ${escapeAttr(label)}" ${mode === "waters" ? "disabled" : ""}>${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="">` : ""}<span class="admin-tile-result">${escapeHtml(label)}</span></button>`;
+}
+
+let adminTileActionContext = null;
+function openAdminTileDialog(attackingTeam, tileIndex) {
+  if (!isBingoStaff || !["ember", "ash"].includes(attackingTeam) || !Number.isInteger(tileIndex)) return;
+  const tile = bingoState.tiles[tileIndex];
+  if (!tile) return;
+  adminTileActionContext = { attackingTeam, tileIndex };
+  const defendingTeam = getOpponent(attackingTeam);
+  const attack = getAttackForTile(attackingTeam, tileIndex);
+  document.getElementById("adminTileTeamLabel").textContent = `${getTeamDisplayName(attackingTeam)} Attack Board`;
+  document.getElementById("adminTileActionTitle").textContent = tile.name || `Tile ${tileIndex + 1}`;
+  document.getElementById("adminTileOrientationText").textContent = `${getTeamDisplayName(attackingTeam)} attacks ${getTeamDisplayName(defendingTeam)} on this tile.`;
+  document.getElementById("adminTileProgressText").textContent = `${getTileCompletedQuantity(tile, attackingTeam)}/${getTileQuantity(tile)}`;
+  document.getElementById("adminTileAttackText").textContent = attack?.result ? attack.result.toUpperCase() : "OPEN";
+  const input = document.getElementById("adminTileProgressInput");
+  input.value = String(getTileCompletedQuantity(tile, attackingTeam));
+  input.max = String(getTileQuantity(tile));
+  document.getElementById("adminTileActionError").textContent = "";
+  document.getElementById("adminTileActionDialog")?.showModal();
+}
+
+async function runAdminTileAction(action) {
+  if (!adminTileActionContext) return;
+  const { attackingTeam, tileIndex } = adminTileActionContext;
+  let quantity = null;
+  if (action === "set-progress") {
+    quantity = Number.parseInt(document.getElementById("adminTileProgressInput")?.value || "0", 10);
+    const required = getTileQuantity(bingoState.tiles[tileIndex]);
+    if (!Number.isInteger(quantity) || quantity < 0 || quantity > required) {
+      document.getElementById("adminTileActionError").textContent = `Enter a quantity from 0 to ${required}.`;
+      return;
+    }
+  }
+  if (["reset", "reset-progress"].includes(action) && !confirm("Confirm this reset? This action is logged.")) return;
+  await saveManualAttackResult(attackingTeam, tileIndex, action, quantity);
+  document.getElementById("adminTileActionDialog")?.close();
+  adminTileActionContext = null;
+}
+
 function applyTeamViewVisibility() {
   const page = document.querySelector("main.bingo-page");
   page?.classList.toggle("is-team-view", !isBingoStaff);
@@ -2410,12 +2460,12 @@ function hideAdminAttackContextMenu() {
   adminAttackContextMenu?.classList.remove("show");
 }
 
-async function saveManualAttackResult(attackingTeam, targetIndex, result) {
+async function saveManualAttackResult(attackingTeam, targetIndex, result, completedQuantity = null) {
   if (!isBingoStaff) return;
   const response = await fetch("/api/admin/bingo/manual-attack", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ attackingTeam, targetIndex, result })
+    body: JSON.stringify({ attackingTeam, targetIndex, result, completedQuantity, stateRevision: bingoState.stateRevision })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -2440,6 +2490,11 @@ document.addEventListener("keydown", event => {
 });
 window.addEventListener("blur", hideAdminAttackContextMenu);
 window.addEventListener("scroll", hideAdminAttackContextMenu, true);
+
+document.getElementById("pendingProofSummary")?.addEventListener("click", () => setBingoTab("proofs"));
+document.getElementById("lastUpdateSummary")?.addEventListener("click", () => setBingoTab("log"));
+document.getElementById("closeAdminTileActionDialog")?.addEventListener("click", () => document.getElementById("adminTileActionDialog")?.close());
+document.querySelectorAll("[data-admin-tile-action]").forEach(button => button.addEventListener("click", () => runAdminTileAction(button.dataset.adminTileAction)));
 
 (async function initBingo() {
   await checkBingoStaff();

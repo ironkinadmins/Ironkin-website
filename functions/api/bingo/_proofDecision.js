@@ -6,7 +6,7 @@ function emptyProgress() {
 
 function appendLog(state, text) {
   const entry = { at: new Date().toISOString(), text: String(text || "").slice(0, 300) };
-  state.log = Array.isArray(state.log) ? [entry, ...state.log].slice(0, 150) : [entry];
+  state.log = Array.isArray(state.log) ? [entry, ...state.log].slice(0, 2000) : [entry];
 }
 
 function teamName(state, team) {
@@ -72,13 +72,16 @@ export async function getBingoState(env) {
   return raw ? enforceStateIntegrity(JSON.parse(raw)) : null;
 }
 
-export async function decideProof(env, { proofId, decision, reviewerId = "", reviewerName = "Discord Staff" }) {
+export async function decideProof(env, { proofId, decision, reviewerId = "", reviewerName = "Discord Staff", expectedRevision = null }) {
   if (!proofId || !["approve", "reject"].includes(decision)) {
     return { ok: false, status: 400, error: "Invalid proof decision." };
   }
 
   const state = await getBingoState(env);
   if (!state) return { ok: false, status: 404, error: "Bingo state not found." };
+  if (expectedRevision !== null && Number(expectedRevision) !== Number(state.stateRevision)) {
+    return { ok: false, status: 409, error: "The board changed after this page loaded. Refresh and try again.", code: "STALE_BOARD_STATE" };
+  }
   const proof = (state.proofs || []).find(p => p.id === proofId);
   if (!proof) return { ok: false, status: 404, error: "Proof not found." };
   if (proof.status !== "pending") {

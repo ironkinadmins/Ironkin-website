@@ -98,7 +98,7 @@ function normaliseAttacks(state) {
       at: clampString(attack.at, 80) || new Date().toISOString()
     });
   }
-  state.attacks = [...byCoordinate.values()].slice(-300);
+  state.attacks = [...byCoordinate.values()].slice(-1000);
   state.teams = state.teams || {};
   for (const team of TEAM_KEYS) {
     state.teams[team] = state.teams[team] || { key: team, ships: [], attacks: [] };

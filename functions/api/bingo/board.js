@@ -144,7 +144,7 @@ function sanitiseState(body) {
         name: clampString(body.teams?.ember?.name || TEAM_ONE_NAME, 80),
         captain: clampString(body.teams?.ember?.captain, 80),
         ships: cleanShips(body.teams?.ember?.ships),
-        attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 200) : [],
+        attacks: Array.isArray(body.teams?.ember?.attacks) ? body.teams.ember.attacks.slice(0, 1000) : [],
         fleetConfirmed: Boolean(body.teams?.ember?.fleetConfirmed)
       },
       ash: {
@@ -154,11 +154,11 @@ function sanitiseState(body) {
         name: clampString(body.teams?.ash?.name || TEAM_TWO_NAME, 80),
         captain: clampString(body.teams?.ash?.captain, 80),
         ships: cleanShips(body.teams?.ash?.ships),
-        attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 200) : [],
+        attacks: Array.isArray(body.teams?.ash?.attacks) ? body.teams.ash.attacks.slice(0, 1000) : [],
         fleetConfirmed: Boolean(body.teams?.ash?.fleetConfirmed)
       }
     },
-    proofs: Array.isArray(body.proofs) ? body.proofs.slice(0, 300).map(proof => ({
+    proofs: Array.isArray(body.proofs) ? body.proofs.slice(0, 1000).map(proof => ({
       id: clampString(proof.id, 80),
       tileIndex: Number.isInteger(Number(proof.tileIndex)) ? Number(proof.tileIndex) : 0,
       team: ["ember", "ash"].includes(proof.team) ? proof.team : "ember",
@@ -174,10 +174,17 @@ function sanitiseState(body) {
       source: clampString(proof.source, 80),
       itemid: Number.isInteger(Number(proof.itemid)) ? Number(proof.itemid) : undefined,
       submittedByDiscordId: clampString(proof.submittedByDiscordId, 80),
+      discordChannelId: clampString(proof.discordChannelId, 80),
       discordMessageId: clampString(proof.discordMessageId, 80),
-      discordMessageUpdatedAt: clampString(proof.discordMessageUpdatedAt, 80)
+      discordMessageUpdatedAt: clampString(proof.discordMessageUpdatedAt, 80),
+      reviewedBy: clampString(proof.reviewedBy, 100),
+      reviewedAt: clampString(proof.reviewedAt, 80),
+      reviewedByDiscordId: clampString(proof.reviewedByDiscordId, 80),
+      rejectionReason: clampString(proof.rejectionReason, 300),
+      resetByAdmin: Boolean(proof.resetByAdmin),
+      resetAt: clampString(proof.resetAt, 80)
     })) : [],
-    attacks: Array.isArray(body.attacks) ? body.attacks.slice(0, 300).map(attack => ({
+    attacks: Array.isArray(body.attacks) ? body.attacks.slice(0, 1000).map(attack => ({
       id: clampString(attack.id, 80),
       attackingTeam: ["ember", "ash"].includes(attack.attackingTeam) ? attack.attackingTeam : "ember",
       defendingTeam: ["ember", "ash"].includes(attack.defendingTeam) ? attack.defendingTeam : "ash",
@@ -186,7 +193,7 @@ function sanitiseState(body) {
       shipKey: clampString(attack.shipKey, 80),
       at: clampString(attack.at, 80) || new Date().toISOString()
     })) : [],
-    log: Array.isArray(body.log) ? body.log.slice(0, 120).map(entry => ({
+    log: Array.isArray(body.log) ? body.log.slice(0, 2000).map(entry => ({
       at: clampString(entry.at, 80) || new Date().toISOString(),
       text: clampString(entry.text, 300)
     })) : base.log
