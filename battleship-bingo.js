@@ -2305,10 +2305,18 @@ function renderAdminControlCenter() {
   const lastUpdate = document.getElementById("lastBoardUpdate");
   if (pendingCount) pendingCount.textContent = String(pending);
   if (lastUpdate) lastUpdate.textContent = formatDateTime(bingoState.updatedAt);
-  const completedTileTotal = team => (bingoState.tiles || []).reduce((total, tile) => {
-    if (!tile?.name) return total;
-    return total + (getTileCompletedQuantity(tile, team) >= getTileQuantity(tile) ? 1 : 0);
-  }, 0);
+  const completedTileTotal = team => {
+    const resolved = new Set();
+    for (const attack of (bingoState.attacks || [])) {
+      if (attack?.attackingTeam !== team) continue;
+      if (attack?.result !== "hit" && attack?.result !== "miss") continue;
+      const tileIndex = Number(attack.targetIndex);
+      if (Number.isInteger(tileIndex) && tileIndex >= 0 && tileIndex < BINGO_SIZE * BINGO_SIZE) {
+        resolved.add(tileIndex);
+      }
+    }
+    return resolved.size;
+  };
   const emberCompleted = document.getElementById("emberCompletedTiles");
   const ashCompleted = document.getElementById("ashCompletedTiles");
   const emberCompletedLabel = document.getElementById("emberCompletedLabel");
