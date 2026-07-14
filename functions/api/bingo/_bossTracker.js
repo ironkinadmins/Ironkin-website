@@ -485,10 +485,11 @@ export function buildSummary(state, settings) {
 
     for (const [metric, kills] of Object.entries(gains.bosses)) {
       if (!bossTotals[metric]) {
-        bossTotals[metric] = { metric, name: formatBossName(metric), total: 0, team1: 0, team2: 0 };
+        bossTotals[metric] = { metric, name: formatBossName(metric), total: 0, team1: 0, team2: 0, contributors: [] };
       }
       bossTotals[metric].total += kills;
       bossTotals[metric][teamKey] += kills;
+      bossTotals[metric].contributors.push({ name: player.displayName, team: teamKey, kills });
     }
 
     players.push({
@@ -513,7 +514,15 @@ export function buildSummary(state, settings) {
       gpTotals.overall += boss.total * gpEach;
       gpTotals.team1 += boss.team1 * gpEach;
       gpTotals.team2 += boss.team2 * gpEach;
-      return { ...boss, gpEach };
+
+      // Keep the top 8 contributors per team: enough for a top-5 list under
+      // any filter without shipping every member for every boss.
+      const teamCounts = { team1: 0, team2: 0 };
+      const contributors = boss.contributors
+        .sort((a, b) => b.kills - a.kills || a.name.localeCompare(b.name))
+        .filter(entry => (teamCounts[entry.team] += 1) <= 8);
+
+      return { ...boss, contributors, gpEach };
     })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 

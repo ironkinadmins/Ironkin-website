@@ -1,6 +1,7 @@
 let bsSummary = null;
 let bsFilter = "total";
 let bsIsStaff = false;
+const bsExpanded = new Set();
 
 function bsEscapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -155,17 +156,36 @@ function bsRender() {
   const feedSection = bosses.length ? `
     <div class="bs-section-head">
       <h2>Kill Feed</h2>
-      <span class="bs-section-hint">rank &middot; boss &middot; gp &middot; kills</span>
+      <span class="bs-section-hint">rank &middot; boss &middot; gp &middot; kills &middot; click for top 5</span>
     </div>
     <div class="bs-feed">
       ${bosses.map((boss, index) => {
         const heat = bsHeatColor(maxCount ? boss.count / maxCount : 0);
+        const expanded = bsExpanded.has(boss.metric);
+        const contributors = (boss.contributors || [])
+          .filter(entry => bsFilter === "total" || entry.team === bsFilter)
+          .slice(0, 5);
+        const detail = expanded && contributors.length ? `
+          <div class="bs-feed-detail">
+            ${contributors.map((entry, place) => `
+              <div class="bs-contrib-row">
+                <span class="bs-feed-rank">${place + 1}</span>
+                <span class="bs-contrib-name">${bsEscapeHtml(entry.name)}</span>
+                ${bsFilter === "total" ? `<span class="bs-contrib-team ${entry.team}">${bsEscapeHtml(entry.team === "team2" ? teamTwoName : teamOneName)}</span>` : ""}
+                <span class="bs-feed-gp">${boss.gpEach ? "&asymp; " + bsFormatGp(entry.kills * boss.gpEach) : ""}</span>
+                <span class="bs-contrib-kills">${Number(entry.kills).toLocaleString()}</span>
+              </div>`).join("")}
+          </div>` : "";
         return `
-          <div class="bs-feed-row">
-            <span class="bs-feed-rank">${String(index + 1).padStart(2, "0")}</span>
-            <span class="bs-feed-name">${bsEscapeHtml(boss.name)}</span>
-            <span class="bs-feed-gp">${boss.gpEach ? "&asymp; " + bsFormatGp(boss.count * boss.gpEach) : ""}</span>
-            <span class="bs-feed-pill ${heat.hot ? "hot" : "cold"}" style="background:${heat.background};color:${heat.hot ? "#1f130b" : "var(--text)"}">${Number(boss.count).toLocaleString()}</span>
+          <div class="bs-feed-item${expanded ? " expanded" : ""}">
+            <div class="bs-feed-row" data-bs-boss="${bsEscapeAttr(boss.metric)}" role="button" aria-expanded="${expanded}">
+              <span class="bs-feed-rank">${String(index + 1).padStart(2, "0")}</span>
+              <span class="bs-feed-name">${bsEscapeHtml(boss.name)}</span>
+              <span class="bs-feed-gp">${boss.gpEach ? "&asymp; " + bsFormatGp(boss.count * boss.gpEach) : ""}</span>
+              <span class="bs-feed-pill ${heat.hot ? "hot" : "cold"}" style="background:${heat.background};color:${heat.hot ? "#1f130b" : "var(--text)"}">${Number(boss.count).toLocaleString()}</span>
+              <span class="bs-feed-chevron">${expanded ? "&#9662;" : "&#9656;"}</span>
+            </div>
+            ${detail}
           </div>`;
       }).join("")}
     </div>` : "";
@@ -239,6 +259,15 @@ function bsBindControls() {
     const filterButton = event.target.closest("[data-bs-filter]");
     if (filterButton) {
       bsFilter = filterButton.dataset.bsFilter;
+      bsRender();
+      return;
+    }
+
+    const bossRow = event.target.closest("[data-bs-boss]");
+    if (bossRow) {
+      const metric = bossRow.dataset.bsBoss;
+      if (bsExpanded.has(metric)) bsExpanded.delete(metric);
+      else bsExpanded.add(metric);
       bsRender();
       return;
     }
