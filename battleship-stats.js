@@ -1,7 +1,10 @@
 let bsSummary = null;
 let bsFilter = "total";
 let bsIsStaff = false;
+let bsShowAllSlayers = false;
 const bsExpanded = new Set();
+
+const BS_SLAYER_PREVIEW = 10;
 
 function bsEscapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -81,6 +84,39 @@ function bsCellHtml(boss, teamOneName, teamTwoName, ratio) {
     </div>`;
 }
 
+// An auto-matched RSN is a guess from the Discord nickname, so the kills behind
+// it may belong to someone else entirely. Staff get the badge as a button that
+// opens the same Set RSN prompt used for untracked members.
+function bsAutoBadgeHtml(player) {
+  if (!player.guessed) return "";
+  const rsn = player.rsn || "?";
+  if (!bsIsStaff) {
+    return `<span class="bs-auto-badge" title="${bsEscapeAttr(`Auto-matched to "${rsn}" on Wise Old Man`)}">auto</span>`;
+  }
+  return `<button type="button" class="bs-auto-badge is-staff"
+    data-bs-set-rsn="${bsEscapeAttr(player.discordId)}"
+    data-bs-name="${bsEscapeAttr(player.displayName)}"
+    title="${bsEscapeAttr(`Auto-matched to "${rsn}" - click to correct`)}">auto</button>`;
+}
+
+function bsSlayerRowHtml(player, index, teamOneName, teamTwoName, maxGained) {
+  // Bar widths are relative to the leader on screen, so the ranking stays
+  // readable whether the top slayer has 40 kills or 4,000.
+  const width = maxGained ? Math.max(3, Math.round((player.gained / maxGained) * 100)) : 0;
+  const teamKey = player.team === "team2" ? "team2" : "team1";
+  const teamPill = bsFilter === "total"
+    ? `<span class="bs-contrib-team ${teamKey}">${bsEscapeHtml(teamKey === "team2" ? teamTwoName : teamOneName)}</span>`
+    : "";
+  return `
+    <div class="bs-slayer-row">
+      <span class="bs-feed-rank">${String(index + 1).padStart(2, "0")}</span>
+      <span class="bs-slayer-name"><span class="bs-slayer-label">${bsEscapeHtml(player.displayName)}</span>${bsAutoBadgeHtml(player)}</span>
+      ${teamPill}
+      <span class="bs-slayer-bar" aria-hidden="true"><span style="width:${width}%"></span></span>
+      <span class="bs-contrib-kills">${Number(player.gained).toLocaleString()}</span>
+    </div>`;
+}
+
 function bsRender() {
   const container = document.getElementById("bsContent");
   const summary = bsSummary;
@@ -145,6 +181,26 @@ function bsRender() {
       </div>
     </div>`;
 
+  // summary.players is already sorted by kills descending server-side.
+  const slayers = players.filter(player => player.tracked && player.gained > 0
+    && (bsFilter === "total" || player.team === bsFilter));
+  const maxGained = slayers.length ? slayers[0].gained : 0;
+  const shownSlayers = bsShowAllSlayers ? slayers : slayers.slice(0, BS_SLAYER_PREVIEW);
+  const autoCount = slayers.filter(player => player.guessed).length;
+
+  const slayerSection = slayers.length ? `
+    <div class="bs-section-head">
+      <h2>Top Slayers</h2>
+      <span class="bs-section-hint">${slayers.length} with kills${autoCount ? ` &middot; ${autoCount} auto-matched` : ""}</span>
+    </div>
+    <div class="bs-slayers">
+      ${shownSlayers.map((player, index) => bsSlayerRowHtml(player, index, teamOneName, teamTwoName, maxGained)).join("")}
+      ${slayers.length > BS_SLAYER_PREVIEW ? `
+        <button type="button" class="bs-show-all" id="bsShowAllSlayers">
+          ${bsShowAllSlayers ? "Show top " + BS_SLAYER_PREVIEW : `Show all ${slayers.length}`}
+        </button>` : ""}
+    </div>` : "";
+
   const heatSection = bosses.length ? `
     <div class="bs-section-head">
       <h2>Heat Map</h2>
@@ -204,7 +260,7 @@ function bsRender() {
         </div>`).join("")}
     </div>` : "";
 
-  container.innerHTML = `${summaryCard}${heatSection}${feedSection}${emptyNotice}${untrackedBlock}`;
+  container.innerHTML = `${summaryCard}${slayerSection}${heatSection}${feedSection}${emptyNotice}${untrackedBlock}`;
 }
 
 async function bsRefreshBatch() {
@@ -259,6 +315,12 @@ function bsBindControls() {
     const filterButton = event.target.closest("[data-bs-filter]");
     if (filterButton) {
       bsFilter = filterButton.dataset.bsFilter;
+      bsRender();
+      return;
+    }
+
+    if (event.target.closest("#bsShowAllSlayers")) {
+      bsShowAllSlayers = !bsShowAllSlayers;
       bsRender();
       return;
     }

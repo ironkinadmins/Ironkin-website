@@ -34,6 +34,11 @@
   gap: 18px;
 }
 
+.bingo-entry-stats {
+  margin: 1.4rem 0 0;
+  text-align: center;
+}
+
 .bingo-team-entry {
   min-width: 0;
   padding: 26px 22px;

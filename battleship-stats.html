@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battleship Bingo Stats | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260714-bstats-3" />
+  <link rel="stylesheet" href="styles.css?v=20260714-bstats-4" />
   <style>
     /* Scoped styles for the Battleship Bingo stats page only. */
     main.page {
@@ -300,6 +300,99 @@
       font-size: 0.88rem;
     }
 
+    .bs-slayers {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-slayer-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+    }
+
+    .bs-slayer-row:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .bs-slayer-name {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    /* The name needs its own box: as a bare text node inside a flex row it
+       would clip instead of ellipsing. */
+    .bs-slayer-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-slayer-bar {
+      width: 32%;
+      max-width: 210px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .bs-slayer-bar > span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #8a4a1e, #ec9245);
+    }
+
+    .bs-auto-badge {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.1rem 0.42rem;
+      border-radius: 999px;
+      border: 1px dashed rgba(255, 200, 120, 0.5);
+      background: transparent;
+      color: #e8b871;
+      flex-shrink: 0;
+    }
+
+    button.bs-auto-badge.is-staff {
+      cursor: pointer;
+    }
+
+    button.bs-auto-badge.is-staff:hover {
+      border-style: solid;
+      border-color: #e8913f;
+      background: #e8913f;
+      color: #1f130b;
+    }
+
+    .bs-show-all {
+      align-self: flex-start;
+      margin-top: 0.6rem;
+      padding: 0.35rem 0.95rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .bs-show-all:hover {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
     .bs-notice {
       color: var(--muted);
       text-align: center;
@@ -374,6 +467,15 @@
       .bs-total-row strong {
         font-size: 2.2rem;
       }
+
+      /* The bar is decorative - drop it before the name starts truncating. */
+      .bs-slayer-bar {
+        display: none;
+      }
+
+      .bs-slayer-row {
+        gap: 0.6rem;
+      }
     }
   </style>
 </head>
@@ -402,7 +504,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260714-bstats-3"></script>
-  <script src="battleship-stats.js?v=20260714-bstats-3"></script>
+  <script src="script.js?v=20260714-bstats-4"></script>
+  <script src="battleship-stats.js?v=20260714-bstats-4"></script>
 </body>
 </html>
