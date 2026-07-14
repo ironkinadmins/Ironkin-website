@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
+import { appendTimelinePoint } from "./_bossTimeline.js";
 import {
   buildSummary,
   getSignups,
@@ -71,6 +72,17 @@ export async function onRequestPost({ request, env }) {
   const url = new URL(request.url);
   const force = isStaff && url.searchParams.get("force") === "1";
   const result = await processChunk(env, state, { force });
+
+  // A finished sweep means every player's `current` is fresh, so the timeline
+  // can be extended for free - no extra Wise Old Man calls. Never let a
+  // timeline problem fail the tracker refresh that the cron depends on.
+  if (result?.cycleComplete) {
+    try {
+      await appendTimelinePoint(env, state);
+    } catch (error) {
+      console.warn("Timeline append failed", error);
+    }
+  }
 
   return Response.json(result);
 }

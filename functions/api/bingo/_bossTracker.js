@@ -113,7 +113,7 @@ function womHeaders(env) {
   return headers;
 }
 
-async function womFetch(env, path, options = {}, timeoutMs = 15000) {
+export async function womFetch(env, path, options = {}, timeoutMs = 15000) {
   const response = await fetch(`${WOM_BASE}${path}`, {
     ...options,
     headers: womHeaders(env),

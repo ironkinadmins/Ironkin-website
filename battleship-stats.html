@@ -5,11 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battleship Bingo Stats | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260714-bstats-4" />
+  <link rel="stylesheet" href="styles.css?v=20260714-bstats-5" />
   <style>
     /* Scoped styles for the Battleship Bingo stats page only. */
     main.page {
       max-width: 920px;
+    }
+
+    /* Series colours are validated against this page's dark surface (#0d0b0a)
+       for the OKLCH lightness band, chroma floor, colourblind separation and
+       contrast. They keep the hues of the existing team pills, so a team reads
+       the same across the page. Do not hand-tweak without re-validating. */
+    #bsContent {
+      --bs-team1: #d47b18;
+      --bs-team2: #4b93f7;
     }
 
     .bs-summary {
@@ -300,6 +309,191 @@
       font-size: 0.88rem;
     }
 
+    .bs-chart-wrap {
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-legend {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .bs-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .bs-legend-item i,
+    .bs-tip i {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .bs-legend-item i.team1,
+    .bs-tip i.team1 {
+      background: var(--bs-team1);
+    }
+
+    .bs-legend-item i.team2,
+    .bs-tip i.team2 {
+      background: var(--bs-team2);
+    }
+
+    .bs-legend-lead {
+      margin-left: auto;
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .bs-chart {
+      position: relative;
+    }
+
+    .bs-chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* Grid and axes stay recessive so the two lines carry the chart. */
+    .bs-grid {
+      stroke: rgba(255, 255, 255, 0.07);
+      stroke-width: 1;
+    }
+
+    .bs-grid-day {
+      stroke-dasharray: 2 5;
+    }
+
+    .bs-axis-label {
+      fill: var(--muted);
+      font-size: 11px;
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    }
+
+    .bs-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .bs-line.team1 { stroke: var(--bs-team1); }
+    .bs-line.team2 { stroke: var(--bs-team2); }
+    .bs-end-dot.team1 { fill: var(--bs-team1); }
+    .bs-end-dot.team2 { fill: var(--bs-team2); }
+
+    /* Labels wear text tokens; the dot beside them carries the identity. */
+    .bs-end-label {
+      fill: var(--muted);
+      font-size: 10px;
+    }
+
+    .bs-end-value {
+      fill: var(--text);
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .bs-crosshair {
+      stroke: rgba(255, 255, 255, 0.35);
+      stroke-width: 1;
+      stroke-dasharray: 3 3;
+      pointer-events: none;
+    }
+
+    .bs-chart-hit {
+      fill: transparent;
+      cursor: crosshair;
+    }
+
+    .bs-tip {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      pointer-events: none;
+      background: #1b1512;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      z-index: 2;
+    }
+
+    .bs-tip strong {
+      display: block;
+      color: var(--muted);
+      font-weight: normal;
+      font-size: 0.72rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .bs-tip span {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text);
+    }
+
+    .bs-tip b {
+      margin-left: auto;
+      padding-left: 0.75rem;
+    }
+
+    .bs-chart-table {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .bs-chart-table summary {
+      cursor: pointer;
+    }
+
+    .bs-chart-table table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+
+    .bs-chart-table th,
+    .bs-chart-table td {
+      text-align: right;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bs-chart-table th:first-child,
+    .bs-chart-table td:first-child {
+      text-align: left;
+    }
+
+    .bs-chart-empty {
+      padding: 1.25rem;
+      border-radius: 14px;
+      border: 1px dashed rgba(255, 255, 255, 0.14);
+      margin-bottom: 1.75rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .bs-chart-empty p {
+      margin: 0 0 0.75rem;
+    }
+
     .bs-slayers {
       display: flex;
       flex-direction: column;
@@ -504,7 +698,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260714-bstats-4"></script>
-  <script src="battleship-stats.js?v=20260714-bstats-4"></script>
+  <script src="script.js?v=20260714-bstats-5"></script>
+  <script src="battleship-stats.js?v=20260714-bstats-5"></script>
 </body>
 </html>

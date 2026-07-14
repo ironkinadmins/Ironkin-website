@@ -1,10 +1,14 @@
 let bsSummary = null;
+let bsTimeline = null;
 let bsFilter = "total";
 let bsIsStaff = false;
 let bsShowAllSlayers = false;
 const bsExpanded = new Set();
 
 const BS_SLAYER_PREVIEW = 10;
+
+// Chart geometry in viewBox units; the SVG itself scales to the page width.
+const BS_CHART = { w: 1000, h: 300, padL: 54, padR: 104, padT: 16, padB: 32 };
 
 function bsEscapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -56,6 +60,17 @@ async function bsCheckStaff() {
   if (toolbar) toolbar.style.display = bsIsStaff ? "flex" : "none";
 }
 
+// The timeline is a separate, slower artefact: a failure there must never take
+// the totals down with it.
+async function bsLoadTimeline() {
+  try {
+    const response = await fetch("/api/bingo/boss-timeline");
+    bsTimeline = response.ok ? await response.json() : null;
+  } catch {
+    bsTimeline = null;
+  }
+}
+
 async function bsLoad() {
   const container = document.getElementById("bsContent");
   if (!container) return;
@@ -64,11 +79,14 @@ async function bsLoad() {
     const response = await fetch("/api/bingo/boss-tracker");
     if (!response.ok) throw new Error("Could not load stats.");
     bsSummary = await response.json();
-    bsRender();
   } catch {
     container.className = "bs-notice";
     container.textContent = "Could not load boss kill stats. Try again in a moment.";
+    return;
   }
+
+  await bsLoadTimeline();
+  bsRender();
 }
 
 function bsCellHtml(boss, teamOneName, teamTwoName, ratio) {
@@ -114,6 +132,172 @@ function bsSlayerRowHtml(player, index, teamOneName, teamTwoName, maxGained) {
       ${teamPill}
       <span class="bs-slayer-bar" aria-hidden="true"><span style="width:${width}%"></span></span>
       <span class="bs-contrib-kills">${Number(player.gained).toLocaleString()}</span>
+    </div>`;
+}
+
+function bsNiceMax(value) {
+  if (!(value > 0)) return 5;
+  const power = Math.pow(10, Math.floor(Math.log10(value)));
+  const scaled = value / power;
+  const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
+  return step * power;
+}
+
+function bsChartScales(points) {
+  const first = new Date(points[0].at).getTime();
+  const last = new Date(points[points.length - 1].at).getTime();
+  const span = Math.max(1, last - first);
+  const peak = points.reduce((best, point) => Math.max(best, point.team1, point.team2), 0);
+  const max = bsNiceMax(peak);
+  const { w, h, padL, padR, padT, padB } = BS_CHART;
+  return {
+    first,
+    last,
+    max,
+    x: time => padL + ((time - first) / span) * (w - padL - padR),
+    y: value => h - padB - (value / max) * (h - padT - padB)
+  };
+}
+
+function bsLinePath(points, key, scales) {
+  return points
+    .map((point, index) => `${index ? "L" : "M"}${scales.x(new Date(point.at).getTime()).toFixed(1)} ${scales.y(point[key]).toFixed(1)}`)
+    .join(" ");
+}
+
+// One label per UTC midnight, so the axis reads as days rather than a wall of
+// timestamps.
+function bsDayTicks(points, scales) {
+  const seen = new Set();
+  const ticks = [];
+  for (const point of points) {
+    const date = new Date(point.at);
+    const key = date.toISOString().slice(0, 10);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    ticks.push({
+      x: scales.x(date.getTime()),
+      label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    });
+  }
+  return ticks.length > 8 ? ticks.filter((_, index) => index % 2 === 0) : ticks;
+}
+
+function bsTimelineHtml(teamOneName, teamTwoName) {
+  const timeline = bsTimeline;
+
+  const rebuildBtn = bsIsStaff
+    ? `<button type="button" class="bs-show-all" id="bsRebuildTimelineBtn">Rebuild timeline from Wise Old Man</button>`
+    : "";
+
+  if (!timeline || !timeline.ready || timeline.points.length < 2) {
+    const message = timeline?.rebuilding
+      ? "Building the timeline from Wise Old Man history..."
+      : "The timeline has not been built yet. It reconstructs the whole event from Wise Old Man history, so nothing is lost.";
+    return `
+      <div class="bs-section-head"><h2>The Race</h2></div>
+      <div class="bs-chart-empty">
+        <p>${bsEscapeHtml(message)}</p>
+        ${rebuildBtn}
+      </div>`;
+  }
+
+  const points = timeline.points;
+  const scales = bsChartScales(points);
+  const { w, h, padL, padR, padT, padB } = BS_CHART;
+  const last = points[points.length - 1];
+  const leader = last.team1 === last.team2 ? null : (last.team1 > last.team2 ? "team1" : "team2");
+  const gap = Math.abs(last.team1 - last.team2);
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(fraction => {
+    const value = scales.max * fraction;
+    const y = scales.y(value);
+    return `
+      <line class="bs-grid" x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" />
+      <text class="bs-axis-label" x="${padL - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${Math.round(value).toLocaleString()}</text>`;
+  }).join("");
+
+  const dayLines = bsDayTicks(points, scales).map(tick => `
+    <line class="bs-grid bs-grid-day" x1="${tick.x.toFixed(1)}" y1="${padT}" x2="${tick.x.toFixed(1)}" y2="${h - padB}" />
+    <text class="bs-axis-label" x="${tick.x.toFixed(1)}" y="${h - padB + 20}" text-anchor="middle">${bsEscapeHtml(tick.label)}</text>`).join("");
+
+  // Direct labels at the line ends: identity never rests on colour alone.
+  // A close race puts both lines at nearly the same height, so keep each dot on
+  // its true value and nudge only the text apart, then hold it inside the plot.
+  const dotY = { team1: scales.y(last.team1), team2: scales.y(last.team2) };
+  const labelY = { ...dotY };
+  const minLabelGap = 28;
+  if (Math.abs(labelY.team1 - labelY.team2) < minLabelGap) {
+    const middle = (labelY.team1 + labelY.team2) / 2;
+    const upper = labelY.team1 <= labelY.team2 ? "team1" : "team2";
+    const lower = upper === "team1" ? "team2" : "team1";
+    labelY[upper] = middle - minLabelGap / 2;
+    labelY[lower] = middle + minLabelGap / 2;
+  }
+
+  // Shift the pair as a unit to stay inside the plot. Clamping each label on its
+  // own would squash them back together whenever both sit against an edge -
+  // exactly the 0-0 start of every event.
+  const labelTop = padT + 12;
+  const labelBottom = h - padB - 6;
+  const highest = Math.min(labelY.team1, labelY.team2);
+  const lowest = Math.max(labelY.team1, labelY.team2);
+  const shift = highest < labelTop ? labelTop - highest
+    : lowest > labelBottom ? labelBottom - lowest
+      : 0;
+  labelY.team1 += shift;
+  labelY.team2 += shift;
+
+  const endLabel = (key, name) => {
+    const dot = dotY[key];
+    const text = labelY[key];
+    return `
+      <circle class="bs-end-dot ${key}" cx="${(w - padR).toFixed(1)}" cy="${dot.toFixed(1)}" r="4" />
+      <text class="bs-end-label" x="${(w - padR + 10).toFixed(1)}" y="${(text - 3).toFixed(1)}">${bsEscapeHtml(name)}</text>
+      <text class="bs-end-value" x="${(w - padR + 10).toFixed(1)}" y="${(text + 12).toFixed(1)}">${Number(last[key]).toLocaleString()}</text>`;
+  };
+
+  // A daily table keeps the numbers available to screen readers and to anyone
+  // who cannot separate the two lines by colour.
+  const tableRows = points.filter((_, index) => index % 12 === 0 || index === points.length - 1)
+    .map(point => `<tr><td>${bsEscapeHtml(bsFormatTimestamp(point.at))}</td><td>${point.team1.toLocaleString()}</td><td>${point.team2.toLocaleString()}</td></tr>`)
+    .join("");
+
+  return `
+    <div class="bs-section-head">
+      <h2>The Race</h2>
+      <span class="bs-section-hint">cumulative kills &middot; every ${timeline.stepMinutes / 60}h</span>
+    </div>
+    <div class="bs-chart-wrap">
+      <div class="bs-legend">
+        <span class="bs-legend-item"><i class="team1"></i>${bsEscapeHtml(teamOneName)}</span>
+        <span class="bs-legend-item"><i class="team2"></i>${bsEscapeHtml(teamTwoName)}</span>
+        ${leader ? `<span class="bs-legend-lead">${bsEscapeHtml(leader === "team1" ? teamOneName : teamTwoName)} ahead by ${gap.toLocaleString()}</span>` : `<span class="bs-legend-lead">Dead level</span>`}
+      </div>
+
+      <div class="bs-chart" id="bsChart">
+        <svg viewBox="0 0 ${w} ${h}" role="img"
+             aria-label="Cumulative boss kills over the event for ${bsEscapeAttr(teamOneName)} and ${bsEscapeAttr(teamTwoName)}">
+          ${gridLines}
+          ${dayLines}
+          <path class="bs-line team1" d="${bsLinePath(points, "team1", scales)}" />
+          <path class="bs-line team2" d="${bsLinePath(points, "team2", scales)}" />
+          ${endLabel("team1", teamOneName)}
+          ${endLabel("team2", teamTwoName)}
+          <line class="bs-crosshair" id="bsCrosshair" x1="0" y1="${padT}" x2="0" y2="${h - padB}" style="display:none" />
+          <rect class="bs-chart-hit" id="bsChartHit" x="${padL}" y="${padT}" width="${w - padL - padR}" height="${h - padT - padB}" />
+        </svg>
+        <div class="bs-tip" id="bsChartTip" hidden></div>
+      </div>
+
+      <details class="bs-chart-table">
+        <summary>View as table</summary>
+        <table>
+          <thead><tr><th>Time</th><th>${bsEscapeHtml(teamOneName)}</th><th>${bsEscapeHtml(teamTwoName)}</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </details>
+      ${rebuildBtn}
     </div>`;
 }
 
@@ -260,7 +444,9 @@ function bsRender() {
         </div>`).join("")}
     </div>` : "";
 
-  container.innerHTML = `${summaryCard}${slayerSection}${heatSection}${feedSection}${emptyNotice}${untrackedBlock}`;
+  const timelineSection = bsTimelineHtml(teamOneName, teamTwoName);
+
+  container.innerHTML = `${summaryCard}${timelineSection}${slayerSection}${heatSection}${feedSection}${emptyNotice}${untrackedBlock}`;
 }
 
 async function bsRefreshBatch() {
@@ -303,8 +489,106 @@ async function bsAdminAction(payload) {
   bsRender();
 }
 
+function bsHideChartTip() {
+  const tip = document.getElementById("bsChartTip");
+  const crosshair = document.getElementById("bsCrosshair");
+  if (tip) tip.hidden = true;
+  if (crosshair) crosshair.style.display = "none";
+}
+
+// The viewBox scales uniformly to the page width, so a client x maps to a
+// viewBox x by simple ratio.
+function bsChartMove(event) {
+  const hit = event.target.closest?.("#bsChartHit");
+  if (!hit || !bsTimeline?.points?.length) {
+    bsHideChartTip();
+    return;
+  }
+
+  const svg = hit.ownerSVGElement;
+  const tip = document.getElementById("bsChartTip");
+  const crosshair = document.getElementById("bsCrosshair");
+  if (!svg || !tip || !crosshair) return;
+
+  const box = svg.getBoundingClientRect();
+  const viewX = ((event.clientX - box.left) / box.width) * BS_CHART.w;
+
+  const points = bsTimeline.points;
+  const scales = bsChartScales(points);
+
+  let nearest = 0;
+  let nearestGap = Infinity;
+  points.forEach((point, index) => {
+    const gap = Math.abs(scales.x(new Date(point.at).getTime()) - viewX);
+    if (gap < nearestGap) {
+      nearestGap = gap;
+      nearest = index;
+    }
+  });
+
+  const point = points[nearest];
+  const pointX = scales.x(new Date(point.at).getTime());
+  crosshair.setAttribute("x1", pointX.toFixed(1));
+  crosshair.setAttribute("x2", pointX.toFixed(1));
+  crosshair.style.display = "";
+
+  const teamOneName = bsSummary?.settings?.teamOneName || "Team 1";
+  const teamTwoName = bsSummary?.settings?.teamTwoName || "Team 2";
+
+  tip.innerHTML = `
+    <strong>${bsEscapeHtml(bsFormatTimestamp(point.at))}</strong>
+    <span><i class="team1"></i>${bsEscapeHtml(teamOneName)}<b>${point.team1.toLocaleString()}</b></span>
+    <span><i class="team2"></i>${bsEscapeHtml(teamTwoName)}<b>${point.team2.toLocaleString()}</b></span>`;
+  tip.hidden = false;
+
+  // Keep the tooltip inside the chart instead of letting it run off the edge.
+  const pixelX = (pointX / BS_CHART.w) * box.width;
+  const half = tip.offsetWidth / 2;
+  const clamped = Math.max(half, Math.min(box.width - half, pixelX));
+  tip.style.left = `${clamped}px`;
+}
+
+// Wise Old Man rate-limits at roughly 20 requests a minute without an API key,
+// and a batch is one request per player. The cron worker spaces its batches 65s
+// apart for the same reason; firing them back to back just earns a wall of 429s.
+const BS_REBUILD_BATCH_GAP_MS = 65 * 1000;
+
+function bsWait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function bsRebuildTimeline() {
+  const button = document.getElementById("bsRebuildTimelineBtn");
+  if (button) { button.disabled = true; button.textContent = "Rebuilding..."; }
+
+  try {
+    for (let batch = 0; batch < 12; batch += 1) {
+      const response = await fetch("/api/bingo/boss-timeline?force=1", { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || "Rebuild failed.");
+      if (data.waiting || data.skipped || data.cycleComplete) break;
+
+      if (button && data.totalPlayers) {
+        const done = Math.min(data.cursor || data.totalPlayers, data.totalPlayers);
+        button.textContent = `Rebuilding ${done}/${data.totalPlayers} - about ${Math.max(1, Math.round(((data.totalPlayers - done) / 9) * 65 / 60))} min left`;
+      }
+      await bsWait(BS_REBUILD_BATCH_GAP_MS);
+    }
+    await bsLoadTimeline();
+    bsRender();
+  } catch (error) {
+    if (button) button.textContent = "Rebuild failed";
+    console.warn("Timeline rebuild failed", error);
+    setTimeout(() => bsRender(), 3000);
+  }
+}
+
 function bsBindControls() {
   document.getElementById("bsRefreshBtn")?.addEventListener("click", bsRefreshBatch);
+
+  const content = document.getElementById("bsContent");
+  content?.addEventListener("mousemove", bsChartMove);
+  content?.addEventListener("mouseleave", bsHideChartTip);
 
   document.getElementById("bsResetBtn")?.addEventListener("click", () => {
     if (!confirm("Reset the boss kill baseline? All progress counts restart from the next refresh.")) return;
@@ -322,6 +606,11 @@ function bsBindControls() {
     if (event.target.closest("#bsShowAllSlayers")) {
       bsShowAllSlayers = !bsShowAllSlayers;
       bsRender();
+      return;
+    }
+
+    if (event.target.closest("#bsRebuildTimelineBtn")) {
+      bsRebuildTimeline();
       return;
     }
 
