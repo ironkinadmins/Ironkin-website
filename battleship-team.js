@@ -33,9 +33,8 @@
     isStaff = Boolean(data.isStaff);
     $("staffAdminBoardBtn")?.classList.toggle("hidden", !isStaff);
     const watersButton = $("watersViewBtn");
-    watersButton.classList.toggle("hidden", !isStaff);
-    watersButton.disabled = !isStaff;
-    if (!isStaff) view = "attack";
+    watersButton.classList.remove("hidden");
+    watersButton.disabled = false;
 
     $("proofPlayer").value = data.displayName || "";
     $("proofPlayer").readOnly = true;
@@ -56,9 +55,8 @@
       isStaff = Boolean(state.isStaff);
       $("staffAdminBoardBtn")?.classList.toggle("hidden", !isStaff);
       const watersButton = $("watersViewBtn");
-      watersButton.classList.toggle("hidden", !isStaff);
-      watersButton.disabled = !isStaff;
-      if (!isStaff) view = "attack";
+      watersButton.classList.remove("hidden");
+      watersButton.disabled = false;
       $("loginPanel").classList.add("hidden");
       $("boardPanel").classList.remove("hidden");
       $("logoutTeamBtn").classList.remove("hidden");
@@ -96,11 +94,12 @@
     const sunk = ships.filter(ship => ship.sunk).length;
     const afloat = Math.max(0, ships.length - sunk);
     const hitsTaken = Math.max(0, Number(fleet.hitsTaken) || 0);
+    const completedTiles = Math.max(0, Number(state?.completedTiles?.[teamKey]) || 0);
     const captain = fleet.captain || "Not assigned";
     const shipTags = ships.length
       ? ships.map(ship => `<span class="fleet-ship-tag${ship.sunk ? " sunk" : ""}">${esc(ship.name || "Ship")} <b>(${Math.max(0, Number(ship.size) || 0)})</b></span>`).join("")
       : `<span class="fleet-empty">Fleet not placed yet.</span>`;
-    return `<article class="team-fleet-card" data-team="${esc(teamKey)}"><div class="fleet-card-top"><span class="fleet-team-icon" aria-hidden="true">${icon}</span><div class="fleet-team-copy"><h3>${esc(teamName)}</h3><p>Captain: ${esc(captain)}</p></div><strong>${sunk}/${ships.length || 6} sunk</strong></div><div class="fleet-card-stats"><span>🛡 ${afloat} afloat</span><span>🔥 ${sunk} lost</span><span>💥 ${hitsTaken} hits taken</span></div><div class="fleet-ship-tags">${shipTags}</div></article>`;
+    return `<article class="team-fleet-card" data-team="${esc(teamKey)}"><div class="fleet-card-top"><span class="fleet-team-icon" aria-hidden="true">${icon}</span><div class="fleet-team-copy"><h3>${esc(teamName)}</h3><p>Captain: ${esc(captain)}</p></div><strong>${sunk}/${ships.length || 6} sunk</strong></div><div class="fleet-card-stats"><span>🛡 ${afloat} afloat</span><span>🔥 ${sunk} lost</span><span>💥 ${hitsTaken} hits taken</span><span>✅ ${completedTiles} tiles completed</span></div><div class="fleet-ship-tags">${shipTags}</div></article>`;
   }
 
   function renderFleetSummary() {
@@ -126,7 +125,6 @@
     const isComplete = completed >= required;
     const isPartial = completed > 0 && !isComplete;
     const attack = attackAt(index, isAttackView ? "out" : "in") || null;
-    const ship = isAttackView ? null : state.ownTeam.ships.find(item => item.cells.includes(index)) || null;
     const percent = Math.round((completed / required) * 100);
     const showProgress = isAttackView;
     const canSubmit = Boolean(isAttackView && tile.name && state.phase === "active" && !isComplete);
@@ -141,7 +139,6 @@
       isComplete,
       isPartial,
       attack,
-      ship,
       canSubmit,
       title: tile.name
         ? `${tile.name}${showProgress && required > 1 ? ` — ${completed}/${required} complete` : showProgress && isComplete ? " — completed" : ""}`
@@ -150,12 +147,11 @@
   }
 
   function renderTile(model) {
-    const { tile, index, required, completed, percent, showProgress, isComplete, isPartial, attack, ship, canSubmit, title } = model;
+    const { tile, index, required, completed, percent, showProgress, isComplete, isPartial, attack, canSubmit, title } = model;
     const classes = [
       "team-tile",
       tile.name ? "" : "empty",
       attack?.result || "",
-      ship ? "ship" : "",
       showProgress && isPartial ? "progress-partial" : ""
     ].filter(Boolean).join(" ");
 
@@ -171,7 +167,6 @@
   }
 
   function render() {
-    if (!isStaff && view !== "attack") view = "attack";
     const isAttackView = view === "attack";
     $("attackViewBtn").classList.toggle("active", isAttackView);
     $("watersViewBtn").classList.toggle("active", !isAttackView);
@@ -236,7 +231,6 @@
   });
 
   $("watersViewBtn").addEventListener("click", () => {
-    if (!isStaff) return;
     view = "waters";
     render();
   });

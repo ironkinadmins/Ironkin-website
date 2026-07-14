@@ -2305,6 +2305,18 @@ function renderAdminControlCenter() {
   const lastUpdate = document.getElementById("lastBoardUpdate");
   if (pendingCount) pendingCount.textContent = String(pending);
   if (lastUpdate) lastUpdate.textContent = formatDateTime(bingoState.updatedAt);
+  const completedTileTotal = team => (bingoState.tiles || []).reduce((total, tile) => {
+    if (!tile?.name) return total;
+    return total + (getTileCompletedQuantity(tile, team) >= getTileQuantity(tile) ? 1 : 0);
+  }, 0);
+  const emberCompleted = document.getElementById("emberCompletedTiles");
+  const ashCompleted = document.getElementById("ashCompletedTiles");
+  const emberCompletedLabel = document.getElementById("emberCompletedLabel");
+  const ashCompletedLabel = document.getElementById("ashCompletedLabel");
+  if (emberCompleted) emberCompleted.textContent = String(completedTileTotal("ember"));
+  if (ashCompleted) ashCompleted.textContent = String(completedTileTotal("ash"));
+  if (emberCompletedLabel) emberCompletedLabel.textContent = `${getTeamDisplayName("ember")} — Tiles Completed`;
+  if (ashCompletedLabel) ashCompletedLabel.textContent = `${getTeamDisplayName("ash")} — Tiles Completed`;
   const host = document.getElementById("adminFourBoards");
   if (!host) return;
   host.innerHTML = [
