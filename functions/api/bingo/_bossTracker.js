@@ -107,6 +107,53 @@ function summarizeBosses(data) {
   return { total, bosses: kills, activities };
 }
 
+// Wise Old Man keeps every snapshot it has ever recorded for a player, and the
+// record follows the account through a name change, so this is a full history
+// of the event even for someone who has since renamed.
+export async function fetchWomSnapshots(env, rsn, fromMs, toMs) {
+  const query = `startDate=${encodeURIComponent(new Date(fromMs).toISOString())}`
+    + `&endDate=${encodeURIComponent(new Date(toMs).toISOString())}`
+    + `&limit=200`; // the default page size is 20 - always ask for more
+  const response = await womFetch(env, `/players/${encodeURIComponent(rsn)}/snapshots?${query}`);
+  if (!response.ok) {
+    return { error: response.status === 404
+      ? `"${rsn}" was not found on Wise Old Man.`
+      : "Wise Old Man is temporarily unavailable." };
+  }
+
+  const raw = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+  const snapshots = raw
+    .filter(snapshot => Number.isFinite(new Date(snapshot?.createdAt).getTime()))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  return { snapshots };
+}
+
+// Converts a WOM *snapshot* into the same shape summarizeBosses() produces from
+// a WOM *player*, so a repaired baseline is indistinguishable from one the
+// tracker took itself. Stores every boss, not just the event whitelist, exactly
+// as summarizeBosses does - that is what keeps EVENT_BOSS_METRICS retroactive.
+export function trackerSnapshotFromWomSnapshot(snapshot) {
+  const bosses = {};
+  const activities = {};
+  let total = 0;
+
+  for (const [metric, value] of Object.entries(snapshot?.data?.bosses || {})) {
+    const count = Math.max(0, Number(value?.kills || 0));
+    if (count > 0) {
+      bosses[metric] = count;
+      total += count;
+    }
+  }
+
+  for (const [metric, value] of Object.entries(snapshot?.data?.activities || {})) {
+    const score = Math.max(0, Number(value?.score || 0));
+    if (score > 0) activities[metric] = score;
+  }
+
+  return { at: snapshot.createdAt, total, bosses, activities };
+}
+
 function womHeaders(env) {
   const headers = { "User-Agent": WOM_USER_AGENT };
   if (env.WOM_API_KEY) headers["x-api-key"] = env.WOM_API_KEY;

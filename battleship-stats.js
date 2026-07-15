@@ -344,7 +344,11 @@ function bsRender() {
   const rest = heatBosses.length >= 3 ? heatBosses.slice(3) : heatBosses;
 
   const players = Array.isArray(summary.players) ? summary.players : [];
-  const untrackedPlayers = players.filter(player => !player.tracked);
+
+  // A player with a baseline but an error is the dangerous case: they still
+  // count as tracked, so their kills sit frozen at the last good sweep while
+  // the page looks perfectly healthy. Usually an in-game name change.
+  const needsAttention = players.filter(player => !player.tracked || player.error);
 
   const summaryCard = `
     <div class="bs-summary">
@@ -432,15 +436,20 @@ function bsRender() {
 
   const emptyNotice = bosses.length ? "" : `<p class="bs-notice">No boss kills recorded for ${bsEscapeHtml(filterLabel)} yet. Get out there!</p>`;
 
-  const untrackedBlock = untrackedPlayers.length ? `
+  const untrackedBlock = needsAttention.length ? `
     <div class="bs-untracked">
-      <strong>Not tracked yet (${untrackedPlayers.length})</strong>
-      <p>These members could not be matched to a RuneScape name on Wise Old Man, so their kills are not counted yet.</p>
-      ${untrackedPlayers.map(player => `
+      <strong>Needs attention (${needsAttention.length})</strong>
+      <p>
+        A <em>stalled</em> member's kills are frozen at their last successful update &mdash;
+        usually an in-game name change. A <em>not tracked</em> member has never been counted.
+        ${bsIsStaff ? "Fixing the name rebuilds their history from Wise Old Man, so nothing is lost." : "Ask staff to fix the RuneScape name."}
+      </p>
+      ${needsAttention.map(player => `
         <div class="bs-untracked-row">
-          <span class="bs-untracked-name">${bsEscapeHtml(player.displayName)}</span>
+          <span class="bs-untracked-name">${bsEscapeHtml(player.displayName)}${player.rsn ? ` <span class="bs-untracked-rsn">tried "${bsEscapeHtml(player.rsn)}"</span>` : ""}</span>
+          <span class="bs-untracked-tag ${player.tracked ? "stalled" : ""}">${player.tracked ? "stalled" : "not tracked"}</span>
           <span class="bs-untracked-error">${bsEscapeHtml(player.error || "Waiting for first refresh...")}</span>
-          ${bsIsStaff ? `<button class="btn secondary bs-set-rsn" type="button" data-bs-set-rsn="${bsEscapeAttr(player.discordId)}" data-bs-name="${bsEscapeAttr(player.displayName)}">Set RSN</button>` : ""}
+          ${bsIsStaff ? `<button class="btn secondary bs-set-rsn" type="button" data-bs-set-rsn="${bsEscapeAttr(player.discordId)}" data-bs-name="${bsEscapeAttr(player.displayName)}">Fix RSN</button>` : ""}
         </div>`).join("")}
     </div>` : "";
 
@@ -486,6 +495,16 @@ async function bsAdminAction(payload) {
     return;
   }
   bsSummary = data.summary;
+
+  // Whether the fix kept their kills or restarted the count is the thing staff
+  // actually need to know, so say it outright instead of leaving them to guess.
+  if (data.repair?.restored) {
+    alert(`Kills restored from Wise Old Man history (${data.repair.snapshots} snapshots since the event started). Nothing was lost.`);
+  } else if (data.repair && !data.repair.restored) {
+    alert(`RSN saved, but their kills restart from the next refresh.\n\n${data.repair.reason}`);
+  }
+
+  await bsLoadTimeline();
   bsRender();
 }
 

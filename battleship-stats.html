@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battleship Bingo Stats | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260714-bstats-5" />
+  <link rel="stylesheet" href="styles.css?v=20260715-bstats-6" />
   <style>
     /* Scoped styles for the Battleship Bingo stats page only. */
     main.page {
@@ -639,6 +639,31 @@
       font-size: 0.8rem;
     }
 
+    .bs-untracked-rsn {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* "Stalled" is the worse state of the two: the member looks fine everywhere
+       else on the page while their kills quietly stop counting. */
+    .bs-untracked-tag {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .bs-untracked-tag.stalled {
+      border-color: rgba(232, 145, 63, 0.6);
+      background: rgba(232, 145, 63, 0.14);
+      color: #f0a45c;
+    }
+
     .bs-set-rsn {
       padding: 0.25rem 0.7rem;
       font-size: 0.78rem;
@@ -698,7 +723,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260714-bstats-5"></script>
-  <script src="battleship-stats.js?v=20260714-bstats-5"></script>
+  <script src="script.js?v=20260715-bstats-6"></script>
+  <script src="battleship-stats.js?v=20260715-bstats-6"></script>
 </body>
 </html>
