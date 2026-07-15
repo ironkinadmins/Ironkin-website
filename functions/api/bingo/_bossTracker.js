@@ -428,6 +428,11 @@ export async function processChunk(env, state, { force = false } = {}) {
 
     let resolved = null;
     let lastError = "Could not reach Wise Old Man.";
+    // Two very different problems wear the same "error" field: a name that will
+    // never resolve until staff fix it, and Wise Old Man being momentarily
+    // unreachable (its API allows only 20 requests a minute per IP, so a busy
+    // sweep can trip it). Only the first needs a human.
+    let lastErrorKind = "unavailable";
 
     for (const candidate of candidates) {
       if (womCalls >= MAX_WOM_CALLS_PER_RUN) break;
@@ -442,11 +447,13 @@ export async function processChunk(env, state, { force = false } = {}) {
       lastError = result.notFound
         ? `"${candidate}" was not found on the hiscores.`
         : "Wise Old Man is temporarily unavailable.";
+      lastErrorKind = result.notFound ? "not_found" : "unavailable";
     }
 
     if (!resolved) {
       player.error = lastError;
-      failures.push({ discordId, displayName: player.displayName, error: lastError });
+      player.errorKind = lastErrorKind;
+      failures.push({ discordId, displayName: player.displayName, error: lastError, kind: lastErrorKind });
       state.cursor += 1;
       continue;
     }
@@ -456,6 +463,7 @@ export async function processChunk(env, state, { force = false } = {}) {
     player.guessed = !player.rsnOverride && candidates.length > 1 &&
       normalizeRsn(resolved.rsn) !== normalizeRsn(player.displayName);
     player.error = null;
+    player.errorKind = null;
     player.updatedAt = nowIso;
     if (!player.baseline) player.baseline = snapshot;
     player.current = snapshot;
@@ -482,6 +490,12 @@ export async function processChunk(env, state, { force = false } = {}) {
     totalPlayers: playerIds.length,
     cycleComplete
   };
+}
+
+// Only these two messages are ever stored in player.error, so the wording is a
+// reliable fallback for state saved before errorKind was recorded.
+function classifyError(message) {
+  return /was not found on the hiscores/.test(String(message || "")) ? "not_found" : "unavailable";
 }
 
 function formatBossName(metric) {
@@ -548,6 +562,11 @@ export function buildSummary(state, settings) {
       tracked: Boolean(player.baseline),
       guessed: player.guessed === true,
       error: player.error || null,
+      // "not_found" needs staff; "unavailable" clears itself on the next sweep.
+      // State written before errorKind existed only has the message, so read the
+      // kind back out of it rather than making everyone wait for a sweep to be
+      // classified correctly.
+      errorKind: player.error ? (player.errorKind || classifyError(player.error)) : null,
       updatedAt: player.updatedAt || null
     });
   }

@@ -36,6 +36,10 @@ const BASELINE_LOOKBACK_MS = 14 * 24 * 60 * 60 * 1000;
 // Guards KV size on a long event: 2h steps means ~12 points/player/day.
 const MAX_SERIES_POINTS = 800;
 
+// A tracker sweep that has not finished within this long has died mid-cycle;
+// don't let its stale marker block rebuilds forever.
+const STALE_SWEEP_MS = 20 * 60 * 1000;
+
 function safeJsonParse(value, fallback) {
   try {
     return value ? JSON.parse(value) : fallback;
@@ -231,6 +235,19 @@ export async function processTimelineChunk(env, { force = false } = {}) {
   const now = Date.now();
   if (now < revealMs) {
     return { waiting: true, reason: "The timeline starts at board reveal.", startsAt: settings.boardRevealAt };
+  }
+
+  // Wise Old Man allows 20 requests a minute per IP. A tracker sweep already
+  // spends about half of that, and a rebuild spends the same again - run both
+  // at once and the tracker's own calls start failing, which strands members on
+  // stale kills. A slower rebuild is much cheaper than a stalled tracker.
+  const sweepStartedAt = tracker.cycleStartedAt ? new Date(tracker.cycleStartedAt).getTime() : 0;
+  const sweepIsLive = sweepStartedAt && Date.now() - sweepStartedAt < STALE_SWEEP_MS;
+  if (sweepIsLive) {
+    return {
+      skipped: true,
+      reason: "A boss kill refresh is running. Wise Old Man limits how often we can ask, so the rebuild waits for it to finish - try again in a few minutes."
+    };
   }
 
   const state = await getTimelineState(env);

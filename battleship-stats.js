@@ -345,10 +345,13 @@ function bsRender() {
 
   const players = Array.isArray(summary.players) ? summary.players : [];
 
-  // A player with a baseline but an error is the dangerous case: they still
-  // count as tracked, so their kills sit frozen at the last good sweep while
-  // the page looks perfectly healthy. Usually an in-game name change.
-  const needsAttention = players.filter(player => !player.tracked || player.error);
+  // Only a name that cannot resolve needs a human. Wise Old Man being briefly
+  // unreachable (its API allows 20 requests a minute per IP) is transient and
+  // clears itself on the next sweep, so it must not look like a broken name -
+  // an alarm that cries wolf gets ignored when it matters.
+  const needsAttention = players.filter(player =>
+    (!player.tracked && player.errorKind !== "unavailable") || player.errorKind === "not_found");
+  const waitingOnWom = players.filter(player => player.errorKind === "unavailable");
 
   const summaryCard = `
     <div class="bs-summary">
@@ -436,6 +439,13 @@ function bsRender() {
 
   const emptyNotice = bosses.length ? "" : `<p class="bs-notice">No boss kills recorded for ${bsEscapeHtml(filterLabel)} yet. Get out there!</p>`;
 
+  const womWaitBlock = waitingOnWom.length ? `
+    <p class="bs-wom-wait">
+      ${waitingOnWom.length} member${waitingOnWom.length === 1 ? "" : "s"} couldn't be refreshed on the last sweep
+      &mdash; Wise Old Man was rate-limiting. Their names are fine and their kills are safe;
+      they catch up automatically on the next refresh.
+    </p>` : "";
+
   const untrackedBlock = needsAttention.length ? `
     <div class="bs-untracked">
       <strong>Needs attention (${needsAttention.length})</strong>
@@ -455,7 +465,7 @@ function bsRender() {
 
   const timelineSection = bsTimelineHtml(teamOneName, teamTwoName);
 
-  container.innerHTML = `${summaryCard}${timelineSection}${slayerSection}${heatSection}${feedSection}${emptyNotice}${untrackedBlock}`;
+  container.innerHTML = `${summaryCard}${timelineSection}${slayerSection}${heatSection}${feedSection}${emptyNotice}${womWaitBlock}${untrackedBlock}`;
 }
 
 async function bsRefreshBatch() {
@@ -585,7 +595,13 @@ async function bsRebuildTimeline() {
       const response = await fetch("/api/bingo/boss-timeline?force=1", { method: "POST" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.error || "Rebuild failed.");
-      if (data.waiting || data.skipped || data.cycleComplete) break;
+
+      if (data.skipped || data.waiting) {
+        if (button) button.textContent = "Rebuild paused";
+        if (data.reason) alert(data.reason);
+        break;
+      }
+      if (data.cycleComplete) break;
 
       if (button && data.totalPlayers) {
         const done = Math.min(data.cursor || data.totalPlayers, data.totalPlayers);

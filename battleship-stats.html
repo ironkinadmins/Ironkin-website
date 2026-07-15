@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battleship Bingo Stats | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260715-bstats-6" />
+  <link rel="stylesheet" href="styles.css?v=20260715-bstats-7" />
   <style>
     /* Scoped styles for the Battleship Bingo stats page only. */
     main.page {
@@ -639,6 +639,18 @@
       font-size: 0.8rem;
     }
 
+    /* Transient and self-healing, so it stays quiet rather than borrowing the
+       red "needs attention" styling. */
+    .bs-wom-wait {
+      margin: 0.5rem 0 0;
+      padding: 0.6rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
     .bs-untracked-rsn {
       font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
       font-size: 0.72rem;
@@ -723,7 +735,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260715-bstats-6"></script>
-  <script src="battleship-stats.js?v=20260715-bstats-6"></script>
+  <script src="script.js?v=20260715-bstats-7"></script>
+  <script src="battleship-stats.js?v=20260715-bstats-7"></script>
 </body>
 </html>
