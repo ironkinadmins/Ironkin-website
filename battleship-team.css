@@ -208,3 +208,33 @@ body.bingo-active #legacyBingoLayout.admin-sidebar-only{display:block!important}
 }
 
 .admin-summary-static{cursor:default}.fleet-card-stats span:nth-child(4){color:#facc15}@media(max-width:1100px){.admin-game-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v3: dedicated controls rendered directly inside the visible Staff Control Center. */
+.admin-board-heading-tools .staff-control-dropdown {
+  display: block;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 100;
+}
+.admin-board-heading-tools .staff-control-dropdown > summary {
+  white-space: nowrap;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+}
+.admin-board-heading-tools .staff-control-dropdown .bingo-admin-menu {
+  right: 0;
+  left: auto;
+  transform: none;
+  z-index: 200;
+}
+@media(max-width:1050px){
+  .admin-board-heading-tools {
+    margin-top: .75rem;
+    justify-content: flex-start;
+  }
+  .admin-board-heading-tools .staff-control-dropdown .bingo-admin-menu {
+    right: auto;
+    left: 0;
+  }
+}

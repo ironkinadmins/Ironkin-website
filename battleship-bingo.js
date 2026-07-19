@@ -1615,17 +1615,19 @@ function updateAdminButtons() {
   }
 
   const activeAdminMenu = document.getElementById("activeGameAdminActions");
-  const staffAdminMount = document.getElementById("staffAdminControlsMount");
-  const activeAdminHome = document.querySelector(".active-game-top-actions");
-  if (activeAdminMenu) {
-    const useStaffControlCenter = isBingoStaff && (isActive || isComplete) && staffAdminMount;
-    const target = useStaffControlCenter ? staffAdminMount : activeAdminHome;
-    if (target && activeAdminMenu.parentElement !== target) target.appendChild(activeAdminMenu);
-    activeAdminMenu.style.display = isBingoStaff ? "block" : "none";
-  }
+  if (activeAdminMenu) activeAdminMenu.style.display = isBingoStaff ? "block" : "none";
 
   const archiveResetBtn = document.getElementById("activeArchiveResetBtn");
   if (archiveResetBtn) archiveResetBtn.style.display = isBingoStaff && isComplete ? "inline-flex" : "none";
+
+  const staffAdminMenu = document.getElementById("staffControlAdminActions");
+  if (staffAdminMenu) staffAdminMenu.style.display = isBingoStaff && (isActive || isComplete) ? "block" : "none";
+  const staffEndBtn = document.getElementById("staffEndGameBtn");
+  const staffArchiveBtn = document.getElementById("staffArchiveResetBtn");
+  const staffReopenBtn = document.getElementById("staffReopenGameBtn");
+  if (staffEndBtn) staffEndBtn.style.display = isBingoStaff && isActive ? "inline-flex" : "none";
+  if (staffArchiveBtn) staffArchiveBtn.style.display = isBingoStaff && isComplete ? "inline-flex" : "none";
+  if (staffReopenBtn) staffReopenBtn.style.display = isBingoStaff && isComplete ? "inline-flex" : "none";
 
   if (phaseBtn) {
     phaseBtn.style.display = isBingoStaff ? "inline-flex" : "none";
@@ -1844,6 +1846,16 @@ async function endActiveGameFromMenu() {
   await saveBingoState();
 }
 
+async function reopenActiveGameFromMenu() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (bingoState.phase !== "complete") return;
+  if (!confirm("Reopen this completed game? New board changes and proof decisions will be allowed again.")) return;
+  bingoState.phase = "active";
+  bingoState.locked = true;
+  addLog("Battleship Bingo was reopened by staff.");
+  await saveBingoState();
+}
+
 async function archiveAndResetBingo() {
   if (!isBingoStaff) return alert("Staff only.");
   if (bingoState.phase !== "complete") return alert("End the game before archiving it.");
@@ -1958,6 +1970,15 @@ function bindBingoControls() {
   document.getElementById("activeUnlockFleetsBtn")?.addEventListener("click", unlockFleetsFromMenu);
   document.getElementById("activeResetProgressBtn")?.addEventListener("click", resetProgressFromMenu);
   document.getElementById("activeResetBoardBtn")?.addEventListener("click", () => document.getElementById("bingoClearBoardBtn")?.click());
+  document.getElementById("staffEndGameBtn")?.addEventListener("click", endActiveGameFromMenu);
+  document.getElementById("staffArchiveResetBtn")?.addEventListener("click", archiveAndResetBingo);
+  document.getElementById("staffReopenGameBtn")?.addEventListener("click", reopenActiveGameFromMenu);
+  document.getElementById("staffReturnSetupBtn")?.addEventListener("click", returnToSetupModeFromMenu);
+  document.getElementById("staffUnlockFleetsBtn")?.addEventListener("click", unlockFleetsFromMenu);
+  document.getElementById("staffResetProgressBtn")?.addEventListener("click", resetProgressFromMenu);
+  document.getElementById("staffResetBoardBtn")?.addEventListener("click", () => document.getElementById("bingoClearBoardBtn")?.click());
+  document.getElementById("staffTeamAccessSettingsBtn")?.addEventListener("click", () => document.getElementById("activeTeamAccessSettingsBtn")?.click());
+  document.getElementById("staffViewSettingsBtn")?.addEventListener("click", () => document.getElementById("activeViewSettingsBtn")?.click());
   document.getElementById("activeViewSettingsBtn")?.addEventListener("click", openBingoHelpModal);
   document.getElementById("bingoViewFleetsBtn")?.addEventListener("click", openFleetsAsAdmin);
   document.getElementById("bingoPhaseActionBtn")?.addEventListener("click", handlePhaseAction);

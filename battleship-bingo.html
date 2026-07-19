@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battleship Bingo | Ironkin Clan</title>
-  <link rel="stylesheet" href="styles.css?v=20260710-admin-rightclick-v1" />
-  <link rel="stylesheet" href="/battleship-team.css?v=20260714-completed-tiles-v1">
+  <link rel="stylesheet" href="styles.css?v=20260719-bingo-admin-controls-v3" />
+  <link rel="stylesheet" href="/battleship-team.css?v=20260719-bingo-admin-controls-v3">
 </head>
 <body>
   <div id="siteNav"></div>
@@ -92,7 +92,26 @@
           <div><p class="eyebrow">Staff Control Center</p><h2>Both Teams — Attack Boards & Waters</h2></div>
           <div class="admin-board-heading-tools">
             <p>Click any attack-board tile to set progress, hit, miss, or reset. Waters are read-only and show the defending fleet.</p>
-            <div id="staffAdminControlsMount"></div>
+            <details class="bingo-admin-dropdown staff-control-dropdown" id="staffControlAdminActions">
+              <summary class="btn secondary">Admin Controls</summary>
+              <div class="bingo-admin-menu">
+                <div class="bingo-admin-group">
+                  <strong>Game Control</strong>
+                  <button class="btn secondary danger" id="staffEndGameBtn" type="button">End Game</button>
+                  <button class="btn primary" id="staffArchiveResetBtn" type="button" style="display:none;">Archive &amp; Reset</button>
+                  <button class="btn secondary" id="staffReopenGameBtn" type="button" style="display:none;">Reopen Game</button>
+                  <button class="btn secondary" id="staffReturnSetupBtn" type="button">Return to Setup Mode</button>
+                  <button class="btn secondary" id="staffUnlockFleetsBtn" type="button">Unlock Fleets</button>
+                </div>
+                <div class="bingo-admin-group">
+                  <strong>Maintenance</strong>
+                  <button class="btn secondary danger" id="staffResetProgressBtn" type="button">Reset Progress</button>
+                  <button class="btn secondary danger" id="staffResetBoardBtn" type="button">Reset Entire Board</button>
+                  <button class="btn secondary" id="staffTeamAccessSettingsBtn" type="button">Team Passwords</button>
+                  <button class="btn secondary" id="staffViewSettingsBtn" type="button">View Match Settings</button>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
         <div id="adminFourBoards" class="admin-four-boards"></div>
@@ -455,6 +474,6 @@ Enhanced crystal weapon seed - 1</pre>
 
   <script src="script.js"></script>
   <script src="admin-team-access.js?v=phase1-clean-1"></script>
-  <script src="battleship-bingo.js?v=20260719-archive-reset-v2"></script>
+  <script src="battleship-bingo.js?v=20260719-archive-reset-v3"></script>
 </body>
 </html>
