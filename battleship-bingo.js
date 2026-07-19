@@ -1614,6 +1614,16 @@ function updateAdminButtons() {
     startBtn.style.display = isSetup || isCaptains ? "none" : "inline-flex";
   }
 
+  const activeAdminMenu = document.getElementById("activeGameAdminActions");
+  const staffAdminMount = document.getElementById("staffAdminControlsMount");
+  const activeAdminHome = document.querySelector(".active-game-top-actions");
+  if (activeAdminMenu) {
+    const useStaffControlCenter = isBingoStaff && (isActive || isComplete) && staffAdminMount;
+    const target = useStaffControlCenter ? staffAdminMount : activeAdminHome;
+    if (target && activeAdminMenu.parentElement !== target) target.appendChild(activeAdminMenu);
+    activeAdminMenu.style.display = isBingoStaff ? "block" : "none";
+  }
+
   const archiveResetBtn = document.getElementById("activeArchiveResetBtn");
   if (archiveResetBtn) archiveResetBtn.style.display = isBingoStaff && isComplete ? "inline-flex" : "none";
 

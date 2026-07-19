@@ -9072,3 +9072,30 @@ body.calendar-modal-active {
 .archive-tile-list { display:grid; gap:.45rem; }
 .archive-tile-row { display:grid; grid-template-columns:minmax(220px,2fr) repeat(3,minmax(90px,1fr)); gap:.75rem; align-items:center; padding:.65rem .75rem; border:1px solid rgba(255,255,255,.1); border-radius:8px; }
 @media (max-width:900px) { .archive-bingo-boards { grid-template-columns:1fr; } .archive-tile-row { grid-template-columns:1fr 1fr; } }
+
+
+/* Battleship Bingo: keep staff controls visible beside the four-board control center. */
+.admin-board-heading-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-board-heading-tools > p {
+  margin: 0;
+  flex: 1 1 360px;
+}
+#staffAdminControlsMount {
+  flex: 0 0 auto;
+}
+#staffAdminControlsMount .bingo-admin-dropdown {
+  position: relative;
+  z-index: 30;
+}
+@media (max-width: 900px) {
+  .admin-board-heading-tools {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
