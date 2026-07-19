@@ -9058,3 +9058,17 @@ body.calendar-modal-active {
   margin-left: auto !important;
   margin-right: auto !important;
 }
+
+/* Battleship Bingo archive */
+.archive-bingo-boards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; margin:1.5rem 0; }
+.archive-board-card { overflow:hidden; }
+.archive-board-grid { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:3px; margin-top:1rem; }
+.archive-board-cell { aspect-ratio:1; min-width:0; display:flex; align-items:center; justify-content:center; padding:2px; border:1px solid rgba(255,255,255,.14); border-radius:4px; background:rgba(255,255,255,.04); font-size:.58rem; line-height:1.05; text-align:center; overflow:hidden; }
+.archive-board-cell span { overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.archive-board-cell.has-ship { outline:2px solid rgba(255,255,255,.32); }
+.archive-board-cell.is-hit { background:rgba(190,48,48,.55); font-weight:800; }
+.archive-board-cell.is-miss { background:rgba(45,105,160,.48); font-weight:700; }
+.archive-board-cell.is-complete:not(.is-hit):not(.is-miss) { background:rgba(77,130,79,.42); }
+.archive-tile-list { display:grid; gap:.45rem; }
+.archive-tile-row { display:grid; grid-template-columns:minmax(220px,2fr) repeat(3,minmax(90px,1fr)); gap:.75rem; align-items:center; padding:.65rem .75rem; border:1px solid rgba(255,255,255,.1); border-radius:8px; }
+@media (max-width:900px) { .archive-bingo-boards { grid-template-columns:1fr; } .archive-tile-row { grid-template-columns:1fr 1fr; } }

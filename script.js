@@ -1736,6 +1736,14 @@ async function fetchArchive() {
   return data.archive || [];
 }
 
+
+async function fetchBingoArchive() {
+  const response = await fetch("/api/bingo/archive/list", { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Could not load Bingo archive.");
+  return data.archive || [];
+}
+
 async function deleteArchiveEntry(archiveId) {
   if (!archiveId) return;
 
@@ -1765,8 +1773,9 @@ async function loadArchivePage() {
   if (!grid) return;
 
   try {
-    const [archive, currentUser] = await Promise.all([
+    const [archive, bingoArchive, currentUser] = await Promise.all([
       fetchArchive(),
+      fetchBingoArchive(),
       getCurrentAuthUser()
     ]);
 
@@ -1775,7 +1784,7 @@ async function loadArchivePage() {
     grid.className = "archive-grid";
     grid.innerHTML = "";
 
-    if (!archive.length) {
+    if (!archive.length && !bingoArchive.length) {
       grid.innerHTML = `
         <article class="card archive-card">
           <p class="eyebrow">No Results Yet</p>
@@ -1785,6 +1794,30 @@ async function loadArchivePage() {
       `;
       return;
     }
+
+    bingoArchive.forEach(entry => {
+      const card = document.createElement("article");
+      card.className = "card archive-card";
+      const dateText = entry.archivedAt ? new Date(entry.archivedAt).toLocaleDateString("en-US") : "Archived";
+      const winner = entry.winner === "ember"
+        ? entry.summary?.emberName
+        : entry.winner === "ash"
+          ? entry.summary?.ashName
+          : entry.winner === "tie" ? "Tie" : "Not recorded";
+      card.innerHTML = `
+        <p class="eyebrow">Battleship Bingo · ${dateText}</p>
+        <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
+        <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
+        <div class="archive-results-list">
+          <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.emberName || "Team 1")}</strong><span>${Number(entry.summary?.emberCompleted || 0)} tiles</span></div>
+          <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.ashName || "Team 2")}</strong><span>${Number(entry.summary?.ashCompleted || 0)} tiles</span></div>
+          <div class="archive-result-row"><strong>Saved records</strong><span>${Number(entry.summary?.proofCount || 0)} proofs · ${Number(entry.summary?.attackCount || 0)} attacks</span></div>
+        </div>
+        <div class="archive-card-actions">
+          <a class="btn secondary" href="/bingo-archive?id=${encodeURIComponent(entry.id)}">View All Four Boards</a>
+        </div>`;
+      grid.appendChild(card);
+    });
 
     archive.forEach(entry => {
       const card = document.createElement("article");

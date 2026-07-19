@@ -1614,6 +1614,9 @@ function updateAdminButtons() {
     startBtn.style.display = isSetup || isCaptains ? "none" : "inline-flex";
   }
 
+  const archiveResetBtn = document.getElementById("activeArchiveResetBtn");
+  if (archiveResetBtn) archiveResetBtn.style.display = isBingoStaff && isComplete ? "inline-flex" : "none";
+
   if (phaseBtn) {
     phaseBtn.style.display = isBingoStaff ? "inline-flex" : "none";
     if (isSetup) phaseBtn.textContent = "Lock Board";
@@ -1831,6 +1834,54 @@ async function endActiveGameFromMenu() {
   await saveBingoState();
 }
 
+async function archiveAndResetBingo() {
+  if (!isBingoStaff) return alert("Staff only.");
+  if (bingoState.phase !== "complete") return alert("End the game before archiving it.");
+
+  const defaultTitle = `Battleship Bingo — ${new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long" })}`;
+  const title = prompt("Archive title:", defaultTitle);
+  if (title === null) return;
+
+  const winnerChoice = prompt(
+    `Winner (enter 1 for ${getTeamDisplayName("ember")}, 2 for ${getTeamDisplayName("ash")}, T for tie, or leave blank):`,
+    ""
+  );
+  if (winnerChoice === null) return;
+  const normalizedWinner = String(winnerChoice).trim().toLowerCase();
+  const winner = normalizedWinner === "1" ? "ember" : normalizedWinner === "2" ? "ash" : normalizedWinner === "t" || normalizedWinner === "tie" ? "tie" : "";
+
+  const confirmed = confirm(
+    "Archive this completed Bingo and permanently reset the live game?\n\n" +
+    "The archive will keep all tiles, proofs, logs, ship placements, attacks, and all four final boards. The live board will be cleared for the next event."
+  );
+  if (!confirmed) return;
+
+  const button = document.getElementById("activeArchiveResetBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Archiving…";
+  }
+
+  try {
+    const response = await fetch("/api/admin/bingo/archive-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title.trim() || defaultTitle, winner })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not archive and reset the Bingo game.");
+
+    alert("Bingo archived successfully. The live game has been reset.");
+    window.location.href = `/bingo-archive?id=${encodeURIComponent(data.archiveId)}`;
+  } catch (error) {
+    alert(error.message || "Could not archive and reset the Bingo game.");
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Archive & Reset";
+    }
+  }
+}
+
 async function returnToSetupModeFromMenu() {
   if (!isBingoStaff) return alert("Staff only.");
   if (!confirm("Return to setup mode? This unlocks the board for editing.")) return;
@@ -1892,6 +1943,7 @@ function bindBingoControls() {
     renderActiveGameSidebar();
   });
   document.getElementById("activeEndGameBtn")?.addEventListener("click", endActiveGameFromMenu);
+  document.getElementById("activeArchiveResetBtn")?.addEventListener("click", archiveAndResetBingo);
   document.getElementById("activeReturnSetupBtn")?.addEventListener("click", returnToSetupModeFromMenu);
   document.getElementById("activeUnlockFleetsBtn")?.addEventListener("click", unlockFleetsFromMenu);
   document.getElementById("activeResetProgressBtn")?.addEventListener("click", resetProgressFromMenu);
