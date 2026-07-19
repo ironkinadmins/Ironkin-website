@@ -3,7 +3,12 @@
   "main": "workers/bingo-boss-tracker-cron.js",
   "compatibility_date": "2026-05-26",
   "triggers": {
-    "crons": ["0 */2 * * *"]
+    // PAUSED: Battleship Bingo ended (Harambe Hunters won). The 2-hour sweep is
+    // disabled so the stats freeze at their final values while members keep
+    // killing bosses to black out the board. Nothing else about the event is
+    // affected. To resume, restore "0 */2 * * *" below and redeploy:
+    //   npx wrangler deploy -c wrangler.bingo-tracker.jsonc
+    "crons": []
   },
   "observability": {
     "enabled": true
