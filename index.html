@@ -6,9 +6,9 @@
   <title>Ironkin Clan</title>
   <meta name="description" content="Ironkin is an Old School RuneScape Ironman clan built around events, progression, competition, and community." />
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260806-home-premium" />
+  <link rel="stylesheet" href="styles.css?v=20260806-premium-v2" />
 </head>
-<body class="home-premium-page">
+<body class="home-premium-page premium-ui">
   <div id="siteNav"></div>
 
   <main class="member-home home-premium">
@@ -31,9 +31,9 @@
           <a class="btn secondary" href="events.html">Explore Events</a>
         </div>
         <div class="home-hero-proof" aria-label="Ironkin highlights">
-          <div><strong>Live</strong><span>Clan events</span></div>
-          <div><strong>Active</strong><span>Ironman community</span></div>
-          <div><strong>Earn</strong><span>Embers & prestige</span></div>
+          <div><strong class="premium-count" data-count="6">6</strong><span>Event formats</span></div>
+          <div><strong class="premium-count" data-count="24">24</strong><span>Community tools</span></div>
+          <div><strong>Always</strong><span>Ironman focused</span></div>
         </div>
       </div>
 
@@ -56,6 +56,13 @@
         <div id="homeFeaturedControls" class="featured-rotation-controls" aria-label="Featured event controls"></div>
         <a id="homeFeaturedLink" class="btn primary home-feature-button" href="events.html">View Event</a>
       </article>
+    </section>
+
+
+    <section class="premium-stat-rail" aria-label="Ironkin platform highlights">
+      <article><span class="premium-stat-icon">◆</span><div><strong>Live progression</strong><small>Events, gains, drops, and milestones</small></div></article>
+      <article><span class="premium-stat-icon">✦</span><div><strong>One clan hub</strong><small>Calendar, records, profiles, and rewards</small></div></article>
+      <article><span class="premium-stat-icon">◈</span><div><strong>Built for Ironkin</strong><small>Private tools shaped around the community</small></div></article>
     </section>
 
     <section class="home-section home-dashboard" aria-label="Ironkin activity overview">
@@ -83,7 +90,18 @@
       </article>
     </section>
 
-    <section class="home-section home-news-section" aria-labelledby="clanNewsTitle">
+
+    <section class="premium-brand-story reveal-on-scroll" aria-labelledby="premiumBrandTitle">
+      <div class="premium-brand-mark"><img src="assets/ironkin-emblem.png" alt="" /></div>
+      <div>
+        <p class="eyebrow">The Ironkin Standard</p>
+        <h2 id="premiumBrandTitle">Every achievement earned.<br><span>Every victory shared.</span></h2>
+        <p>Ironkin brings solo progression into a stronger community experience—giving every event, milestone, and memorable drop a place to matter.</p>
+      </div>
+      <a class="btn secondary" href="hall-of-flame.html">Explore the Hall of Flame</a>
+    </section>
+
+    <section class="home-section home-news-section reveal-on-scroll" aria-labelledby="clanNewsTitle">
       <div class="home-news-header">
         <div>
           <p class="eyebrow">From the Clan</p>
@@ -100,6 +118,6 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260806-home-premium"></script>
+  <script src="script.js?v=20260806-premium-v2"></script>
 </body>
 </html>

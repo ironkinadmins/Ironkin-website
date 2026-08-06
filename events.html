@@ -4,19 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Events | Ironkin Clan</title>
-  <link rel="stylesheet" href="styles.css?v=20260611-botw-unified-admin-drops" />
+  <link rel="stylesheet" href="styles.css?v=20260806-premium-v2" />
 </head>
-<body>
+<body class="premium-ui events-premium-page">
   <div id="siteNav"></div>
 
 <main class="page">
-<section class="page-title">
-  <h1>Clan Events</h1>
+<section class="page-title premium-page-hero">
+  <div>
+    <p class="eyebrow">Compete. Contribute. Celebrate.</p>
+    <h1>Clan Events</h1>
+    <p>Everything happening across Ironkin—from weekly competitions and clan goals to bounties, bingo, and giveaways.</p>
+  </div>
+  <div class="premium-page-hero-mark" aria-hidden="true">⚔</div>
+</section>
 
-  <p>
-    Choose an Ironkin event to view the full dashboard,
-    leaderboard, clan progress, and drops.
-  </p>
+<section class="event-filter-bar" aria-label="Filter clan events">
+  <button class="is-active" type="button" data-event-filter="all">All events</button>
+  <button type="button" data-event-filter="active">Active</button>
+  <button type="button" data-event-filter="inactive">Inactive</button>
+  <a href="calendar.html">View calendar <span>→</span></a>
 </section>
 
     <section id="eventHubGrid" class="event-hub-grid">
@@ -28,6 +35,6 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260711-bingo-landing-route-fix-v2"></script>
+  <script src="script.js?v=20260806-premium-v2"></script>
 </body>
 </html>

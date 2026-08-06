@@ -4660,3 +4660,58 @@ loadRecordsPage();
 if (document.getElementById("giveawaysApp")) {
   loadGiveawaysPage();
 }
+/* ===== Premium UI enhancements ===== */
+function initPremiumUi() {
+  const currentPage = location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.premium-nav-links > a').forEach(link => {
+    const href = (link.getAttribute('href') || '').split('?')[0];
+    if (href === currentPage || (currentPage === '' && href === 'index.html')) link.setAttribute('aria-current', 'page');
+  });
+
+  document.querySelectorAll('.home-panel, .home-news-section, .event-hub-card, .premium-stat-rail, .event-panel').forEach(el => el.classList.add('reveal-on-scroll'));
+  const reveal = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (entry.isIntersecting) { entry.target.classList.add('is-visible'); reveal.unobserve(entry.target); }
+  }), { threshold: .08 });
+  document.querySelectorAll('.reveal-on-scroll').forEach(el => reveal.observe(el));
+
+  const countObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    const el = entry.target;
+    const target = Number(el.dataset.count || 0);
+    const started = performance.now();
+    const duration = 850;
+    const tick = now => {
+      const p = Math.min((now - started) / duration, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    countObserver.unobserve(el);
+  }), { threshold: .5 });
+  document.querySelectorAll('.premium-count[data-count]').forEach(el => countObserver.observe(el));
+
+  const filterBar = document.querySelector('.event-filter-bar');
+  filterBar?.addEventListener('click', event => {
+    const button = event.target.closest('[data-event-filter]');
+    if (!button) return;
+    filterBar.querySelectorAll('[data-event-filter]').forEach(item => item.classList.toggle('is-active', item === button));
+    const filter = button.dataset.eventFilter;
+    document.querySelectorAll('#eventHubGrid .event-hub-card').forEach(card => {
+      const inactive = card.classList.contains('is-inactive') || /not active/i.test(card.textContent || '');
+      card.classList.toggle('is-filter-hidden', filter === 'active' ? inactive : filter === 'inactive' ? !inactive : false);
+    });
+  });
+
+  const hub = document.getElementById('eventHubGrid');
+  if (hub) {
+    new MutationObserver(() => {
+      hub.querySelectorAll('.event-hub-card').forEach((card, index) => {
+        card.style.setProperty('--card-index', index);
+        card.classList.add('reveal-on-scroll', 'is-visible');
+      });
+    }).observe(hub, { childList:true });
+  }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPremiumUi);
+else initPremiumUi();
