@@ -1927,10 +1927,11 @@ function parseWinnerSummary(description) {
     .map(line => line.trim())
     .filter(Boolean)
     .map(line => {
-      const separator = line.includes("-") ? "-" : "-";
-      const parts = line.split(separator);
-      const eventName = parts.shift()?.trim() || "Record";
-      const resultText = parts.join(separator).trim();
+      // Discord entries historically use an em dash, but older and manually
+      // edited entries may use an en dash or a spaced regular hyphen.
+      const match = line.match(/^(.+?)\s*(?:\u2014|\u2013|\s-\s)\s*(.+)$/);
+      const eventName = match?.[1]?.trim() || line;
+      const resultText = match?.[2]?.trim() || "";
       const link = parseMarkdownLink(resultText);
       const winnerParts = link.text.split(":");
       const winner = winnerParts.shift()?.trim() || link.text;
