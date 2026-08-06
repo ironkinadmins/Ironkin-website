@@ -510,6 +510,7 @@ async function loadBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const showOnEventsInput = document.getElementById("bingoShowOnEventsInput");
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
   const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
@@ -524,6 +525,7 @@ async function loadBingoSettings() {
     titleInput.value = settings.title || "Battleship Bingo";
     descriptionInput.value = settings.description || "";
     activeInput.checked = settings.active === true;
+    if (showOnEventsInput) showOnEventsInput.checked = settings.showOnEventsPage === true;
     signupOpenInput.checked = settings.signupOpen === true;
     viewEventInput.checked = settings.enableViewEvent === true;
     if (registrationEndsAtInput) registrationEndsAtInput.value = toDateTimeLocalValue(settings.registrationEndsAt);
@@ -540,6 +542,7 @@ async function saveBingoSettings() {
   const titleInput = document.getElementById("bingoTitleInput");
   const descriptionInput = document.getElementById("bingoDescriptionInput");
   const activeInput = document.getElementById("bingoActiveInput");
+  const showOnEventsInput = document.getElementById("bingoShowOnEventsInput");
   const signupOpenInput = document.getElementById("bingoSignupOpenInput");
   const viewEventInput = document.getElementById("bingoViewEventInput");
   const registrationEndsAtInput = document.getElementById("bingoRegistrationEndsAtInput");
@@ -557,6 +560,7 @@ async function saveBingoSettings() {
       title: titleInput.value.trim() || "Battleship Bingo",
       description: descriptionInput.value.trim(),
       active: activeInput.checked,
+      showOnEventsPage: showOnEventsInput?.checked === true,
       signupOpen: signupOpenInput.checked,
       enableViewEvent: viewEventInput.checked,
       registrationEndsAt: fromDateTimeLocalValue(registrationEndsAtInput?.value || ""),
@@ -574,6 +578,34 @@ async function saveBingoSettings() {
   }
 
   if (status) status.textContent = "Bingo settings saved.";
+}
+
+
+async function loadGuessKcSettings() {
+  const input = document.getElementById("guessKcShowOnEventsInput");
+  if (!input) return;
+  try {
+    const response = await fetch(`/api/giveaways/settings?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not load Guess the KC settings.");
+    input.checked = data.settings?.showOnEventsPage !== false;
+  } catch (error) {
+    const status = document.getElementById("guessKcSettingsStatus");
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function saveGuessKcSettings() {
+  const input = document.getElementById("guessKcShowOnEventsInput");
+  const status = document.getElementById("guessKcSettingsStatus");
+  if (!input) return;
+  const response = await fetch("/api/admin/giveaways/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ showOnEventsPage: input.checked })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (status) status.textContent = response.ok ? "Guess the KC visibility saved." : (data.error || "Could not save settings.");
 }
 
 
@@ -728,6 +760,7 @@ async function loadAdmin() {
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
   const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
   const startBingoEventBtn = document.getElementById("startBingoEventBtn");
+  const saveGuessKcSettingsBtn = document.getElementById("saveGuessKcSettingsBtn");
   const profileSearchBtn = document.getElementById("profileSearchBtn");
   const profileSearchInput = document.getElementById("profileSearchInput");
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
@@ -774,6 +807,7 @@ async function loadAdmin() {
         applyBingoMode("started");
       });
     }
+    if (saveGuessKcSettingsBtn) saveGuessKcSettingsBtn.addEventListener("click", saveGuessKcSettings);
     if (profileSearchBtn) profileSearchBtn.addEventListener("click", searchMemberProfiles);
     if (profileSearchInput) {
       profileSearchInput.addEventListener("keydown", event => {
@@ -783,6 +817,7 @@ async function loadAdmin() {
     if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
     if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
     loadBingoSettings();
+    loadGuessKcSettings();
   } catch (error) {
     document.body.insertAdjacentHTML("beforeend", `<p class="admin-error">${error.message}</p>`);
   }

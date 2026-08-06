@@ -932,7 +932,11 @@ async function loadRecentActivity() {
 
     container.innerHTML = "";
 
-    data.achievements.slice(0, 6).forEach(item => {
+    data.achievements
+      .slice()
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 6)
+      .forEach(item => {
       const row = document.createElement("div");
       row.className = "activity-feed-row";
 
@@ -1037,6 +1041,8 @@ async function fetchBingoSettings() {
 
 async function appendBattleshipBingoCard(grid) {
   const settings = await fetchBingoSettings();
+  if (settings.showOnEventsPage !== true) return;
+
   const active = settings.active === true;
   const signupOpen = settings.signupOpen === true;
   const enableViewEvent = settings.enableViewEvent === true;
@@ -1065,6 +1071,10 @@ async function appendBattleshipBingoCard(grid) {
 
 async function appendGiveawaysHubCard(grid) {
   try {
+    const settingsResponse = await fetch(`/api/giveaways/settings?t=${Date.now()}`, { cache: "no-store" });
+    const settingsData = await settingsResponse.json().catch(() => ({}));
+    if (settingsResponse.ok && settingsData.settings?.showOnEventsPage === false) return;
+
     const response = await fetch(`/api/giveaways/list?t=${Date.now()}`, { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
     const giveaways = Array.isArray(data.giveaways) ? data.giveaways : [];
@@ -2042,6 +2052,52 @@ function renderSpeedRecordCard(entry) {
       }
     </article>
   `;
+}
+
+
+function formatDiscordNewsText(value = "") {
+  return escapeHtml(String(value))
+    .replace(/&lt;@!?\d+&gt;/g, "@member")
+    .replace(/&lt;#\d+&gt;/g, "#channel")
+    .replace(/\n/g, "<br>");
+}
+
+function renderClanNewsEntry(entry) {
+  const embed = entry.embeds?.[0] || null;
+  const title = embed?.title || "Clan Update";
+  const body = entry.content || embed?.description || "";
+  const image = embed?.image || entry.attachments?.find(file => file.contentType?.startsWith("image/"))?.url || "";
+  const fields = Array.isArray(embed?.fields) ? embed.fields : [];
+  const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" }) : "";
+
+  return `
+    <article class="clan-news-entry">
+      <div class="clan-news-meta">
+        ${entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" loading="lazy">` : ""}
+        <span><strong>${escapeHtml(entry.author || "Ironkin Staff")}</strong><small>${escapeHtml(date)}</small></span>
+      </div>
+      ${title ? `<h3>${escapeHtml(title)}</h3>` : ""}
+      ${body ? `<div class="clan-news-body">${formatDiscordNewsText(body)}</div>` : ""}
+      ${fields.length ? `<div class="clan-news-fields">${fields.map(field => `<div><strong>${escapeHtml(field.name || "")}</strong><span>${formatDiscordNewsText(field.value || "")}</span></div>`).join("")}</div>` : ""}
+      ${image ? `<img class="clan-news-image" src="${escapeHtml(image)}" alt="Clan news attachment" loading="lazy">` : ""}
+    </article>`;
+}
+
+async function loadClanNews() {
+  const feed = document.getElementById("clanNewsFeed");
+  if (!feed) return;
+
+  try {
+    const response = await fetch("/api/clan-news", { cache: "no-cache" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not load clan news.");
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+    feed.innerHTML = entries.length
+      ? entries.slice(0, 8).map(renderClanNewsEntry).join("")
+      : `<p class="admin-muted">No clan news has been posted yet.</p>`;
+  } catch (error) {
+    feed.innerHTML = `<p class="admin-muted">Could not load clan news: ${escapeHtml(error.message)}</p>`;
+  }
 }
 
 async function loadHallOfFlamePage() {
@@ -4582,6 +4638,8 @@ loadSiteNav();
 loadHomeStats();
 loadHomeBingoSignupBanner();
 loadRecentActivity();
+loadClanNews();
+if (document.getElementById("clanNewsFeed")) setInterval(loadClanNews, 60000);
 loadHomeEventWidgets();
 loadEventsHub();
 loadSingleEventDashboard();

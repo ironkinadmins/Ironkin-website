@@ -7,7 +7,7 @@ export async function onRequestGet({ request }) {
 
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL(request.url).origin + "/api/recent-activity-cache-v3"
+      new URL(request.url).origin + "/api/recent-activity-cache-v4"
     );
 
     const cached = await cache.match(cacheKey);
@@ -45,7 +45,6 @@ export async function onRequestGet({ request }) {
         member.username
       )
       .filter(Boolean)
-      .sort(() => Math.random() - 0.5)
       .slice(0, SAMPLE_MEMBERS);
 
     const achievementResults = await Promise.allSettled(
@@ -82,7 +81,7 @@ export async function onRequestGet({ request }) {
         item.createdAt &&
         new Date(item.createdAt) >= cutoff
       )
-      .sort(() => Math.random() - 0.5)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
       .slice(0, DISPLAY_LIMIT);
 
     const response = Response.json({

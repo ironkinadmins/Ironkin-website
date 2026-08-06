@@ -2,6 +2,7 @@ const DEFAULT_SETTINGS = {
   title: "Battleship Bingo",
   description: "Build a board, split into teams, claim tiles, and track summer progress.",
   active: false,
+  showOnEventsPage: false,
   signupOpen: false,
   enableViewEvent: false,
   registrationEndsAt: "",

@@ -18,7 +18,8 @@
 
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Bingo</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Special Event</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="guess-kc">Guess the KC</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
     </div>
 
@@ -182,7 +183,11 @@
           <label>Visibility</label>
           <label class="admin-check-row">
             <input id="bingoActiveInput" type="checkbox" />
-            <span>Bingo is active/visible</span>
+            <span>Bingo event is active</span>
+          </label>
+          <label class="admin-check-row">
+            <input id="bingoShowOnEventsInput" type="checkbox" />
+            <span>Show special event card on Events page</span>
           </label>
           <label class="admin-check-row">
             <input id="bingoSignupOpenInput" type="checkbox" />
@@ -214,6 +219,25 @@
     </div>
 
 
+
+
+    <div class="admin-tab-panel" id="adminTab-guess-kc">
+      <section class="admin-card">
+        <div class="admin-section-header">
+          <p class="eyebrow">Giveaway</p>
+          <h2>Guess the KC Controls</h2>
+          <p class="admin-muted">Control whether the Guess the KC card appears on the Events page. Giveaway creation and winner management remain on the dedicated page.</p>
+        </div>
+        <div class="admin-toggle-row">
+          <label><input id="guessKcShowOnEventsInput" type="checkbox" /> Show card on Events page</label>
+        </div>
+        <div class="admin-action-row">
+          <button type="button" class="btn primary" id="saveGuessKcSettingsBtn">Save Visibility</button>
+          <a class="btn secondary" href="giveaways.html">Manage Guess the KC</a>
+        </div>
+        <p class="admin-muted" id="guessKcSettingsStatus"></p>
+      </section>
+    </div>
 
     <div class="admin-tab-panel" id="adminTab-profiles">
       <section class="admin-card">

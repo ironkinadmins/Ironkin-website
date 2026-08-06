@@ -9099,3 +9099,16 @@ body.calendar-modal-active {
     justify-content: flex-start;
   }
 }
+
+/* Clan News homepage feed */
+.clan-news-feed { display: grid; gap: 1rem; margin-top: 1rem; max-height: 760px; overflow-y: auto; padding-right: .35rem; }
+.clan-news-entry { border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 1rem; background: rgba(0,0,0,.18); }
+.clan-news-entry h3 { margin: .65rem 0 .45rem; }
+.clan-news-meta { display: flex; align-items: center; gap: .65rem; }
+.clan-news-meta img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.clan-news-meta span { display: grid; }
+.clan-news-meta small { opacity: .7; margin-top: .1rem; }
+.clan-news-body { line-height: 1.55; overflow-wrap: anywhere; }
+.clan-news-fields { display: grid; gap: .55rem; margin-top: .75rem; }
+.clan-news-fields > div { display: grid; gap: .2rem; padding: .65rem; border-radius: 10px; background: rgba(255,255,255,.04); }
+.clan-news-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; border-radius: 10px; margin-top: .8rem; }
