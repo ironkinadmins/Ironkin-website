@@ -48,7 +48,7 @@ function getAdminEventOptionText(event) {
   const title = event.title || getResetEventTitle(event);
   const tier = event?.type === "botw" ? getBotwTierLabel(event) : "";
   const label = tier ? `BOTW ${tier}` : (event.label || event.type);
-  return `${label} — ${title}${event.active ? " (Active)" : ""}`;
+  return `${label} - ${title}${event.active ? " (Active)" : ""}`;
 }
 
 function formatAdminDate(value) {

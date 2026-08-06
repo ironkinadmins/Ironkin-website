@@ -32,7 +32,7 @@ export function buildProofMessage(state, proof, status = "pending", reviewer = "
   return {
     content: isPending ? `<@&${clean(state?.discordCouncilRoleId || "1515576495844757524", 30)}>` : "",
     embeds: [{
-      title: `Battleship Bingo Proof — ${statusText}`,
+      title: `Battleship Bingo Proof - ${statusText}`,
       color: proofColor(status),
       fields,
       footer: { text: `Proof ID: ${proof.id}` },

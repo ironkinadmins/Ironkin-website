@@ -600,7 +600,7 @@ async function loadSiteNav() {
   }
 
   try {
-    const response = await fetch("nav.html");
+    const response = await fetch("/nav.html?v=20260806-premium-v3", { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("Could not load navigation.");
@@ -639,7 +639,7 @@ function renderHomeLastEventResult(entry) {
   if (featuredStats) {
     featuredStats.innerHTML = `
       <div class="featured-stat">
-        <strong>${winner ? escapeHtml(winner.name) : "—"}</strong>
+        <strong>${winner ? escapeHtml(winner.name) : "-"}</strong>
         <span>Winner</span>
       </div>
 
@@ -838,7 +838,7 @@ function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
       }
     }
   } else {
-    if (homeTotalGained) homeTotalGained.textContent = "—";
+    if (homeTotalGained) homeTotalGained.textContent = "-";
     if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
     if (homeClanXp) homeClanXp.textContent = featuredEvent.target ? `${formatNumber(featuredEvent.target)} goal` : "Coming Soon";
     if (featuredStats) featuredStats.innerHTML = "";
@@ -879,7 +879,7 @@ async function loadHomeStats() {
       if (eventMeta) eventMeta.textContent = "No previous results found yet.";
       if (topThree) topThree.textContent = "Archive an event to show its final results here.";
       if (featuredStats) featuredStats.innerHTML = "";
-      if (homeTotalGained) homeTotalGained.textContent = "—";
+      if (homeTotalGained) homeTotalGained.textContent = "-";
       if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Total Gained";
       if (controls) controls.innerHTML = "";
       return;
@@ -1927,7 +1927,7 @@ function parseWinnerSummary(description) {
     .map(line => line.trim())
     .filter(Boolean)
     .map(line => {
-      const separator = line.includes("—") ? "—" : "-";
+      const separator = line.includes("-") ? "-" : "-";
       const parts = line.split(separator);
       const eventName = parts.shift()?.trim() || "Record";
       const resultText = parts.join(separator).trim();

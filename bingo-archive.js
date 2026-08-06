@@ -32,7 +32,7 @@ function renderAttackBoard(state, team) {
     const result = attack?.result || "";
     const classes = [result ? `is-${result}` : "", done ? "is-complete" : ""].filter(Boolean).join(" ");
     const label = result === "hit" ? "HIT" : result === "miss" ? "MISS" : tile.name || String(index + 1);
-    return boardCell(label, classes, `${tile.name || `Tile ${index + 1}`} — ${result || (done ? "completed" : "open")}`);
+    return boardCell(label, classes, `${tile.name || `Tile ${index + 1}`} - ${result || (done ? "completed" : "open")}`);
   }).join("");
 }
 
@@ -43,7 +43,7 @@ function renderWatersBoard(state, team) {
     const result = attack?.result || "";
     const classes = [ship ? "has-ship" : "", result ? `is-${result}` : ""].filter(Boolean).join(" ");
     const label = result === "hit" ? "HIT" : result === "miss" ? "MISS" : ship ? ship.name : "";
-    return boardCell(label, classes, ship ? `${ship.name}${result ? ` — ${result}` : ""}` : result || "Empty water");
+    return boardCell(label, classes, ship ? `${ship.name}${result ? ` - ${result}` : ""}` : result || "Empty water");
   }).join("");
 }
 
@@ -70,10 +70,10 @@ async function loadArchivedBingo() {
     <div class="admin-summary-card admin-summary-static"><span>Attacks</span><strong>${archive.summary?.attackCount ?? 0}</strong></div>`;
 
   document.getElementById("archiveBingoBoards").innerHTML = [
-    boardCard(`${emberName} — Attack Board`, `Final attacks against ${ashName}'s waters`, renderAttackBoard(state, "ember")),
-    boardCard(`${emberName} — Waters`, "Final fleet placement and incoming attacks", renderWatersBoard(state, "ember")),
-    boardCard(`${ashName} — Attack Board`, `Final attacks against ${emberName}'s waters`, renderAttackBoard(state, "ash")),
-    boardCard(`${ashName} — Waters`, "Final fleet placement and incoming attacks", renderWatersBoard(state, "ash"))
+    boardCard(`${emberName} - Attack Board`, `Final attacks against ${ashName}'s waters`, renderAttackBoard(state, "ember")),
+    boardCard(`${emberName} - Waters`, "Final fleet placement and incoming attacks", renderWatersBoard(state, "ember")),
+    boardCard(`${ashName} - Attack Board`, `Final attacks against ${emberName}'s waters`, renderAttackBoard(state, "ash")),
+    boardCard(`${ashName} - Waters`, "Final fleet placement and incoming attacks", renderWatersBoard(state, "ash"))
   ].join("");
 
   document.getElementById("archiveTileList").innerHTML = (state.tiles || []).map((tile, index) => `

@@ -90,11 +90,11 @@ function renderWomStats(profile) {
     </div>
     <div class="profile-stat-card">
       <span>Combat Level</span>
-      <strong>${wom.combatLevel || "—"}</strong>
+      <strong>${wom.combatLevel || "-"}</strong>
     </div>
     <div class="profile-stat-card">
       <span>Overall Rank</span>
-      <strong>${wom.overallRank ? profileFormatNumber(wom.overallRank) : "—"}</strong>
+      <strong>${wom.overallRank ? profileFormatNumber(wom.overallRank) : "-"}</strong>
     </div>
     <div class="profile-top-skills">
       <h3>Top Skills by XP</h3>

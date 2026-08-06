@@ -141,7 +141,7 @@
       attack,
       canSubmit,
       title: tile.name
-        ? `${tile.name}${showProgress && required > 1 ? ` — ${completed}/${required} complete` : showProgress && isComplete ? " — completed" : ""}`
+        ? `${tile.name}${showProgress && required > 1 ? ` - ${completed}/${required} complete` : showProgress && isComplete ? " - completed" : ""}`
         : "Empty"
     };
   }
@@ -197,7 +197,7 @@
   function openProof(index) {
     const tile = state.tiles[index];
     $("proofTileIndex").value = String(index);
-    $("proofTitle").textContent = `Submit Proof — ${tile.name}`;
+    $("proofTitle").textContent = `Submit Proof - ${tile.name}`;
     $("proofQuantity").max = String(Math.max(1, Number(tile.quantity) - Number(teamProgress(tile).completedQuantity || 0)));
     $("proofQuantity").value = "1";
     $("proofError").textContent = "";

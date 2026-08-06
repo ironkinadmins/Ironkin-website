@@ -806,7 +806,7 @@ function getTileProgressTitle(tile, team = getSelectedProofTeam()) {
   const required = getTileQuantity(tile);
   const completed = Math.min(getTileCompletedQuantity(tile, team), required);
   if (!tile?.name || required <= 1) return tile?.name || "Empty";
-  return `${tile.name} — ${completed}/${required} complete`;
+  return `${tile.name} - ${completed}/${required} complete`;
 }
 
 function getTileStatus(tile, team = getSelectedProofTeam()) {
@@ -1475,7 +1475,7 @@ function renderProofs() {
             <span><b>Source:</b> ${escapeHtml(source)}</span>
             <span><b>Quantity:</b> ${qty}</span>
             <span><b>Progress:</b> ${completed}/${required}</span>
-            <span><b>Proof ID:</b> ${escapeHtml(proof.id || "—")}</span>
+            <span><b>Proof ID:</b> ${escapeHtml(proof.id || "-")}</span>
             <span><b>Status:</b> ${escapeHtml(proof.status || "pending")}</span>
             ${proof.itemid ? `<span><b>Item ID:</b> ${escapeHtml(proof.itemid)}</span>` : ""}
             ${proof.reviewedBy ? `<span><b>Reviewed by:</b> ${escapeHtml(proof.reviewedBy)}</span>` : ""}
@@ -1860,7 +1860,7 @@ async function archiveAndResetBingo() {
   if (!isBingoStaff) return alert("Staff only.");
   if (bingoState.phase !== "complete") return alert("End the game before archiving it.");
 
-  const defaultTitle = `Battleship Bingo — ${new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long" })}`;
+  const defaultTitle = `Battleship Bingo - ${new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long" })}`;
   const title = prompt("Archive title:", defaultTitle);
   if (title === null) return;
 
@@ -2406,8 +2406,8 @@ function renderAdminControlCenter() {
   const ashCompletedLabel = document.getElementById("ashCompletedLabel");
   if (emberCompleted) emberCompleted.textContent = String(completedTileTotal("ember"));
   if (ashCompleted) ashCompleted.textContent = String(completedTileTotal("ash"));
-  if (emberCompletedLabel) emberCompletedLabel.textContent = `${getTeamDisplayName("ember")} — Tiles Completed`;
-  if (ashCompletedLabel) ashCompletedLabel.textContent = `${getTeamDisplayName("ash")} — Tiles Completed`;
+  if (emberCompletedLabel) emberCompletedLabel.textContent = `${getTeamDisplayName("ember")} - Tiles Completed`;
+  if (ashCompletedLabel) ashCompletedLabel.textContent = `${getTeamDisplayName("ash")} - Tiles Completed`;
   const host = document.getElementById("adminFourBoards");
   if (!host) return;
   host.innerHTML = [
@@ -2423,7 +2423,7 @@ function renderAdminControlCenter() {
 
 function renderAdminBoardCard(team, mode) {
   const opposing = getOpponent(team);
-  const title = mode === "attack" ? `${getTeamDisplayName(team)} — Attack Board` : `${getTeamDisplayName(team)} — Your Waters`;
+  const title = mode === "attack" ? `${getTeamDisplayName(team)} - Attack Board` : `${getTeamDisplayName(team)} - Your Waters`;
   const subtitle = mode === "attack" ? `Attacks ${getTeamDisplayName(opposing)}'s fleet` : `Defends against ${getTeamDisplayName(opposing)}`;
   const cells = bingoState.tiles.map((tile, index) => renderAdminBoardTile(team, mode, tile, index)).join("");
   return `<section class="admin-board-card"><header><h3>${escapeHtml(title)}</h3><span>${escapeHtml(subtitle)}</span></header><div class="admin-board-grid">${cells}</div></section>`;
@@ -2462,7 +2462,7 @@ function renderAdminBoardTile(team, mode, tile, index) {
   const description = mode === "attack"
     ? `${progress}/${required}${result ? ` • ${result.toUpperCase()}` : ""}`
     : `${defendingShip ? defendingShip.name : "Water"}${result ? ` • ${result.toUpperCase()}` : ""}`;
-  return `<button type="button" class="${classes}" data-team="${team}" data-index="${index}" data-mode="${mode}" title="${escapeAttr(tile.name || `Tile ${index + 1}`)} — ${escapeAttr(description)}" ${mode === "waters" ? "disabled" : ""}>${quantityBadge}${attackBadge}${shipBadge}${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="">` : ""}<span class="tile-name">${escapeHtml(tile.name || "Empty")}</span>${progressMarkup}</button>`;
+  return `<button type="button" class="${classes}" data-team="${team}" data-index="${index}" data-mode="${mode}" title="${escapeAttr(tile.name || `Tile ${index + 1}`)} - ${escapeAttr(description)}" ${mode === "waters" ? "disabled" : ""}>${quantityBadge}${attackBadge}${shipBadge}${tile.image ? `<img src="${escapeAttr(tile.image)}" alt="">` : ""}<span class="tile-name">${escapeHtml(tile.name || "Empty")}</span>${progressMarkup}</button>`;
 }
 
 let adminTileActionContext = null;
@@ -2572,7 +2572,7 @@ function showAdminAttackContextMenu(clientX, clientY, tileIndex) {
   const tile = bingoState.tiles?.[tileIndex] || {};
   menu.dataset.tileIndex = String(tileIndex);
   const title = document.getElementById("adminAttackContextTitle");
-  if (title) title.textContent = `${tile.name || `Tile ${tileIndex + 1}`} — Admin Repair`;
+  if (title) title.textContent = `${tile.name || `Tile ${tileIndex + 1}`} - Admin Repair`;
   const oneName = document.getElementById("adminAttackTeamOneName");
   const twoName = document.getElementById("adminAttackTeamTwoName");
   if (oneName) oneName.textContent = `${getTeamDisplayName("ember")} Attack`;
