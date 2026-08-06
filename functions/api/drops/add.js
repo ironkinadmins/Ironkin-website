@@ -15,6 +15,9 @@ export async function onRequestPost({ request, env }) {
 
   const eventId = body.eventId;
   const name = body.name?.trim();
+  const image = body.image?.trim() || "";
+  const wikiUrl = body.wikiUrl?.trim() || "";
+  const rewardEmbers = Math.max(0, Number(body.rewardEmbers || 0));
 
   if (!eventId || !name) {
     return Response.json(
@@ -28,13 +31,14 @@ export async function onRequestPost({ request, env }) {
   const existingValue = await env.DROPS_KV.get(key);
   const drops = existingValue ? JSON.parse(existingValue) : [];
 
-  const exists = drops.some(drop => drop.name === name);
+  const existing = drops.find(drop => drop.name.toLowerCase() === name.toLowerCase());
 
-  if (!exists) {
-    drops.push({
-      name,
-      count: 0
-    });
+  if (existing) {
+    if (image) existing.image = image;
+    if (wikiUrl) existing.wikiUrl = wikiUrl;
+    if (body.rewardEmbers !== undefined) existing.rewardEmbers = rewardEmbers;
+  } else {
+    drops.push({ name, image, wikiUrl, rewardEmbers, count: 0 });
   }
 
   await env.DROPS_KV.put(key, JSON.stringify(drops));

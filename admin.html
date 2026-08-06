@@ -18,7 +18,7 @@
 
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Special Event</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Battleship Bingo</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="guess-kc">Guess the KC</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
     </div>
@@ -141,6 +141,32 @@
       <div class="admin-divider"></div>
       <div id="adminDropsList" class="admin-drops-list">Loading...</div>
     </section>
+
+    <section class="admin-card" id="bountiesEditor" style="display:none">
+      <div class="admin-section-header">
+        <h2>Bounty Items</h2>
+        <p>Select OSRS items from the Wiki, assign an Ember reward, and track how many the clan receives.</p>
+      </div>
+      <div class="admin-form-grid">
+        <div class="admin-field admin-field-wide">
+          <label for="bountyItemSearchInput">Search OSRS Wiki</label>
+          <input id="bountyItemSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
+          <div id="bountyWikiSearchResults" class="wiki-results bounty-wiki-results"></div>
+        </div>
+        <div class="admin-field">
+          <label for="bountySelectedItemInput">Selected Item</label>
+          <input id="bountySelectedItemInput" type="text" readonly placeholder="Select an item above" />
+          <input id="bountySelectedImageInput" type="hidden" />
+        </div>
+        <div class="admin-field">
+          <label for="bountyRewardInput">Reward per Item</label>
+          <div class="admin-inline-row"><input id="bountyRewardInput" type="number" min="0" placeholder="Example: 25" /><span>Embers</span></div>
+        </div>
+      </div>
+      <div class="admin-action-row"><button type="button" class="btn primary" id="addBountyItemBtn">Add Bounty</button></div>
+      <div class="admin-divider"></div>
+      <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
+    </section>
     </div>
 
     <div class="admin-tab-panel" id="adminTab-bingo">
@@ -187,7 +213,7 @@
           </label>
           <label class="admin-check-row">
             <input id="bingoShowOnEventsInput" type="checkbox" />
-            <span>Show special event card on Events page</span>
+            <span>Show Battleship Bingo card on Events page</span>
           </label>
           <label class="admin-check-row">
             <input id="bingoSignupOpenInput" type="checkbox" />

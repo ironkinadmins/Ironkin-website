@@ -65,7 +65,21 @@ const DEFAULT_EVENTS = [
       { percent: 100, title: "Bond Giveaway" }
     ]
   }
-];
+  ,
+  {
+    id: "bounties",
+    type: "bounties",
+    label: "Bounties",
+    title: "Clan Bounties",
+    description: "Collect selected bounty items and earn Embers for every completed drop.",
+    womCompetitionId: null,
+    featured: false,
+    active: false,
+    dropsEnabled: true,
+    target: null,
+    startDate: null,
+    endDate: null
+  }];
 
 function normalizeBotwEvents(events) {
   const list = Array.isArray(events) ? [...events] : [];
@@ -114,7 +128,11 @@ function normalizeBotwEvents(events) {
 
 function ensureAdminEvents(savedEvents) {
   const normalized = normalizeBotwEvents(Array.isArray(savedEvents) ? savedEvents : []);
-  const byId = new Map(normalized.map(event => [event.id, event]));
+  const clanGoalCandidates = normalized.filter(event => String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal");
+  const preferredClanGoal = clanGoalCandidates.find(event => event.id === "clan-goal") || clanGoalCandidates[0];
+  const deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
+  if (preferredClanGoal) deduped.push({ ...preferredClanGoal, id: "clan-goal", label: "Clan Goal" });
+  const byId = new Map(deduped.map(event => [event.id, event]));
 
   const mergedDefaults = DEFAULT_EVENTS.map(defaultEvent => ({
     ...defaultEvent,
@@ -122,7 +140,7 @@ function ensureAdminEvents(savedEvents) {
   }));
 
   const defaultIds = new Set(DEFAULT_EVENTS.map(event => event.id));
-  const extras = normalized.filter(event => event?.id && !defaultIds.has(event.id));
+  const extras = deduped.filter(event => event?.id && !defaultIds.has(event.id));
 
   return [...mergedDefaults, ...extras];
 }

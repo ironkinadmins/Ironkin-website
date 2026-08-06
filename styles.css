@@ -9101,7 +9101,7 @@ body.calendar-modal-active {
 }
 
 /* Clan News homepage feed */
-.clan-news-feed { display: grid; gap: 1rem; margin-top: 1rem; max-height: 760px; overflow-y: auto; padding-right: .35rem; }
+.clan-news-feed { display: grid; gap: 1rem; margin-top: 1rem; }
 .clan-news-entry { border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 1rem; background: rgba(0,0,0,.18); }
 .clan-news-entry h3 { margin: .65rem 0 .45rem; }
 .clan-news-meta { display: flex; align-items: center; gap: .65rem; }
@@ -9112,3 +9112,16 @@ body.calendar-modal-active {
 .clan-news-fields { display: grid; gap: .55rem; margin-top: .75rem; }
 .clan-news-fields > div { display: grid; gap: .2rem; padding: .65rem; border-radius: 10px; background: rgba(255,255,255,.04); }
 .clan-news-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; border-radius: 10px; margin-top: .8rem; }
+
+.clan-news-preview-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .9rem 1.25rem; }
+.clan-news-preview-entry .clan-news-meta { grid-column: 1 / -1; }
+.clan-news-preview-copy h3 { margin: 0 0 .4rem; }
+.clan-news-preview-copy p { margin: 0; color: var(--muted); line-height: 1.55; }
+.clan-news-message-link { white-space: nowrap; font-weight: 800; text-decoration: none; color: var(--accent); }
+.clan-news-message-link:hover { text-decoration: underline; }
+.bounty-drop-main { display:flex; align-items:center; gap:.75rem; min-width:0; }
+.bounty-drop-main img { width:48px; height:48px; object-fit:contain; border-radius:8px; background:rgba(255,255,255,.05); }
+.bounty-drop-main span { display:grid; gap:.15rem; }
+.bounty-drop-main small { color:var(--muted); }
+.bounty-wiki-results { margin-top:.65rem; }
+@media (max-width: 720px) { .clan-news-preview-entry { grid-template-columns: 1fr; } .clan-news-message-link { white-space: normal; } }

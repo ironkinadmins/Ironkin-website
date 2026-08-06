@@ -28,6 +28,7 @@ function normalizeMessages(messages, channelId) {
         ? `https://cdn.discordapp.com/avatars/${message.author.id}/${message.author.avatar}.png?size=128`
         : "",
       content: message.content || "",
+      messageUrl: `https://discord.com/channels/${message.guild_id || "@me"}/${channelId}/${message.id}`,
       embeds: (message.embeds || []).map(embed => ({
         title: embed.title || "",
         description: embed.description || "",

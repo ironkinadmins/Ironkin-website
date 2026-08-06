@@ -406,7 +406,8 @@ function formatEventType(type) {
     "clan-goal-boss": "Clan Goal",
     "clan-goal-skill": "Clan Goal",
     clan_goal: "Clan Goal",
-    "clan-goal": "Clan Goal"
+    "clan-goal": "Clan Goal",
+    bounties: "Bounties"
   };
 
   return labels[type] || String(type || "Event").toUpperCase();
@@ -419,7 +420,8 @@ function getEventIcon(type) {
     "clan-goal-boss": "🔥",
     "clan-goal-skill": "🔥",
     clan_goal: "🔥",
-    "clan-goal": "🔥"
+    "clan-goal": "🔥",
+    bounties: "🎯"
   };
 
   return icons[type] || "🔥";
@@ -1149,83 +1151,46 @@ async function loadHomeBingoSignupBanner() {
 
 async function loadEventsHub() {
   const grid = document.getElementById("eventHubGrid");
-
   if (!grid) return;
+  grid.className = "event-hub-grid";
+  grid.innerHTML = "";
 
   try {
     const events = await fetchCurrentEvents();
+    const find = id => events.find(event => event.id === id);
+    const sotw = find("sotw-current") || events.find(event => event.type === "sotw") || { id:"sotw-current", type:"sotw", label:"SOTW", title:"Skill of the Week", active:false };
+    const botwEvents = events.filter(isBotwEvent);
+    const clanGoal = find("clan-goal") || events.find(isClanGoalEvent) || { id:"clan-goal", type:"clan-goal-boss", label:"Clan Goal", title:"Clan Goal", active:false };
+    const bounties = find("bounties") || { id:"bounties", type:"bounties", label:"Bounties", title:"Clan Bounties", active:false };
 
-    grid.className = "event-hub-grid";
-    grid.innerHTML = "";
+    const permanentCards = [
+      { event:sotw, type:"sotw", icon:getEventIcon("sotw"), label:"SOTW", fallback:"Skill of the Week" },
+      { event:null, type:"botw", icon:getEventIcon("botw"), label:"BOTW", fallback:"Boss of the Week", active:botwEvents.some(isEventActive), href:"event.html?id=botw-current", description:"View Elite and Standard BOTW dashboards in one place." },
+      { event:clanGoal, type:"clan-goal", icon:getEventIcon("clan-goal"), label:"Clan Goal", fallback:"Clan Goal" },
+      { event:bounties, type:"bounties", icon:getEventIcon("bounties"), label:"Bounties", fallback:"Clan Bounties" }
+    ];
 
-    if (!events.length) {
-      const empty = document.createElement("p");
-      empty.className = "muted";
-      empty.textContent = "No Ironkin events found.";
-      grid.appendChild(empty);
-      await appendBattleshipBingoCard(grid);
-      await appendGiveawaysHubCard(grid);
-      return;
-    }
-
-    const botwEvents = events.filter(event => isBotwEvent(event));
-    let botwHubCardAdded = false;
-
-    events.forEach(event => {
-      if (isBotwEvent(event)) {
-        if (botwHubCardAdded) return;
-
-        const activeBotw = botwEvents.some(item => isEventActive(item));
-        botwHubCardAdded = true;
-
-        grid.appendChild(createEventHubCard({
-          type: "botw",
-          href: activeBotw ? "event.html?id=botw-current" : "",
-          icon: getEventIcon("botw"),
-          label: "BOTW",
-          title: activeBotw ? "Boss of the Week" : "Boss of the Week",
-          description: activeBotw
-            ? "View Elite and Standard BOTW dashboards in one place."
-            : "Not active",
-          active: activeBotw
-        }));
-        return;
-      }
-
-      const active = isEventActive(event);
-
+    permanentCards.forEach(item => {
+      const event = item.event;
+      const active = item.active ?? isEventActive(event);
+      const href = active ? (item.href || getEventPageHref(event)) : "";
       grid.appendChild(createEventHubCard({
-        type: event.type,
-        href: active ? getEventPageHref(event) : "",
-        icon: getEventIcon(event.type),
-        label: event.label || formatEventType(event.type),
-        title: active ? displayEventTitle(event.title, event.type) : formatInactiveEventTitle(event),
-        description: active
-          ? (event.description || "View the full Ironkin event dashboard.")
-          : formatInactiveEventDescription(event),
+        type:item.type, href, icon:item.icon, label:item.label,
+        title: active ? displayEventTitle(event?.title || item.fallback, event?.type || item.type) : item.fallback,
+        description: active ? (event?.description || item.description || "View the full Ironkin event dashboard.") : "Not active",
         active
       }));
     });
 
-    if (botwEvents.length && !botwHubCardAdded) {
-      const activeBotw = botwEvents.some(event => isEventActive(event));
-      grid.appendChild(createEventHubCard({
-        type: "botw",
-        href: activeBotw ? "event.html?id=botw-current" : "",
-        icon: getEventIcon("botw"),
-        label: "BOTW",
-        title: "Boss of the Week",
-        description: activeBotw
-          ? "View Elite and Standard BOTW dashboards in one place."
-          : "Not active",
-        active: activeBotw
-      }));
-    }
-
     await appendBattleshipBingoCard(grid);
     await appendGiveawaysHubCard(grid);
   } catch (error) {
-    grid.textContent = `Could not load events: ${error.message}`;
+    [
+      ["sotw","📊","SOTW","Skill of the Week"],
+      ["botw","☠️","BOTW","Boss of the Week"],
+      ["clan-goal","🔥","Clan Goal","Clan Goal"],
+      ["bounties","🎯","Bounties","Clan Bounties"]
+    ].forEach(([type,icon,label,title]) => grid.appendChild(createEventHubCard({ type, icon, label, title, description:"Not active", active:false })));
   }
 }
 
@@ -1378,6 +1343,16 @@ async function loadSingleEventDashboard() {
     }
 
     resolvedSingleEventDropId = isClanGoalEvent(event) ? "clan-goal" : (event.id || eventId);
+
+    if (event.type === "bounties") {
+      dashboard.innerHTML = `
+        <section class="event-detail-card">
+          <div class="event-detail-hero"><div><p class="eyebrow">🎯 Bounties</p><h1>${escapeHtml(event.title || "Clan Bounties")}</h1><p>${escapeHtml(event.description || "Collect selected items and earn Embers for every bounty completed.")}</p></div><div class="event-percent-box"><strong>${event.active ? "ACTIVE" : "INACTIVE"}</strong><span>Bounty Board</span></div></div>
+          <div class="event-detail-body">${renderDropsPanel()}${renderRewardsSection(event)}</div>
+        </section>`;
+      loadDrops();
+      return;
+    }
 
     const standings = await fetchEventStandings(event).catch(() => null);
     const eventHasNotStarted = isBeforeEventStart(standings, event);
@@ -2062,24 +2037,39 @@ function formatDiscordNewsText(value = "") {
     .replace(/\n/g, "<br>");
 }
 
+function getClanNewsPreview(entry) {
+  const embed = entry.embeds?.[0] || null;
+  const source = entry.content || embed?.description || embed?.fields?.[0]?.value || "";
+  const plain = String(source)
+    .replace(/<@!?\d+>/g, "@member")
+    .replace(/<#\d+>/g, "#channel")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[*_`~>#|]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return plain.length > 220 ? `${plain.slice(0, 217).trim()}…` : plain;
+}
+
 function renderClanNewsEntry(entry) {
   const embed = entry.embeds?.[0] || null;
   const title = embed?.title || "Clan Update";
-  const body = entry.content || embed?.description || "";
-  const image = embed?.image || entry.attachments?.find(file => file.contentType?.startsWith("image/"))?.url || "";
-  const fields = Array.isArray(embed?.fields) ? embed.fields : [];
-  const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" }) : "";
+  const preview = getClanNewsPreview(entry);
+  const date = entry.createdAt
+    ? new Date(entry.createdAt).toLocaleDateString("en-CA", { dateStyle: "medium" })
+    : "";
+  const messageUrl = entry.messageUrl || `https://discord.com/channels/1364728339469832313/1364729142796619846/${entry.id}`;
 
   return `
-    <article class="clan-news-entry">
+    <article class="clan-news-entry clan-news-preview-entry">
       <div class="clan-news-meta">
         ${entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" loading="lazy">` : ""}
         <span><strong>${escapeHtml(entry.author || "Ironkin Staff")}</strong><small>${escapeHtml(date)}</small></span>
       </div>
-      ${title ? `<h3>${escapeHtml(title)}</h3>` : ""}
-      ${body ? `<div class="clan-news-body">${formatDiscordNewsText(body)}</div>` : ""}
-      ${fields.length ? `<div class="clan-news-fields">${fields.map(field => `<div><strong>${escapeHtml(field.name || "")}</strong><span>${formatDiscordNewsText(field.value || "")}</span></div>`).join("")}</div>` : ""}
-      ${image ? `<img class="clan-news-image" src="${escapeHtml(image)}" alt="Clan news attachment" loading="lazy">` : ""}
+      <div class="clan-news-preview-copy">
+        <h3>${escapeHtml(title)}</h3>
+        ${preview ? `<p>${escapeHtml(preview)}</p>` : ""}
+      </div>
+      <a class="clan-news-message-link" href="${escapeHtml(messageUrl)}" target="_blank" rel="noopener">Read announcement on Discord →</a>
     </article>`;
 }
 
@@ -2093,7 +2083,7 @@ async function loadClanNews() {
     if (!response.ok) throw new Error(data.error || "Could not load clan news.");
     const entries = Array.isArray(data.entries) ? data.entries : [];
     feed.innerHTML = entries.length
-      ? entries.slice(0, 8).map(renderClanNewsEntry).join("")
+      ? entries.slice(0, 4).map(renderClanNewsEntry).join("")
       : `<p class="admin-muted">No clan news has been posted yet.</p>`;
   } catch (error) {
     feed.innerHTML = `<p class="admin-muted">Could not load clan news: ${escapeHtml(error.message)}</p>`;
@@ -2212,7 +2202,10 @@ async function loadDropsForEvent(eventId, listId = "dropsList") {
       row.className = "drop-row";
 
       row.innerHTML = `
-        <span>${escapeHtml(drop.name)}</span>
+        <div class="bounty-drop-main">
+          ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
+          <span><strong>${escapeHtml(drop.name)}</strong>${drop.rewardEmbers ? `<small>${formatNumber(drop.rewardEmbers)} Embers each</small>` : ""}</span>
+        </div>
 
         <div class="drop-controls">
           <strong>${formatNumber(drop.count)}</strong>
@@ -2305,7 +2298,10 @@ async function loadDrops() {
       row.className = "drop-row";
 
       row.innerHTML = `
-        <span>${escapeHtml(drop.name)}</span>
+        <div class="bounty-drop-main">
+          ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
+          <span><strong>${escapeHtml(drop.name)}</strong>${drop.rewardEmbers ? `<small>${formatNumber(drop.rewardEmbers)} Embers each</small>` : ""}</span>
+        </div>
 
         <div class="drop-controls">
           <strong>${formatNumber(drop.count)}</strong>

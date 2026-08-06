@@ -29,6 +29,7 @@ function getResetEventTitle(event) {
     return tier ? `Boss of the Week - ${tier}` : "Boss of the Week";
   }
   if (String(event?.type || "").includes("clan-goal")) return "Clan Goal";
+  if (event?.type === "bounties") return "Clan Bounties";
   return event?.label || event?.title || "Event";
 }
 
@@ -113,6 +114,7 @@ async function previewWomDetails() {
 function isClanGoalEvent(event) {
   return Boolean(event?.type && event.type.includes("clan-goal"));
 }
+function isBountiesEvent(event) { return event?.type === "bounties" || event?.id === "bounties"; }
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -133,6 +135,10 @@ function getDefaultRewards(event) {
       ],
       participation: []
     };
+  }
+
+  if (isBountiesEvent(event)) {
+    return { placement: [], participation: [] };
   }
 
   if (event?.type === "botw") {
@@ -184,11 +190,18 @@ function updateEventFieldVisibility() {
   const standardDrops = document.getElementById("standardDropsEditor");
   const dropsToggle = document.getElementById("eventDropsInput")?.closest("label");
   const showGoalFields = isClanGoalEvent(event);
+  const showBounties = isBountiesEvent(event);
+  const bountiesEditor = document.getElementById("bountiesEditor");
+  const womField = document.getElementById("eventWomInput")?.closest(".admin-field");
+  const detectedBox = document.getElementById("womDetectedBox")?.closest(".admin-field");
 
   if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
   if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
   if (standardDrops) standardDrops.style.display = showGoalFields ? "block" : "none";
-  if (dropsToggle) dropsToggle.style.display = showGoalFields ? "inline-flex" : "none";
+  if (bountiesEditor) bountiesEditor.style.display = showBounties ? "block" : "none";
+  if (dropsToggle) dropsToggle.style.display = (showGoalFields || showBounties) ? "inline-flex" : "none";
+  if (womField) womField.style.display = showBounties ? "none" : "grid";
+  if (detectedBox) detectedBox.style.display = showBounties ? "none" : "grid";
 }
 
 function renderMilestonesEditor() {
@@ -834,7 +847,7 @@ async function saveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = isClanGoalEvent(event) ? document.getElementById("eventDropsInput").checked : false;
+  event.dropsEnabled = (isClanGoalEvent(event) || isBountiesEvent(event)) ? document.getElementById("eventDropsInput").checked : false;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -873,7 +886,7 @@ async function archiveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = isClanGoalEvent(event) ? document.getElementById("eventDropsInput").checked : false;
+  event.dropsEnabled = (isClanGoalEvent(event) || isBountiesEvent(event)) ? document.getElementById("eventDropsInput").checked : false;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -908,7 +921,9 @@ async function archiveSelectedEvent() {
 }
 
 async function loadAdminDrops() {
-  const list = document.getElementById("adminDropsList");
+  const list = isBountiesEvent(getSelectedEvent())
+    ? document.getElementById("adminBountiesList")
+    : document.getElementById("adminDropsList");
   if (!list) return;
 
   if (!selectedEventId) {
@@ -930,7 +945,10 @@ async function loadAdminDrops() {
     const row = document.createElement("div");
     row.className = "drop-row";
     row.innerHTML = `
-      <span>${drop.name}</span>
+      <div class="bounty-drop-main">
+        ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
+        <span><strong>${escapeHtml(drop.name)}</strong>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}</span>
+      </div>
       <div class="drop-controls">
         <button onclick="changeDrop('${drop.name}', -1)">−</button>
         <strong>${drop.count}</strong>
@@ -979,4 +997,42 @@ async function deleteDrop(name) {
   loadAdminDrops();
 }
 
+let bountyWikiTimer = null;
+async function searchBountyWiki(query) {
+  const resultsEl = document.getElementById("bountyWikiSearchResults");
+  if (!resultsEl) return;
+  if (!query || query.length < 2) { resultsEl.innerHTML = ""; return; }
+  resultsEl.innerHTML = `<div class="wiki-loading">Searching...</div>`;
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    const results = (Array.isArray(data) ? data : data.results || []).filter(item => item?.name && item?.image);
+    resultsEl.innerHTML = results.length ? results.map(item => `
+      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No item results found.</div>`;
+    resultsEl.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+      document.getElementById("bountySelectedItemInput").value = button.dataset.name || "";
+      document.getElementById("bountySelectedImageInput").value = button.dataset.image || "";
+      document.getElementById("bountySelectedImageInput").dataset.wikiUrl = button.dataset.url || "";
+      resultsEl.innerHTML = "";
+    }));
+  } catch { resultsEl.innerHTML = `<div class="wiki-loading">Could not search the OSRS Wiki.</div>`; }
+}
+async function addBountyItem() {
+  const name = document.getElementById("bountySelectedItemInput")?.value.trim();
+  const imageInput = document.getElementById("bountySelectedImageInput");
+  const rewardEmbers = Number(document.getElementById("bountyRewardInput")?.value || 0);
+  if (!name || !selectedEventId) { alert("Select an OSRS item first."); return; }
+  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { alert(data.error || "Could not add bounty."); return; }
+  document.getElementById("bountySelectedItemInput").value = "";
+  imageInput.value = "";
+  document.getElementById("bountyRewardInput").value = "";
+  document.getElementById("bountyItemSearchInput").value = "";
+  loadAdminDrops();
+}
+
 loadAdmin();
+
+document.getElementById("bountyItemSearchInput")?.addEventListener("input", event => { clearTimeout(bountyWikiTimer); bountyWikiTimer = setTimeout(() => searchBountyWiki(event.target.value.trim()), 250); });
+document.getElementById("addBountyItemBtn")?.addEventListener("click", addBountyItem);

@@ -7,7 +7,7 @@ const DEFAULT_EVENTS = [
     description: "Compete against fellow Ironkin members in the current Skill of the Week event.",
     womCompetitionId: null,
     featured: false,
-    active: true,
+    active: false,
     dropsEnabled: false,
     target: null,
     startDate: null,
@@ -22,7 +22,7 @@ const DEFAULT_EVENTS = [
     description: "Battle for the top spot in the Elite Boss of the Week challenge.",
     womCompetitionId: null,
     featured: false,
-    active: true,
+    active: false,
     dropsEnabled: false,
     target: null,
     startDate: null,
@@ -37,7 +37,7 @@ const DEFAULT_EVENTS = [
     description: "Battle for the top spot in the Standard Boss of the Week challenge.",
     womCompetitionId: null,
     featured: false,
-    active: true,
+    active: false,
     dropsEnabled: false,
     target: null,
     startDate: null,
@@ -51,7 +51,7 @@ const DEFAULT_EVENTS = [
     description: "Every gain brings Ironkin closer to the next clan milestone.",
     womCompetitionId: null,
     featured: false,
-    active: true,
+    active: false,
     dropsEnabled: true,
     target: null,
     startDate: null,
@@ -63,7 +63,21 @@ milestones: [
   { percent: 100, title: "Bond Giveaway" }
 ]
   }
-];
+  ,
+  {
+    id: "bounties",
+    type: "bounties",
+    label: "Bounties",
+    title: "Clan Bounties",
+    description: "Collect selected bounty items and earn Embers for every completed drop.",
+    womCompetitionId: null,
+    featured: false,
+    active: false,
+    dropsEnabled: true,
+    target: null,
+    startDate: null,
+    endDate: null
+  }];
 
 
 function normalizeBotwEvents(events) {
@@ -129,10 +143,20 @@ function isCurrentEventActive(event, now = Date.now()) {
 export async function onRequestGet({ env }) {
   const saved = await env.DROPS_KV.get("events:active");
   const rawEvents = saved ? JSON.parse(saved) : [];
-  const events = normalizeBotwEvents(rawEvents).filter(event => isCurrentEventActive(event));
+  const normalized = normalizeBotwEvents(rawEvents);
+  const clanGoalCandidates = normalized.filter(event => String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal");
+  const preferredClanGoal = clanGoalCandidates.find(event => event.id === "clan-goal") || clanGoalCandidates[0];
+  const deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
+  if (preferredClanGoal) deduped.push({ ...preferredClanGoal, id: "clan-goal", label: "Clan Goal" });
+  const byId = new Map(deduped.map(event => [event.id, event]));
+  const defaultIds = new Set(DEFAULT_EVENTS.map(event => event.id));
+  const events = [
+    ...DEFAULT_EVENTS.map(defaultEvent => ({ ...defaultEvent, ...(byId.get(defaultEvent.id) || {}) })),
+    ...deduped.filter(event => event?.id && !defaultIds.has(event.id))
+  ];
 
   return Response.json({
-    active: events.length > 0,
+    active: events.some(event => isCurrentEventActive(event)),
     events
   });
 }
