@@ -158,7 +158,9 @@ export async function onRequestPost({ request, env }) {
     winner,
     topFive,
     leaderboard: topFive,
-    rewards: event.rewards || { placement: [], participation: [] },
+    ...(event?.type === "bounties" || event?.id === "bounties"
+      ? {}
+      : { rewards: event.rewards || { placement: [], participation: [] } }),
     drops
   };
 
@@ -197,9 +199,16 @@ export async function onRequestPost({ request, env }) {
         : item
     );
 
+    const sanitizedEvents = updatedEvents.map(item => {
+      if (item?.type !== "bounties" && item?.id !== "bounties") return item;
+      const sanitized = { ...item };
+      delete sanitized.rewards;
+      return sanitized;
+    });
+
     await env.DROPS_KV.put(
       "events:active",
-      JSON.stringify(updatedEvents)
+      JSON.stringify(sanitizedEvents)
     );
   }
 

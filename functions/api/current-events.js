@@ -153,7 +153,12 @@ export async function onRequestGet({ env }) {
   const events = [
     ...DEFAULT_EVENTS.map(defaultEvent => ({ ...defaultEvent, ...(byId.get(defaultEvent.id) || {}) })),
     ...deduped.filter(event => event?.id && !defaultIds.has(event.id))
-  ];
+  ].map(event => {
+    if (event?.type !== "bounties" && event?.id !== "bounties") return event;
+    const sanitized = { ...event };
+    delete sanitized.rewards;
+    return sanitized;
+  });
 
   return Response.json({
     active: events.some(event => isCurrentEventActive(event)),

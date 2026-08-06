@@ -204,6 +204,10 @@ function getEventMetricLabel(event) {
 }
 
 function getDefaultRewards(event) {
+  if (event?.type === "bounties" || event?.id === "bounties") {
+    return { placement: [], participation: [] };
+  }
+
   if (event?.type?.includes("clan-goal")) {
     return {
       placement: [
@@ -338,6 +342,9 @@ function renderDropsPanel(listId = "dropsList") {
 }
 
 function renderRewardsSection(event) {
+  // Bounties reward each submitted item directly and never use event placement/participation rewards.
+  if (event?.type === "bounties" || event?.id === "bounties") return "";
+
   const rewards = getEventRewards(event);
   const hasPlacement = rewards.placement.length > 0;
   const hasParticipation = rewards.participation.length > 0;
@@ -1348,7 +1355,7 @@ async function loadSingleEventDashboard() {
       dashboard.innerHTML = `
         <section class="event-detail-card">
           <div class="event-detail-hero"><div><p class="eyebrow">🎯 Bounties</p><h1>${escapeHtml(event.title || "Clan Bounties")}</h1><p>${escapeHtml(event.description || "Collect selected items and earn Embers for every bounty completed.")}</p></div><div class="event-percent-box"><strong>${event.active ? "ACTIVE" : "INACTIVE"}</strong><span>Bounty Board</span></div></div>
-          <div class="event-detail-body">${renderDropsPanel()}${renderRewardsSection(event)}</div>
+          <div class="event-detail-body">${renderDropsPanel()}</div>
         </section>`;
       loadDrops();
       return;

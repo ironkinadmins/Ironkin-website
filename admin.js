@@ -308,6 +308,11 @@ function renderRewardsEditor() {
 
   normalizeRewards(event);
 
+  const rewardsGrid = document.querySelector(".admin-rewards-grid");
+  if (rewardsGrid) {
+    rewardsGrid.style.display = isBountiesEvent(event) ? "none" : "";
+  }
+
   placementEditor.innerHTML = "";
   participationEditor.innerHTML = "";
 
@@ -369,6 +374,12 @@ function renderRewardsEditor() {
 function collectRewardsFromEditor() {
   const event = getSelectedEvent();
   if (!event) return;
+
+  // Bounties use per-item Ember rewards only. Remove any legacy event-level rewards.
+  if (isBountiesEvent(event)) {
+    delete event.rewards;
+    return;
+  }
 
   const placementLabels = document.querySelectorAll("[data-placement-label]");
   const placementRewards = document.querySelectorAll("[data-placement-reward]");
@@ -852,10 +863,18 @@ async function saveSelectedEvent() {
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
 
+  // Ensure legacy bounty placement/participation rewards are not persisted.
+  const eventsToSave = allEvents.map(item => {
+    if (!isBountiesEvent(item)) return item;
+    const cleanItem = { ...item };
+    delete cleanItem.rewards;
+    return cleanItem;
+  });
+
   const response = await fetch("/api/admin/events/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ events: allEvents })
+    body: JSON.stringify({ events: eventsToSave })
   });
 
   if (!response.ok) {
@@ -891,12 +910,22 @@ async function archiveSelectedEvent() {
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
 
+  const eventToArchive = { ...event };
+  if (isBountiesEvent(eventToArchive)) delete eventToArchive.rewards;
+
+  const eventsToArchive = allEvents.map(item => {
+    if (!isBountiesEvent(item)) return item;
+    const cleanItem = { ...item };
+    delete cleanItem.rewards;
+    return cleanItem;
+  });
+
   const response = await fetch("/api/admin/events/archive", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      event,
-      events: allEvents
+      event: eventToArchive,
+      events: eventsToArchive
     })
   });
 

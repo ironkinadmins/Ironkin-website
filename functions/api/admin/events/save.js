@@ -17,13 +17,20 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
+  const sanitizedEvents = events.map(event => {
+    if (event?.type !== "bounties" && event?.id !== "bounties") return event;
+    const sanitized = { ...event };
+    delete sanitized.rewards;
+    return sanitized;
+  });
+
   await env.DROPS_KV.put(
     "events:active",
-    JSON.stringify(events)
+    JSON.stringify(sanitizedEvents)
   );
 
   return Response.json({
     success: true,
-    events
+    events: sanitizedEvents
   });
 }

@@ -142,7 +142,12 @@ function ensureAdminEvents(savedEvents) {
   const defaultIds = new Set(DEFAULT_EVENTS.map(event => event.id));
   const extras = deduped.filter(event => event?.id && !defaultIds.has(event.id));
 
-  return [...mergedDefaults, ...extras];
+  return [...mergedDefaults, ...extras].map(event => {
+    if (event?.type !== "bounties" && event?.id !== "bounties") return event;
+    const sanitized = { ...event };
+    delete sanitized.rewards;
+    return sanitized;
+  });
 }
 
 export async function onRequestGet({ request, env }) {
