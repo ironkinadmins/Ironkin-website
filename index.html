@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Ironkin Clan</title>
-
+  <meta name="description" content="Ironkin is an Old School RuneScape Ironman clan built around events, progression, competition, and community." />
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="styles.css?v=20260611-botw-unified-admin-drops" />
+  <link rel="stylesheet" href="styles.css?v=20260806-home-premium" />
 </head>
-
-<body>
+<body class="home-premium-page">
   <div id="siteNav"></div>
 
-  <main class="member-home">
+  <main class="member-home home-premium">
     <section id="homeBingoSignupBanner" class="bingo-home-banner" style="display:none;">
       <div>
         <p class="eyebrow">Battleship Bingo</p>
@@ -23,101 +21,78 @@
       <a class="btn primary" href="/bingo">Enter Bingo</a>
     </section>
 
-    <section class="member-home-grid">
-      <div class="member-hero-card">
-        <p class="eyebrow">Old School RuneScape Ironman Clan</p>
-
-        <h1>
-          Forged Alone.<br />
-          Bound as Kin.
-        </h1>
-
-        <p>
-          The Ironkin hub for live clan events, achievements, competition,
-          progression, and Hall of Flame glory.
-        </p>
-
-        <div class="join-callout">
-          <span>Not a member?</span>
-
-          <a
-            class="btn primary"
-            href="https://discord.gg/ironkin"
-            target="_blank"
-            rel="noopener"
-          >
-            Join Today
-          </a>
+    <section class="home-hero-shell" aria-labelledby="homeHeroTitle">
+      <div class="home-hero-copy">
+        <div class="home-kicker"><span></span> Old School RuneScape Ironman Clan</div>
+        <h1 id="homeHeroTitle">Forged Alone.<br><em>Bound as Kin.</em></h1>
+        <p class="home-hero-lead">A home for ironmen who value progression, competition, and the people behind every achievement.</p>
+        <div class="home-hero-actions">
+          <a class="btn primary home-hero-primary" href="https://discord.gg/ironkin" target="_blank" rel="noopener">Join Ironkin</a>
+          <a class="btn secondary" href="events.html">Explore Events</a>
+        </div>
+        <div class="home-hero-proof" aria-label="Ironkin highlights">
+          <div><strong>Live</strong><span>Clan events</span></div>
+          <div><strong>Active</strong><span>Ironman community</span></div>
+          <div><strong>Earn</strong><span>Embers & prestige</span></div>
         </div>
       </div>
 
-      <article class="card member-featured-event">
-        <p id="homeEventPercent" class="eyebrow">Featured Event</p>
-
-        <h2 id="homeEventTitle">Loading event...</h2>
-
-        <p id="homeEventMeta">Checking Wise Old Man...</p>
-
-        <div id="homeFeaturedStats" class="featured-stats"></div>
-
-        <div class="featured-total-gained">
-          <strong id="homeTotalGained">Loading...</strong>
-          <span id="homeTotalGainedLabel">Total Gained</span>
-        </div>
-
-        <div id="homeTopThree" class="home-top-three">
-          Loading top competitors...
-        </div>
-
-        <div id="homeFeaturedControls" class="featured-rotation-controls" aria-label="Featured event controls"></div>
-
-        <a id="homeFeaturedLink" class="btn primary" href="events.html">View Event</a>
-      </article>
-
-      <article class="card home-widget-card">
-        <div class="section-heading-row">
+      <article class="home-feature-panel member-featured-event">
+        <div class="home-feature-topline">
           <div>
-            <p class="eyebrow">Calendar</p>
+            <p id="homeEventPercent" class="eyebrow">Featured Event</p>
+            <h2 id="homeEventTitle">Loading event...</h2>
+          </div>
+          <span class="home-live-pill">Live</span>
+        </div>
+        <p id="homeEventMeta" class="home-event-meta">Checking Wise Old Man...</p>
+        <div id="homeFeaturedStats" class="featured-stats"></div>
+        <div class="featured-total-gained home-total-panel">
+          <span id="homeTotalGainedLabel">Total Gained</span>
+          <strong id="homeTotalGained">Loading...</strong>
+        </div>
+        <div class="home-rank-heading"><span>Top competitors</span><span>Gained</span></div>
+        <div id="homeTopThree" class="home-top-three">Loading top competitors...</div>
+        <div id="homeFeaturedControls" class="featured-rotation-controls" aria-label="Featured event controls"></div>
+        <a id="homeFeaturedLink" class="btn primary home-feature-button" href="events.html">View Event</a>
+      </article>
+    </section>
+
+    <section class="home-section home-dashboard" aria-label="Ironkin activity overview">
+      <article class="home-panel home-calendar-panel">
+        <div class="home-panel-heading">
+          <div>
+            <p class="eyebrow">On the Horizon</p>
             <h2>Upcoming Events</h2>
           </div>
-          <a href="calendar.html">View calendar →</a>
+          <a href="calendar.html">Full calendar <span>→</span></a>
         </div>
-
-        <div id="homeUpcomingEvents" class="home-list-widget">
-          Loading upcoming events...
-        </div>
+        <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">Loading upcoming events...</div>
       </article>
 
-
-
-      <article class="card member-achievements">
-        <div class="section-heading-row">
+      <article class="home-panel member-achievements home-achievement-panel">
+        <div class="home-panel-heading">
           <div>
-            <p class="eyebrow">Clan Activity</p>
+            <p class="eyebrow">Clan Momentum</p>
             <h2>Recent Achievements</h2>
           </div>
+          <a href="profile.html">View profiles <span>→</span></a>
         </div>
-
-        <p>Fresh milestones and achievements from Ironkin members.</p>
-
-        <div id="recentActivity" class="activity-scroll">
-          Loading recent achievements...
-        </div>
+        <p class="home-panel-intro">Fresh milestones, drops, and progression from Ironkin members.</p>
+        <div id="recentActivity" class="activity-scroll home-activity-list">Loading recent achievements...</div>
       </article>
-        </div>
-      </article>
+    </section>
 
-      <article class="card member-flame-preview clan-news-card">
-        <div class="section-heading-row">
-          <div>
-            <p class="eyebrow">Discord Updates</p>
-            <h2>Clan News</h2>
-          </div>
+    <section class="home-section home-news-section" aria-labelledby="clanNewsTitle">
+      <div class="home-news-header">
+        <div>
+          <p class="eyebrow">From the Clan</p>
+          <h2 id="clanNewsTitle">Latest News</h2>
+          <p>Announcements, event updates, and important community news from the Ironkin staff team.</p>
         </div>
-
-        <p>Latest announcements posted by staff in the Ironkin clan news channel.</p>
-        <div id="clanNewsFeed" class="clan-news-feed">Loading clan news...</div>
-      </article>
+        <a class="btn secondary" href="https://discord.com/channels/1364728339469832313/1364729142796619846" target="_blank" rel="noopener">Open Discord Channel</a>
+      </div>
+      <div id="clanNewsFeed" class="clan-news-feed home-news-grid">Loading clan news...</div>
     </section>
   </main>
 
@@ -125,6 +100,6 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="script.js?v=20260711-bingo-landing-route-fix-v2"></script>
+  <script src="script.js?v=20260806-home-premium"></script>
 </body>
 </html>

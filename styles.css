@@ -9125,3 +9125,198 @@ body.calendar-modal-active {
 .bounty-drop-main small { color:var(--muted); }
 .bounty-wiki-results { margin-top:.65rem; }
 @media (max-width: 720px) { .clan-news-preview-entry { grid-template-columns: 1fr; } .clan-news-message-link { white-space: normal; } }
+
+/* ===== Premium Ironkin homepage, August 2026 ===== */
+.home-premium-page {
+  background:
+    radial-gradient(circle at 18% 3%, rgba(255, 122, 26, .12), transparent 29rem),
+    radial-gradient(circle at 88% 24%, rgba(255, 169, 76, .07), transparent 34rem),
+    #090807;
+}
+.home-premium {
+  width: min(1240px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 42px 0 72px;
+}
+.home-premium .eyebrow {
+  margin: 0 0 8px;
+  color: #ff9b45;
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.home-hero-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(380px, .8fr);
+  min-height: 590px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 150, 54, .22);
+  border-radius: 30px;
+  background:
+    linear-gradient(90deg, rgba(9, 7, 6, .97) 0%, rgba(13, 9, 7, .92) 47%, rgba(13, 9, 7, .68) 100%),
+    url("assets/ironkin-bg.png") center / cover no-repeat;
+  box-shadow: 0 36px 90px rgba(0, 0, 0, .44), inset 0 1px rgba(255,255,255,.035);
+}
+.home-hero-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent 45%, rgba(255, 120, 24, .08));
+}
+.home-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(42px, 6vw, 86px);
+}
+.home-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #ffc28c;
+  font-size: .76rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.home-kicker span { width: 34px; height: 2px; background: #ff7a1a; box-shadow: 0 0 16px #ff7a1a; }
+.home-hero-copy h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(3.6rem, 7vw, 7rem);
+  line-height: .88;
+  letter-spacing: -.065em;
+  text-wrap: balance;
+}
+.home-hero-copy h1 em { color: #ff8a2b; font-style: normal; }
+.home-hero-lead {
+  max-width: 650px;
+  margin: 28px 0 0;
+  color: rgba(255,255,255,.7);
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.75;
+}
+.home-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 34px; }
+.home-hero-actions .btn { min-height: 48px; padding-inline: 22px; }
+.home-hero-primary { box-shadow: 0 12px 30px rgba(255, 105, 10, .2); }
+.home-hero-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 48px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+.home-hero-proof div { display: grid; gap: 3px; }
+.home-hero-proof strong { color: #fff; font-size: .95rem; }
+.home-hero-proof span { color: rgba(255,255,255,.48); font-size: .75rem; }
+.home-feature-panel {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  margin: 34px 34px 34px 0;
+  padding: 30px;
+  border: 1px solid rgba(255, 163, 75, .28);
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(31, 22, 17, .95), rgba(13, 10, 8, .96));
+  box-shadow: 0 28px 70px rgba(0,0,0,.4), inset 0 1px rgba(255,255,255,.045);
+  backdrop-filter: blur(16px);
+}
+.home-feature-topline { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.home-feature-topline h2 { margin: 0; font-size: clamp(1.35rem, 2vw, 2rem); line-height: 1.15; }
+.home-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,122,26,.35);
+  border-radius: 999px;
+  color: #ffb06c;
+  background: rgba(255,122,26,.1);
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.home-live-pill::before { content:""; width:7px; height:7px; border-radius:50%; background:#ff7a1a; box-shadow:0 0 10px #ff7a1a; }
+.home-event-meta { min-height: 20px; color: rgba(255,255,255,.55); }
+.home-feature-panel .featured-stats { margin: 20px 0; }
+.home-total-panel {
+  display: flex !important;
+  flex-direction: column-reverse;
+  align-items: flex-start !important;
+  gap: 4px;
+  margin: 18px 0 22px;
+  padding: 20px 22px !important;
+  border: 1px solid rgba(255, 145, 45, .3);
+  border-radius: 16px;
+  background: radial-gradient(circle at 85% 25%, rgba(255,122,26,.15), transparent 44%), rgba(255,255,255,.025);
+}
+.home-total-panel strong { color: #ff962f; font-size: clamp(2rem, 3vw, 2.8rem); line-height: 1; }
+.home-total-panel span { color: rgba(255,255,255,.45); font-size: .67rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+.home-rank-heading { display:flex; justify-content:space-between; padding:0 2px 8px; color:rgba(255,255,255,.38); font-size:.66rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.home-feature-panel .home-top-three { margin: 0 0 20px; }
+.home-feature-panel .home-top-three div { padding: 11px 2px; border-color: rgba(255,255,255,.08); }
+.home-feature-button { width: 100%; justify-content: center; margin-top: 6px; }
+.home-section { margin-top: 26px; }
+.home-dashboard { display:grid; grid-template-columns: .9fr 1.1fr; gap: 26px; }
+.home-panel,
+.home-news-section {
+  border: 1px solid rgba(255, 154, 58, .18);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(26,19,15,.94), rgba(14,11,9,.96));
+  box-shadow: 0 18px 50px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.025);
+}
+.home-panel { min-height: 400px; padding: 28px; }
+.home-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:22px; }
+.home-panel-heading h2,
+.home-news-header h2 { margin:0; font-size: clamp(1.45rem, 2vw, 2rem); }
+.home-panel-heading > a { color:#ff9a42; font-size:.78rem; font-weight:800; text-decoration:none; }
+.home-panel-heading > a span { display:inline-block; transition:transform .2s ease; }
+.home-panel-heading > a:hover span { transform:translateX(4px); }
+.home-panel-intro { margin:-8px 0 18px; color:rgba(255,255,255,.48); font-size:.88rem; }
+.home-upcoming-list,
+.home-activity-list { max-height: 330px; overflow:auto; padding-right:6px; scrollbar-width:thin; scrollbar-color:rgba(255,135,36,.45) transparent; }
+.home-upcoming-list > *,
+.home-activity-list > * { border-color: rgba(255,255,255,.075) !important; }
+.home-news-section { padding: 34px; }
+.home-news-header { display:flex; justify-content:space-between; align-items:flex-end; gap:28px; margin-bottom:26px; }
+.home-news-header > div > p:last-child { max-width:680px; margin:10px 0 0; color:rgba(255,255,255,.5); line-height:1.65; }
+.home-news-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; margin:0; }
+.home-news-grid .clan-news-entry {
+  min-height: 190px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 17px;
+  background: linear-gradient(150deg, rgba(255,255,255,.035), rgba(0,0,0,.1));
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.home-news-grid .clan-news-entry:hover { transform:translateY(-3px); border-color:rgba(255,137,37,.36); background:rgba(255,122,26,.045); }
+.home-news-grid .clan-news-preview-entry { grid-template-columns:1fr; align-items:start; }
+.home-news-grid .clan-news-meta { grid-column:auto; }
+.home-news-grid .clan-news-meta img { width:34px; height:34px; }
+.home-news-grid .clan-news-preview-copy p { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.home-news-grid .clan-news-message-link { align-self:end; margin-top:auto; padding-top:12px; white-space:normal; }
+@media (max-width: 1020px) {
+  .home-hero-shell { grid-template-columns: 1fr; }
+  .home-feature-panel { margin: 0 32px 32px; }
+  .home-dashboard { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .home-premium { width:min(100% - 22px, 1240px); padding-top:20px; }
+  .home-hero-shell { border-radius:22px; }
+  .home-hero-copy { padding:42px 24px 34px; }
+  .home-hero-copy h1 { font-size:clamp(3.1rem, 16vw, 5rem); }
+  .home-hero-proof { gap:20px; }
+  .home-feature-panel { margin:0 12px 12px; padding:22px; border-radius:18px; }
+  .home-panel, .home-news-section { padding:22px; border-radius:19px; }
+  .home-panel-heading, .home-news-header { align-items:flex-start; flex-direction:column; }
+  .home-news-grid { grid-template-columns:1fr; }
+  .home-news-grid .clan-news-entry { min-height:0; }
+}
