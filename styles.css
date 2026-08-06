@@ -9412,3 +9412,40 @@ input:focus,select:focus,textarea:focus { outline:none; border-color:rgba(255,12
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
 @media(max-width:1080px) { .premium-nav-links{gap:2px}.premium-nav-links>a,.nav-dropdown-toggle{padding-inline:8px}.brand-wordmark small{display:none}.events-premium-page .event-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.premium-brand-story{grid-template-columns:auto 1fr}.premium-brand-story>.btn{grid-column:2} }
 @media(max-width:760px) { .premium-header{top:6px;width:calc(100% - 12px);margin-top:6px;border-radius:15px}.premium-nav{min-height:60px}.brand-wordmark small{display:block}.premium-nav-links{top:68px!important;left:6px!important;right:6px!important;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(12,9,7,.97);box-shadow:0 25px 70px rgba(0,0,0,.5);padding:12px!important}.premium-nav-links>a,.nav-dropdown-toggle{width:100%;text-align:left;padding:12px}.nav-discord-btn{justify-content:center}.page{width:min(100% - 20px,1220px);padding-top:26px}.premium-stat-rail{grid-template-columns:1fr}.premium-stat-rail article{min-height:92px}.premium-brand-story{grid-template-columns:1fr;text-align:center;padding:28px 22px}.premium-brand-mark{margin:auto}.premium-brand-story>.btn{grid-column:auto}.premium-page-hero{min-height:360px}.premium-page-hero-mark{position:absolute;right:-20px;bottom:-28px;opacity:.35}.event-filter-bar{overflow:auto}.event-filter-bar a{white-space:nowrap}.events-premium-page .event-hub-grid{grid-template-columns:1fr}.events-premium-page .event-hub-card{min-height:270px} }
+
+
+/* Staff Handbook typography isolation */
+.handbook-page,
+.handbook-page button,
+.handbook-page input,
+.handbook-page select,
+.handbook-page textarea {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.handbook-card h2 {
+  font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.handbook-card h3 {
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.handbook-card p,
+.handbook-card li {
+  font-size: 0.98rem;
+  font-weight: 450;
+  line-height: 1.65;
+}
+
+.handbook-card li + li {
+  margin-top: 0.35rem;
+}
+
+.handbook-card strong {
+  font-weight: 650;
+}
