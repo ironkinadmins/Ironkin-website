@@ -59,35 +59,39 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ results: [] });
   }
 
+  // Only members present in the profile index are eligible to appear in search.
+  // Supabase is used solely to enrich those real profiles with Ember data.
   const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
   const balances = await getSupabaseBalances(env);
-  const byId = new Map();
+  const balanceById = new Map();
 
   balances.forEach(row => {
     const discordId = String(row.user_id || "");
     if (!discordId) return;
-    byId.set(discordId, {
-      discordId,
-      displayName: row.display_name || "Unknown member",
-      username: "",
-      embers: Number(row.balance || 0),
-      source: "supabase"
+    balanceById.set(discordId, {
+      displayName: row.display_name || "",
+      embers: Number(row.balance || 0)
     });
   });
+
+  const byId = new Map();
 
   if (Array.isArray(index)) {
     index.forEach(item => {
       const discordId = String(item.discordId || "");
       if (!discordId) return;
-      const existing = byId.get(discordId) || { discordId, embers: 0, source: "profile" };
+
+      const balance = balanceById.get(discordId);
+
       byId.set(discordId, {
-        ...existing,
-        displayName: item.displayName || existing.displayName || "Unknown member",
-        username: item.username || existing.username || "",
+        discordId,
+        displayName: item.displayName || balance?.displayName || "Unknown member",
+        username: item.username || "",
         avatar: item.avatar || "",
         avatarUrl: item.avatarUrl || "",
-        rank: item.rank || existing.rank || "",
-        staffRank: item.staffRank || existing.staffRank || ""
+        rank: item.rank || "",
+        staffRank: item.staffRank || "",
+        embers: balance?.embers || 0
       });
     });
   }
