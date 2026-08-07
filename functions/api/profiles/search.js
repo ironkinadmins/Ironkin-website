@@ -1,4 +1,5 @@
 import { getSession } from "../_auth.js";
+import { ensureDiscordProfilesSynced } from "../_discordProfiles.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 
 function safeJsonParse(value, fallback) {
@@ -57,6 +58,14 @@ export async function onRequestGet({ request, env }) {
 
   if (q.length < 2) {
     return Response.json({ results: [] });
+  }
+
+  // Keep the directory populated with every current non-bot Discord guild member,
+  // including members who have never signed into the website.
+  try {
+    await ensureDiscordProfilesSynced(env);
+  } catch (error) {
+    console.warn("Discord profile sync skipped:", error?.message || error);
   }
 
   // Only members present in the profile index are eligible to appear in search.

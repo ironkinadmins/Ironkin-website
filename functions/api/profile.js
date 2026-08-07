@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "./_auth.js";
+import { ensureDiscordProfilesSynced } from "./_discordProfiles.js";
 import { TEAM_ONE_KEY, TEAM_TWO_KEY, rosterTeamForName } from "./bingo/_teams.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 const WOM_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -435,6 +436,14 @@ export async function onRequestGet({ request, env }) {
   const requestedId = String(url.searchParams.get("id") || "").trim();
   const targetDiscordId = requestedId || session.id;
   const isOwnProfile = targetDiscordId === session.id;
+
+  // A member no longer needs to have signed into the site to have a profile.
+  // Refresh the Discord-backed directory at most once every six hours.
+  try {
+    await ensureDiscordProfilesSynced(env);
+  } catch (error) {
+    console.warn("Discord profile sync skipped:", error?.message || error);
+  }
 
   let record = await getProfileRecord(env, targetDiscordId);
 
