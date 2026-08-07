@@ -62,10 +62,12 @@ export async function onRequestGet({ request, env }) {
 
   // Keep the directory populated with every current non-bot Discord guild member,
   // including members who have never signed into the website.
+  let syncWarning = "";
   try {
     await ensureDiscordProfilesSynced(env);
   } catch (error) {
-    console.warn("Discord profile sync skipped:", error?.message || error);
+    syncWarning = error?.message || "Discord profile sync failed.";
+    console.warn("Discord profile sync skipped:", syncWarning);
   }
 
   // Only members present in the profile index are eligible to appear in search.
@@ -122,5 +124,5 @@ export async function onRequestGet({ request, env }) {
       profileUrl: `profile.html?id=${encodeURIComponent(item.discordId)}`
     }));
 
-  return Response.json({ results });
+  return Response.json({ results, syncWarning });
 }

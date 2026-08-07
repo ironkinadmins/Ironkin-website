@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../../_auth.js";
+import { ensureDiscordProfilesSynced } from "../../_discordProfiles.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 
 function safeJsonParse(value, fallback) {
@@ -59,6 +60,13 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ results: [] });
   }
 
+  let syncWarning = "";
+  try {
+    await ensureDiscordProfilesSynced(env);
+  } catch (error) {
+    syncWarning = error?.message || "Discord profile sync failed.";
+  }
+
   const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
   const balances = await getSupabaseBalances(env);
   const byId = new Map();
@@ -109,5 +117,5 @@ export async function onRequestGet({ request, env }) {
       profileUrl: `profile.html?id=${encodeURIComponent(item.discordId)}`
     }));
 
-  return Response.json({ results });
+  return Response.json({ results, syncWarning });
 }

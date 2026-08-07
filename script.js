@@ -620,13 +620,16 @@ function setupGlobalSearch() {
       const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}&t=${Date.now()}`, { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       const members = response.ok && Array.isArray(data.results) ? data.results : [];
+      const emptyMessage = response.status === 401
+        ? "Sign in to search member profiles."
+        : (data.syncWarning ? escapeNavSearchHtml(data.syncWarning) : "No matching members.");
       const memberHtml = members.length ? members.slice(0, 6).map(item => `
         <a class="global-search-result global-search-member" href="${escapeNavSearchHtml(item.profileUrl || "/profile.html")}">
           <img src="${escapeNavSearchHtml(item.avatarUrl || "/assets/ironkin-emblem.png")}" alt="" />
           <span><strong>${escapeNavSearchHtml(item.displayName || "Unknown member")}</strong><small>${escapeNavSearchHtml(item.staffRank || item.rank || "Ironkin member")}</small></span>
           <em>Member</em>
         </a>
-      `).join("") : `<div class="global-search-empty">${response.status === 401 ? "Sign in to search member profiles." : "No matching members."}</div>`;
+      `).join("") : `<div class="global-search-empty">${emptyMessage}</div>`;
       results.innerHTML = `<div class="global-search-section-label">Pages</div>${pageHtml || '<div class="global-search-empty">No matching pages.</div>'}<div class="global-search-section-label">Members</div>${memberHtml}`;
     } catch {
       results.innerHTML = `<div class="global-search-section-label">Pages</div>${pageHtml}<div class="global-search-section-label">Members</div><div class="global-search-empty">Member search is temporarily unavailable.</div>`;
