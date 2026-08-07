@@ -9265,7 +9265,7 @@ body.calendar-modal-active {
 .home-feature-panel .home-top-three div { padding: 11px 2px; border-color: rgba(255,255,255,.08); }
 .home-feature-button { width: 100%; justify-content: center; margin-top: 6px; }
 .home-section { margin-top: 26px; }
-.home-dashboard { display:grid; grid-template-columns: .9fr 1.1fr; gap: 26px; }
+.home-dashboard { display:grid; grid-template-columns: .9fr 1.1fr; gap: 26px; align-items:start; }
 .home-panel,
 .home-news-section {
   border: 1px solid rgba(255, 154, 58, .18);
@@ -9273,7 +9273,7 @@ body.calendar-modal-active {
   background: linear-gradient(145deg, rgba(26,19,15,.94), rgba(14,11,9,.96));
   box-shadow: 0 18px 50px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.025);
 }
-.home-panel { min-height: 400px; padding: 28px; }
+.home-panel { min-height: 0; padding: 28px; }
 .home-panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:22px; }
 .home-panel-heading h2,
 .home-news-header h2 { margin:0; font-size: clamp(1.45rem, 2vw, 2rem); }
