@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "./_auth.js";
+import { TEAM_ONE_KEY, TEAM_TWO_KEY, rosterTeamForName } from "./bingo/_teams.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 const WOM_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const CLAN_RANKS = [
@@ -288,43 +289,71 @@ async function getEventPlacements(env, rsn) {
     return { wins: {}, topThreeFinishes: 0, recent: [] };
   }
 
-  const raw = await env.DROPS_KV.get("events:archive");
-  const archive = safeJsonParse(raw, []);
+  const [eventsRaw, bingoRaw] = await Promise.all([
+    env.DROPS_KV.get("events:archive"),
+    env.DROPS_KV.get("bingo:archive:index:v1")
+  ]);
+  const archive = safeJsonParse(eventsRaw, []);
+  const bingoArchive = safeJsonParse(bingoRaw, []);
   const recent = [];
   const wins = { sotw: 0, botw: 0, bingo: 0, clanGoal: 0 };
   let topThreeFinishes = 0;
 
-  if (!Array.isArray(archive)) {
-    return { wins, topThreeFinishes, recent };
+  if (Array.isArray(archive)) {
+    archive.forEach(entry => {
+      const rows = getArchiveRows(entry);
+      const matchIndex = rows.findIndex(row => normalizeName(row.name || row.displayName || row.username) === target);
+      if (matchIndex === -1) return;
+
+      const placement = matchIndex + 1;
+      const row = rows[matchIndex];
+      const eventType = formatEventType(entry.type);
+
+      if (placement === 1) {
+        if (entry.type === "sotw") wins.sotw += 1;
+        else if (entry.type === "botw") wins.botw += 1;
+        else if (String(entry.type || "").includes("bingo")) wins.bingo += 1;
+        else if (String(entry.type || "").includes("clan-goal")) wins.clanGoal += 1;
+      }
+
+      if (placement <= 3) topThreeFinishes += 1;
+
+      recent.push({
+        eventId: entry.id || null,
+        title: entry.title || entry.label || "Archived Event",
+        type: eventType,
+        placement,
+        gained: Number(row.gained || row.score || 0),
+        endedAt: entry.endedAt || entry.endDate || null
+      });
+    });
   }
 
-  archive.forEach(entry => {
-    const rows = getArchiveRows(entry);
-    const matchIndex = rows.findIndex(row => normalizeName(row.name || row.displayName || row.username) === target);
-    if (matchIndex === -1) return;
+  // Battleship Bingo is archived separately from the normal event leaderboard.
+  // Every member of the winning team receives one Bingo win. New archives carry
+  // an immutable team-member snapshot; older archives fall back to the original
+  // roster mapping so the July/August 2026 Harambe Hunters win is counted too.
+  if (Array.isArray(bingoArchive)) {
+    bingoArchive.forEach(entry => {
+      const winnerTeam = entry?.winner === "ember"
+        ? TEAM_ONE_KEY
+        : entry?.winner === "ash"
+          ? TEAM_TWO_KEY
+          : null;
+      if (!winnerTeam) return;
 
-    const placement = matchIndex + 1;
-    const row = rows[matchIndex];
-    const eventType = formatEventType(entry.type);
+      const archivedMembers = winnerTeam === TEAM_ONE_KEY
+        ? entry?.summary?.teamMembers?.ember
+        : entry?.summary?.teamMembers?.ash;
 
-    if (placement === 1) {
-      if (entry.type === "sotw") wins.sotw += 1;
-      else if (entry.type === "botw") wins.botw += 1;
-      else if (String(entry.type || "").includes("bingo")) wins.bingo += 1;
-      else if (String(entry.type || "").includes("clan-goal")) wins.clanGoal += 1;
-    }
+      const isArchivedWinner = Array.isArray(archivedMembers) && archivedMembers.some(member =>
+        [member?.rsn, member?.displayName, member?.username].some(name => normalizeName(name) === target)
+      );
 
-    if (placement <= 3) topThreeFinishes += 1;
-
-    recent.push({
-      eventId: entry.id || null,
-      title: entry.title || entry.label || "Archived Event",
-      type: eventType,
-      placement,
-      gained: Number(row.gained || row.score || 0),
-      endedAt: entry.endedAt || entry.endDate || null
+      const isLegacyWinner = !Array.isArray(archivedMembers) && rosterTeamForName(rsn) === winnerTeam;
+      if (isArchivedWinner || isLegacyWinner) wins.bingo += 1;
     });
-  });
+  }
 
   recent.sort((a, b) => new Date(b.endedAt || 0) - new Date(a.endedAt || 0));
 

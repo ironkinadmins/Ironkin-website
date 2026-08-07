@@ -5,6 +5,7 @@ import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "../../bingo/_teams.js";
 const STATE_KEY = "bingo:state:v2";
 const ARCHIVE_INDEX_KEY = "bingo:archive:index:v1";
 const ARCHIVE_PREFIX = "bingo:archive:v1:";
+const SIGNUPS_KEY = "bingo:signups";
 const SIZE = 10;
 const SHIPS = [
   { key: "carrier", name: "Carrier", size: 5 },
@@ -97,6 +98,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   const body = await request.json().catch(() => ({}));
+  const signupsRaw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
+  const safeSignups = Array.isArray(signups) ? signups : [];
   const archivedAt = new Date().toISOString();
   const archiveId = `bingo-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const title = safeTitle(body.title);
@@ -116,7 +120,25 @@ export async function onRequestPost({ request, env }) {
       emberCompleted: completedTiles(state, "ember"),
       ashCompleted: completedTiles(state, "ash"),
       proofCount: Array.isArray(state.proofs) ? state.proofs.length : 0,
-      attackCount: Array.isArray(state.attacks) ? state.attacks.length : 0
+      attackCount: Array.isArray(state.attacks) ? state.attacks.length : 0,
+      teamMembers: {
+        ember: safeSignups
+          .filter(member => member?.team === "team1")
+          .map(member => ({
+            discordId: String(member.discordId || ""),
+            displayName: String(member.displayName || ""),
+            username: String(member.username || ""),
+            rsn: String(member.rsn || "")
+          })),
+        ash: safeSignups
+          .filter(member => member?.team === "team2")
+          .map(member => ({
+            discordId: String(member.discordId || ""),
+            displayName: String(member.displayName || ""),
+            username: String(member.username || ""),
+            rsn: String(member.rsn || "")
+          }))
+      }
     },
     // Complete immutable final-state snapshot: all tiles, all four boards,
     // fleets/ship positions, proofs, attacks and the match log.
