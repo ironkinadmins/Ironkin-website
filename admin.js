@@ -897,7 +897,28 @@ async function loadAdmin() {
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
   const syncDiscordMembersBtn = document.getElementById("syncDiscordMembersBtn");
 
-  if (!eventSelect || !addDropBtn || !saveEventBtn) return;
+  // User Management must initialize independently of the Events admin controls.
+  // Previously these listeners/status calls were below the Events guard, so if an
+  // event control was missing or failed to initialize the Discord Sync card stayed
+  // on "Checking…" and the Sync Now button had no click handler.
+  if (profileSearchBtn) profileSearchBtn.addEventListener("click", searchMemberProfiles);
+  if (profileSearchInput) {
+    profileSearchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") searchMemberProfiles();
+    });
+  }
+  if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
+  if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
+  if (syncDiscordMembersBtn) syncDiscordMembersBtn.addEventListener("click", syncDiscordMembersNow);
+  loadDiscordSyncStatus();
+
+  // The rest of loadAdmin configures the Events tab. Do not let missing event
+  // controls disable unrelated User Management functionality.
+  if (!eventSelect || !addDropBtn || !saveEventBtn) {
+    loadBingoSettings();
+    loadGuessKcSettings();
+    return;
+  }
 
   try {
     allEvents = await fetchEvents();
@@ -939,16 +960,6 @@ async function loadAdmin() {
       });
     }
     if (saveGuessKcSettingsBtn) saveGuessKcSettingsBtn.addEventListener("click", saveGuessKcSettings);
-    if (profileSearchBtn) profileSearchBtn.addEventListener("click", searchMemberProfiles);
-    if (profileSearchInput) {
-      profileSearchInput.addEventListener("keydown", event => {
-        if (event.key === "Enter") searchMemberProfiles();
-      });
-    }
-    if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
-    if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
-    if (syncDiscordMembersBtn) syncDiscordMembersBtn.addEventListener("click", syncDiscordMembersNow);
-    loadDiscordSyncStatus();
     loadBingoSettings();
     loadGuessKcSettings();
   } catch (error) {
