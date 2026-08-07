@@ -35,18 +35,66 @@ function buildProfileBadges(profile) {
   const rank = String(profile.rank || "");
   const staffRank = String(profile.staffRank || "");
   const wins = profile.placements?.wins || {};
+  const botwWins = Number(wins.botw || 0);
+  const sotwWins = Number(wins.sotw || 0);
+  const bingoWins = Number(wins.bingo || 0);
   const topThree = Number(profile.placements?.topThreeFinishes || 0);
   const embers = Number(profile.embers?.balance || 0);
 
-  if (staffRank) badges.push({ icon: "◆", label: staffRank, tone: "staff" });
-  if (rank === "Founder") badges.push({ icon: "♛", label: "Founder", tone: "founder" });
-  else if (rank) badges.push({ icon: "◇", label: rank, tone: "rank" });
-  if (Number(wins.botw || 0) > 0) badges.push({ icon: "⚔", label: `${wins.botw}× BOTW Winner`, tone: "event" });
-  if (Number(wins.sotw || 0) > 0) badges.push({ icon: "✦", label: `${wins.sotw}× SOTW Winner`, tone: "event" });
-  if (Number(wins.bingo || 0) > 0) badges.push({ icon: "▦", label: "Bingo Champion", tone: "event" });
-  if (topThree >= 5) badges.push({ icon: "🏆", label: "Event Champion", tone: "champion" });
-  if (embers >= 1000) badges.push({ icon: "🔥", label: "Ember Elite", tone: "ember" });
-  else if (embers >= 500) badges.push({ icon: "🔥", label: "Ember Collector", tone: "ember" });
+  if (staffRank) badges.push({
+    icon: "◆",
+    label: staffRank,
+    tone: "staff",
+    tooltip: `${staffRank} — Member of the Ironkin staff team.`
+  });
+  if (rank === "Founder") badges.push({
+    icon: "♛",
+    label: "Founder",
+    tone: "founder",
+    tooltip: "Founder — Created Ironkin."
+  });
+  else if (rank) badges.push({
+    icon: "◇",
+    label: rank,
+    tone: "rank",
+    tooltip: `Clan Rank: ${rank}`
+  });
+  if (botwWins > 0) badges.push({
+    icon: "⚔",
+    label: `${botwWins}× BOTW Winner`,
+    tone: "event",
+    tooltip: `Boss of the Week Winner — Won BOTW ${botwWins} ${botwWins === 1 ? "time" : "times"}.`
+  });
+  if (sotwWins > 0) badges.push({
+    icon: "✦",
+    label: `${sotwWins}× SOTW Winner`,
+    tone: "event",
+    tooltip: `Skill of the Week Winner — Won SOTW ${sotwWins} ${sotwWins === 1 ? "time" : "times"}.`
+  });
+  if (bingoWins > 0) badges.push({
+    icon: "▦",
+    label: `${bingoWins}× Bingo Winner`,
+    tone: "event",
+    tooltip: `Battleship Bingo Champion — Member of a winning Bingo team ${bingoWins} ${bingoWins === 1 ? "time" : "times"}.`
+  });
+  if (topThree >= 5) badges.push({
+    icon: "🏆",
+    label: "Event Champion",
+    tone: "champion",
+    tooltip: `Event Champion — Achieved ${topThree} top-three finishes in clan events.`
+  });
+  if (embers >= 1000) badges.push({
+    icon: "🔥",
+    label: "Ember Elite",
+    tone: "ember",
+    tooltip: "Ember Elite — Reached at least 1,000 Embers."
+  });
+  else if (embers >= 500) badges.push({
+    icon: "🔥",
+    label: "Ember Collector",
+    tone: "ember",
+    tooltip: "Ember Collector — Reached at least 500 Embers."
+  });
 
   return badges.slice(0, 7);
 }
@@ -79,7 +127,7 @@ function renderProfileHero(profile) {
           ${memberSincePill}
         </div>
         <div class="profile-badge-row">
-          ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}"><i>${badge.icon}</i>${profileEscapeHtml(badge.label)}</span>`).join("")}
+          ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0"><i>${badge.icon}</i>${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
       </div>
