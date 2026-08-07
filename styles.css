@@ -9882,3 +9882,62 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   .ember-podium-card.place-1 { min-height: 118px; }
   .profile-skeleton { align-items: flex-start; }
 }
+
+/* Admin > User Management: Discord profile sync */
+.discord-sync-card {
+  margin: 1.25rem 0 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 157, 66, 0.25);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 119, 21, 0.07), rgba(0, 0, 0, 0.2));
+}
+.discord-sync-head,
+.discord-sync-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.discord-sync-head h3 { margin: .15rem 0 .25rem; }
+.discord-sync-health {
+  flex: 0 0 auto;
+  padding: .45rem .7rem;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.discord-sync-health.is-healthy { color: #b9ffcf; background: rgba(42, 190, 90, .12); border-color: rgba(72, 220, 118, .28); }
+.discord-sync-health.is-warning { color: #ffd59d; background: rgba(255, 139, 38, .12); border-color: rgba(255, 153, 64, .3); }
+.discord-sync-health.is-error { color: #ffb0a7; background: rgba(225, 55, 45, .12); border-color: rgba(255, 90, 75, .3); }
+.discord-sync-health.is-loading { color: #ddd; background: rgba(255,255,255,.05); }
+.discord-sync-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 1rem 0;
+}
+.discord-sync-stat {
+  padding: .8rem .9rem;
+  border-radius: 12px;
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.07);
+}
+.discord-sync-stat span { display:block; color:rgba(255,255,255,.58); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; }
+.discord-sync-stat strong { display:block; margin-top:.25rem; font-size:1.05rem; color:#fff4e8; }
+.discord-sync-actions { margin-top: .8rem; }
+.discord-sync-summary {
+  margin-top: 1rem;
+  padding: .9rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 137, 38, .08);
+  border: 1px solid rgba(255, 153, 64, .18);
+  color: rgba(255,255,255,.82);
+  line-height: 1.55;
+}
+@media (max-width: 760px) {
+  .discord-sync-head, .discord-sync-actions { align-items:flex-start; flex-direction:column; }
+  .discord-sync-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

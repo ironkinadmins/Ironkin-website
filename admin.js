@@ -770,6 +770,112 @@ async function saveProfileOverrides(clear = false) {
   if (status) status.textContent = clear ? "Overrides cleared." : "Profile overrides saved.";
 }
 
+
+function formatSyncAge(iso) {
+  if (!iso) return "Never";
+  const time = new Date(iso).getTime();
+  if (!Number.isFinite(time)) return "Unknown";
+  const diff = Math.max(0, Date.now() - time);
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function renderDiscordSyncMeta(meta, options = {}) {
+  const health = document.getElementById("discordSyncHealth");
+  const count = document.getElementById("discordSyncMemberCount");
+  const last = document.getElementById("discordSyncLastSync");
+  const writes = document.getElementById("discordSyncWrites");
+  const failures = document.getElementById("discordSyncFailures");
+  const summary = document.getElementById("discordSyncSummary");
+
+  const failureCount = Number(meta?.profileRecordFailures || 0);
+  const isReady = Boolean(meta?.directoryReady);
+  if (count) count.textContent = meta?.memberCount != null ? formatNumber(meta.memberCount) : "—";
+  if (last) {
+    last.textContent = formatSyncAge(meta?.syncedAt);
+    last.title = meta?.syncedAt ? new Date(meta.syncedAt).toLocaleString() : "";
+  }
+  if (writes) writes.textContent = meta?.profileRecordsWritten != null ? formatNumber(meta.profileRecordsWritten) : "—";
+  if (failures) failures.textContent = meta?.profileRecordFailures != null ? formatNumber(meta.profileRecordFailures) : "—";
+
+  if (health) {
+    health.className = "discord-sync-health";
+    if (!isReady) {
+      health.classList.add("is-warning");
+      health.textContent = "Not synced";
+    } else if (failureCount > 0) {
+      health.classList.add("is-warning");
+      health.textContent = "Partial";
+    } else {
+      health.classList.add("is-healthy");
+      health.textContent = "Healthy";
+    }
+  }
+
+  if (summary && options.showSummary) {
+    const seconds = Number(meta?.durationMs || 0) / 1000;
+    summary.hidden = false;
+    summary.innerHTML = `<strong>✓ Sync complete</strong><br>` +
+      `Members scanned: ${formatNumber(meta?.memberCount || 0)} &nbsp;•&nbsp; ` +
+      `Added: ${formatNumber(meta?.added || 0)} &nbsp;•&nbsp; ` +
+      `Updated: ${formatNumber(meta?.updated || 0)} &nbsp;•&nbsp; ` +
+      `Removed from search: ${formatNumber(meta?.removed || 0)} &nbsp;•&nbsp; ` +
+      `Time: ${seconds ? seconds.toFixed(1) : "0.0"}s`;
+  }
+}
+
+async function loadDiscordSyncStatus() {
+  const health = document.getElementById("discordSyncHealth");
+  if (!health) return;
+  try {
+    const response = await fetch(`/api/admin/profiles/sync-discord?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not load sync status.");
+    renderDiscordSyncMeta(data.meta || null);
+  } catch (error) {
+    health.className = "discord-sync-health is-error";
+    health.textContent = "Unavailable";
+    const status = document.getElementById("discordSyncStatus");
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function syncDiscordMembersNow() {
+  const button = document.getElementById("syncDiscordMembersBtn");
+  const status = document.getElementById("discordSyncStatus");
+  const health = document.getElementById("discordSyncHealth");
+  const summary = document.getElementById("discordSyncSummary");
+
+  if (button) button.disabled = true;
+  if (summary) summary.hidden = true;
+  if (status) status.textContent = "Pulling the latest Discord roster and updating profiles…";
+  if (health) {
+    health.className = "discord-sync-health is-loading";
+    health.textContent = "Syncing…";
+  }
+
+  try {
+    const response = await fetch("/api/admin/profiles/sync-discord", { method: "POST" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not sync Discord members.");
+    renderDiscordSyncMeta(data, { showSummary: true });
+    if (status) status.textContent = "Discord member profiles are up to date.";
+  } catch (error) {
+    if (health) {
+      health.className = "discord-sync-health is-error";
+      health.textContent = "Sync failed";
+    }
+    if (status) status.textContent = error.message;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function loadAdmin() {
   setupAdminTabs();
 
@@ -789,6 +895,7 @@ async function loadAdmin() {
   const profileSearchInput = document.getElementById("profileSearchInput");
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
+  const syncDiscordMembersBtn = document.getElementById("syncDiscordMembersBtn");
 
   if (!eventSelect || !addDropBtn || !saveEventBtn) return;
 
@@ -840,6 +947,8 @@ async function loadAdmin() {
     }
     if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
     if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
+    if (syncDiscordMembersBtn) syncDiscordMembersBtn.addEventListener("click", syncDiscordMembersNow);
+    loadDiscordSyncStatus();
     loadBingoSettings();
     loadGuessKcSettings();
   } catch (error) {

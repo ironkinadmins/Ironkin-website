@@ -160,6 +160,8 @@ export async function getDiscordProfileSyncMeta(env) {
 }
 
 export async function syncDiscordProfiles(env) {
+  const startedAt = Date.now();
+  const previousIndex = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
   const members = await fetchGuildMembers(env);
   const now = new Date().toISOString();
   const nonBotMembers = members.filter(member => member?.user?.id && !member?.user?.bot);
@@ -167,6 +169,34 @@ export async function syncDiscordProfiles(env) {
     .map(member => buildDirectoryEntry(member, now))
     .filter(item => item.discordId)
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" }));
+
+  const previousById = new Map((Array.isArray(previousIndex) ? previousIndex : []).map(item => [String(item?.discordId || ""), item]));
+  const currentById = new Map(index.map(item => [String(item.discordId), item]));
+  let added = 0;
+  let updated = 0;
+  let removed = 0;
+
+  for (const item of index) {
+    const old = previousById.get(String(item.discordId));
+    if (!old) {
+      added += 1;
+      continue;
+    }
+
+    const changed =
+      old.displayName !== item.displayName ||
+      old.username !== item.username ||
+      old.avatar !== item.avatar ||
+      old.rank !== item.rank ||
+      old.staffRank !== item.staffRank ||
+      old.memberSince !== item.memberSince ||
+      JSON.stringify(old.roles || []) !== JSON.stringify(item.roles || []);
+    if (changed) updated += 1;
+  }
+
+  for (const old of Array.isArray(previousIndex) ? previousIndex : []) {
+    if (old?.discordId && !currentById.has(String(old.discordId))) removed += 1;
+  }
 
   // CRITICAL: publish the complete Discord directory FIRST. The old implementation only
   // wrote the index after hundreds of per-member KV reads/writes, so a timeout/failure
@@ -178,8 +208,12 @@ export async function syncDiscordProfiles(env) {
     memberCount: index.length,
     botsSkipped: members.length - nonBotMembers.length,
     discordMemberCount: members.length,
+    added,
+    updated,
+    removed,
     profileRecordsWritten: 0,
     profileRecordFailures: 0,
+    durationMs: Date.now() - startedAt,
     directoryReady: true
   };
   await env.DROPS_KV.put(PROFILE_SYNC_META_KEY, JSON.stringify(preliminaryMeta));
@@ -190,7 +224,8 @@ export async function syncDiscordProfiles(env) {
   const meta = {
     ...preliminaryMeta,
     profileRecordsWritten: writeResult.ok,
-    profileRecordFailures: writeResult.failed
+    profileRecordFailures: writeResult.failed,
+    durationMs: Date.now() - startedAt
   };
   await env.DROPS_KV.put(PROFILE_SYNC_META_KEY, JSON.stringify(meta));
   return meta;

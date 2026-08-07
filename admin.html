@@ -273,6 +273,44 @@
           <p class="admin-muted">Search members by Discord nickname, RSN, or Discord ID. Staff can override profile blurbs, avatar URLs, and display rank labels if something does not meet clan rules.</p>
         </div>
 
+        <div class="discord-sync-card" id="discordProfileSyncCard">
+          <div class="discord-sync-head">
+            <div>
+              <p class="eyebrow">Discord Member Sync</p>
+              <h3>Profile Directory</h3>
+              <p class="admin-muted">Profiles refresh automatically when needed and can be force-synced here at any time.</p>
+            </div>
+            <span class="discord-sync-health is-loading" id="discordSyncHealth">Checking…</span>
+          </div>
+
+          <div class="discord-sync-stats">
+            <div class="discord-sync-stat">
+              <span>Members Synced</span>
+              <strong id="discordSyncMemberCount">—</strong>
+            </div>
+            <div class="discord-sync-stat">
+              <span>Last Sync</span>
+              <strong id="discordSyncLastSync">—</strong>
+            </div>
+            <div class="discord-sync-stat">
+              <span>Profile Writes</span>
+              <strong id="discordSyncWrites">—</strong>
+            </div>
+            <div class="discord-sync-stat">
+              <span>Failures</span>
+              <strong id="discordSyncFailures">—</strong>
+            </div>
+          </div>
+
+          <div class="discord-sync-actions">
+            <button type="button" class="btn primary" id="syncDiscordMembersBtn">Sync Discord Members Now</button>
+            <span class="admin-muted" id="discordSyncStatus">Automatic refresh interval: 6 hours.</span>
+          </div>
+          <div class="discord-sync-summary" id="discordSyncSummary" hidden></div>
+        </div>
+
+        <div class="admin-divider"></div>
+
         <div class="admin-field">
           <label for="profileSearchInput">Search Member</label>
           <div class="admin-inline-row">
@@ -325,6 +363,6 @@
   </main>
 
   <script src="/script.js?v=20260807-premium-v4"></script>
-  <script src="admin.js?v=20260606-profile-1"></script>
+  <script src="admin.js?v=20260807-profile-sync-ui-1"></script>
 </body>
 </html>
