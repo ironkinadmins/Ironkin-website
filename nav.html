@@ -25,7 +25,11 @@
         </div>
       </div>
 
-      <div class="nav-member-search" id="navMemberSearch">
+      <button type="button" class="nav-global-search-trigger" id="navGlobalSearchTrigger" aria-label="Open search">
+        <span>⌕</span><span>Search</span><kbd>Ctrl K</kbd>
+      </button>
+
+      <div class="nav-member-search" id="navMemberSearch" style="display:none;">
         <input id="navMemberSearchInput" type="search" placeholder="Search members..." autocomplete="off" />
         <div id="navMemberSearchResults" class="nav-member-search-results" style="display:none;"></div>
       </div>

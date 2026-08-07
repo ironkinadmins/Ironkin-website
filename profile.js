@@ -29,6 +29,28 @@ function getPlacementIcon(place) {
   return `#${place}`;
 }
 
+
+function buildProfileBadges(profile) {
+  const badges = [];
+  const rank = String(profile.rank || "");
+  const staffRank = String(profile.staffRank || "");
+  const wins = profile.placements?.wins || {};
+  const topThree = Number(profile.placements?.topThreeFinishes || 0);
+  const embers = Number(profile.embers?.balance || 0);
+
+  if (staffRank) badges.push({ icon: "◆", label: staffRank, tone: "staff" });
+  if (rank === "Founder") badges.push({ icon: "♛", label: "Founder", tone: "founder" });
+  else if (rank) badges.push({ icon: "◇", label: rank, tone: "rank" });
+  if (Number(wins.botw || 0) > 0) badges.push({ icon: "⚔", label: `${wins.botw}× BOTW Winner`, tone: "event" });
+  if (Number(wins.sotw || 0) > 0) badges.push({ icon: "✦", label: `${wins.sotw}× SOTW Winner`, tone: "event" });
+  if (Number(wins.bingo || 0) > 0) badges.push({ icon: "▦", label: "Bingo Champion", tone: "event" });
+  if (topThree >= 5) badges.push({ icon: "🏆", label: "Event Champion", tone: "champion" });
+  if (embers >= 1000) badges.push({ icon: "🔥", label: "Ember Elite", tone: "ember" });
+  else if (embers >= 500) badges.push({ icon: "🔥", label: "Ember Collector", tone: "ember" });
+
+  return badges.slice(0, 7);
+}
+
 function renderProfileHero(profile) {
   const hero = document.getElementById("profileHero");
   if (!hero) return;
@@ -55,6 +77,9 @@ function renderProfileHero(profile) {
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
           ${staffPill}
           ${memberSincePill}
+        </div>
+        <div class="profile-badge-row">
+          ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}"><i>${badge.icon}</i>${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
       </div>

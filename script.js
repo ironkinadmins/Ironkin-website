@@ -546,6 +546,124 @@ function setupMemberSearch() {
 }
 
 
+
+const GLOBAL_SEARCH_ROUTES = [
+  { title: "Home", subtitle: "Ironkin dashboard", href: "/index.html", keywords: "home dashboard clan" },
+  { title: "Events", subtitle: "Active and upcoming clan events", href: "/events.html", keywords: "events botw sotw clan goal bounty bingo" },
+  { title: "Calendar", subtitle: "Clan schedule", href: "/calendar.html", keywords: "calendar schedule upcoming" },
+  { title: "Hall of Flame", subtitle: "Champions and historic achievements", href: "/hall-of-flame.html", keywords: "hall flame winners champions" },
+  { title: "Archive", subtitle: "Past event results", href: "/archive.html", keywords: "archive past events results" },
+  { title: "Records", subtitle: "Ironkin records", href: "/records.html", keywords: "records stats wins" },
+  { title: "Ranks", subtitle: "Clan progression and ranks", href: "/ranks.html", keywords: "ranks progression prestige" },
+  { title: "Ember Shop", subtitle: "Spend your Embers", href: "/shop.html", keywords: "shop embers rewards tickets" },
+  { title: "Ember Leaderboard", subtitle: "Top Ember balances", href: "/ember-leaderboard.html", keywords: "embers leaderboard rankings" },
+  { title: "Rules", subtitle: "Community rules and expectations", href: "/rules.html", keywords: "rules moderation guidelines" },
+  { title: "Giveaways", subtitle: "Clan giveaways", href: "/giveaways.html", keywords: "giveaways kc guess" },
+  { title: "My Profile", subtitle: "Member profile and RuneLite settings", href: "/profile.html", keywords: "profile member runelite api key" }
+];
+
+function ensureGlobalSearchPalette() {
+  let palette = document.getElementById("globalSearchPalette");
+  if (palette) return palette;
+
+  palette = document.createElement("div");
+  palette.id = "globalSearchPalette";
+  palette.className = "global-search-overlay";
+  palette.setAttribute("aria-hidden", "true");
+  palette.innerHTML = `
+    <div class="global-search-dialog" role="dialog" aria-modal="true" aria-label="Search Ironkin">
+      <div class="global-search-input-row">
+        <span>⌕</span>
+        <input id="globalSearchInput" type="search" placeholder="Search Ironkin..." autocomplete="off" />
+        <kbd>Esc</kbd>
+      </div>
+      <div id="globalSearchResults" class="global-search-results"></div>
+      <div class="global-search-footer"><span>Search pages and members</span><span>Ctrl / Cmd + K</span></div>
+    </div>
+  `;
+  document.body.appendChild(palette);
+  return palette;
+}
+
+function setupGlobalSearch() {
+  const trigger = document.getElementById("navGlobalSearchTrigger");
+  const palette = ensureGlobalSearchPalette();
+  const input = palette.querySelector("#globalSearchInput");
+  const results = palette.querySelector("#globalSearchResults");
+  if (!input || !results || palette.dataset.ready === "true") return;
+  palette.dataset.ready = "true";
+  let timer = null;
+
+  const renderPages = query => {
+    const q = query.toLowerCase().trim();
+    const pages = GLOBAL_SEARCH_ROUTES.filter(item => !q || `${item.title} ${item.subtitle} ${item.keywords}`.toLowerCase().includes(q)).slice(0, 6);
+    return pages.map(item => `
+      <a class="global-search-result" href="${item.href}">
+        <span class="global-search-result-icon">↗</span>
+        <span><strong>${escapeNavSearchHtml(item.title)}</strong><small>${escapeNavSearchHtml(item.subtitle)}</small></span>
+        <em>Page</em>
+      </a>
+    `).join("");
+  };
+
+  async function runGlobalSearch(query) {
+    const q = String(query || "").trim();
+    const pageHtml = renderPages(q);
+    if (q.length < 2) {
+      results.innerHTML = `<div class="global-search-section-label">Quick links</div>${pageHtml}`;
+      return;
+    }
+
+    results.innerHTML = `<div class="global-search-section-label">Pages</div>${pageHtml || '<div class="global-search-empty">No matching pages.</div>'}<div class="global-search-section-label">Members</div><div class="global-search-empty">Searching members...</div>`;
+
+    try {
+      const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}&t=${Date.now()}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      const members = response.ok && Array.isArray(data.results) ? data.results : [];
+      const memberHtml = members.length ? members.slice(0, 6).map(item => `
+        <a class="global-search-result global-search-member" href="${escapeNavSearchHtml(item.profileUrl || "/profile.html")}">
+          <img src="${escapeNavSearchHtml(item.avatarUrl || "/assets/ironkin-emblem.png")}" alt="" />
+          <span><strong>${escapeNavSearchHtml(item.displayName || "Unknown member")}</strong><small>${escapeNavSearchHtml(item.staffRank || item.rank || "Ironkin member")}</small></span>
+          <em>Member</em>
+        </a>
+      `).join("") : `<div class="global-search-empty">${response.status === 401 ? "Sign in to search member profiles." : "No matching members."}</div>`;
+      results.innerHTML = `<div class="global-search-section-label">Pages</div>${pageHtml || '<div class="global-search-empty">No matching pages.</div>'}<div class="global-search-section-label">Members</div>${memberHtml}`;
+    } catch {
+      results.innerHTML = `<div class="global-search-section-label">Pages</div>${pageHtml}<div class="global-search-section-label">Members</div><div class="global-search-empty">Member search is temporarily unavailable.</div>`;
+    }
+  }
+
+  function openSearch() {
+    palette.classList.add("is-open");
+    palette.setAttribute("aria-hidden", "false");
+    document.body.classList.add("search-open");
+    input.value = "";
+    runGlobalSearch("");
+    requestAnimationFrame(() => input.focus());
+  }
+
+  function closeSearch() {
+    palette.classList.remove("is-open");
+    palette.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("search-open");
+  }
+
+  trigger?.addEventListener("click", openSearch);
+  palette.addEventListener("click", event => { if (event.target === palette) closeSearch(); });
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => runGlobalSearch(input.value), 180);
+  });
+  document.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      palette.classList.contains("is-open") ? closeSearch() : openSearch();
+    } else if (event.key === "Escape" && palette.classList.contains("is-open")) {
+      closeSearch();
+    }
+  });
+}
+
 async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
@@ -568,11 +686,7 @@ async function loadDiscordUser() {
       loginBtn.title = "View your Ironkin member profile";
     }
 
-    const navSearch = document.getElementById("navMemberSearch");
-    if (navSearch) {
-      navSearch.style.display = "block";
-      setupMemberSearch();
-    }
+    setupGlobalSearch();
 
     if (profileNavLink) {
       profileNavLink.style.display = "none";
@@ -600,13 +714,14 @@ async function loadSiteNav() {
   }
 
   try {
-    const response = await fetch("/nav.html?v=20260806-premium-v3", { cache: "no-store" });
+    const response = await fetch("/nav.html?v=20260807-premium-v4", { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("Could not load navigation.");
     }
 
     navMount.innerHTML = await response.text();
+    setupGlobalSearch();
     loadDiscordUser();
   } catch {
     navMount.innerHTML = "";
@@ -745,6 +860,23 @@ function restartHomeFeaturedRotation() {
   }, 8000);
 }
 
+
+function updateHomeFeaturedProgress(event, standings) {
+  const bar = document.getElementById("homeFeaturedProgress");
+  if (!bar) return;
+  const start = getEventStartTime({ ...event, start: standings?.startsAt || event?.start || event?.startDate });
+  const end = getEventEndTime({ ...event, end: standings?.endsAt || event?.end || event?.endDate });
+  let percent = 0;
+
+  if (isClanGoalEvent(event) && Number(event?.target || 0) > 0 && Number(standings?.totalGained || 0) >= 0) {
+    percent = Math.min(100, Math.max(0, (Number(standings?.totalGained || 0) / Number(event.target)) * 100));
+  } else if (start !== null && end !== null && end > start) {
+    percent = Math.min(100, Math.max(0, ((Date.now() - start) / (end - start)) * 100));
+  }
+
+  bar.style.width = `${percent.toFixed(1)}%`;
+}
+
 function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
   if (!homeFeaturedRotationItems.length) return;
 
@@ -770,6 +902,7 @@ function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
   if (eventPercent) eventPercent.textContent = typeLabel;
   if (eventTitle) eventTitle.textContent = title;
   if (featuredLink) featuredLink.href = getEventPageHref(featuredEvent);
+  updateHomeFeaturedProgress(featuredEvent, standings);
 
   if (eventHasNotStarted) {
     const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
@@ -935,7 +1068,7 @@ async function loadRecentActivity() {
     }
 
     if (!data.achievements || data.achievements.length === 0) {
-      container.textContent = "No recent achievements found yet.";
+      container.innerHTML = `<div class="premium-empty-state"><span>✦</span><strong>No recent clan activity</strong><p>Fresh Wise Old Man achievements will appear here automatically.</p></div>`;
       return;
     }
 
@@ -959,8 +1092,8 @@ async function loadRecentActivity() {
         <span class="activity-feed-icon">✦</span>
 
         <div>
-          <strong>${player}</strong>
-          <span>${achievement}</span>
+          <button type="button" class="activity-player-link" data-member-search="${escapeHtml(player)}">${escapeHtml(player)}</button>
+          <span>${escapeHtml(achievement)}</span>
         </div>
 
         <small>${date}</small>
@@ -972,6 +1105,19 @@ async function loadRecentActivity() {
     container.textContent = "Could not load recent achievements.";
   }
 }
+
+
+document.addEventListener("click", event => {
+  const memberButton = event.target.closest("[data-member-search]");
+  if (!memberButton) return;
+  const trigger = document.getElementById("navGlobalSearchTrigger");
+  trigger?.click();
+  const input = document.getElementById("globalSearchInput");
+  if (input) {
+    input.value = memberButton.dataset.memberSearch || "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+});
 
 function createEventHubCard({ type, href, icon, label, title, description, active = false, ctaLabel = "View Event →" }) {
   const card = document.createElement(href ? "a" : "article");
@@ -1003,7 +1149,7 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
   if (href) {
     footerHtml = `
       <div class="event-hub-footer">
-        <span>Dashboard</span>
+        <span>${active ? "Live now" : "Event details"}</span>
         <strong>${ctaLabel}</strong>
       </div>
     `;
@@ -2442,11 +2588,6 @@ function setupCalendarFilters() {
 
       button.classList.add("active");
       loadCalendar();
-loadUpcomingEventsWidget();
-loadHomeEmberLeaders();
-loadEmberLeaderboard();
-loadDiscordStats();
-loadRecordsPage();
     };
   });
 }
@@ -2860,11 +3001,13 @@ function renderEmberRows(leaders, compact = false) {
         ? "bronze"
         : "";
 
+    const tag = player.user_id ? "a" : "div";
+    const href = player.user_id ? ` href="/profile.html?id=${encodeURIComponent(player.user_id)}"` : "";
     return `
-      <div class="ember-leader-row ${compact ? "compact" : ""} ${rankClass}">
-        <strong>#${player.rank} ${player.display_name}</strong>
+      <${tag}${href} class="ember-leader-row ${compact ? "compact" : ""} ${rankClass}">
+        <strong>#${player.rank} ${escapeHtml(player.display_name)}</strong>
         <span>${formatNumber(player.balance)} Embers</span>
-      </div>
+      </${tag}>
     `;
   }).join("");
 }
@@ -2907,6 +3050,17 @@ async function loadEmberLeaderboard() {
         </div>
       </div>
 
+      <div class="ember-podium" aria-label="Top three Ember holders">
+        ${leaders.slice(0, 3).map(player => `
+          <a class="ember-podium-card place-${player.rank}" href="/profile.html?id=${encodeURIComponent(player.user_id || "")}">
+            <span class="ember-podium-medal">${player.rank === 1 ? "🥇" : player.rank === 2 ? "🥈" : "🥉"}</span>
+            <strong>${escapeHtml(player.display_name)}</strong>
+            <span>${formatNumber(player.balance)} Embers</span>
+            <small>#${player.rank}</small>
+          </a>
+        `).join("")}
+      </div>
+
       <input
         id="emberSearchInput"
         class="ember-search"
@@ -2915,7 +3069,7 @@ async function loadEmberLeaderboard() {
       />
 
       <div id="emberLeaderboardRows">
-        ${renderEmberRows(leaders)}
+        ${renderEmberRows(leaders.slice(3))}
       </div>
     `;
 
@@ -2931,7 +3085,7 @@ async function loadEmberLeaderboard() {
           .includes(search)
       );
 
-      rowsContainer.innerHTML = renderEmberRows(filtered);
+      rowsContainer.innerHTML = renderEmberRows(search ? filtered : leaders.slice(3));
     });
   } catch (error) {
     container.textContent = error.message;
@@ -2974,6 +3128,41 @@ async function loadDiscordStats() {
   }
 }
 
+
+async function loadHomeStatusRail() {
+  const members = document.getElementById("homeDiscordMembers");
+  const online = document.getElementById("homeDiscordOnline");
+  const active = document.getElementById("homeActiveEvents");
+  const next = document.getElementById("homeNextEvent");
+  if (!members && !online && !active && !next) return;
+
+  try {
+    const [discordResponse, eventsResponse, calendarResponse] = await Promise.all([
+      fetch("/api/discord/stats"),
+      fetch("/api/current-events"),
+      fetch("/api/calendar/events")
+    ]);
+    const discord = await discordResponse.json().catch(() => ({}));
+    const eventData = await eventsResponse.json().catch(() => ({}));
+    const calendar = await calendarResponse.json().catch(() => ({}));
+
+    if (members) members.textContent = discordResponse.ok ? formatNumber(discord.members || 0) : "—";
+    if (online) online.textContent = discordResponse.ok ? formatNumber(discord.online || 0) : "—";
+    if (active) {
+      const count = (eventData.events || []).filter(event => isEventCurrentlyActiveByDates(event)).length;
+      active.textContent = formatNumber(count);
+    }
+    if (next) {
+      const now = Date.now();
+      const upcoming = (calendar.events || []).filter(event => getEventStartTime(event) > now).sort((a,b) => getEventStartTime(a)-getEventStartTime(b))[0];
+      next.textContent = upcoming ? new Date(upcoming.start).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "None";
+      if (upcoming) next.title = upcoming.title || "Upcoming event";
+    }
+  } catch {
+    [members, online, active, next].forEach(el => { if (el && el.textContent === "—") el.textContent = "—"; });
+  }
+}
+
 async function loadUpcomingEventsWidget() {
   const container = document.getElementById("homeUpcomingEvents");
 
@@ -2994,7 +3183,7 @@ async function loadUpcomingEventsWidget() {
       .slice(0, 4);
 
     if (!upcoming.length) {
-      container.innerHTML = `<p class="admin-muted">No upcoming events found.</p>`;
+      container.innerHTML = `<div class="premium-empty-state"><span>◇</span><strong>No upcoming events</strong><p>New clan events will appear here as soon as they are scheduled.</p><a href="events.html">Explore events →</a></div>`;
       return;
     }
 
@@ -4642,6 +4831,7 @@ loadSiteNav();
 loadHomeStats();
 loadHomeBingoSignupBanner();
 loadRecentActivity();
+if (document.getElementById("recentActivity")) setInterval(loadRecentActivity, 60000);
 loadClanNews();
 if (document.getElementById("clanNewsFeed")) setInterval(loadClanNews, 60000);
 loadHomeEventWidgets();
@@ -4653,6 +4843,7 @@ setupCalendarFilters();
 setupCalendarAdminTools();
 loadCalendar();
 loadUpcomingEventsWidget();
+loadHomeStatusRail();
 loadHomeEmberLeaders();
 loadEmberLeaderboard();
 loadDiscordStats();

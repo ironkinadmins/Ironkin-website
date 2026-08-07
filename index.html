@@ -6,7 +6,7 @@
   <title>Ironkin Clan</title>
   <meta name="description" content="Ironkin is an Old School RuneScape Ironman clan built around events, progression, competition, and community." />
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="/styles.css?v=20260806-premium-v3" />
+  <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
 </head>
 <body class="home-premium-page premium-ui">
   <div id="siteNav"></div>
@@ -41,7 +41,12 @@
           <span class="home-live-pill">Live</span>
         </div>
         <p id="homeEventMeta" class="home-event-meta">Checking Wise Old Man...</p>
-        <div id="homeFeaturedStats" class="featured-stats"></div>
+        <div class="home-event-progress" aria-hidden="true"><span id="homeFeaturedProgress"></span></div>
+        <div id="homeFeaturedStats" class="featured-stats">
+          <div class="skeleton-card-mini"><span class="skeleton-line"></span><span class="skeleton-line"></span></div>
+          <div class="skeleton-card-mini"><span class="skeleton-line"></span><span class="skeleton-line"></span></div>
+          <div class="skeleton-card-mini"><span class="skeleton-line"></span><span class="skeleton-line"></span></div>
+        </div>
         <div class="featured-total-gained home-total-panel">
           <span id="homeTotalGainedLabel">Total Gained</span>
           <strong id="homeTotalGained">Loading...</strong>
@@ -53,6 +58,13 @@
       </article>
     </section>
 
+    <section class="home-status-rail" aria-label="Live clan status">
+      <article><span class="home-status-icon">◆</span><div><strong id="homeDiscordMembers">—</strong><small>Discord Members</small></div></article>
+      <article><span class="home-status-icon">●</span><div><strong id="homeDiscordOnline">—</strong><small>Online Now</small></div></article>
+      <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Active Events</small></div></article>
+      <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
+    </section>
+
 <section class="home-section home-dashboard" aria-label="Ironkin activity overview">
       <article class="home-panel home-calendar-panel">
         <div class="home-panel-heading">
@@ -62,19 +74,27 @@
           </div>
           <a href="calendar.html">Full calendar <span>→</span></a>
         </div>
-        <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">Loading upcoming events...</div>
+        <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+        </div>
       </article>
 
       <article class="home-panel member-achievements home-achievement-panel">
         <div class="home-panel-heading">
           <div>
-            <p class="eyebrow">Clan Momentum</p>
-            <h2>Recent Achievements</h2>
+            <p class="eyebrow">Live Clan Feed</p>
+            <h2>Clan Activity</h2>
           </div>
           <a href="profile.html">View profiles <span>→</span></a>
         </div>
-        <p class="home-panel-intro">Fresh milestones, drops, and progression from Ironkin members.</p>
-        <div id="recentActivity" class="activity-scroll home-activity-list">Loading recent achievements...</div>
+        <p class="home-panel-intro">Live milestones and progression from Ironkin members, refreshed automatically.</p>
+        <div id="recentActivity" class="activity-scroll home-activity-list">
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+        </div>
       </article>
     </section>
 
@@ -106,6 +126,6 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="/script.js?v=20260806-premium-v3"></script>
+  <script src="/script.js?v=20260807-premium-v4"></script>
 </body>
 </html>
