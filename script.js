@@ -435,7 +435,7 @@ function getEventIcon(type) {
 }
 
 async function fetchCurrentEvents() {
-  const response = await fetch("/api/current-events");
+  const response = await fetch(`/api/current-events?t=${Date.now()}`, { cache: "no-store" });
   const data = await response.json();
 
   if (!response.ok) {
@@ -793,7 +793,14 @@ let homeFeaturedRotationItems = [];
 function getHomeFeaturedCandidates(events) {
   return (Array.isArray(events) ? events : [])
     .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled")
-    .filter(event => hasLiveFeaturedData(event) || isEventCurrentlyActiveByDates(event) || isEventUpcomingByDates(event))
+    .filter(event => {
+      // Bounties are manual-only: they should appear on the homepage only when
+      // staff explicitly marks the bounty board Active in Admin.
+      if (event?.type === "bounties" || event?.id === "bounties") {
+        return event.active === true;
+      }
+      return hasLiveFeaturedData(event) || isEventCurrentlyActiveByDates(event) || isEventUpcomingByDates(event);
+    })
     .sort((a, b) => {
       const scoreDiff = featuredPriorityScore(a) - featuredPriorityScore(b);
       if (scoreDiff !== 0) return scoreDiff;
@@ -906,6 +913,52 @@ function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
   if (eventTitle) eventTitle.textContent = title;
   if (featuredLink) featuredLink.href = getEventPageHref(featuredEvent);
   updateHomeFeaturedProgress(featuredEvent, standings);
+
+  // Bounties are drop-based, not WOM-based. Render aggregate bounty counts
+  // instead of WOM standings/competitor language.
+  if (featuredEvent?.type === "bounties" || featuredEvent?.id === "bounties") {
+    const drops = Array.isArray(item.bountyDrops) ? item.bountyDrops : [];
+    const totalCompleted = drops.reduce((sum, drop) => sum + Number(drop?.count || 0), 0);
+    const completedDrops = drops
+      .filter(drop => Number(drop?.count || 0) > 0)
+      .sort((a, b) => Number(b.count || 0) - Number(a.count || 0));
+
+    if (eventMeta) eventMeta.textContent = featuredEvent.description || "Complete selected bounty drops to earn Embers.";
+    if (homeTotalGained) homeTotalGained.textContent = formatNumber(totalCompleted);
+    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Bounties Completed";
+    if (homeClanXp) homeClanXp.textContent = `${formatNumber(totalCompleted)} completed`;
+    if (featuredStats) {
+      featuredStats.innerHTML = `
+        <div class="featured-stat">
+          <strong>${formatNumber(drops.length)}</strong>
+          <span>Bounty Items</span>
+        </div>
+        <div class="featured-stat">
+          <strong>${formatNumber(completedDrops.length)}</strong>
+          <span>Items Completed</span>
+        </div>
+        <div class="featured-stat">
+          <strong>${formatNumber(totalCompleted)}</strong>
+          <span>Total Drops</span>
+        </div>
+      `;
+    }
+    if (topThree) {
+      topThree.innerHTML = "";
+      if (completedDrops.length) {
+        completedDrops.slice(0, 3).forEach((drop, dropIndex) => {
+          const div = document.createElement("div");
+          div.innerHTML = `<strong>#${dropIndex + 1} ${escapeHtml(drop.name)}</strong><span>${formatNumber(drop.count)} completed</span>`;
+          topThree.appendChild(div);
+        });
+      } else {
+        topThree.textContent = "No bounty drops completed yet.";
+      }
+    }
+    setHomeFeaturedControls(homeFeaturedRotationItems, homeFeaturedRotationIndex);
+    if (resetTimer) restartHomeFeaturedRotation();
+    return;
+  }
 
   if (eventHasNotStarted) {
     const startText = getCountdownToStart(standings?.startsAt || featuredEvent.startDate || featuredEvent.start);
@@ -1022,12 +1075,29 @@ async function loadHomeStats() {
     }
 
     const standingsList = await Promise.all(
-      featuredCandidates.map(event => fetchEventStandings(event).catch(() => null))
+      featuredCandidates.map(event => {
+        if (event?.type === "bounties" || event?.id === "bounties") return Promise.resolve(null);
+        return fetchEventStandings(event).catch(() => null);
+      })
+    );
+
+    const bountyDropsList = await Promise.all(
+      featuredCandidates.map(async event => {
+        if (event?.type !== "bounties" && event?.id !== "bounties") return null;
+        try {
+          const response = await fetch(`/api/drops/list?eventId=bounties&t=${Date.now()}`, { cache: "no-store" });
+          const data = await response.json();
+          return response.ok ? (data.drops || []) : [];
+        } catch {
+          return [];
+        }
+      })
     );
 
     homeFeaturedRotationItems = featuredCandidates.map((event, index) => ({
       event,
-      standings: standingsList[index]
+      standings: standingsList[index],
+      bountyDrops: bountyDropsList[index]
     }));
 
     renderHomeFeaturedRotationItem(0, false);

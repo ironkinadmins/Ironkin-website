@@ -135,7 +135,10 @@ function isCurrentEventActive(event, now = Date.now()) {
     return start <= now && end >= now;
   }
 
-  // Legacy/manual safety: keep undated events only if they are explicitly active and linked to WOM.
+  // Bounties are intentionally manual and never use WOM.
+  if (event?.type === "bounties" || event?.id === "bounties") return true;
+
+  // Legacy/manual safety: keep other undated events only if they are explicitly active and linked to WOM.
   // This prevents old default placeholders from becoming the current event.
   return Boolean(event.womCompetitionId);
 }
@@ -146,8 +149,17 @@ export async function onRequestGet({ env }) {
   const normalized = normalizeBotwEvents(rawEvents);
   const clanGoalCandidates = normalized.filter(event => String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal");
   const preferredClanGoal = clanGoalCandidates.find(event => event.id === "clan-goal") || clanGoalCandidates[0];
-  const deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
+  let deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
   if (preferredClanGoal) deduped.push({ ...preferredClanGoal, id: "clan-goal", label: "Clan Goal" });
+
+  // Keep exactly one canonical bounty board. Older builds could leave an extra
+  // bounty-shaped event behind, which made the public site disagree with the
+  // checkbox shown in Admin.
+  const bountyCandidates = deduped.filter(event => event?.id === "bounties" || event?.type === "bounties");
+  const preferredBounties = bountyCandidates.find(event => event.id === "bounties") || bountyCandidates[0];
+  deduped = deduped.filter(event => event?.id !== "bounties" && event?.type !== "bounties");
+  if (preferredBounties) deduped.push({ ...preferredBounties, id: "bounties", type: "bounties", label: "Bounties", womCompetitionId: null });
+
   const byId = new Map(deduped.map(event => [event.id, event]));
   const defaultIds = new Set(DEFAULT_EVENTS.map(event => event.id));
   const events = [
@@ -163,5 +175,10 @@ export async function onRequestGet({ env }) {
   return Response.json({
     active: events.some(event => isCurrentEventActive(event)),
     events
+  }, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Pragma": "no-cache"
+    }
   });
 }

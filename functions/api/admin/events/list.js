@@ -130,8 +130,14 @@ function ensureAdminEvents(savedEvents) {
   const normalized = normalizeBotwEvents(Array.isArray(savedEvents) ? savedEvents : []);
   const clanGoalCandidates = normalized.filter(event => String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal");
   const preferredClanGoal = clanGoalCandidates.find(event => event.id === "clan-goal") || clanGoalCandidates[0];
-  const deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
+  let deduped = normalized.filter(event => !(String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal"));
   if (preferredClanGoal) deduped.push({ ...preferredClanGoal, id: "clan-goal", label: "Clan Goal" });
+
+  const bountyCandidates = deduped.filter(event => event?.id === "bounties" || event?.type === "bounties");
+  const preferredBounties = bountyCandidates.find(event => event.id === "bounties") || bountyCandidates[0];
+  deduped = deduped.filter(event => event?.id !== "bounties" && event?.type !== "bounties");
+  if (preferredBounties) deduped.push({ ...preferredBounties, id: "bounties", type: "bounties", label: "Bounties", womCompetitionId: null });
+
   const byId = new Map(deduped.map(event => [event.id, event]));
 
   const mergedDefaults = DEFAULT_EVENTS.map(defaultEvent => ({
