@@ -3672,7 +3672,7 @@ function clearCalendarEventForm() {
   const templateInput = document.getElementById("calendarEventTemplateInput");
   const multiDayInput = document.getElementById("calendarMultiDayInput");
   if (recurringInput) recurringInput.value = "none";
-  if (discordEventInput) discordEventInput.checked = false;
+  if (discordEventInput) discordEventInput.checked = true;
   // Announcements historically pinged @everyone, so keep that as the default
   // while allowing staff to opt out per event in Advanced Options.
   if (pingEveryoneInput) pingEveryoneInput.checked = true;
@@ -3777,10 +3777,10 @@ function getCalendarWomMetricForForm() {
 
 
 const DEFAULT_CALENDAR_EVENT_TEMPLATES = {
-  "botw-elite": { label: "BOTW Elite", title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
-  "botw-standard": { label: "BOTW Standard", title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
-  sotw: { label: "SOTW", title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
-  "clan-goal": { label: "Clan Goal", title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: false, description: "" },
+  "botw-elite": { label: "BOTW Elite", title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
+  "botw-standard": { label: "BOTW Standard", title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
+  sotw: { label: "SOTW", title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
+  "clan-goal": { label: "Clan Goal", title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: true, description: "" },
   mass: { label: "Clan Mass", title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true, description: "" },
   giveaway: { label: "Giveaway", title: "Giveaway", type: "giveaway", start: "7:00", end: "8:00", durationDays: 0, wom: false, discord: true, description: "" },
   challenge: { label: "Photo/Clan Challenge", title: "Photo Challenge", type: "challenge", start: "7:00", end: "7:00", durationDays: 1, wom: false, discord: true, description: "" },
@@ -4282,7 +4282,12 @@ async function syncCalendarDiscordScheduledEvent(eventId) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not sync Discord scheduled event.");
-    alert(data.event?.discordScheduledEventId ? "Discord scheduled event synced." : "Event saved, but no Discord scheduled event ID was returned.");
+    if (data.event?.discordScheduledEventId) {
+      alert("Discord scheduled event synced.");
+    } else {
+      const reason = data.discordScheduledEvent?.reason || "Discord did not return a scheduled event ID.";
+      throw new Error(`Discord scheduled event was not created: ${reason}`);
+    }
     loadCalendar();
   } catch (error) {
     alert(error.message || "Could not sync Discord scheduled event.");
