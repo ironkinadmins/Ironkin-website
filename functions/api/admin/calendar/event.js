@@ -443,9 +443,11 @@ function buildEventAnnouncementPayload(env, event, mode = "created") {
     fields.splice(4, 0, { name: "Discord Event", value: scheduledLink, inline: false });
   }
 
+  const pingEveryone = event.pingEveryone !== false;
+
   return {
-    content: isCancel ? "@everyone" : "@everyone",
-    allowed_mentions: { parse: ["everyone"] },
+    content: pingEveryone ? "@everyone" : "",
+    allowed_mentions: pingEveryone ? { parse: ["everyone"] } : { parse: [] },
     embeds: [{
       title: titlePrefix,
       color: isCancel ? 0xb91c1c : (isUpdate ? 0xf59e0b : 0xff7a1a),
@@ -753,6 +755,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
       botwTier: normalizedType.botwTier || undefined,
       activeEventId: normalizedType.activeEventId || undefined,
       featured: body.featured === true,
+      // Default to true for older events so existing announcement behavior is preserved.
+      pingEveryone: typeof body.pingEveryone === "boolean" ? body.pingEveryone : (existing?.pingEveryone !== false),
       dropsEnabled: body.dropsEnabled !== false,
       target: body.target ? Number(body.target) : null,
       goalKind: cleanText(body.goalKind),

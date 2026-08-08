@@ -3668,10 +3668,14 @@ function clearCalendarEventForm() {
   setCalendarDateAndTime();
   const recurringInput = document.getElementById("calendarRecurringInput");
   const discordEventInput = document.getElementById("calendarCreateDiscordEventInput");
+  const pingEveryoneInput = document.getElementById("calendarPingEveryoneInput");
   const templateInput = document.getElementById("calendarEventTemplateInput");
   const multiDayInput = document.getElementById("calendarMultiDayInput");
   if (recurringInput) recurringInput.value = "none";
   if (discordEventInput) discordEventInput.checked = false;
+  // Announcements historically pinged @everyone, so keep that as the default
+  // while allowing staff to opt out per event in Advanced Options.
+  if (pingEveryoneInput) pingEveryoneInput.checked = true;
   if (templateInput) templateInput.value = "";
   if (multiDayInput) multiDayInput.checked = false;
   updateCalendarMultiDayFields();
@@ -4027,6 +4031,7 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   const descInput = document.getElementById("calendarEventDescriptionInput");
   const createWomInput = document.getElementById("calendarCreateWomInput");
   const createDiscordEventInput = document.getElementById("calendarCreateDiscordEventInput");
+  const pingEveryoneInput = document.getElementById("calendarPingEveryoneInput");
   const multiDayInput = document.getElementById("calendarMultiDayInput");
   const featuredInput = document.getElementById("calendarFeaturedInput");
   const targetInput = document.getElementById("calendarTargetInput");
@@ -4048,7 +4053,9 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   if (targetInput) targetInput.value = event.target || "";
   if (createWomInput) createWomInput.checked = duplicate ? false : Boolean(event.womCompetitionId);
   if (createDiscordEventInput) createDiscordEventInput.checked = duplicate ? false : Boolean(event.discordScheduledEventId);
-  setCalendarAdvancedOptionsOpen(Boolean(event.womCompetitionId || event.discordScheduledEventId));
+  // Legacy events predate this setting and should retain the old @everyone behavior.
+  if (pingEveryoneInput) pingEveryoneInput.checked = event.pingEveryone !== false;
+  setCalendarAdvancedOptionsOpen(Boolean(event.womCompetitionId || event.discordScheduledEventId || event.pingEveryone === false));
 
   const goalKind = event.goalKind || (event.eventType === "sotw" ? "skill-xp" : "boss-kc");
   if (competitionInput) competitionInput.value = goalKind;
@@ -4108,6 +4115,7 @@ async function saveCalendarEventForm(event) {
     status: calendarEditingEvent?.status || "scheduled",
     recurrence: getCalendarRecurrenceForForm(),
     createDiscordScheduledEvent: document.getElementById("calendarCreateDiscordEventInput")?.checked === true,
+    pingEveryone: document.getElementById("calendarPingEveryoneInput")?.checked === true,
     removeDiscordScheduledEvent: document.getElementById("calendarCreateDiscordEventInput")?.checked !== true && Boolean(calendarEditingEvent?.discordScheduledEventId),
     discordScheduledEventId: calendarEditingEvent?.discordScheduledEventId || ""
   };
