@@ -1765,7 +1765,7 @@ async function loadSingleEventDashboard() {
             </section>
 
             ${
-              isClanGoal
+              isClanGoal && event.dropsEnabled
                 ? renderDropsPanel()
                 : renderCompetitionStats(event, standings)
             }

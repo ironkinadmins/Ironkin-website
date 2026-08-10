@@ -2,7 +2,7 @@ export function getDropListKey(eventId) {
   return `drops:${eventId || "global"}`;
 }
 
-const LEGACY_CLAN_GOAL_DROP_IDS = [
+export const LEGACY_CLAN_GOAL_DROP_IDS = [
   "clan-goal-hueycoatl",
   "clan-goal-vetion"
 ];
@@ -38,6 +38,14 @@ export async function readDropsWithClanGoalFallback(env, eventId) {
 
     if (legacyDrops.length) {
       await env.DROPS_KV.put(key, JSON.stringify(legacyDrops));
+
+      // The canonical Clan Goal key is now the only source of truth. Purging
+      // the old event-specific keys prevents deleted drops from reappearing
+      // later if the canonical list becomes empty.
+      for (const staleEventId of LEGACY_CLAN_GOAL_DROP_IDS) {
+        await env.DROPS_KV.delete(getDropListKey(staleEventId));
+      }
+
       return {
         eventId: normalizedEventId,
         key,
