@@ -1,3 +1,4 @@
+import { requirePluginUser } from "../api/_pluginAuth.js";
 import { listTrackedItems, upsertTrackedItem } from "../api/_supabase.js";
 import { resolveOsrsItemIdByName } from "../api/_osrsItems.js";
 import { makePluginEventId } from "../api/_pluginEvents.js";
@@ -7,7 +8,9 @@ function safeJson(value, fallback) {
   try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+  const auth = await requirePluginUser(request, env);
+  if (!auth.ok) return auth.response;
   const events = safeJson(await env.DROPS_KV.get("events:active"), []);
   const activeEvents = (Array.isArray(events) ? events : []).filter(event => event?.active === true && event?.dropsEnabled === true);
   const dbRows = await listTrackedItems(env).catch(() => []);

@@ -1,3 +1,4 @@
+import { requirePluginUser } from "../../api/_pluginAuth.js";
 import { listTrackedItems, insertEventSubmission, findActiveDuplicateSubmission } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
 
@@ -20,7 +21,9 @@ async function sha256Hex(value) {
 
 export async function onRequestPost(context) {
   const { request, env, params } = context;
-  const pluginUser = context.data?.pluginUser || null;
+  const auth = await requirePluginUser(request, env);
+  if (!auth.ok) return auth.response;
+  const pluginUser = auth.pluginUser;
   const requestedEventId = String(params.eventId || "").trim();
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return Response.json({ error: "Invalid JSON body." }, { status: 400 });
