@@ -12,7 +12,21 @@ export async function onRequestGet({ request, env }) {
   const auth = await requirePluginUser(request, env);
   if (!auth.ok) return auth.response;
   const events = safeJson(await env.DROPS_KV.get("events:active"), []);
-  const activeEvents = (Array.isArray(events) ? events : []).filter(event => event?.active === true && event?.dropsEnabled === true);
+  const configured = Array.isArray(events) ? events : [];
+  const pvmEntry = configured.find(event => event?.id === "pvm-entry" || event?.type === "pvm-entry") || {
+    id: "pvm-entry",
+    type: "pvm-entry",
+    label: "PvM Entry",
+    title: "PvM Entry",
+    active: true,
+    dropsEnabled: true,
+    pluginEventId: "pvm-entry",
+    pluginOnly: true
+  };
+  const activeEvents = [
+    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true && event?.dropsEnabled === true),
+    { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true }
+  ];
   const dbRows = await listTrackedItems(env).catch(() => []);
   const dbByEvent = new Map();
   for (const row of dbRows) {

@@ -79,6 +79,22 @@ const DEFAULT_EVENTS = [
     target: null,
     startDate: null,
     endDate: null
+  },
+  {
+    id: "pvm-entry",
+    type: "pvm-entry",
+    label: "PvM Entry",
+    title: "PvM Entry",
+    description: "Permanent tracked-item list used by the Ironkin Clan Plugin for group PvM drop entries.",
+    womCompetitionId: null,
+    featured: false,
+    active: true,
+    dropsEnabled: true,
+    pluginEventId: "pvm-entry",
+    pluginOnly: true,
+    target: null,
+    startDate: null,
+    endDate: null
   }];
 
 function normalizeBotwEvents(events) {

@@ -25,6 +25,9 @@ export async function onRequestPost({ request, env }) {
   const previousById = new Map((Array.isArray(previousEvents) ? previousEvents : []).map(event => [event?.id, event]));
 
   function ensurePluginEventId(event) {
+    if (event?.id === "pvm-entry" || event?.type === "pvm-entry") {
+      return { ...event, id: "pvm-entry", type: "pvm-entry", pluginEventId: "pvm-entry", pluginOnly: true, active: true, dropsEnabled: true, featured: false, womCompetitionId: null };
+    }
     if (!event?.active) return event;
     const previous = previousById.get(event.id);
     if (previous?.active && previous?.pluginEventId) return { ...event, pluginEventId: previous.pluginEventId };
@@ -36,6 +39,23 @@ export async function onRequestPost({ request, env }) {
   }
 
   const sanitizedEvents = events.map(event => {
+    if (event?.id === "pvm-entry" || event?.type === "pvm-entry") {
+      const sanitized = {
+        ...event,
+        id: "pvm-entry",
+        type: "pvm-entry",
+        label: "PvM Entry",
+        title: event?.title || "PvM Entry",
+        womCompetitionId: null,
+        featured: false,
+        active: true,
+        dropsEnabled: true,
+        pluginEventId: "pvm-entry",
+        pluginOnly: true
+      };
+      delete sanitized.rewards;
+      return sanitized;
+    }
     if (event?.type !== "bounties" && event?.id !== "bounties") return event;
     const sanitized = {
       ...event,

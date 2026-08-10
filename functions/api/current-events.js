@@ -165,7 +165,7 @@ export async function onRequestGet({ env }) {
   const events = [
     ...DEFAULT_EVENTS.map(defaultEvent => ({ ...defaultEvent, ...(byId.get(defaultEvent.id) || {}) })),
     ...deduped.filter(event => event?.id && !defaultIds.has(event.id))
-  ].map(event => {
+  ].filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.pluginOnly !== true).map(event => {
     if (event?.type !== "bounties" && event?.id !== "bounties") return event;
     const sanitized = { ...event };
     delete sanitized.rewards;

@@ -30,6 +30,7 @@ function getResetEventTitle(event) {
   }
   if (String(event?.type || "").includes("clan-goal")) return "Clan Goal";
   if (event?.type === "bounties") return "Clan Bounties";
+  if (event?.type === "pvm-entry" || event?.id === "pvm-entry") return "PvM Entry";
   return event?.label || event?.title || "Event";
 }
 
@@ -60,6 +61,7 @@ function getPluginTrackingLabel(event) {
   if (event?.type === "sotw") return "SOTW";
   if (isClanGoalEvent(event)) return "Clan Goal";
   if (isBountiesEvent(event)) return "Bounties";
+  if (isPvmEntryEvent(event)) return "PvM Entry";
   return event?.label || event?.title || event?.type || "Event";
 }
 
@@ -126,7 +128,7 @@ function parseBackfillCsv(text) {
 
 function getBackfillSupportedEvents() {
   return allEvents.filter(event =>
-    event && event.pluginEventId && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event))
+    event && event.pluginEventId && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event) || isPvmEntryEvent(event) || isPvmEntryEvent(event))
   );
 }
 
@@ -513,7 +515,7 @@ function renderPluginTrackingOverview() {
   if (!mount) return;
 
   const supported = allEvents.filter(event =>
-    event && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event))
+    event && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event) || isPvmEntryEvent(event) || isPvmEntryEvent(event))
   );
 
   if (!supported.length) {
@@ -637,6 +639,7 @@ function isClanGoalEvent(event) {
   return Boolean(event?.type && event.type.includes("clan-goal"));
 }
 function isBountiesEvent(event) { return event?.type === "bounties" || event?.id === "bounties"; }
+function isPvmEntryEvent(event) { return event?.type === "pvm-entry" || event?.id === "pvm-entry"; }
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -713,18 +716,27 @@ function updateEventFieldVisibility() {
   const dropsToggle = document.getElementById("eventDropsInput")?.closest("label");
   const showGoalFields = isClanGoalEvent(event);
   const showBounties = isBountiesEvent(event);
-  const supportsTrackedDrops = Boolean(event && ["sotw", "botw", "bounties"].includes(event.type)) || showGoalFields;
+  const showPvmEntry = isPvmEntryEvent(event);
+  const supportsTrackedDrops = Boolean(event && ["sotw", "botw", "bounties", "pvm-entry"].includes(event.type)) || showGoalFields;
   const bountiesEditor = document.getElementById("bountiesEditor");
   const womField = document.getElementById("eventWomInput")?.closest(".admin-field");
   const detectedBox = document.getElementById("womDetectedBox")?.closest(".admin-field");
+  const rewardsDivider = document.getElementById("eventRewardsDivider");
+  const rewardsHeader = document.getElementById("eventRewardsHeader");
+  const rewardsGrid = document.getElementById("eventRewardsGrid");
+  const archiveButton = document.getElementById("archiveEventBtn");
 
   if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
   if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
   if (standardDrops) standardDrops.style.display = (supportsTrackedDrops && !showBounties) ? "block" : "none";
   if (bountiesEditor) bountiesEditor.style.display = showBounties ? "block" : "none";
   if (dropsToggle) dropsToggle.style.display = supportsTrackedDrops ? "inline-flex" : "none";
-  if (womField) womField.style.display = showBounties ? "none" : "grid";
-  if (detectedBox) detectedBox.style.display = showBounties ? "none" : "grid";
+  if (womField) womField.style.display = (showBounties || showPvmEntry) ? "none" : "grid";
+  if (detectedBox) detectedBox.style.display = (showBounties || showPvmEntry) ? "none" : "grid";
+  if (rewardsDivider) rewardsDivider.style.display = showPvmEntry ? "none" : "block";
+  if (rewardsHeader) rewardsHeader.style.display = showPvmEntry ? "none" : "block";
+  if (rewardsGrid) rewardsGrid.style.display = showPvmEntry ? "none" : "grid";
+  if (archiveButton) archiveButton.style.display = showPvmEntry ? "none" : "inline-flex";
 }
 
 function renderMilestonesEditor() {
@@ -988,9 +1000,16 @@ function populateEventFields() {
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";
   document.getElementById("eventTargetInput").value = event.target || "";
   updateDetectedWomBox(event);
-  document.getElementById("eventActiveInput").checked = Boolean(event.active);
-  document.getElementById("eventFeaturedInput").checked = Boolean(event.featured);
-  document.getElementById("eventDropsInput").checked = Boolean(event.dropsEnabled);
+  const pvmEntry = isPvmEntryEvent(event);
+  const activeInput = document.getElementById("eventActiveInput");
+  const featuredInput = document.getElementById("eventFeaturedInput");
+  const dropsInput = document.getElementById("eventDropsInput");
+  activeInput.checked = pvmEntry ? true : Boolean(event.active);
+  featuredInput.checked = pvmEntry ? false : Boolean(event.featured);
+  dropsInput.checked = pvmEntry ? true : Boolean(event.dropsEnabled);
+  activeInput.disabled = pvmEntry;
+  featuredInput.disabled = pvmEntry;
+  dropsInput.disabled = pvmEntry;
   updatePluginEventIdDisplay();
   renderPluginTrackingOverview();
 
@@ -1511,20 +1530,24 @@ async function saveSelectedEvent() {
   if (!event) return;
 
   event.description = document.getElementById("eventDescriptionInput").value.trim();
-  event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
+  event.womCompetitionId = isPvmEntryEvent(event) ? null : (document.getElementById("eventWomInput").value.trim() || null);
 
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
-  event.active = document.getElementById("eventActiveInput").checked;
-  event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
+  event.active = isPvmEntryEvent(event) ? true : document.getElementById("eventActiveInput").checked;
+  event.featured = isPvmEntryEvent(event) ? false : document.getElementById("eventFeaturedInput").checked;
+  event.dropsEnabled = isPvmEntryEvent(event) ? true : document.getElementById("eventDropsInput").checked;
+  if (isPvmEntryEvent(event)) {
+    event.pluginEventId = "pvm-entry";
+    event.pluginOnly = true;
+  }
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
 
   // Ensure legacy bounty placement/participation rewards are not persisted.
   const eventsToSave = allEvents.map(item => {
-    if (!isBountiesEvent(item)) return item;
+    if (!isBountiesEvent(item) && !isPvmEntryEvent(item)) return item;
     const cleanItem = { ...item };
     delete cleanItem.rewards;
     return cleanItem;
@@ -1593,7 +1616,7 @@ async function archiveSelectedEvent() {
   if (isBountiesEvent(eventToArchive)) delete eventToArchive.rewards;
 
   const eventsToArchive = allEvents.map(item => {
-    if (!isBountiesEvent(item)) return item;
+    if (!isBountiesEvent(item) && !isPvmEntryEvent(item)) return item;
     const cleanItem = { ...item };
     delete cleanItem.rewards;
     return cleanItem;

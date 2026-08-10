@@ -13,6 +13,21 @@ function cleanBase64Image(value) {
 }
 function base64ByteLength(base64) { const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0; return Math.floor((base64.length * 3) / 4) - padding; }
 function normalizePlayerKey(discordId, username) { return String(discordId || username || "").trim().toLowerCase(); }
+function normalizeParticipants(value, primaryUsername) {
+  if (!Array.isArray(value)) return [];
+  const primary = String(primaryUsername || "").trim().toLowerCase();
+  const seen = new Set();
+  const result = [];
+  for (const raw of value) {
+    const name = String(raw || "").trim().slice(0, 64);
+    const key = name.toLowerCase();
+    if (!name || key === primary || seen.has(key)) continue;
+    seen.add(key);
+    result.push(name);
+    if (result.length >= 20) break;
+  }
+  return result;
+}
 async function sha256Hex(value) {
   const bytes = new TextEncoder().encode(String(value));
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -31,12 +46,28 @@ export async function onRequestPost(context) {
   const username = String(body.username || pluginUser?.displayName || "").trim();
   const itemId = asPositiveInt(body.itemid ?? body.itemId);
   const quantity = Math.max(1, asPositiveInt(body.quantity) || 1);
+  const participants = normalizeParticipants(body.participants, username);
   const timestamp = Number(body.timestamp || Date.now());
   if (!username) return Response.json({ error: "Missing username." }, { status: 400 });
   if (!itemId) return Response.json({ error: "Missing or invalid itemid." }, { status: 400 });
 
   const events = safeJson(await env.DROPS_KV.get("events:active"), []);
-  const event = (Array.isArray(events) ? events : []).find(entry => entry?.active === true && entry?.dropsEnabled === true && makePluginEventId(entry) === requestedEventId);
+  const configured = Array.isArray(events) ? events : [];
+  let event = configured.find(entry => entry?.active === true && entry?.dropsEnabled === true && makePluginEventId(entry) === requestedEventId);
+  if (requestedEventId === "pvm-entry") {
+    const savedPvm = configured.find(entry => entry?.id === "pvm-entry" || entry?.type === "pvm-entry");
+    event = {
+      ...(savedPvm || {}),
+      id: "pvm-entry",
+      type: "pvm-entry",
+      label: "PvM Entry",
+      title: savedPvm?.title || "PvM Entry",
+      active: true,
+      dropsEnabled: true,
+      pluginEventId: "pvm-entry",
+      pluginOnly: true
+    };
+  }
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
   const websiteEventId = String(event.id || "");
@@ -85,6 +116,7 @@ export async function onRequestPost(context) {
     item_id: itemId,
     item_name: String(tracked.item_name || body.itemName || `Item ${itemId}`),
     quantity,
+    participants,
     tracking_rule: trackingRule,
     client_submission_key: clientSubmissionKey,
     source: "runelite",
@@ -93,5 +125,5 @@ export async function onRequestPost(context) {
     client_timestamp: clientTimestamp
   });
 
-  return Response.json({ success: true, submissionId: record?.id || submissionId, eventId: requestedEventId, itemid: itemId, status: "pending" }, { status: 201 });
+  return Response.json({ success: true, submissionId: record?.id || submissionId, eventId: requestedEventId, itemid: itemId, participants, status: "pending" }, { status: 201 });
 }
