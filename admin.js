@@ -146,7 +146,7 @@ async function searchUnlinkedOsrsItems(query) {
   const q = String(query || "").trim();
   if (!q) return [];
   try {
-    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(q)}&t=${Date.now()}`, { cache: "no-store" });
+    const response = await fetch(`/api/osrs/item-id-search?q=${encodeURIComponent(q)}&t=${Date.now()}`, { cache: "no-store" });
     const data = await response.json();
     return Array.isArray(data) ? data.filter(item => Number(item?.id) > 0).slice(0, 12) : [];
   } catch {
@@ -178,16 +178,16 @@ async function loadUnlinkedTrackedItems() {
     }
 
     mount.innerHTML = unlinked.map((drop, index) => `
-      <div class="admin-card" style="margin:0 0 12px;padding:14px" data-unlinked-row="${index}">
+      <div class="admin-card unlinked-item-linker" style="margin:0 0 12px;padding:14px" data-unlinked-row="${index}">
         <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
           <div>
             <strong>${escapeHtml(drop.name || "Unknown item")}</strong>
             <div class="admin-muted">Currently saved by name only</div>
           </div>
           <div style="min-width:min(100%,440px);flex:1">
-            <input type="text" data-unlinked-search="${index}" value="${escapeHtml(drop.name || "")}" placeholder="Search OSRS item…" />
+            <input type="text" data-unlinked-search="${index}" value="${escapeHtml(drop.name || "")}" placeholder="Type the real OSRS item name…" autocomplete="off" />
             <select data-unlinked-results="${index}" style="margin-top:8px;width:100%">
-              <option value="">Search to choose an OSRS item…</option>
+              <option value="">Type above to search OSRS items…</option>
             </select>
             <div class="admin-muted" data-unlinked-choice="${index}" style="margin-top:6px">No OSRS item selected.</div>
             <button type="button" class="btn secondary" data-unlinked-save="${index}" style="margin-top:8px" disabled>Save Link</button>
@@ -204,9 +204,10 @@ async function loadUnlinkedTrackedItems() {
       let timer = null;
 
       const runSearch = async () => {
+        if (choice) choice.textContent = "Searching OSRS items…";
         results = await searchUnlinkedOsrsItems(search?.value || "");
         if (!select) return;
-        select.innerHTML = `<option value="">Select item…</option>` + results.map(item =>
+        select.innerHTML = `<option value="">${results.length ? "Select item…" : "No matches - try a different search"}</option>` + results.map(item =>
           `<option value="${Number(item.id)}">${escapeHtml(item.name)} (ID ${Number(item.id)})</option>`
         ).join("");
         const normalized = normalizeBackfillLabel(drop.name);
@@ -215,6 +216,8 @@ async function loadUnlinkedTrackedItems() {
           select.value = String(exact.id);
           if (choice) choice.textContent = `Selected: ${exact.name} (ID ${exact.id})`;
           if (save) save.disabled = false;
+        } else if (choice) {
+          choice.textContent = results.length ? `${results.length} match${results.length === 1 ? "" : "es"} found. Choose one below.` : "No OSRS item matches. Change the search text to the actual item name.";
         }
       };
 

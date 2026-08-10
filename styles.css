@@ -9941,3 +9941,27 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   .discord-sync-head, .discord-sync-actions { align-items:flex-start; flex-direction:column; }
   .discord-sync-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* Clan Plugin - legacy item linker readability */
+.unlinked-item-linker,
+.unlinked-item-linker strong,
+.unlinked-item-linker .admin-muted {
+  color: #fff0d8 !important;
+}
+.unlinked-item-linker input,
+.unlinked-item-linker select {
+  width: 100%;
+  color: #fff0d8 !important;
+  background: #120e0b !important;
+  border: 1px solid rgba(255, 145, 45, 0.45) !important;
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+}
+.unlinked-item-linker select option {
+  color: #111 !important;
+  background: #f2f2f2 !important;
+}
+.unlinked-item-linker input::placeholder {
+  color: rgba(255, 240, 216, 0.48) !important;
+}
