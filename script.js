@@ -1606,10 +1606,27 @@ async function loadSingleEventDashboard() {
     const highestGain =
       standings?.standings?.[0]?.gained || 0;
 
+    // Clan Goals can track either skill XP or boss KC. Prefer the explicit
+    // goalKind saved by the admin panel, then fall back to the event type/metric
+    // so older Clan Goal records still display the correct units automatically.
+    const skillMetricNames = new Set([
+      "attack", "strength", "defence", "ranged", "prayer", "magic",
+      "runecrafting", "construction", "hitpoints", "agility", "herblore",
+      "thieving", "crafting", "fletching", "slayer", "hunter", "mining",
+      "smithing", "fishing", "cooking", "firemaking", "woodcutting", "farming"
+    ]);
+    const clanGoalTracksXp = isClanGoal && (
+      event.goalKind === "skill-xp" ||
+      event.type === "clan-goal-skill" ||
+      (!event.goalKind && skillMetricNames.has(String(event.metric || standings?.metric || "").toLowerCase()))
+    );
+
     const totalLabel = isSotw
       ? "Total XP Gained"
       : isBotw
       ? "Total KC"
+      : clanGoalTracksXp
+      ? "Current XP"
       : "Current KC";
 
     const contributorsLabel = isSotw
@@ -1622,6 +1639,8 @@ async function loadSingleEventDashboard() {
       ? "Highest Gain"
       : isBotw
       ? "Highest KC"
+      : clanGoalTracksXp
+      ? "Goal XP"
       : "Goal KC";
 
     const thirdValue =
