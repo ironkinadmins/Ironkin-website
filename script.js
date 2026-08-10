@@ -196,10 +196,33 @@ function isBeforeEventStart(standings, event) {
 }
 
 
-function getEventMetricLabel(event) {
-  if (event?.type === "sotw") return "XP";
-  if (event?.type === "botw") return "KC";
-  if (event?.type?.includes("clan-goal")) return "KC";
+function eventTracksXp(event, standings = null) {
+  if (event?.type === "sotw") return true;
+  if (event?.type === "botw") return false;
+
+  const isClanGoal =
+    event?.type === "clan-goal" ||
+    event?.type === "clan-goal-boss" ||
+    event?.type === "clan-goal-skill" ||
+    event?.type === "clan_goal";
+
+  if (!isClanGoal) return false;
+  if (event?.goalKind === "skill-xp" || event?.type === "clan-goal-skill") return true;
+  if (event?.goalKind === "boss-kc" || event?.type === "clan-goal-boss") return false;
+
+  const skillMetricNames = new Set([
+    "attack", "strength", "defence", "ranged", "prayer", "magic",
+    "runecrafting", "construction", "hitpoints", "agility", "herblore",
+    "thieving", "crafting", "fletching", "slayer", "hunter", "mining",
+    "smithing", "fishing", "cooking", "firemaking", "woodcutting", "farming"
+  ]);
+  const metric = String(event?.womMetric || event?.metric || standings?.metric || "").toLowerCase();
+  return skillMetricNames.has(metric);
+}
+
+function getEventMetricLabel(event, standings = null) {
+  if (eventTracksXp(event, standings)) return "XP";
+  if (event?.type === "botw" || event?.type?.includes("clan-goal") || event?.type === "clan_goal") return "KC";
   return "Gained";
 }
 
@@ -273,18 +296,18 @@ function getCompetitionStats(event, standings) {
   const leader = Number(activeRows[0]?.gained || 0);
   const second = Number(activeRows[1]?.gained || 0);
   const leaderAdvantage = Math.max(leader - second, 0);
-  const isSkillEvent = event?.type === "sotw";
-  const densityThreshold = isSkillEvent ? 100000 : 10;
+  const tracksXp = eventTracksXp(event, standings);
+  const densityThreshold = tracksXp ? 100000 : 10;
   const densityCount = activeRows.filter(player => Number(player.gained || 0) >= densityThreshold).length;
   const density = activeCount ? Math.round((densityCount / activeCount) * 100) : 0;
-  const metricLabel = getEventMetricLabel(event);
+  const metricLabel = getEventMetricLabel(event, standings);
 
   return {
     average: activeCount ? Math.round(totalGained / activeCount) : 0,
     topFiveCombined,
     leaderAdvantage,
     density,
-    densityLabel: isSkillEvent ? "100K+ XP" : "10+ KC",
+    densityLabel: tracksXp ? "100K+ XP" : "10+ KC",
     metricLabel
   };
 }
@@ -1606,20 +1629,8 @@ async function loadSingleEventDashboard() {
     const highestGain =
       standings?.standings?.[0]?.gained || 0;
 
-    // Clan Goals can track either skill XP or boss KC. Prefer the explicit
-    // goalKind saved by the admin panel, then fall back to the event type/metric
-    // so older Clan Goal records still display the correct units automatically.
-    const skillMetricNames = new Set([
-      "attack", "strength", "defence", "ranged", "prayer", "magic",
-      "runecrafting", "construction", "hitpoints", "agility", "herblore",
-      "thieving", "crafting", "fletching", "slayer", "hunter", "mining",
-      "smithing", "fishing", "cooking", "firemaking", "woodcutting", "farming"
-    ]);
-    const clanGoalTracksXp = isClanGoal && (
-      event.goalKind === "skill-xp" ||
-      event.type === "clan-goal-skill" ||
-      (!event.goalKind && skillMetricNames.has(String(event.metric || standings?.metric || "").toLowerCase()))
-    );
+    // Use the same automatic XP/KC detection everywhere on the event page.
+    const clanGoalTracksXp = isClanGoal && eventTracksXp(event, standings);
 
     const totalLabel = isSotw
       ? "Total XP Gained"
