@@ -141,6 +141,51 @@ function populateBackfillEventSelect() {
   if (bounty) select.value = bounty.id;
 }
 
+async function resolveLegacyBackfillTrackedItem(eventId, drop) {
+  const existingId = Number(drop?.itemId || 0);
+  if (Number.isInteger(existingId) && existingId > 0) {
+    return { ...drop, itemId: existingId };
+  }
+
+  const name = String(drop?.name || "").trim();
+  if (!name) return { ...drop, itemId: null, _legacyUnresolved: true };
+
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(name)}&t=${Date.now()}`, { cache: "no-store" });
+    const results = await response.json();
+    const normalizedName = normalizeBackfillLabel(name);
+    const exact = (Array.isArray(results) ? results : []).find(item =>
+      normalizeBackfillLabel(item?.name) === normalizedName && Number(item?.id) > 0
+    );
+
+    if (!exact) {
+      return { ...drop, itemId: null, _legacyUnresolved: true };
+    }
+
+    const resolved = { ...drop, itemId: Number(exact.id), _legacyResolved: true };
+
+    // Permanently upgrade the legacy tracked item so RuneLite and future
+    // imports do not have to resolve the item name again.
+    await fetch("/api/drops/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId,
+        name,
+        itemId: resolved.itemId,
+        image: drop?.image || exact.image || "",
+        wikiUrl: drop?.wikiUrl || exact.url || "",
+        rewardEmbers: Number(drop?.rewardEmbers || 0),
+        trackingRule: drop?.trackingRule || "repeatable"
+      })
+    });
+
+    return resolved;
+  } catch {
+    return { ...drop, itemId: null, _legacyUnresolved: true };
+  }
+}
+
 async function loadBackfillTrackedItems() {
   const eventId = document.getElementById("backfillEventSelect")?.value || "";
   backfillTrackedItems = [];
@@ -148,7 +193,10 @@ async function loadBackfillTrackedItems() {
   try {
     const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}&t=${Date.now()}`, { cache: "no-store" });
     const data = await response.json();
-    backfillTrackedItems = (data.drops || []).filter(drop => Number(drop?.itemId) > 0);
+    const drops = Array.isArray(data.drops) ? data.drops : [];
+    backfillTrackedItems = await Promise.all(
+      drops.map(drop => resolveLegacyBackfillTrackedItem(eventId, drop))
+    );
   } catch {
     backfillTrackedItems = [];
   }
@@ -186,8 +234,15 @@ function renderBackfillPreview() {
     importBtn.disabled = true;
     return;
   }
+  const resolvedTrackedItems = backfillTrackedItems.filter(item => Number(item?.itemId) > 0);
+  const unresolvedTrackedItems = backfillTrackedItems.filter(item => !Number(item?.itemId));
   if (!backfillTrackedItems.length) {
-    mount.innerHTML = `<p class="admin-error">This event has no RuneLite-trackable items. Add the bounty/drop items first, then retry the CSV.</p>`;
+    mount.innerHTML = `<p class="admin-error">This event has no tracked bounty/drop items. Add the items under Events first, then retry the CSV.</p>`;
+    importBtn.disabled = true;
+    return;
+  }
+  if (!resolvedTrackedItems.length) {
+    mount.innerHTML = `<p class="admin-error">The tracked items exist, but none could be matched to an OSRS item ID automatically. Re-select those items once in Events, then retry the CSV.</p>`;
     importBtn.disabled = true;
     return;
   }
@@ -199,8 +254,14 @@ function renderBackfillPreview() {
     }
   });
 
-  const options = backfillTrackedItems.map(item => `<option value="${Number(item.itemId)}">${escapeHtml(item.name)} (ID ${Number(item.itemId)})</option>`).join("");
+  const options = resolvedTrackedItems.map(item => `<option value="${Number(item.itemId)}">${escapeHtml(item.name)} (ID ${Number(item.itemId)})</option>`).join("");
+  const legacyNote = unresolvedTrackedItems.length
+    ? `<div class="admin-warning" style="margin-bottom:10px">${unresolvedTrackedItems.length} legacy tracked item${unresolvedTrackedItems.length === 1 ? "" : "s"} could not be matched automatically: ${unresolvedTrackedItems.map(item => escapeHtml(item.name || "Unknown item")).join(", ")}. They will not appear in the mapping dropdown until re-selected in Events.</div>`
+    : backfillTrackedItems.some(item => item?._legacyResolved)
+      ? `<div class="admin-success" style="margin-bottom:10px">Legacy tracked items were matched to OSRS item IDs and upgraded automatically.</div>`
+      : "";
   mount.innerHTML = `
+    ${legacyNote}
     <div class="admin-muted" style="margin-bottom:10px">${backfillRows.length} approved historical submission${backfillRows.length === 1 ? "" : "s"} found. Confirm the item mapping before importing.</div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse">
