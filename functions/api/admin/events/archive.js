@@ -1,104 +1,13 @@
 import { getSession, isStaffSession } from "../../_auth.js";
 import { readDropsWithClanGoalFallback } from "../../drops/_dropKeys.js";
-function normalizePlayerName(player) {
-  return (
-    player?.displayName ||
-    player?.username ||
-    player?.name ||
-    player?.player?.displayName ||
-    player?.player?.username ||
-    player?.player?.name ||
-    player?.rsn ||
-    player?.user ||
-    "Unknown"
-  );
-}
+import {
+  getWomCompetitionSnapshot,
+  normalizeWomStandingsRows
+} from "../../../_womCompetition.js";
 
-function normalizeGained(row) {
-  const raw =
-    row?.progress?.gained ??
-    row?.gained ??
-    row?.score ??
-    row?.value ??
-    0;
-
-  return Number(raw || 0);
-}
-
-function normalizeStandingsRows(rows) {
-  return (Array.isArray(rows) ? rows : [])
-    .map(row => ({
-      name: normalizePlayerName(row),
-      gained: normalizeGained(row),
-      start: Number(row?.progress?.start ?? row?.start ?? 0),
-      end: Number(row?.progress?.end ?? row?.end ?? 0),
-      updatedAt: row?.updatedAt || null
-    }))
-    .filter(player => player.name && player.name !== "Unknown")
-    .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url);
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(data?.message || data?.error || `Request failed: ${response.status}`);
-  }
-
-  return data;
-}
-
-async function fetchStandingsSnapshot(event) {
-  if (!event?.womCompetitionId || event.womCompetitionId === "PUT_YOUR_WOM_ID_HERE") {
-    return null;
-  }
-
-  try {
-    const details = await fetchJson(
-      `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}`
-    );
-
-    // Wise Old Man competition details already include participations. This is the
-    // most reliable source and matches the live dashboard endpoint.
-    let normalized = normalizeStandingsRows(details.participations || []);
-
-    // Fallback for older/different WOM responses where standings are separate.
-    if (!normalized.length) {
-      try {
-        const standings = await fetchJson(
-          `https://api.wiseoldman.net/v2/competitions/${event.womCompetitionId}/standings`
-        );
-
-        const rows = Array.isArray(standings)
-          ? standings
-          : standings?.standings || standings?.results || [];
-
-        normalized = normalizeStandingsRows(rows);
-      } catch (error) {
-        // Keep the archive working even if the fallback endpoint is unavailable.
-      }
-    }
-
-    const totalGained = normalized.reduce(
-      (sum, player) => sum + Number(player.gained || 0),
-      0
-    );
-
-    const contributors = normalized.filter(player => Number(player.gained || 0) > 0).length;
-
-    return {
-      title: details.title || event.title,
-      metric: details.metric || event.metric || null,
-      startsAt: details.startsAt || event.startDate || null,
-      endsAt: details.endsAt || event.endDate || null,
-      totalGained,
-      contributors,
-      standings: normalized
-    };
-  } catch (error) {
-    return null;
-  }
+function hasWomCompetition(event) {
+  const id = String(event?.womCompetitionId || "").trim();
+  return Boolean(id && id !== "PUT_YOUR_WOM_ID_HERE");
 }
 
 export async function onRequestPost({ request, env }) {
@@ -120,7 +29,34 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const standings = await fetchStandingsSnapshot(event);
+  let standings = null;
+
+  if (hasWomCompetition(event)) {
+    try {
+      // Request the newest final leaderboard from WOM. If WOM is temporarily
+      // unavailable or returns an empty response, the shared helper falls back
+      // to the last known-good standings cached by the live event page.
+      standings = await getWomCompetitionSnapshot(env, event.womCompetitionId);
+    } catch (error) {
+      return Response.json(
+        {
+          error: "Could not archive this WOM event because its final standings could not be loaded.",
+          details: error?.message || "Wise Old Man is temporarily unavailable. Please try again."
+        },
+        { status: 503 }
+      );
+    }
+
+    if (!Array.isArray(standings?.standings) || !standings.standings.length) {
+      return Response.json(
+        {
+          error: "Could not archive this WOM event because no leaderboard snapshot is available.",
+          details: "Refresh the event standings and try End Event + Send to Archive again."
+        },
+        { status: 409 }
+      );
+    }
+  }
   const dropsResult = await readDropsWithClanGoalFallback(env, event, { isClanGoal: String(event?.type || "").includes("clan-goal") });
   const drops = dropsResult.drops || [];
 
@@ -133,7 +69,8 @@ export async function onRequestPost({ request, env }) {
           ? event.topFive
           : [];
 
-  const topFive = normalizeStandingsRows(standingsRows)
+  const normalizedRows = normalizeWomStandingsRows(standingsRows);
+  const topFive = normalizedRows
     .filter(player => Number(player.gained || 0) > 0)
     .slice(0, 5);
 
@@ -153,11 +90,13 @@ export async function onRequestPost({ request, env }) {
     endDate: standings?.endsAt || event.endDate || null,
     endedAt,
     metric: standings?.metric || null,
-    totalGained: standings?.totalGained || 0,
-    contributors: standings?.contributors || 0,
+    totalGained: Number(standings?.totalGained ?? event.totalGained ?? 0),
+    contributors: Number(standings?.contributors ?? event.contributors ?? 0),
     winner,
     topFive,
-    leaderboard: topFive,
+    // Preserve the complete final leaderboard, not only the top five. This makes
+    // the archive a true snapshot and gives us enough data for future displays.
+    leaderboard: normalizedRows,
     ...(event?.type === "bounties" || event?.id === "bounties"
       ? {}
       : { rewards: event.rewards || { placement: [], participation: [] } }),

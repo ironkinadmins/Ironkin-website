@@ -1052,7 +1052,8 @@ async function archiveSelectedEvent() {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    alert(data.error || "Could not archive event.");
+    const detail = data.details ? `\n\n${data.details}` : "";
+    alert(`${data.error || "Could not archive event."}${detail}`);
     return;
   }
 
