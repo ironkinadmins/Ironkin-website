@@ -19,8 +19,6 @@
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Battleship Bingo</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="guess-kc">Guess the KC</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
     </div>
 
@@ -188,20 +186,7 @@
       <div class="admin-divider"></div>
       <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
     </section>
-    </div>
 
-    <div class="admin-tab-panel" id="adminTab-clan-plugin">
-      <section class="admin-card" id="pluginTrackingOverview">
-        <div class="admin-section-header">
-          <p class="eyebrow">Clan Plugin</p>
-          <h2>Event IDs & Tracking</h2>
-          <p>Read-only overview of event IDs published to the Ironkin Clan Plugin. IDs are created and managed automatically; members do not enter them manually.</p>
-        </div>
-        <div id="pluginTrackingOverviewList"></div>
-      </section>
-    </div>
-
-    <div class="admin-tab-panel" id="adminTab-bingo">
     <section class="admin-card admin-bingo-card">
       <div class="admin-section-header">
         <p class="eyebrow">Battleship Bingo</p>
@@ -274,12 +259,12 @@
 
       <p class="admin-muted" id="bingoSettingsStatus"></p>
     </section>
-    </div>
 
 
 
 
-    <div class="admin-tab-panel" id="adminTab-guess-kc">
+
+
       <section class="admin-card">
         <div class="admin-section-header">
           <p class="eyebrow">Giveaway</p>
@@ -294,6 +279,20 @@
           <a class="btn secondary" href="giveaways.html">Manage Guess the KC</a>
         </div>
         <p class="admin-muted" id="guessKcSettingsStatus"></p>
+      </section>
+
+
+
+    </div>
+
+    <div class="admin-tab-panel" id="adminTab-clan-plugin">
+      <section class="admin-card" id="pluginTrackingOverview">
+        <div class="admin-section-header">
+          <p class="eyebrow">Clan Plugin</p>
+          <h2>Event IDs & Tracking</h2>
+          <p>Read-only overview of event IDs published to the Ironkin Clan Plugin. IDs are created and managed automatically; members do not enter them manually.</p>
+        </div>
+        <div id="pluginTrackingOverviewList"></div>
       </section>
     </div>
 
