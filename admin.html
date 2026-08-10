@@ -130,11 +130,18 @@
         <p>These drops are saved only for the selected event.</p>
       </div>
 
+      <div class="admin-field admin-field-wide">
+        <label for="dropItemSearchInput">Search OSRS Items</label>
+        <input id="dropItemSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
+        <div id="dropWikiSearchResults" class="wiki-results"></div>
+      </div>
       <div class="admin-field">
-        <label for="dropNameInput">Add Drop</label>
+        <label for="dropNameInput">Selected Item</label>
         <div class="admin-add-row">
-          <input id="dropNameInput" type="text" placeholder="Example: Huey Hide" />
-          <button class="btn primary" id="addDropBtn">Add Drop</button>
+          <input id="dropNameInput" type="text" readonly placeholder="Select an item above" />
+          <input id="dropItemIdInput" type="hidden" />
+          <input id="dropImageInput" type="hidden" />
+          <button class="btn primary" id="addDropBtn">Add Tracked Item</button>
         </div>
       </div>
 

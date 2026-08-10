@@ -42,6 +42,7 @@ function resetEventAfterArchive(event) {
   event.endDate = null;
   event.active = false;
   event.featured = false;
+  event.pluginEventId = null;
 }
 
 function getAdminEventOptionText(event) {
@@ -191,15 +192,16 @@ function updateEventFieldVisibility() {
   const dropsToggle = document.getElementById("eventDropsInput")?.closest("label");
   const showGoalFields = isClanGoalEvent(event);
   const showBounties = isBountiesEvent(event);
+  const supportsTrackedDrops = Boolean(event && ["sotw", "botw", "bounties"].includes(event.type)) || showGoalFields;
   const bountiesEditor = document.getElementById("bountiesEditor");
   const womField = document.getElementById("eventWomInput")?.closest(".admin-field");
   const detectedBox = document.getElementById("womDetectedBox")?.closest(".admin-field");
 
   if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
   if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
-  if (standardDrops) standardDrops.style.display = showGoalFields ? "block" : "none";
+  if (standardDrops) standardDrops.style.display = (supportsTrackedDrops && !showBounties) ? "block" : "none";
   if (bountiesEditor) bountiesEditor.style.display = showBounties ? "block" : "none";
-  if (dropsToggle) dropsToggle.style.display = (showGoalFields || showBounties) ? "inline-flex" : "none";
+  if (dropsToggle) dropsToggle.style.display = supportsTrackedDrops ? "inline-flex" : "none";
   if (womField) womField.style.display = showBounties ? "none" : "grid";
   if (detectedBox) detectedBox.style.display = showBounties ? "none" : "grid";
 }
@@ -978,7 +980,7 @@ async function saveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = (isClanGoalEvent(event) || isBountiesEvent(event)) ? document.getElementById("eventDropsInput").checked : false;
+  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -1025,7 +1027,7 @@ async function archiveSelectedEvent() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = (isClanGoalEvent(event) || isBountiesEvent(event)) ? document.getElementById("eventDropsInput").checked : false;
+  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -1097,7 +1099,7 @@ async function loadAdminDrops() {
     row.innerHTML = `
       <div class="bounty-drop-main">
         ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
-        <span><strong>${escapeHtml(drop.name)}</strong>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}</span>
+        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}</span>
       </div>
       <div class="drop-controls">
         <button onclick="changeDrop('${drop.name}', -1)">−</button>
@@ -1112,17 +1114,53 @@ async function loadAdminDrops() {
 
 async function addDrop() {
   const input = document.getElementById("dropNameInput");
+  const itemIdInput = document.getElementById("dropItemIdInput");
+  const imageInput = document.getElementById("dropImageInput");
   const name = input.value.trim();
+  const itemId = Number(itemIdInput?.value || 0);
   if (!name || !selectedEventId) return;
+  if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
 
-  await fetch("/api/drops/add", {
+  const response = await fetch("/api/drops/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId: selectedEventId, name })
+    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "" })
   });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { alert(data.error || "Could not add tracked item."); return; }
+  if (data.supabaseWarning && data.supabaseWarning !== "not-configured") console.warn("Supabase sync warning:", data.supabaseWarning);
 
   input.value = "";
+  if (itemIdInput) itemIdInput.value = "";
+  if (imageInput) { imageInput.value = ""; imageInput.dataset.wikiUrl = ""; }
+  const search = document.getElementById("dropItemSearchInput");
+  if (search) search.value = "";
+  const results = document.getElementById("dropWikiSearchResults");
+  if (results) results.innerHTML = "";
   loadAdminDrops();
+}
+
+let standardDropWikiTimer = null;
+async function searchStandardDropWiki(query) {
+  const resultsEl = document.getElementById("dropWikiSearchResults");
+  if (!resultsEl) return;
+  if (!query || query.length < 2) { resultsEl.innerHTML = ""; return; }
+  resultsEl.innerHTML = `<div class="wiki-loading">Searching...</div>`;
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    const results = (Array.isArray(data) ? data : data.results || []).filter(item => item?.name && item?.image && Number(item?.id) > 0);
+    resultsEl.innerHTML = results.length ? results.map(item => `
+      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-id="${Number(item.id)}" data-id="${Number(item.id || 0)}" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No RuneLite-trackable item results found.</div>`;
+    resultsEl.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+      document.getElementById("dropNameInput").value = button.dataset.name || "";
+      document.getElementById("dropItemIdInput").value = button.dataset.id || "";
+      const imageInput = document.getElementById("dropImageInput");
+      imageInput.value = button.dataset.image || "";
+      imageInput.dataset.wikiUrl = button.dataset.url || "";
+      resultsEl.innerHTML = "";
+    }));
+  } catch { resultsEl.innerHTML = `<div class="wiki-loading">Could not search OSRS items.</div>`; }
 }
 
 async function changeDrop(name, direction) {
@@ -1158,9 +1196,10 @@ async function searchBountyWiki(query) {
     const data = await response.json();
     const results = (Array.isArray(data) ? data : data.results || []).filter(item => item?.name && item?.image);
     resultsEl.innerHTML = results.length ? results.map(item => `
-      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No item results found.</div>`;
+      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-id="${Number(item.id || 0)}" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No item results found.</div>`;
     resultsEl.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
       document.getElementById("bountySelectedItemInput").value = button.dataset.name || "";
+      document.getElementById("bountySelectedItemInput").dataset.itemId = button.dataset.id || "";
       document.getElementById("bountySelectedImageInput").value = button.dataset.image || "";
       document.getElementById("bountySelectedImageInput").dataset.wikiUrl = button.dataset.url || "";
       resultsEl.innerHTML = "";
@@ -1172,10 +1211,13 @@ async function addBountyItem() {
   const imageInput = document.getElementById("bountySelectedImageInput");
   const rewardEmbers = Number(document.getElementById("bountyRewardInput")?.value || 0);
   if (!name || !selectedEventId) { alert("Select an OSRS item first."); return; }
-  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers }) });
+  const itemId = Number(document.getElementById("bountySelectedItemInput")?.dataset.itemId || 0);
+  if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
+  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add bounty."); return; }
   document.getElementById("bountySelectedItemInput").value = "";
+  document.getElementById("bountySelectedItemInput").dataset.itemId = "";
   imageInput.value = "";
   document.getElementById("bountyRewardInput").value = "";
   document.getElementById("bountyItemSearchInput").value = "";
@@ -1184,5 +1226,6 @@ async function addBountyItem() {
 
 loadAdmin();
 
+document.getElementById("dropItemSearchInput")?.addEventListener("input", event => { clearTimeout(standardDropWikiTimer); standardDropWikiTimer = setTimeout(() => searchStandardDropWiki(event.target.value.trim()), 250); });
 document.getElementById("bountyItemSearchInput")?.addEventListener("input", event => { clearTimeout(bountyWikiTimer); bountyWikiTimer = setTimeout(() => searchBountyWiki(event.target.value.trim()), 250); });
 document.getElementById("addBountyItemBtn")?.addEventListener("click", addBountyItem);

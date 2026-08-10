@@ -1,4 +1,5 @@
 import { getSession, isStaffSession } from "../../_auth.js";
+import { eventTypeSlug } from "../../_pluginEvents.js";
 export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
     return Response.json(
@@ -17,6 +18,23 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
+
+  const previousRaw = await env.DROPS_KV.get("events:active");
+  let previousEvents = [];
+  try { previousEvents = previousRaw ? JSON.parse(previousRaw) : []; } catch { previousEvents = []; }
+  const previousById = new Map((Array.isArray(previousEvents) ? previousEvents : []).map(event => [event?.id, event]));
+
+  function ensurePluginEventId(event) {
+    if (!event?.active) return event;
+    const previous = previousById.get(event.id);
+    if (previous?.active && previous?.pluginEventId) return { ...event, pluginEventId: previous.pluginEventId };
+    if (event.pluginEventId) return event;
+    const type = eventTypeSlug(event);
+    const wom = String(event.womCompetitionId || "").trim();
+    const suffix = wom || `${new Date().toISOString().slice(0,10).replace(/-/g, "")}-${crypto.randomUUID().slice(0,8)}`;
+    return { ...event, pluginEventId: `${type}-${suffix}` };
+  }
+
   const sanitizedEvents = events.map(event => {
     if (event?.type !== "bounties" && event?.id !== "bounties") return event;
     const sanitized = {
@@ -32,9 +50,11 @@ export async function onRequestPost({ request, env }) {
 
   // Keep one canonical bounty event so Admin and the public site cannot drift
   // onto different legacy bounty records.
-  const bountyEvents = sanitizedEvents.filter(event => event?.id === "bounties" || event?.type === "bounties");
+  const eventsWithPluginIds = sanitizedEvents.map(ensurePluginEventId);
+
+  const bountyEvents = eventsWithPluginIds.filter(event => event?.id === "bounties" || event?.type === "bounties");
   const canonicalBounty = bountyEvents.find(event => event.id === "bounties") || bountyEvents[0] || null;
-  const eventsToStore = sanitizedEvents.filter(event => event?.id !== "bounties" && event?.type !== "bounties");
+  const eventsToStore = eventsWithPluginIds.filter(event => event?.id !== "bounties" && event?.type !== "bounties");
   if (canonicalBounty) eventsToStore.push(canonicalBounty);
 
   await env.DROPS_KV.put(

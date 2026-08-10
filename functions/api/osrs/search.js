@@ -1,3 +1,4 @@
+import { getOsrsItemMapping } from "../_osrsItems.js";
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
@@ -27,8 +28,12 @@ gsrsearch: q,
     const data = await response.json();
     const pages = data?.query?.pages || {};
 
+    const mapping = await getOsrsItemMapping().catch(() => []);
+    const idsByName = new Map(mapping.map(item => [String(item?.name || "").trim().toLowerCase(), Number(item?.id)]));
+
     const results = Object.values(pages)
       .map(page => ({
+        id: idsByName.get(String(page.title || "").trim().toLowerCase()) || null,
         name: page.title || "",
         image: page.thumbnail?.source || page.original?.source || "",
         url: page.fullurl || ""

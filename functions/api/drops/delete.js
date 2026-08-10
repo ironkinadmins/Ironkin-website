@@ -1,5 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { getDropListKey, LEGACY_CLAN_GOAL_DROP_IDS, readDropsWithClanGoalFallback } from "./_dropKeys.js";
+import { deleteTrackedItem } from "../_supabase.js";
 
 export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
@@ -25,9 +26,13 @@ export async function onRequestPost({ request, env }) {
   const key = result.key || getDropListKey(eventId);
   const drops = result.drops || [];
 
+  const removedDrop = drops.find(drop => drop.name === name);
   const updatedDrops = drops.filter(drop => drop.name !== name);
 
   await env.DROPS_KV.put(key, JSON.stringify(updatedDrops));
+  if (removedDrop?.itemId) {
+    await deleteTrackedItem(env, eventId, removedDrop.itemId).catch(() => null);
+  }
 
   // Clan Goal drops used to be stored under event-specific legacy keys.
   // Remove the same drop from those keys too, otherwise an emptied canonical

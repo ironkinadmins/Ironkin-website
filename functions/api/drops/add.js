@@ -1,4 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
+import { resolveOsrsItemIdByName } from "../_osrsItems.js";
+import { upsertTrackedItem } from "../_supabase.js";
 function getDropListKey(eventId) {
   return `drops:${eventId}`;
 }
@@ -18,6 +20,10 @@ export async function onRequestPost({ request, env }) {
   const image = body.image?.trim() || "";
   const wikiUrl = body.wikiUrl?.trim() || "";
   const rewardEmbers = Math.max(0, Number(body.rewardEmbers || 0));
+  let itemId = Number(body.itemId);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    itemId = await resolveOsrsItemIdByName(name).catch(() => null);
+  }
 
   if (!eventId || !name) {
     return Response.json(
@@ -37,14 +43,30 @@ export async function onRequestPost({ request, env }) {
     if (image) existing.image = image;
     if (wikiUrl) existing.wikiUrl = wikiUrl;
     if (body.rewardEmbers !== undefined) existing.rewardEmbers = rewardEmbers;
+    if (itemId) existing.itemId = itemId;
   } else {
-    drops.push({ name, image, wikiUrl, rewardEmbers, count: 0 });
+    drops.push({ name, image, wikiUrl, rewardEmbers, itemId: itemId || null, count: 0 });
   }
 
   await env.DROPS_KV.put(key, JSON.stringify(drops));
 
+  let supabase = { synced: false, reason: itemId ? "not-configured" : "missing-item-id" };
+  if (itemId) {
+    supabase = await upsertTrackedItem(env, {
+      websiteEventId: eventId,
+      itemId,
+      itemName: name,
+      imageUrl: image,
+      wikiUrl,
+      rewardEmbers
+    }).catch(error => ({ synced: false, reason: error.message }));
+  }
+
   return Response.json({
     success: true,
+    itemId: itemId || null,
+    supabaseSynced: Boolean(supabase.synced),
+    supabaseWarning: supabase.synced ? null : supabase.reason,
     drops
   });
 }
