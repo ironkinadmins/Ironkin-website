@@ -1,3 +1,4 @@
+
 let selectedEventId = null;
 let allEvents = [];
 
@@ -1222,12 +1223,17 @@ async function loadAdminDrops() {
         <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}<small>${formatDropTrackingRule(drop.trackingRule)}</small></span>
       </div>
       <div class="drop-controls">
-        <button onclick="changeDrop('${drop.name}', -1)">−</button>
+        <button type="button" data-drop-action="decrement">−</button>
         <strong>${drop.count}</strong>
-        <button onclick="changeDrop('${drop.name}', 1)">+</button>
-        <button onclick="deleteDrop('${drop.name}')">Delete</button>
+        <button type="button" data-drop-action="increment">+</button>
+        <button type="button" data-drop-action="delete">Delete</button>
       </div>
     `;
+
+    row.querySelector('[data-drop-action="decrement"]')?.addEventListener("click", () => changeDrop(drop.name, -1));
+    row.querySelector('[data-drop-action="increment"]')?.addEventListener("click", () => changeDrop(drop.name, 1));
+    row.querySelector('[data-drop-action="delete"]')?.addEventListener("click", () => deleteDrop(drop.name));
+
     list.appendChild(row);
   });
 }
