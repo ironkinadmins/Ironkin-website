@@ -228,7 +228,6 @@ function renderPluginApiKey(profile) {
   const card = document.getElementById("profilePluginCard");
   const keyInput = document.getElementById("profilePluginApiKeyInput");
   const serverInput = document.getElementById("profilePluginServerInput");
-  const bingoInput = document.getElementById("profilePluginBingoInput");
 
   if (!card || profile.isOwnProfile === false) return;
 
@@ -236,7 +235,6 @@ function renderPluginApiKey(profile) {
   card.style.display = "";
   if (keyInput) keyInput.value = plugin.apiKey || "";
   if (serverInput) serverInput.value = plugin.serverUrl || "https://ironkinclan.com";
-  if (bingoInput) bingoInput.value = plugin.bingoId || "battleship-bingo";
 }
 
 async function copyPluginApiKey() {

@@ -18,6 +18,7 @@
 
     <div class="admin-tabs" role="tablist" aria-label="Admin sections">
       <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
+      <button type="button" class="admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="bingo">Battleship Bingo</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="guess-kc">Guess the KC</button>
       <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
@@ -42,15 +43,6 @@
 
         <div class="admin-field admin-field-wide">
           <div id="botwTierNotice" class="admin-info-box" style="display:none"></div>
-        </div>
-
-        <div class="admin-field admin-field-wide" id="pluginEventIdField">
-          <label for="pluginEventIdInput">Plugin Event ID</label>
-          <div class="admin-inline-row">
-            <input id="pluginEventIdInput" type="text" readonly placeholder="Created automatically when the event is activated and saved" />
-            <button type="button" class="btn secondary" id="copyPluginEventIdBtn">Copy</button>
-          </div>
-          <p class="admin-muted" id="pluginEventIdHelp">RuneLite receives this ID automatically from the API. You never need to enter it into the plugin.</p>
         </div>
 
         <div class="admin-field admin-field-wide">
@@ -133,14 +125,6 @@
       </div>
     </section>
 
-    <section class="admin-card" id="pluginTrackingOverview">
-      <div class="admin-section-header">
-        <h2>RuneLite / API Tracking</h2>
-        <p>Read-only view of the event IDs currently published to the Ironkin plugin. These IDs are managed automatically.</p>
-      </div>
-      <div id="pluginTrackingOverviewList"></div>
-    </section>
-
     <section class="admin-card" id="standardDropsEditor">
       <div class="admin-section-header">
         <h2>Event Drops</h2>
@@ -204,6 +188,17 @@
       <div class="admin-divider"></div>
       <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
     </section>
+    </div>
+
+    <div class="admin-tab-panel" id="adminTab-clan-plugin">
+      <section class="admin-card" id="pluginTrackingOverview">
+        <div class="admin-section-header">
+          <p class="eyebrow">Clan Plugin</p>
+          <h2>Event IDs & Tracking</h2>
+          <p>Read-only overview of event IDs published to the Ironkin Clan Plugin. IDs are created and managed automatically; members do not enter them manually.</p>
+        </div>
+        <div id="pluginTrackingOverviewList"></div>
+      </section>
     </div>
 
     <div class="admin-tab-panel" id="adminTab-bingo">

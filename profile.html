@@ -41,28 +41,16 @@
         <div id="profileEventRecord"></div>
       </div>
 
-      <div class="profile-panel profile-settings-card">
-        <div class="profile-section-header">
-          <p class="eyebrow">Profile Settings</p>
-          <h2>Edit Profile</h2>
-          <p class="admin-muted">Discord avatar is used by default. Add a custom avatar URL or short blurb if you want.</p>
-        </div>
-
-
-        <div class="profile-plugin-card" id="profilePluginCard" style="display:none;">
+      <div class="profile-panel profile-plugin-card" id="profilePluginCard" style="display:none;">
           <div class="profile-section-header">
-            <p class="eyebrow">RuneLite Plugin</p>
-            <h3>Plugin API Key</h3>
+            <p class="eyebrow">Clan Plugin</p>
+            <h2>Clan Plugin Settings</h2>
             <p class="admin-muted">Use this in the Ironkin RuneLite plugin. Keep it private.</p>
           </div>
           <div class="admin-form-grid single-column">
             <div class="admin-field admin-field-wide">
               <label for="profilePluginServerInput">Server URL</label>
               <input id="profilePluginServerInput" type="text" readonly value="https://ironkinclan.com" />
-            </div>
-            <div class="admin-field admin-field-wide">
-              <label for="profilePluginBingoInput">Bingo ID</label>
-              <input id="profilePluginBingoInput" type="text" readonly value="battleship-bingo" />
             </div>
             <div class="admin-field admin-field-wide">
               <label for="profilePluginApiKeyInput">API Key</label>
@@ -75,6 +63,13 @@
             </div>
           </div>
           <p class="admin-muted" id="profilePluginStatus"></p>
+        </div>
+
+      <div class="profile-panel profile-settings-card">
+        <div class="profile-section-header">
+          <p class="eyebrow">Profile Settings</p>
+          <h2>Edit Profile</h2>
+          <p class="admin-muted">Discord avatar is used by default. Add a custom avatar URL or short blurb if you want.</p>
         </div>
 
         <div class="admin-form-grid single-column">

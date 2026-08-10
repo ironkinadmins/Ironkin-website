@@ -1,4 +1,3 @@
-
 let selectedEventId = null;
 let allEvents = [];
 
