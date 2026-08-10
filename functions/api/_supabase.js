@@ -38,7 +38,7 @@ export async function supabaseRest(env, path, options = {}) {
 
 export async function listTrackedItems(env) {
   if (!hasSupabase(env)) return [];
-  const response = await supabaseRest(env, "ironkin_event_items?select=website_event_id,item_id,item_name,image_url,wiki_url,reward_embers&order=website_event_id.asc,item_name.asc");
+  const response = await supabaseRest(env, "ironkin_event_items?select=website_event_id,item_id,item_name,image_url,wiki_url,reward_embers,tracking_rule&order=website_event_id.asc,item_name.asc");
   return response.json();
 }
 
@@ -54,6 +54,7 @@ export async function upsertTrackedItem(env, item) {
       image_url: String(item.imageUrl || ""),
       wiki_url: String(item.wikiUrl || ""),
       reward_embers: Math.max(0, Number(item.rewardEmbers || 0)),
+      tracking_rule: ["repeatable", "once_per_player", "once_per_event"].includes(String(item.trackingRule || "")) ? String(item.trackingRule) : "repeatable",
       updated_at: new Date().toISOString()
     }])
   });
@@ -67,6 +68,27 @@ export async function deleteTrackedItem(env, websiteEventId, itemId) {
     headers: { Prefer: "return=minimal" }
   });
   return { synced: true };
+}
+
+export async function findActiveDuplicateSubmission(env, { pluginEventId, itemId, trackingRule, playerKey, clientSubmissionKey }) {
+  if (!hasSupabase(env)) return null;
+  const fields = "id,status,player_name,item_name,created_at";
+  if (clientSubmissionKey) {
+    const r = await supabaseRest(env, `ironkin_event_submissions?select=${fields}&client_submission_key=eq.${encodeURIComponent(clientSubmissionKey)}&limit=1`);
+    const rows = await r.json();
+    if (rows?.[0]) return { ...rows[0], reason: "same_submission" };
+  }
+  if (trackingRule === "once_per_event") {
+    const r = await supabaseRest(env, `ironkin_event_submissions?select=${fields}&plugin_event_id=eq.${encodeURIComponent(pluginEventId)}&item_id=eq.${encodeURIComponent(Number(itemId))}&tracking_rule=eq.once_per_event&status=neq.rejected&limit=1`);
+    const rows = await r.json();
+    if (rows?.[0]) return { ...rows[0], reason: "once_per_event" };
+  }
+  if (trackingRule === "once_per_player" && playerKey) {
+    const r = await supabaseRest(env, `ironkin_event_submissions?select=${fields}&plugin_event_id=eq.${encodeURIComponent(pluginEventId)}&item_id=eq.${encodeURIComponent(Number(itemId))}&tracking_rule=eq.once_per_player&player_key=eq.${encodeURIComponent(playerKey)}&status=neq.rejected&limit=1`);
+    const rows = await r.json();
+    if (rows?.[0]) return { ...rows[0], reason: "once_per_player" };
+  }
+  return null;
 }
 
 export async function insertEventSubmission(env, submission) {

@@ -52,6 +52,98 @@ function getAdminEventOptionText(event) {
   return `${label} - ${title}${event.active ? " (Active)" : ""}`;
 }
 
+function getPluginTrackingLabel(event) {
+  if (event?.type === "botw") {
+    const tier = getBotwTierLabel(event);
+    return tier ? `BOTW ${tier}` : "BOTW";
+  }
+  if (event?.type === "sotw") return "SOTW";
+  if (isClanGoalEvent(event)) return "Clan Goal";
+  if (isBountiesEvent(event)) return "Bounties";
+  return event?.label || event?.title || event?.type || "Event";
+}
+
+function updatePluginEventIdDisplay() {
+  const event = getSelectedEvent();
+  const input = document.getElementById("pluginEventIdInput");
+  const help = document.getElementById("pluginEventIdHelp");
+  if (!input || !event) return;
+
+  input.value = event.pluginEventId || "";
+  if (help) {
+    help.textContent = event.pluginEventId
+      ? "This ID is sent to RuneLite automatically through /events/item-list. It is shown here only for troubleshooting and Supabase lookups."
+      : event.active
+        ? "Save the event to create its Plugin Event ID."
+        : "The Plugin Event ID is created automatically when this event is activated and saved.";
+  }
+}
+
+function renderPluginTrackingOverview() {
+  const mount = document.getElementById("pluginTrackingOverviewList");
+  if (!mount) return;
+
+  const supported = allEvents.filter(event =>
+    event && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event))
+  );
+
+  if (!supported.length) {
+    mount.innerHTML = `<p class="admin-muted">No trackable events found.</p>`;
+    return;
+  }
+
+  mount.innerHTML = supported.map(event => {
+    const id = event.pluginEventId || "Not created yet";
+    const state = event.active ? (event.dropsEnabled ? "Active - Drops Enabled" : "Active - Drops Disabled") : "Inactive";
+    return `
+      <div class="admin-info-box" style="margin-bottom:10px">
+        <div class="admin-inline-row" style="justify-content:space-between;align-items:center">
+          <div>
+            <strong>${escapeHtml(getPluginTrackingLabel(event))}</strong>
+            <div class="admin-muted">${escapeHtml(event.title || getResetEventTitle(event))} · ${escapeHtml(state)}</div>
+          </div>
+          <button type="button" class="btn secondary" data-copy-plugin-event-id="${escapeHtml(event.pluginEventId || "")}" ${event.pluginEventId ? "" : "disabled"}>Copy ID</button>
+        </div>
+        <code style="display:block;margin-top:8px;word-break:break-all">${escapeHtml(id)}</code>
+      </div>
+    `;
+  }).join("");
+
+  mount.querySelectorAll("[data-copy-plugin-event-id]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const value = button.dataset.copyPluginEventId || "";
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        const original = button.textContent;
+        button.textContent = "Copied";
+        setTimeout(() => { button.textContent = original; }, 1200);
+      } catch {
+        alert(`Plugin Event ID: ${value}`);
+      }
+    });
+  });
+}
+
+async function copySelectedPluginEventId() {
+  const value = document.getElementById("pluginEventIdInput")?.value.trim() || "";
+  if (!value) {
+    alert("This event does not have a Plugin Event ID yet. Activate and save it first.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    const button = document.getElementById("copyPluginEventIdBtn");
+    if (button) {
+      const original = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => { button.textContent = original; }, 1200);
+    }
+  } catch {
+    alert(`Plugin Event ID: ${value}`);
+  }
+}
+
 function formatAdminDate(value) {
   if (!value) return "Dates not loaded yet.";
 
@@ -470,6 +562,8 @@ function populateEventFields() {
   document.getElementById("eventActiveInput").checked = Boolean(event.active);
   document.getElementById("eventFeaturedInput").checked = Boolean(event.featured);
   document.getElementById("eventDropsInput").checked = Boolean(event.dropsEnabled);
+  updatePluginEventIdDisplay();
+  renderPluginTrackingOverview();
 
   updateEventFieldVisibility();
   renderMilestonesEditor();
@@ -884,6 +978,7 @@ async function loadAdmin() {
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
   const saveEventBtn = document.getElementById("saveEventBtn");
+  const copyPluginEventIdBtn = document.getElementById("copyPluginEventIdBtn");
   const addMilestoneBtn = document.getElementById("addMilestoneBtn");
   const addPlacementRewardBtn = document.getElementById("addPlacementRewardBtn");
   const addParticipationRewardBtn = document.getElementById("addParticipationRewardBtn");
@@ -945,6 +1040,7 @@ async function loadAdmin() {
 
     addDropBtn.addEventListener("click", addDrop);
     saveEventBtn.addEventListener("click", saveSelectedEvent);
+    if (copyPluginEventIdBtn) copyPluginEventIdBtn.addEventListener("click", copySelectedPluginEventId);
 
     if (addMilestoneBtn) addMilestoneBtn.addEventListener("click", addMilestone);
     if (addPlacementRewardBtn) addPlacementRewardBtn.addEventListener("click", addPlacementReward);
@@ -999,10 +1095,27 @@ async function saveSelectedEvent() {
     body: JSON.stringify({ events: eventsToSave })
   });
 
+  const data = await response.json().catch(() => ({}));
+
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
     alert(data.error || "Could not save event.");
     return;
+  }
+
+  if (Array.isArray(data.events)) {
+    const keepSelectedId = selectedEventId;
+    allEvents = data.events;
+    selectedEventId = keepSelectedId;
+    populateEventFields();
+
+    const eventSelect = document.getElementById("adminEventSelect");
+    if (eventSelect) {
+      Array.from(eventSelect.options).forEach(option => {
+        const updated = allEvents.find(item => item.id === option.value);
+        if (updated) option.textContent = getAdminEventOptionText(updated);
+      });
+      eventSelect.value = keepSelectedId;
+    }
   }
 
   alert("Event saved.");
@@ -1072,6 +1185,13 @@ async function archiveSelectedEvent() {
   alert("Event archived and marked inactive.");
 }
 
+function formatDropTrackingRule(value) {
+  const rule = String(value || "repeatable");
+  if (rule === "once_per_player") return "Duplicate rule: Once per player";
+  if (rule === "once_per_event") return "Duplicate rule: Once per event (clan-wide)";
+  return "Duplicate rule: Count every drop";
+}
+
 async function loadAdminDrops() {
   const list = isBountiesEvent(getSelectedEvent())
     ? document.getElementById("adminBountiesList")
@@ -1099,7 +1219,7 @@ async function loadAdminDrops() {
     row.innerHTML = `
       <div class="bounty-drop-main">
         ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
-        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}</span>
+        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}<small>${formatDropTrackingRule(drop.trackingRule)}</small></span>
       </div>
       <div class="drop-controls">
         <button onclick="changeDrop('${drop.name}', -1)">−</button>
@@ -1118,13 +1238,14 @@ async function addDrop() {
   const imageInput = document.getElementById("dropImageInput");
   const name = input.value.trim();
   const itemId = Number(itemIdInput?.value || 0);
+  const trackingRule = String(document.getElementById("dropTrackingRuleInput")?.value || "repeatable");
   if (!name || !selectedEventId) return;
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
 
   const response = await fetch("/api/drops/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "" })
+    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "", trackingRule })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add tracked item."); return; }
@@ -1210,10 +1331,11 @@ async function addBountyItem() {
   const name = document.getElementById("bountySelectedItemInput")?.value.trim();
   const imageInput = document.getElementById("bountySelectedImageInput");
   const rewardEmbers = Number(document.getElementById("bountyRewardInput")?.value || 0);
+  const trackingRule = String(document.getElementById("bountyTrackingRuleInput")?.value || "repeatable");
   if (!name || !selectedEventId) { alert("Select an OSRS item first."); return; }
   const itemId = Number(document.getElementById("bountySelectedItemInput")?.dataset.itemId || 0);
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
-  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers }) });
+  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add bounty."); return; }
   document.getElementById("bountySelectedItemInput").value = "";

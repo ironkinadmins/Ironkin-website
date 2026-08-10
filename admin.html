@@ -44,6 +44,15 @@
           <div id="botwTierNotice" class="admin-info-box" style="display:none"></div>
         </div>
 
+        <div class="admin-field admin-field-wide" id="pluginEventIdField">
+          <label for="pluginEventIdInput">Plugin Event ID</label>
+          <div class="admin-inline-row">
+            <input id="pluginEventIdInput" type="text" readonly placeholder="Created automatically when the event is activated and saved" />
+            <button type="button" class="btn secondary" id="copyPluginEventIdBtn">Copy</button>
+          </div>
+          <p class="admin-muted" id="pluginEventIdHelp">RuneLite receives this ID automatically from the API. You never need to enter it into the plugin.</p>
+        </div>
+
         <div class="admin-field admin-field-wide">
           <label>Detected WOM Event</label>
           <div class="admin-detected-event" id="womDetectedBox">
@@ -124,6 +133,14 @@
       </div>
     </section>
 
+    <section class="admin-card" id="pluginTrackingOverview">
+      <div class="admin-section-header">
+        <h2>RuneLite / API Tracking</h2>
+        <p>Read-only view of the event IDs currently published to the Ironkin plugin. These IDs are managed automatically.</p>
+      </div>
+      <div id="pluginTrackingOverviewList"></div>
+    </section>
+
     <section class="admin-card" id="standardDropsEditor">
       <div class="admin-section-header">
         <h2>Event Drops</h2>
@@ -141,6 +158,11 @@
           <input id="dropNameInput" type="text" readonly placeholder="Select an item above" />
           <input id="dropItemIdInput" type="hidden" />
           <input id="dropImageInput" type="hidden" />
+          <select id="dropTrackingRuleInput" title="How duplicate drops should be handled">
+            <option value="repeatable">Count every drop</option>
+            <option value="once_per_player">Once per player</option>
+            <option value="once_per_event">Once per event (clan-wide)</option>
+          </select>
           <button class="btn primary" id="addDropBtn">Add Tracked Item</button>
         </div>
       </div>
@@ -168,6 +190,14 @@
         <div class="admin-field">
           <label for="bountyRewardInput">Reward per Item</label>
           <div class="admin-inline-row"><input id="bountyRewardInput" type="number" min="0" placeholder="Example: 25" /><span>Embers</span></div>
+        </div>
+        <div class="admin-field">
+          <label for="bountyTrackingRuleInput">Duplicate Rule</label>
+          <select id="bountyTrackingRuleInput">
+            <option value="repeatable">Count every drop</option>
+            <option value="once_per_player">Once per player</option>
+            <option value="once_per_event">Once per event (clan-wide)</option>
+          </select>
         </div>
       </div>
       <div class="admin-action-row"><button type="button" class="btn primary" id="addBountyItemBtn">Add Bounty</button></div>

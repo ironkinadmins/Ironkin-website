@@ -43,7 +43,8 @@ export async function onRequestGet({ env }) {
             itemName: drop.name,
             imageUrl: drop.image,
             wikiUrl: drop.wikiUrl,
-            rewardEmbers: drop.rewardEmbers
+            rewardEmbers: drop.rewardEmbers,
+            trackingRule: drop.trackingRule || "repeatable"
           }).catch(() => null);
         }
       }

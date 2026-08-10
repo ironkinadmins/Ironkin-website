@@ -20,6 +20,8 @@ export async function onRequestPost({ request, env }) {
   const image = body.image?.trim() || "";
   const wikiUrl = body.wikiUrl?.trim() || "";
   const rewardEmbers = Math.max(0, Number(body.rewardEmbers || 0));
+  const allowedTrackingRules = new Set(["repeatable", "once_per_player", "once_per_event"]);
+  const trackingRule = allowedTrackingRules.has(String(body.trackingRule || "")) ? String(body.trackingRule) : "repeatable";
   let itemId = Number(body.itemId);
   if (!Number.isInteger(itemId) || itemId <= 0) {
     itemId = await resolveOsrsItemIdByName(name).catch(() => null);
@@ -44,8 +46,9 @@ export async function onRequestPost({ request, env }) {
     if (wikiUrl) existing.wikiUrl = wikiUrl;
     if (body.rewardEmbers !== undefined) existing.rewardEmbers = rewardEmbers;
     if (itemId) existing.itemId = itemId;
+    existing.trackingRule = trackingRule;
   } else {
-    drops.push({ name, image, wikiUrl, rewardEmbers, itemId: itemId || null, count: 0 });
+    drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, itemId: itemId || null, count: 0 });
   }
 
   await env.DROPS_KV.put(key, JSON.stringify(drops));
@@ -58,7 +61,8 @@ export async function onRequestPost({ request, env }) {
       itemName: name,
       imageUrl: image,
       wikiUrl,
-      rewardEmbers
+      rewardEmbers,
+      trackingRule
     }).catch(error => ({ synced: false, reason: error.message }));
   }
 

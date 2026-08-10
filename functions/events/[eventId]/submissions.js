@@ -1,4 +1,4 @@
-import { listTrackedItems, insertEventSubmission } from "../../api/_supabase.js";
+import { listTrackedItems, insertEventSubmission, findActiveDuplicateSubmission } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
 
 const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
@@ -11,6 +11,12 @@ function cleanBase64Image(value) {
   return cleaned.replace(/[\r\n]/g, "");
 }
 function base64ByteLength(base64) { const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0; return Math.floor((base64.length * 3) / 4) - padding; }
+function normalizePlayerKey(discordId, username) { return String(discordId || username || "").trim().toLowerCase(); }
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 export async function onRequestPost(context) {
   const { request, env, params } = context;
@@ -35,6 +41,25 @@ export async function onRequestPost(context) {
   const tracked = rows.find(row => String(row.website_event_id) === websiteEventId && Number(row.item_id) === itemId);
   if (!tracked) return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
 
+  const trackingRule = ["repeatable", "once_per_player", "once_per_event"].includes(String(tracked.tracking_rule || "")) ? String(tracked.tracking_rule) : "repeatable";
+  const discordId = String(pluginUser?.discordId || "");
+  const playerKey = normalizePlayerKey(discordId, username);
+  const clientTimestamp = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString();
+  // Protect against HTTP retries/double firing even for repeatable items.
+  const clientSubmissionKey = await sha256Hex(`${requestedEventId}|${playerKey}|${itemId}|${quantity}|${clientTimestamp}`);
+  const duplicate = await findActiveDuplicateSubmission(env, { pluginEventId: requestedEventId, itemId, trackingRule, playerKey, clientSubmissionKey });
+  if (duplicate) {
+    return Response.json({
+      success: true,
+      duplicate: true,
+      duplicateReason: duplicate.reason,
+      submissionId: duplicate.id,
+      eventId: requestedEventId,
+      itemid: itemId,
+      status: duplicate.status
+    }, { status: 200 });
+  }
+
   let proofUrl = "";
   const imageData = cleanBase64Image(body.imageData);
   if (imageData) {
@@ -52,14 +77,17 @@ export async function onRequestPost(context) {
     event_type: String(event.type || ""),
     event_name: String(event.title || event.label || requestedEventId),
     player_name: username,
-    discord_id: String(pluginUser?.discordId || ""),
+    discord_id: discordId,
+    player_key: playerKey,
     item_id: itemId,
     item_name: String(tracked.item_name || body.itemName || `Item ${itemId}`),
     quantity,
+    tracking_rule: trackingRule,
+    client_submission_key: clientSubmissionKey,
     source: "runelite",
     status: "pending",
     proof_url: proofUrl,
-    client_timestamp: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString()
+    client_timestamp: clientTimestamp
   });
 
   return Response.json({ success: true, submissionId: record?.id || submissionId, eventId: requestedEventId, itemid: itemId, status: "pending" }, { status: 201 });
