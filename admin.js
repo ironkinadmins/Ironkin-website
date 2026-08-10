@@ -486,9 +486,19 @@ async function importHistoricalDrops() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ websiteEventId: eventId, rows })
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Import failed.");
-    if (status) status.textContent = `Imported ${Number(data.imported || 0)}, skipped ${Number(data.skipped || 0)}, failed ${Number(data.failed || 0)}.`;
+    const rawResponse = await response.text();
+    let data = {};
+    try { data = rawResponse ? JSON.parse(rawResponse) : {}; } catch { data = {}; }
+    if (!response.ok) {
+      const serverMessage = data.error || data.message || rawResponse || `Import endpoint returned HTTP ${response.status}.`;
+      throw new Error(serverMessage);
+    }
+    const failedDetails = Array.isArray(data.details)
+      ? data.details.filter(entry => entry?.status === "failed").map(entry => `#${entry.submissionId || "?"}: ${entry.reason || "failed"}`)
+      : [];
+    if (status) {
+      status.textContent = `Imported ${Number(data.imported || 0)}, skipped ${Number(data.skipped || 0)}, failed ${Number(data.failed || 0)}.${failedDetails.length ? ` ${failedDetails.slice(0, 3).join(" | ")}${failedDetails.length > 3 ? " …" : ""}` : ""}`;
+    }
     await loadBackfillTrackedItems();
     renderBackfillPreview();
   } catch (error) {

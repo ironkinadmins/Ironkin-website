@@ -32,7 +32,7 @@ async function alreadyImported(env, key) {
   return rows?.[0] || null;
 }
 
-export async function onRequestPost({ request, env }) {
+async function handleBackfillPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
@@ -121,4 +121,17 @@ export async function onRequestPost({ request, env }) {
   }
 
   return Response.json({ success: result.failed === 0, ...result });
+}
+
+
+export async function onRequestPost(context) {
+  try {
+    return await handleBackfillPost(context);
+  } catch (error) {
+    console.error("Historical drop import failed:", error);
+    return Response.json({
+      error: error?.message || "Historical drop import failed unexpectedly.",
+      errorType: error?.name || "Error"
+    }, { status: 500 });
+  }
 }
