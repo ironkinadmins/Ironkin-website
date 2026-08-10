@@ -294,6 +294,33 @@
         </div>
         <div id="pluginTrackingOverviewList"></div>
       </section>
+
+      <section class="admin-card" id="historicalDropImportCard">
+        <div class="admin-section-header">
+          <p class="eyebrow">Historical Drops</p>
+          <h2>Backfill Approved Submissions</h2>
+          <p class="admin-muted">Import previously-approved Discord submissions into Supabase. Imported rows are marked approved and deduplicated by Discord Submission ID.</p>
+        </div>
+
+        <div class="admin-field">
+          <label for="backfillEventSelect">Target Event</label>
+          <select id="backfillEventSelect"></select>
+          <small class="admin-muted" id="backfillEventHelp">Choose the event these historical drops belong to.</small>
+        </div>
+
+        <div class="admin-field">
+          <label for="backfillCsvInput">Backfill CSV</label>
+          <input id="backfillCsvInput" type="file" accept=".csv,text/csv" />
+          <small class="admin-muted">Expected columns: submission_id, submitted_at_local, player, category, item_label, reward_embers, approved_by, status.</small>
+        </div>
+
+        <div id="backfillPreview" class="admin-profile-results">Choose an event and CSV file to preview the import.</div>
+
+        <div class="admin-action-row">
+          <button type="button" class="btn primary" id="importBackfillBtn" disabled>Import Approved Drops</button>
+        </div>
+        <p class="admin-muted" id="backfillImportStatus"></p>
+      </section>
     </div>
 
     <div class="admin-tab-panel" id="adminTab-profiles">

@@ -79,6 +79,214 @@ function updatePluginEventIdDisplay() {
   }
 }
 
+
+let backfillRows = [];
+let backfillTrackedItems = [];
+
+function normalizeBackfillLabel(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’‘]/g, "'")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function parseCsvLine(line) {
+  const cells = [];
+  let value = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      if (quoted && line[i + 1] === '"') { value += '"'; i += 1; }
+      else quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      cells.push(value);
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  cells.push(value);
+  return cells;
+}
+
+function parseBackfillCsv(text) {
+  const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]).map(header => header.trim());
+  return lines.slice(1).map(line => {
+    const values = parseCsvLine(line);
+    const row = {};
+    headers.forEach((header, index) => { row[header] = values[index] ?? ""; });
+    return row;
+  });
+}
+
+function getBackfillSupportedEvents() {
+  return allEvents.filter(event =>
+    event && event.pluginEventId && (event.type === "sotw" || event.type === "botw" || isClanGoalEvent(event) || isBountiesEvent(event))
+  );
+}
+
+function populateBackfillEventSelect() {
+  const select = document.getElementById("backfillEventSelect");
+  if (!select) return;
+  const events = getBackfillSupportedEvents();
+  select.innerHTML = events.length
+    ? events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(getPluginTrackingLabel(event))} - ${escapeHtml(event.title || getResetEventTitle(event))}</option>`).join("")
+    : `<option value="">No Plugin Event IDs available</option>`;
+  const bounty = events.find(event => isBountiesEvent(event) && event.active) || events.find(event => isBountiesEvent(event));
+  if (bounty) select.value = bounty.id;
+}
+
+async function loadBackfillTrackedItems() {
+  const eventId = document.getElementById("backfillEventSelect")?.value || "";
+  backfillTrackedItems = [];
+  if (!eventId) return;
+  try {
+    const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}&t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    backfillTrackedItems = (data.drops || []).filter(drop => Number(drop?.itemId) > 0);
+  } catch {
+    backfillTrackedItems = [];
+  }
+}
+
+function autoMapBackfillItem(label) {
+  const normalized = normalizeBackfillLabel(label);
+  if (!normalized) return null;
+  let exact = backfillTrackedItems.find(item => normalizeBackfillLabel(item.name) === normalized);
+  if (exact) return exact;
+
+  const aliases = new Map([
+    ["chisel", ["jeweller s chisel", "jewellers chisel"]],
+    ["jeweller s chisel", ["jeweller s chisel", "jewellers chisel"]],
+    ["jewellers chisel", ["jeweller s chisel", "jewellers chisel"]]
+  ]);
+  const targets = aliases.get(normalized) || [];
+  for (const target of targets) {
+    exact = backfillTrackedItems.find(item => normalizeBackfillLabel(item.name) === target);
+    if (exact) return exact;
+  }
+
+  // Combined labels such as "dust/mist battlestaff" are intentionally left
+  // unmapped because each historical row may represent either real item.
+  return null;
+}
+
+function renderBackfillPreview() {
+  const mount = document.getElementById("backfillPreview");
+  const importBtn = document.getElementById("importBackfillBtn");
+  if (!mount || !importBtn) return;
+
+  if (!backfillRows.length) {
+    mount.innerHTML = "Choose an event and CSV file to preview the import.";
+    importBtn.disabled = true;
+    return;
+  }
+  if (!backfillTrackedItems.length) {
+    mount.innerHTML = `<p class="admin-error">This event has no RuneLite-trackable items. Add the bounty/drop items first, then retry the CSV.</p>`;
+    importBtn.disabled = true;
+    return;
+  }
+
+  backfillRows.forEach(row => {
+    if (!row._mappedItemId) {
+      const match = autoMapBackfillItem(row.item_label);
+      if (match) row._mappedItemId = Number(match.itemId);
+    }
+  });
+
+  const options = backfillTrackedItems.map(item => `<option value="${Number(item.itemId)}">${escapeHtml(item.name)} (ID ${Number(item.itemId)})</option>`).join("");
+  mount.innerHTML = `
+    <div class="admin-muted" style="margin-bottom:10px">${backfillRows.length} approved historical submission${backfillRows.length === 1 ? "" : "s"} found. Confirm the item mapping before importing.</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th style="text-align:left;padding:8px">Submission</th><th style="text-align:left;padding:8px">Player</th><th style="text-align:left;padding:8px">Historical Label</th><th style="text-align:left;padding:8px">Tracked Item</th></tr></thead>
+        <tbody>${backfillRows.map((row, index) => `
+          <tr>
+            <td style="padding:8px">#${escapeHtml(row.submission_id || "?")}</td>
+            <td style="padding:8px">${escapeHtml(row.player || "")}</td>
+            <td style="padding:8px">${escapeHtml(row.item_label || "")}</td>
+            <td style="padding:8px"><select data-backfill-map-index="${index}"><option value="">Select item…</option>${options}</select></td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+
+  mount.querySelectorAll("[data-backfill-map-index]").forEach(select => {
+    const index = Number(select.dataset.backfillMapIndex);
+    const row = backfillRows[index];
+    if (row?._mappedItemId) select.value = String(row._mappedItemId);
+    select.addEventListener("change", () => {
+      row._mappedItemId = Number(select.value || 0) || null;
+      importBtn.disabled = backfillRows.some(item => !item._mappedItemId);
+    });
+  });
+  importBtn.disabled = backfillRows.some(row => !row._mappedItemId);
+}
+
+async function handleBackfillCsvChange(event) {
+  const file = event.target.files?.[0];
+  backfillRows = [];
+  const status = document.getElementById("backfillImportStatus");
+  if (status) status.textContent = "";
+  if (!file) { renderBackfillPreview(); return; }
+  try {
+    const parsed = parseBackfillCsv(await file.text());
+    backfillRows = parsed.filter(row => String(row.status || "approved").toLowerCase() === "approved");
+    await loadBackfillTrackedItems();
+    renderBackfillPreview();
+  } catch (error) {
+    if (status) status.textContent = error.message || "Could not read CSV.";
+    renderBackfillPreview();
+  }
+}
+
+async function importHistoricalDrops() {
+  const eventId = document.getElementById("backfillEventSelect")?.value || "";
+  const status = document.getElementById("backfillImportStatus");
+  const button = document.getElementById("importBackfillBtn");
+  if (!eventId || !backfillRows.length || backfillRows.some(row => !row._mappedItemId)) return;
+  if (!confirm(`Import ${backfillRows.length} approved historical submissions into ${eventId}? Existing Discord Submission IDs will be skipped.`)) return;
+
+  const itemById = new Map(backfillTrackedItems.map(item => [Number(item.itemId), item]));
+  const rows = backfillRows.map(row => {
+    const item = itemById.get(Number(row._mappedItemId));
+    const local = String(row.submitted_at_local || "").trim();
+    const parsedDate = local ? new Date(local.replace(" ", "T")) : null;
+    return {
+      submissionId: String(row.submission_id || "").trim(),
+      playerName: String(row.player || "").trim(),
+      itemId: Number(item?.itemId || 0),
+      itemName: String(item?.name || ""),
+      quantity: 1,
+      approvedBy: String(row.approved_by || "").trim(),
+      submittedAt: parsedDate && Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString() : null
+    };
+  });
+
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Importing…";
+  try {
+    const response = await fetch("/api/admin/event-submissions/backfill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ websiteEventId: eventId, rows })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Import failed.");
+    if (status) status.textContent = `Imported ${Number(data.imported || 0)}, skipped ${Number(data.skipped || 0)}, failed ${Number(data.failed || 0)}.`;
+    await loadBackfillTrackedItems();
+    renderBackfillPreview();
+  } catch (error) {
+    if (status) status.textContent = error.message || "Import failed.";
+  } finally {
+    if (button) button.disabled = backfillRows.some(row => !row._mappedItemId);
+  }
+}
+
 function renderPluginTrackingOverview() {
   const mount = document.getElementById("pluginTrackingOverviewList");
   if (!mount) return;
@@ -993,6 +1201,9 @@ async function loadAdmin() {
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
   const syncDiscordMembersBtn = document.getElementById("syncDiscordMembersBtn");
+  const backfillCsvInput = document.getElementById("backfillCsvInput");
+  const backfillEventSelect = document.getElementById("backfillEventSelect");
+  const importBackfillBtn = document.getElementById("importBackfillBtn");
 
   // User Management must initialize independently of the Events admin controls.
   // Previously these listeners/status calls were below the Events guard, so if an
@@ -1008,6 +1219,9 @@ async function loadAdmin() {
   if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
   if (syncDiscordMembersBtn) syncDiscordMembersBtn.addEventListener("click", syncDiscordMembersNow);
   loadDiscordSyncStatus();
+  if (backfillCsvInput) backfillCsvInput.addEventListener("change", handleBackfillCsvChange);
+  if (backfillEventSelect) backfillEventSelect.addEventListener("change", async () => { await loadBackfillTrackedItems(); renderBackfillPreview(); });
+  if (importBackfillBtn) importBackfillBtn.addEventListener("click", importHistoricalDrops);
 
   // The rest of loadAdmin configures the Events tab. Do not let missing event
   // controls disable unrelated User Management functionality.
@@ -1019,6 +1233,8 @@ async function loadAdmin() {
 
   try {
     allEvents = await fetchEvents();
+    populateBackfillEventSelect();
+    renderPluginTrackingOverview();
     eventSelect.innerHTML = "";
 
     allEvents.forEach(event => {
@@ -1106,6 +1322,7 @@ async function saveSelectedEvent() {
     const keepSelectedId = selectedEventId;
     allEvents = data.events;
     selectedEventId = keepSelectedId;
+    populateBackfillEventSelect();
     populateEventFields();
 
     const eventSelect = document.getElementById("adminEventSelect");
