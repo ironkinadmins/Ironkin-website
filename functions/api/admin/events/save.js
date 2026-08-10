@@ -38,7 +38,9 @@ export async function onRequestPost({ request, env }) {
     return { ...event, pluginEventId: `${type}-${suffix}` };
   }
 
-  const sanitizedEvents = events.map(event => {
+  const sanitizedEvents = events.map(rawEvent => {
+    const password = String(rawEvent?.eventPassword || "").trim().slice(0, 128);
+    const event = { ...rawEvent, eventPassword: password || null };
     if (event?.id === "pvm-entry" || event?.type === "pvm-entry") {
       const sanitized = {
         ...event,

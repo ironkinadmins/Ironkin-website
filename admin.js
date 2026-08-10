@@ -38,6 +38,7 @@ function resetEventAfterArchive(event) {
   event.title = getResetEventTitle(event);
   event.description = "";
   event.womCompetitionId = null;
+  event.eventPassword = null;
   event.target = null;
   event.startDate = null;
   event.endDate = null;
@@ -1002,6 +1003,8 @@ function populateEventFields() {
 
   document.getElementById("eventDescriptionInput").value = event.description || "";
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";
+  const eventPasswordInput = document.getElementById("eventPasswordInput");
+  if (eventPasswordInput) eventPasswordInput.value = event.eventPassword || "";
   document.getElementById("eventTargetInput").value = event.target || "";
   updateDetectedWomBox(event);
   const pvmEntry = isPvmEntryEvent(event);
@@ -1550,6 +1553,8 @@ async function saveSelectedEvent() {
 
   event.description = document.getElementById("eventDescriptionInput").value.trim();
   event.womCompetitionId = isPvmEntryEvent(event) ? null : (document.getElementById("eventWomInput").value.trim() || null);
+  const eventPasswordInput = document.getElementById("eventPasswordInput");
+  event.eventPassword = eventPasswordInput?.value.trim() || null;
 
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
@@ -1621,6 +1626,8 @@ async function archiveSelectedEvent() {
   // Capture any unsaved edits before archiving.
   event.description = document.getElementById("eventDescriptionInput").value.trim();
   event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
+  const eventPasswordInput = document.getElementById("eventPasswordInput");
+  event.eventPassword = eventPasswordInput?.value.trim() || null;
 
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;

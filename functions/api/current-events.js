@@ -166,9 +166,10 @@ export async function onRequestGet({ env }) {
     ...DEFAULT_EVENTS.map(defaultEvent => ({ ...defaultEvent, ...(byId.get(defaultEvent.id) || {}) })),
     ...deduped.filter(event => event?.id && !defaultIds.has(event.id))
   ].filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.pluginOnly !== true).map(event => {
-    if (event?.type !== "bounties" && event?.id !== "bounties") return event;
     const sanitized = { ...event };
-    delete sanitized.rewards;
+    // Event passwords are plugin-only secrets and must never be exposed by the public events API.
+    delete sanitized.eventPassword;
+    if (sanitized?.type === "bounties" || sanitized?.id === "bounties") delete sanitized.rewards;
     return sanitized;
   });
 

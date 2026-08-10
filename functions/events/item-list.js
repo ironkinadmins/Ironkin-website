@@ -69,7 +69,12 @@ export async function onRequestGet({ request, env }) {
     }
 
     itemIds = [...new Set(itemIds)];
-    if (itemIds.length) result.push({ eventId: makePluginEventId(event), items: itemIds });
+    if (itemIds.length) {
+      const responseEvent = { eventId: makePluginEventId(event), items: itemIds };
+      const eventPassword = String(event?.eventPassword || "").trim();
+      if (eventPassword) responseEvent.eventPassword = eventPassword;
+      result.push(responseEvent);
+    }
   }
 
   return Response.json({ events: result }, { headers: { "Cache-Control": "no-store" } });

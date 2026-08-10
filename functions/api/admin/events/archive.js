@@ -128,6 +128,7 @@ export async function onRequestPost({ request, env }) {
             title: getResetEventTitle(item),
             description: "",
             womCompetitionId: null,
+            eventPassword: null,
             target: null,
             startDate: null,
             endDate: null,

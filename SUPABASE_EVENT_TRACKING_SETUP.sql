@@ -38,6 +38,7 @@ create table if not exists public.ironkin_event_submissions (
   item_id integer not null check (item_id > 0),
   item_name text not null,
   quantity integer not null default 1 check (quantity > 0),
+  participants text[] not null default '{}',
   tracking_rule text not null default 'repeatable' check (tracking_rule in ('repeatable','once_per_player','once_per_event')),
   client_submission_key text not null default '',
   source text not null default 'runelite',
@@ -55,6 +56,7 @@ create table if not exists public.ironkin_event_submissions (
 );
 
 -- Upgrade path if the table was created before duplicate-rule support.
+alter table public.ironkin_event_submissions add column if not exists participants text[] not null default '{}';
 alter table public.ironkin_event_submissions add column if not exists player_key text not null default '';
 alter table public.ironkin_event_submissions add column if not exists tracking_rule text not null default 'repeatable';
 alter table public.ironkin_event_submissions add column if not exists client_submission_key text not null default '';
