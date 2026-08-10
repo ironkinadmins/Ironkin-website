@@ -23,6 +23,13 @@
     </div>
 
     <div class="admin-tab-panel active" id="adminTab-events">
+      <div class="admin-tabs event-subtabs" role="tablist" aria-label="Event admin sections">
+        <button type="button" class="event-subtab-btn active" data-event-subtab="standard">Event Management</button>
+        <button type="button" class="event-subtab-btn" data-event-subtab="bingo">Battleship Bingo</button>
+        <button type="button" class="event-subtab-btn" data-event-subtab="guess-kc">Guess the KC</button>
+      </div>
+
+      <div class="event-subtab-panel active" id="eventSubtab-standard">
     <section class="admin-card">
       <div id="standardEventEditor">
       <div class="admin-form-grid">
@@ -187,6 +194,9 @@
       <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
     </section>
 
+      </div>
+
+      <div class="event-subtab-panel" id="eventSubtab-bingo">
     <section class="admin-card admin-bingo-card">
       <div class="admin-section-header">
         <p class="eyebrow">Battleship Bingo</p>
@@ -265,6 +275,9 @@
 
 
 
+      </div>
+
+      <div class="event-subtab-panel" id="eventSubtab-guess-kc">
       <section class="admin-card">
         <div class="admin-section-header">
           <p class="eyebrow">Giveaway</p>
@@ -280,8 +293,7 @@
         </div>
         <p class="admin-muted" id="guessKcSettingsStatus"></p>
       </section>
-
-
+      </div>
 
     </div>
 

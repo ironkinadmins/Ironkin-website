@@ -725,6 +725,8 @@ function updateEventFieldVisibility() {
   const rewardsHeader = document.getElementById("eventRewardsHeader");
   const rewardsGrid = document.getElementById("eventRewardsGrid");
   const archiveButton = document.getElementById("archiveEventBtn");
+  const rewardsPlacement = document.getElementById("placementRewardsEditor")?.closest(".admin-reward-panel");
+  const rewardsParticipation = document.getElementById("participationRewardsEditor")?.closest(".admin-reward-panel");
 
   if (targetSection) targetSection.style.display = showGoalFields ? "grid" : "none";
   if (milestonesSection) milestonesSection.style.display = showGoalFields ? "grid" : "none";
@@ -736,6 +738,8 @@ function updateEventFieldVisibility() {
   if (rewardsDivider) rewardsDivider.style.display = showPvmEntry ? "none" : "block";
   if (rewardsHeader) rewardsHeader.style.display = showPvmEntry ? "none" : "block";
   if (rewardsGrid) rewardsGrid.style.display = showPvmEntry ? "none" : "grid";
+  if (rewardsPlacement) rewardsPlacement.style.display = showPvmEntry ? "none" : "block";
+  if (rewardsParticipation) rewardsParticipation.style.display = showPvmEntry ? "none" : "block";
   if (archiveButton) archiveButton.style.display = showPvmEntry ? "none" : "inline-flex";
 }
 
@@ -1037,6 +1041,20 @@ function setupAdminTabs() {
       panels.forEach(panel => {
         panel.classList.toggle("active", panel.id === `adminTab-${target}`);
       });
+    });
+  });
+}
+
+function setupEventSubtabs() {
+  const buttons = Array.from(document.querySelectorAll(".event-subtab-btn"));
+  const panels = Array.from(document.querySelectorAll(".event-subtab-panel"));
+  if (!buttons.length || !panels.length) return;
+
+  buttons.forEach(button => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.eventSubtab;
+      buttons.forEach(item => item.classList.toggle("active", item === button));
+      panels.forEach(panel => panel.classList.toggle("active", panel.id === `eventSubtab-${target}`));
     });
   });
 }
@@ -1422,6 +1440,7 @@ async function syncDiscordMembersNow() {
 
 async function loadAdmin() {
   setupAdminTabs();
+  setupEventSubtabs();
 
   const eventSelect = document.getElementById("adminEventSelect");
   const addDropBtn = document.getElementById("addDropBtn");
