@@ -130,6 +130,144 @@ function getBackfillSupportedEvents() {
   );
 }
 
+
+function populateUnlinkedEventSelect() {
+  const select = document.getElementById("unlinkedEventSelect");
+  if (!select) return;
+  const events = getBackfillSupportedEvents();
+  select.innerHTML = events.length
+    ? events.map(event => `<option value="${escapeHtml(event.id)}">${escapeHtml(getPluginTrackingLabel(event))} - ${escapeHtml(event.title || getResetEventTitle(event))}</option>`).join("")
+    : `<option value="">No Plugin Event IDs available</option>`;
+  const bounty = events.find(event => isBountiesEvent(event) && event.active) || events.find(event => isBountiesEvent(event));
+  if (bounty) select.value = bounty.id;
+}
+
+async function searchUnlinkedOsrsItems(query) {
+  const q = String(query || "").trim();
+  if (!q) return [];
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(q)}&t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    return Array.isArray(data) ? data.filter(item => Number(item?.id) > 0).slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadUnlinkedTrackedItems() {
+  const eventId = document.getElementById("unlinkedEventSelect")?.value || "";
+  const mount = document.getElementById("unlinkedTrackedItemsList");
+  const status = document.getElementById("unlinkedTrackedItemsStatus");
+  if (!mount) return;
+  if (status) status.textContent = "";
+  if (!eventId) {
+    mount.innerHTML = `<p class="admin-muted">Choose an event.</p>`;
+    return;
+  }
+
+  mount.innerHTML = `<p class="admin-muted">Checking tracked items…</p>`;
+  try {
+    const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}&t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    const drops = Array.isArray(data.drops) ? data.drops : [];
+    const unlinked = drops.filter(drop => !Number(drop?.itemId));
+
+    if (!unlinked.length) {
+      mount.innerHTML = `<div class="admin-success">All tracked items for this event are linked to OSRS item IDs.</div>`;
+      return;
+    }
+
+    mount.innerHTML = unlinked.map((drop, index) => `
+      <div class="admin-card" style="margin:0 0 12px;padding:14px" data-unlinked-row="${index}">
+        <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+          <div>
+            <strong>${escapeHtml(drop.name || "Unknown item")}</strong>
+            <div class="admin-muted">Currently saved by name only</div>
+          </div>
+          <div style="min-width:min(100%,440px);flex:1">
+            <input type="text" data-unlinked-search="${index}" value="${escapeHtml(drop.name || "")}" placeholder="Search OSRS item…" />
+            <select data-unlinked-results="${index}" style="margin-top:8px;width:100%">
+              <option value="">Search to choose an OSRS item…</option>
+            </select>
+            <div class="admin-muted" data-unlinked-choice="${index}" style="margin-top:6px">No OSRS item selected.</div>
+            <button type="button" class="btn secondary" data-unlinked-save="${index}" style="margin-top:8px" disabled>Save Link</button>
+          </div>
+        </div>
+      </div>`).join("");
+
+    unlinked.forEach((drop, index) => {
+      const search = mount.querySelector(`[data-unlinked-search="${index}"]`);
+      const select = mount.querySelector(`[data-unlinked-results="${index}"]`);
+      const choice = mount.querySelector(`[data-unlinked-choice="${index}"]`);
+      const save = mount.querySelector(`[data-unlinked-save="${index}"]`);
+      let results = [];
+      let timer = null;
+
+      const runSearch = async () => {
+        results = await searchUnlinkedOsrsItems(search?.value || "");
+        if (!select) return;
+        select.innerHTML = `<option value="">Select item…</option>` + results.map(item =>
+          `<option value="${Number(item.id)}">${escapeHtml(item.name)} (ID ${Number(item.id)})</option>`
+        ).join("");
+        const normalized = normalizeBackfillLabel(drop.name);
+        const exact = results.find(item => normalizeBackfillLabel(item.name) === normalized);
+        if (exact) {
+          select.value = String(exact.id);
+          if (choice) choice.textContent = `Selected: ${exact.name} (ID ${exact.id})`;
+          if (save) save.disabled = false;
+        }
+      };
+
+      search?.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(runSearch, 250);
+      });
+
+      select?.addEventListener("change", () => {
+        const selected = results.find(item => Number(item.id) === Number(select.value));
+        if (choice) choice.textContent = selected ? `Selected: ${selected.name} (ID ${selected.id})` : "No OSRS item selected.";
+        if (save) save.disabled = !selected;
+      });
+
+      save?.addEventListener("click", async () => {
+        const selected = results.find(item => Number(item.id) === Number(select?.value));
+        if (!selected) return;
+        save.disabled = true;
+        save.textContent = "Saving…";
+        try {
+          const saveResponse = await fetch("/api/drops/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              eventId,
+              name: drop.name,
+              itemId: Number(selected.id),
+              image: drop?.image || selected.image || "",
+              wikiUrl: drop?.wikiUrl || selected.url || "",
+              rewardEmbers: Number(drop?.rewardEmbers || 0),
+              trackingRule: drop?.trackingRule || "repeatable"
+            })
+          });
+          const saveData = await saveResponse.json().catch(() => ({}));
+          if (!saveResponse.ok) throw new Error(saveData.error || "Could not save item link.");
+          if (status) status.textContent = `${drop.name} linked to ${selected.name} (ID ${selected.id}).`;
+          await loadUnlinkedTrackedItems();
+          await loadBackfillTrackedItems();
+          renderBackfillPreview();
+        } catch (error) {
+          if (status) status.textContent = error.message || "Could not save item link.";
+          save.disabled = false;
+          save.textContent = "Save Link";
+        }
+      });
+
+      runSearch();
+    });
+  } catch (error) {
+    mount.innerHTML = `<p class="admin-error">${escapeHtml(error.message || "Could not load tracked items.")}</p>`;
+  }
+}
+
 function populateBackfillEventSelect() {
   const select = document.getElementById("backfillEventSelect");
   if (!select) return;
@@ -242,7 +380,7 @@ function renderBackfillPreview() {
     return;
   }
   if (!resolvedTrackedItems.length) {
-    mount.innerHTML = `<p class="admin-error">The tracked items exist, but none could be matched to an OSRS item ID automatically. Re-select those items once in Events, then retry the CSV.</p>`;
+    mount.innerHTML = `<p class="admin-error">The tracked items exist, but none could be matched to an OSRS item ID automatically. Link those items in the Unlinked Tracked Items section above, then retry the CSV.</p>`;
     importBtn.disabled = true;
     return;
   }
@@ -256,7 +394,7 @@ function renderBackfillPreview() {
 
   const options = resolvedTrackedItems.map(item => `<option value="${Number(item.itemId)}">${escapeHtml(item.name)} (ID ${Number(item.itemId)})</option>`).join("");
   const legacyNote = unresolvedTrackedItems.length
-    ? `<div class="admin-warning" style="margin-bottom:10px">${unresolvedTrackedItems.length} legacy tracked item${unresolvedTrackedItems.length === 1 ? "" : "s"} could not be matched automatically: ${unresolvedTrackedItems.map(item => escapeHtml(item.name || "Unknown item")).join(", ")}. They will not appear in the mapping dropdown until re-selected in Events.</div>`
+    ? `<div class="admin-warning" style="margin-bottom:10px">${unresolvedTrackedItems.length} legacy tracked item${unresolvedTrackedItems.length === 1 ? "" : "s"} could not be matched automatically: ${unresolvedTrackedItems.map(item => escapeHtml(item.name || "Unknown item")).join(", ")}. Link them in the Unlinked Tracked Items section above, then they will appear here immediately.</div>`
     : backfillTrackedItems.some(item => item?._legacyResolved)
       ? `<div class="admin-success" style="margin-bottom:10px">Legacy tracked items were matched to OSRS item IDs and upgraded automatically.</div>`
       : "";
@@ -271,7 +409,7 @@ function renderBackfillPreview() {
             <td style="padding:8px">#${escapeHtml(row.submission_id || "?")}</td>
             <td style="padding:8px">${escapeHtml(row.player || "")}</td>
             <td style="padding:8px">${escapeHtml(row.item_label || "")}</td>
-            <td style="padding:8px"><select data-backfill-map-index="${index}"><option value="">Select item…</option>${options}</select></td>
+            <td style="padding:8px"><select data-backfill-map-index="${index}"><option value="">Select item…</option>${options}</select><div class="admin-muted" data-backfill-selected-label="${index}" style="margin-top:4px"></div></td>
           </tr>`).join("")}</tbody>
       </table>
     </div>`;
@@ -279,10 +417,19 @@ function renderBackfillPreview() {
   mount.querySelectorAll("[data-backfill-map-index]").forEach(select => {
     const index = Number(select.dataset.backfillMapIndex);
     const row = backfillRows[index];
+    const selectedLabel = mount.querySelector(`[data-backfill-selected-label="${index}"]`);
+    const updateSelectedFeedback = () => {
+      const item = resolvedTrackedItems.find(item => Number(item.itemId) === Number(select.value));
+      if (selectedLabel) selectedLabel.textContent = item ? `Mapped to: ${item.name} (ID ${item.itemId})` : "Not mapped";
+    };
     if (row?._mappedItemId) select.value = String(row._mappedItemId);
+    updateSelectedFeedback();
     select.addEventListener("change", () => {
       row._mappedItemId = Number(select.value || 0) || null;
+      updateSelectedFeedback();
       importBtn.disabled = backfillRows.some(item => !item._mappedItemId);
+      const status = document.getElementById("backfillImportStatus");
+      if (status) status.textContent = row._mappedItemId ? `Submission #${row.submission_id || "?"} mapping saved in this preview.` : "";
     });
   });
   importBtn.disabled = backfillRows.some(row => !row._mappedItemId);
@@ -1264,6 +1411,7 @@ async function loadAdmin() {
   const syncDiscordMembersBtn = document.getElementById("syncDiscordMembersBtn");
   const backfillCsvInput = document.getElementById("backfillCsvInput");
   const backfillEventSelect = document.getElementById("backfillEventSelect");
+  const unlinkedEventSelect = document.getElementById("unlinkedEventSelect");
   const importBackfillBtn = document.getElementById("importBackfillBtn");
 
   // User Management must initialize independently of the Events admin controls.
@@ -1282,6 +1430,7 @@ async function loadAdmin() {
   loadDiscordSyncStatus();
   if (backfillCsvInput) backfillCsvInput.addEventListener("change", handleBackfillCsvChange);
   if (backfillEventSelect) backfillEventSelect.addEventListener("change", async () => { await loadBackfillTrackedItems(); renderBackfillPreview(); });
+  if (unlinkedEventSelect) unlinkedEventSelect.addEventListener("change", loadUnlinkedTrackedItems);
   if (importBackfillBtn) importBackfillBtn.addEventListener("click", importHistoricalDrops);
 
   // The rest of loadAdmin configures the Events tab. Do not let missing event
@@ -1295,6 +1444,8 @@ async function loadAdmin() {
   try {
     allEvents = await fetchEvents();
     populateBackfillEventSelect();
+  populateUnlinkedEventSelect();
+  loadUnlinkedTrackedItems();
     renderPluginTrackingOverview();
     eventSelect.innerHTML = "";
 
@@ -1384,6 +1535,8 @@ async function saveSelectedEvent() {
     allEvents = data.events;
     selectedEventId = keepSelectedId;
     populateBackfillEventSelect();
+    populateUnlinkedEventSelect();
+    loadUnlinkedTrackedItems();
     populateEventFields();
 
     const eventSelect = document.getElementById("adminEventSelect");
