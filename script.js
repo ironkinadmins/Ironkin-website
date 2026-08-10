@@ -2466,26 +2466,12 @@ async function loadDropsForEvent(eventId, listId = "dropsList") {
 
         <div class="drop-controls">
           <strong>${formatNumber(drop.count)}</strong>
-
-          ${
-            isStaff
-              ? `
-                <button type="button" class="drop-adjust-btn" data-event-id="${escapeHtml(eventId)}" data-list-id="${escapeHtml(listId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="1">+</button>
-                <button type="button" class="drop-adjust-btn" data-event-id="${escapeHtml(eventId)}" data-list-id="${escapeHtml(listId)}" data-drop-name="${escapeHtml(drop.name)}" data-direction="-1">−</button>
-              `
-              : ""
-          }
         </div>
       `;
 
       dropsList.appendChild(row);
     });
 
-    dropsList.querySelectorAll(".drop-adjust-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        changeDropForEvent(button.dataset.eventId, button.dataset.dropName, Number(button.dataset.direction || 0), button.dataset.listId);
-      });
-    });
   } catch {
     dropsList.innerHTML = "";
   }
@@ -2562,26 +2548,12 @@ async function loadDrops() {
 
         <div class="drop-controls">
           <strong>${formatNumber(drop.count)}</strong>
-
-          ${
-            isStaff
-              ? `
-                <button type="button" class="drop-adjust-btn" data-drop-name="${escapeHtml(drop.name)}" data-direction="1">+</button>
-                <button type="button" class="drop-adjust-btn" data-drop-name="${escapeHtml(drop.name)}" data-direction="-1">−</button>
-              `
-              : ""
-          }
         </div>
       `;
 
       dropsList.appendChild(row);
     });
 
-    dropsList.querySelectorAll(".drop-adjust-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        changeDrop(button.dataset.dropName, Number(button.dataset.direction || 0));
-      });
-    });
   } catch {
     dropsList.innerHTML = "";
   }
