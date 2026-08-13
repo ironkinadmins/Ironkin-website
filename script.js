@@ -5002,11 +5002,27 @@ else initPremiumUi();
   const home = document.getElementById("ironkinGamesPromoHome");
   const events = document.getElementById("ironkinGamesPromoEvents");
   if (!home && !events) return;
+
+  // Fail closed: promos stay hidden unless the API explicitly enables them.
+  const setPromoVisible = (el, visible) => {
+    if (!el) return;
+    el.hidden = !visible;
+    el.style.setProperty("display", visible ? "block" : "none", "important");
+  };
+
+  setPromoVisible(home, false);
+  setPromoVisible(events, false);
+
   try {
-    const response = await fetch("/api/ironkin-games/state", { cache: "no-store" });
+    const response = await fetch(`/api/ironkin-games/state?_=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    });
     if (!response.ok) return;
     const state = await response.json();
-    if (home && state.enabled && state.showOnHome) home.style.display = "block";
-    if (events && state.enabled && state.showOnEvents) events.style.display = "block";
-  } catch (_) {}
+    setPromoVisible(home, Boolean(state.enabled && state.showOnHome));
+    setPromoVisible(events, Boolean(state.enabled && state.showOnEvents));
+  } catch (_) {
+    // Leave both promos hidden if settings cannot be loaded.
+  }
 })();
