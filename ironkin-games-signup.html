@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Games Signup | Ironkin Clan</title>
   <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
-  <link rel="stylesheet" href="/ironkin-games.css?v=20260813-games-signup" />
+  <link rel="stylesheet" href="/ironkin-games.css?v=20260813-games-timezone" />
 </head>
 <body class="premium-ui games-page">
   <div id="siteNav"></div>
@@ -26,7 +26,7 @@
           <div>
             <p class="eyebrow">Your Entry</p>
             <h2>Register for Ironkin Games</h2>
-            <p class="games-muted">You must be signed into the site with Discord. Your RSN is verified against the Ironkin Wise Old Man group.</p>
+            <p class="games-muted">You must be signed into the site with Discord. Your RSN is verified against the Ironkin Wise Old Man group. Choose the timezone you normally play in so team scheduling can account for availability.</p>
           </div>
           <a class="games-btn secondary" href="/ironkin-games.html">Back to Games</a>
         </div>
@@ -34,6 +34,12 @@
           <label class="games-field">
             <span class="games-field-label">OSRS Username</span>
             <input id="gamesSignupRsn" maxlength="12" autocomplete="off" placeholder="Your Ironman RSN" required />
+          </label>
+          <label class="games-field">
+            <span class="games-field-label">Timezone</span>
+            <select id="gamesSignupTimezone" required>
+              <option value="">Select your timezone</option>
+            </select>
           </label>
           <button id="gamesSignupButton" class="games-btn" type="submit">Sign Up</button>
           <button id="gamesWithdrawButton" class="games-btn danger" type="button" hidden>Withdraw</button>
@@ -55,7 +61,7 @@
     </section>
   </main>
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
-  <script src="/script.js?v=20260813-games-signup"></script>
-  <script src="/ironkin-games-signup.js?v=20260813-games-signup"></script>
+  <script src="/script.js?v=20260813-games-timezone"></script>
+  <script src="/ironkin-games-signup.js?v=20260813-games-timezone"></script>
 </body>
 </html>

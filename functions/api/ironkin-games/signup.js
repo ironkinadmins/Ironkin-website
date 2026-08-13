@@ -9,6 +9,17 @@ function normalizeRsn(value) {
   return String(value || "").trim().toLowerCase().replace(/[ _-]+/g, " ");
 }
 
+function validTimezone(value) {
+  const timezone = String(value || "").trim();
+  if (!timezone || timezone.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function womFetch(env, path) {
   const headers = { "User-Agent": "Ironkin Games signup" };
   if (env.WOM_API_KEY) headers["x-api-key"] = env.WOM_API_KEY;
@@ -60,6 +71,7 @@ export async function onRequestGet({ request, env }) {
       ehb: s.ehb,
       totalLevel: s.totalLevel,
       balanceScore: s.balanceScore,
+      timezone: s.timezone || "",
       signedUpAt: s.signedUpAt
     })),
     teams: (state.teams || []).map(t => ({ id:t.id, name:t.name, members:(t.members || []).map(m => ({ name:m.name, rsn:m.rsn, ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel, balanceScore:m.balanceScore })) }))
@@ -78,6 +90,12 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const rsn = String(body.rsn || "").trim();
   if (!rsn || rsn.length > 12) return Response.json({ error:"Enter a valid OSRS username." }, { status:400 });
+
+  const existingSignup = (state.signups || []).find(s => String(s.discordId) === String(session.id));
+  const requestedTimezone = String(body.timezone || existingSignup?.timezone || "").trim();
+  if (!validTimezone(requestedTimezone)) {
+    return Response.json({ error:"Select a valid timezone before signing up." }, { status:400 });
+  }
 
   let members;
   try { members = await groupMembers(env); }
@@ -98,6 +116,7 @@ export async function onRequestPost({ request, env }) {
     discordName: String(session.username || ""),
     displayName: String(displayName),
     rsn: String(player?.displayName || player?.username || rsn),
+    timezone: requestedTimezone,
     ...stats,
     signedUpAt: (state.signups || []).find(s => String(s.discordId) === String(session.id))?.signedUpAt || now,
     updatedAt: now

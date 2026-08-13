@@ -142,6 +142,7 @@ export function balanceSignups(state) {
       ehp: Number(player.ehp) || 0,
       ehb: Number(player.ehb) || 0,
       totalLevel: Number(player.totalLevel) || 0,
+      timezone: String(player.timezone || ""),
       balanceScore: Number(player.balanceScore) || 0
     }))
   }));
