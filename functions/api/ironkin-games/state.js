@@ -37,7 +37,7 @@ export async function onRequestGet({ request, env }) {
   }));
 
   return Response.json({
-    enabled:state.enabled, title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
+    enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
     rules:state.rules || [], scoring:state.scoring, teams:state.teams || [], weeks,
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId } : null,
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),

@@ -4995,3 +4995,18 @@ function initPremiumUi() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPremiumUi);
 else initPremiumUi();
+
+
+// Ironkin Games promotional visibility (controlled from Admin > Ironkin Games).
+(async function loadIronkinGamesPromoVisibility(){
+  const home = document.getElementById("ironkinGamesPromoHome");
+  const events = document.getElementById("ironkinGamesPromoEvents");
+  if (!home && !events) return;
+  try {
+    const response = await fetch("/api/ironkin-games/state", { cache: "no-store" });
+    if (!response.ok) return;
+    const state = await response.json();
+    if (home && state.enabled && state.showOnHome) home.style.display = "block";
+    if (events && state.enabled && state.showOnEvents) events.style.display = "block";
+  } catch (_) {}
+})();

@@ -3,6 +3,8 @@ export const GAMES_KEY = "ironkin-games:v1";
 export function defaultGames() {
   return {
     enabled: true,
+    showOnHome: false,
+    showOnEvents: false,
     title: "Ironkin Games",
     subtitle: "Forged Alone. Bound as Kin. Tested Together.",
     season: "2026",
