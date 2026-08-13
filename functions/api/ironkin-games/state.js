@@ -37,8 +37,11 @@ export async function onRequestGet({ request, env }) {
   }));
 
   return Response.json({
-    enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
-    rules:state.rules || [], scoring:state.scoring, teams:state.teams || [], weeks,
+    enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), signupOpen:Boolean(state.signupOpen), rosterLocked:Boolean(state.rosterLocked), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
+    rules:state.rules || [], scoring:state.scoring, teams:(state.teams || []).map(t => ({
+      id:t.id, name:t.name, points:t.points || 0,
+      members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
+    })), weeks,
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId } : null,
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
     submissions: (state.submissions || []).filter(s => staff || state.resultsUnlocked || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))

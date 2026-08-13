@@ -5020,6 +5020,21 @@ else initPremiumUi();
     });
     if (!response.ok) return;
     const state = await response.json();
+    const signupActive = Boolean(state.signupOpen && !state.rosterLocked);
+    [home, events].filter(Boolean).forEach(el => {
+      const eyebrow = el.querySelector("[data-games-promo-eyebrow]");
+      const copy = el.querySelector("[data-games-promo-copy]");
+      const cta = el.querySelector("[data-games-promo-cta]");
+      if (signupActive) {
+        if (eyebrow) eyebrow.textContent = "Registration Open";
+        if (copy) copy.textContent = "Signups are now open! Join the competition and get ready to represent your team across five weeks of challenges.";
+        if (cta) { cta.textContent = "Sign Up Now"; cta.href = "/ironkin-games-signup.html"; }
+      } else {
+        if (eyebrow) eyebrow.textContent = "Season Competition";
+        if (copy) copy.textContent = "A multi-week team competition with timed challenge reveals, flexible team slots, private proof, and a points leaderboard.";
+        if (cta) { cta.textContent = "Open Ironkin Games"; cta.href = "/ironkin-games.html"; }
+      }
+    });
     setPromoVisible(home, Boolean(state.enabled && state.showOnHome));
     setPromoVisible(events, Boolean(state.enabled && state.showOnEvents));
   } catch (_) {
