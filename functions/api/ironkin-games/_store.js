@@ -18,10 +18,10 @@ export function defaultGames() {
     ],
     scoring: { main: [100,75,55,40], side: [30,20,15,10] },
     teams: [
-      { id:"ember", name:"Team Ember", colorLabel:"Ember", captainDiscordId:"", members:[], points:0 },
-      { id:"ash", name:"Team Ash", colorLabel:"Ash", captainDiscordId:"", members:[], points:0 },
-      { id:"forge", name:"Team Forge", colorLabel:"Forge", captainDiscordId:"", members:[], points:0 },
-      { id:"kin", name:"Team Kin", colorLabel:"Kin", captainDiscordId:"", members:[], points:0 }
+      { id:"team-1", name:"Team 1", captainDiscordId:"", members:[], points:0 },
+      { id:"team-2", name:"Team 2", captainDiscordId:"", members:[], points:0 },
+      { id:"team-3", name:"Team 3", captainDiscordId:"", members:[], points:0 },
+      { id:"team-4", name:"Team 4", captainDiscordId:"", members:[], points:0 }
     ],
     weeks: [],
     sessions: [],
@@ -33,7 +33,36 @@ export function defaultGames() {
 export async function loadGames(env) {
   const raw = await env.DROPS_KV.get(GAMES_KEY);
   if (!raw) return defaultGames();
-  try { return { ...defaultGames(), ...JSON.parse(raw) }; } catch { return defaultGames(); }
+  try {
+    const state = { ...defaultGames(), ...JSON.parse(raw) };
+
+    // Migrate the original themed team slot IDs to neutral internal IDs.
+    // Custom team names are preserved and are always the user-facing identity.
+    const legacyIds = { ember:"team-1", ash:"team-2", forge:"team-3", kin:"team-4" };
+    let changed = false;
+    state.teams = (state.teams || []).map((team, index) => {
+      const oldId = String(team.id || "");
+      const nextId = legacyIds[oldId] || oldId || `team-${index + 1}`;
+      if (nextId !== oldId || Object.prototype.hasOwnProperty.call(team, "colorLabel")) changed = true;
+      const { colorLabel, ...rest } = team;
+      return { ...rest, id: nextId, name: String(team.name || `Team ${index + 1}`) };
+    });
+    const remap = id => legacyIds[String(id || "")] || id;
+    state.sessions = (state.sessions || []).map(item => {
+      const teamId = remap(item.teamId);
+      if (teamId !== item.teamId) changed = true;
+      return { ...item, teamId };
+    });
+    state.submissions = (state.submissions || []).map(item => {
+      const teamId = remap(item.teamId);
+      if (teamId !== item.teamId) changed = true;
+      return { ...item, teamId };
+    });
+    if (changed) await saveGames(env, state);
+    return state;
+  } catch {
+    return defaultGames();
+  }
 }
 
 export async function saveGames(env, state) {
