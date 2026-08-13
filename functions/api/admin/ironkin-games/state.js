@@ -1,0 +1,4 @@
+import { getSession, isStaffSession } from "../../_auth.js";
+import { loadGames, saveGames } from "../../ironkin-games/_store.js";
+export async function onRequestGet({request,env}){ if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403}); return Response.json(await loadGames(env),{headers:{"Cache-Control":"no-store"}}); }
+export async function onRequestPost({request,env}){ if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403}); const body=await request.json().catch(()=>null); if(!body||typeof body!=="object") return Response.json({error:"Invalid state."},{status:400}); const current=await loadGames(env); const next={...current,...body,updatedAt:new Date().toISOString()}; await saveGames(env,next); return Response.json({ok:true,state:next}); }
