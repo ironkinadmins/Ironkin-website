@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ironkin Games Signup | Ironkin Clan</title>
+  <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
+  <link rel="stylesheet" href="/ironkin-games.css?v=20260813-games-signup" />
+</head>
+<body class="premium-ui games-page">
+  <div id="siteNav"></div>
+  <main class="page games-shell">
+    <section class="games-hero games-signup-hero">
+      <div>
+        <p class="eyebrow">Registration</p>
+        <h1>Ironkin Games Signup</h1>
+        <p>Register your Ironman and the site will use Wise Old Man EHP, EHB, and total level to help build balanced teams.</p>
+      </div>
+      <div class="games-hero-badge"><span>IK</span><strong>SIGNUP</strong></div>
+    </section>
+
+    <section id="gamesSignupStatus" class="games-notice">Loading registration…</section>
+    <section class="games-grid">
+      <article class="games-card full games-signup-card">
+        <div class="games-card-heading">
+          <div>
+            <p class="eyebrow">Your Entry</p>
+            <h2>Register for Ironkin Games</h2>
+            <p class="games-muted">You must be signed into the site with Discord. Your RSN is verified against the Ironkin Wise Old Man group.</p>
+          </div>
+          <a class="games-btn secondary" href="/ironkin-games.html">Back to Games</a>
+        </div>
+        <form id="gamesSignupForm" class="games-signup-form">
+          <label class="games-field">
+            <span class="games-field-label">OSRS Username</span>
+            <input id="gamesSignupRsn" maxlength="12" autocomplete="off" placeholder="Your Ironman RSN" required />
+          </label>
+          <button id="gamesSignupButton" class="games-btn" type="submit">Sign Up</button>
+          <button id="gamesWithdrawButton" class="games-btn danger" type="button" hidden>Withdraw</button>
+        </form>
+        <div id="mySignupStats"></div>
+      </article>
+
+      <article class="games-card full">
+        <div class="games-card-heading">
+          <div>
+            <p class="eyebrow">Live Balance</p>
+            <h2>Current Teams</h2>
+            <p class="games-muted">Teams rebalance as new players register while automatic balancing is enabled. Staff can make final manual adjustments after signup closes.</p>
+          </div>
+          <div id="signupCount" class="games-kpi-small">0 signed up</div>
+        </div>
+        <div id="signupTeams" class="games-signup-teams"></div>
+      </article>
+    </section>
+  </main>
+  <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
+  <script src="/script.js?v=20260813-games-signup"></script>
+  <script src="/ironkin-games-signup.js?v=20260813-games-signup"></script>
+</body>
+</html>
