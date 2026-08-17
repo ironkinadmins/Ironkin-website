@@ -51,10 +51,15 @@ export async function onRequestGet({ request, env }) {
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
     // Public master schedule: expose only safe scheduling metadata for all teams.
     // Never expose challenge names, objectives, rules, scores, proof, or other reveal-sensitive data here.
-    scheduleSessions: allSessions.filter(s => s.scheduledAt).map(s => ({
-      weekId:s.weekId, challengeId:s.challengeId, teamId:s.teamId, scheduledAt:s.scheduledAt,
-      startedAt:s.startedAt || "", status:s.status || "scheduled"
-    })),
+    scheduleSessions: allSessions.filter(s => s.scheduledAt).map(s => {
+      const related = (state.submissions || []).filter(x => x.weekId === s.weekId && x.challengeId === s.challengeId && x.teamId === s.teamId);
+      const latest = related.sort((a,b) => new Date(b.submittedAt || b.createdAt || 0).getTime() - new Date(a.submittedAt || a.createdAt || 0).getTime())[0];
+      return {
+        weekId:s.weekId, challengeId:s.challengeId, teamId:s.teamId, scheduledAt:s.scheduledAt,
+        startedAt:s.startedAt || "", endsAt:s.endsAt || "", status:s.status || "scheduled",
+        submissionStatus: latest ? (latest.status || "submitted") : ""
+      };
+    }),
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
     submissions: (state.submissions || []).filter(s => staff || state.resultsUnlocked || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
   }, { headers:{"Cache-Control":"no-store"} });
