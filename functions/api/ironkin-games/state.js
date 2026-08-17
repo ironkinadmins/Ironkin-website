@@ -48,6 +48,12 @@ export async function onRequestGet({ request, env }) {
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
     })), weeks,
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
+    // Public master schedule: expose only safe scheduling metadata for all teams.
+    // Never expose challenge names, objectives, rules, scores, proof, or other reveal-sensitive data here.
+    scheduleSessions: allSessions.filter(s => s.scheduledAt).map(s => ({
+      weekId:s.weekId, challengeId:s.challengeId, teamId:s.teamId, scheduledAt:s.scheduledAt,
+      startedAt:s.startedAt || "", status:s.status || "scheduled"
+    })),
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
     submissions: (state.submissions || []).filter(s => staff || state.resultsUnlocked || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
   }, { headers:{"Cache-Control":"no-store"} });

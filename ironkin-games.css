@@ -141,3 +141,7 @@
 /* Public Ironkin Games schedule table */
 .schedule-table{margin-top:14px}.schedule-header,.schedule-row{display:grid;grid-template-columns:minmax(210px,1.35fr) minmax(145px,.9fr) minmax(145px,.9fr) minmax(175px,1fr) minmax(100px,.6fr);gap:14px;align-items:center}.schedule-header{padding:10px 0 9px;border-bottom:1px solid rgba(216,153,75,.35);color:#d8994b;font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.schedule-row{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)}.schedule-row:last-child{border-bottom:0}.schedule-booked-time{font-weight:700;color:#f4f1ec}.schedule-status{display:inline-flex;justify-content:center}.schedule-help{margin:-4px 0 8px}
 @media(max-width:900px){.schedule-header{display:none}.schedule-row{grid-template-columns:1fr;gap:8px;padding:16px 0}.schedule-row>[data-label]{display:grid;grid-template-columns:125px 1fr;gap:10px;align-items:start}.schedule-row>[data-label]::before{content:attr(data-label);color:#d8994b;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.schedule-status{justify-self:start}}
+
+/* Ironkin Games master schedule: Challenge | Team | Opens | Closes | Booked Time | Status */
+.schedule-header-master,.schedule-row-master{grid-template-columns:minmax(180px,1.2fr) minmax(120px,.8fr) minmax(145px,.9fr) minmax(145px,.9fr) minmax(175px,1fr) minmax(100px,.6fr)}
+@media(max-width:900px){.schedule-row-master{grid-template-columns:1fr}}
