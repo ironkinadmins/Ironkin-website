@@ -33,6 +33,7 @@ export async function onRequestGet({ request, env }) {
       const teamReveal = team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
+      item.revealed = Boolean(reveal);
       if (!reveal && challenge.kind === "main") item.name = challenge.publicName || "Mystery Main Challenge";
       const own = sessions.find(s => s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
       if (own) item.session = own;
