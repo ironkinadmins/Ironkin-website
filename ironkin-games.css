@@ -59,3 +59,44 @@
 .games-shell input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background-color: rgba(216,153,75,.16);
 }
+
+/* Public This Week booking calendar — keep the picker obvious on the dark theme */
+.games-book-picker{
+  display:inline-flex;
+  align-items:stretch;
+  min-width:0;
+}
+.games-book-picker .games-book-time{
+  min-width:180px;
+  border-radius:10px 0 0 10px;
+}
+.games-book-picker .games-book-time::-webkit-calendar-picker-indicator{
+  filter:invert(77%) sepia(48%) saturate(900%) hue-rotate(340deg) brightness(102%) contrast(90%);
+  opacity:1;
+}
+.games-calendar-btn{
+  width:44px;
+  min-width:44px;
+  border:1px solid rgba(216,153,75,.48);
+  border-left:0;
+  border-radius:0 10px 10px 0;
+  background:rgba(216,153,75,.14);
+  color:#f0a63d;
+  cursor:pointer;
+  font-size:1.05rem;
+  line-height:1;
+  display:grid;
+  place-items:center;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+.games-calendar-btn:hover,
+.games-calendar-btn:focus-visible{
+  background:rgba(216,153,75,.25);
+  border-color:#d8994b;
+  box-shadow:0 0 0 3px rgba(216,153,75,.10);
+  outline:none;
+}
+@media(max-width:600px){
+  .games-book-picker{width:100%}
+  .games-book-picker .games-book-time{flex:1;min-width:0}
+}
