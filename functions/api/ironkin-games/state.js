@@ -17,8 +17,13 @@ export async function onRequestGet({ request, env }) {
   const session = await getSession(request, env);
   const staff = isStaffSession(session);
   const team = memberTeam(state, session);
-  const sessions = (state.sessions || []).filter(s => staff || (team && s.teamId === team.id));
-  const started = new Set(sessions.filter(s => s.startedAt).map(s => `${s.weekId}:${s.challengeId}`));
+  const allSessions = state.sessions || [];
+  // Staff may review all sessions, but the public challenge reveal must still
+  // behave like a normal player view. Only this viewer's own team sessions can
+  // unlock a hidden Main Challenge on the public Ironkin Games page.
+  const sessions = allSessions.filter(s => staff || (team && s.teamId === team.id));
+  const teamSessions = team ? allSessions.filter(s => s.teamId === team.id) : [];
+  const started = new Set(teamSessions.filter(s => s.startedAt).map(s => `${s.weekId}:${s.challengeId}`));
   const now = Date.now();
 
   const weeks = (state.weeks || []).map(week => ({
@@ -26,7 +31,7 @@ export async function onRequestGet({ request, env }) {
     challenges: (week.challenges || []).map(challenge => {
       const publicReveal = challenge.kind === "side" || challenge.status === "complete" || state.resultsUnlocked;
       const teamReveal = team && started.has(`${week.id}:${challenge.id}`);
-      const reveal = staff || publicReveal || teamReveal;
+      const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
       if (!reveal && challenge.kind === "main") item.name = challenge.publicName || "Mystery Main Challenge";
       const own = sessions.find(s => s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
