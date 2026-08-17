@@ -11,6 +11,13 @@ export function defaultGames() {
     timezone: "America/Toronto",
     resultsUnlocked: false, // legacy compatibility
     publishedResultWeeks: [],
+    gamesCompleted: false,
+    completedAt: "",
+    winnerTeamId: "",
+    winnerTeamIds: [],
+    winnerTeamName: "",
+    finalStandings: [],
+    finalProgression: [],
     signupOpen: false,
     rosterLocked: false,
     autoBalanceSignups: true,

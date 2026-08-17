@@ -9,6 +9,7 @@ export async function onRequestPost({ request, env }) {
   const weekId = String(body.weekId || "");
   const action = body.action === "hide" ? "hide" : "publish";
   const state = await loadGames(env);
+  if (state.gamesCompleted) return Response.json({ error: "The Ironkin Games are complete. Published results are locked." }, { status: 409 });
   const week = (state.weeks || []).find(w => String(w.id) === weekId);
   if (!week) return Response.json({ error: "Week not found." }, { status: 404 });
 

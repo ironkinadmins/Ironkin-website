@@ -44,10 +44,14 @@ export async function onRequestGet({ request, env }) {
     for (const w of state.weeks || []) publishedWeeks.add(String(w.id));
   }
   const publicPoints = new Map((state.teams || []).map(t => [String(t.id), 0]));
-  for (const sub of state.submissions || []) {
-    if (String(sub.status || '').toLowerCase() !== 'approved') continue;
-    if (!publishedWeeks.has(String(sub.weekId))) continue;
-    publicPoints.set(String(sub.teamId), (publicPoints.get(String(sub.teamId)) || 0) + (Number(sub.points) || 0));
+  if (state.gamesCompleted && Array.isArray(state.finalStandings) && state.finalStandings.length) {
+    for (const row of state.finalStandings) publicPoints.set(String(row.teamId), Number(row.points) || 0);
+  } else {
+    for (const sub of state.submissions || []) {
+      if (String(sub.status || '').toLowerCase() !== 'approved') continue;
+      if (!publishedWeeks.has(String(sub.weekId))) continue;
+      publicPoints.set(String(sub.teamId), (publicPoints.get(String(sub.teamId)) || 0) + (Number(sub.points) || 0));
+    }
   }
 
   const weeks = (state.weeks || []).map(week => ({
@@ -87,6 +91,14 @@ export async function onRequestGet({ request, env }) {
     signedIn:Boolean(session), isStaff:staff,
     publishedResultWeeks:[...publishedWeeks],
     hasPublishedResults:publishedWeeks.size > 0,
+    gamesCompleted:Boolean(state.gamesCompleted),
+    completedAt:state.completedAt || "",
+    winnerTeamId:state.winnerTeamId || "",
+    winnerTeamIds:Array.isArray(state.winnerTeamIds) ? state.winnerTeamIds : (state.winnerTeamId ? [state.winnerTeamId] : []),
+    winnerTeamName:state.winnerTeamName || "",
+    finalStandings:Array.isArray(state.finalStandings) ? state.finalStandings : [],
+    finalProgression:Array.isArray(state.finalProgression) ? state.finalProgression : [],
+    canEndGames:staff && !state.gamesCompleted && (state.weeks || []).length > 0 && (state.weeks || []).every(w => publishedWeeks.has(String(w.id))) && !(state.submissions || []).some(s => !["approved","rejected"].includes(String(s.status || "").toLowerCase())),
     resultsUnlocked:false, // legacy field; public UI now publishes results per week
     submissions: (state.submissions || []).filter(s => staff || publishedWeeks.has(String(s.weekId)) || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
   }, { headers:{"Cache-Control":"no-store"} });
