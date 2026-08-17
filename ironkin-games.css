@@ -14,3 +14,48 @@
 
 @media(max-width:900px){.games-signup-form{grid-template-columns:1fr 1fr}.games-signup-form .games-btn{width:100%}.games-signup-admin-row{grid-template-columns:1fr 1fr}.games-signup-admin-row>div{grid-column:1/-1}}
 @media(max-width:600px){.games-signup-form{grid-template-columns:1fr}}
+
+/* Improve native date / datetime calendar icon visibility on dark inputs */
+.games-shell input[type="date"]::-webkit-calendar-picker-indicator,
+.games-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: .9;
+  cursor: pointer;
+  transform: scale(1.15);
+}
+
+.games-shell input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.games-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Make every Ironkin Games native date/time picker control visible on dark backgrounds */
+.games-shell input[type="date"],
+.games-shell input[type="datetime-local"],
+.games-shell input[type="time"],
+.games-shell input[type="month"],
+.games-shell input[type="week"] {
+  color-scheme: dark;
+}
+
+.games-shell input[type="date"]::-webkit-calendar-picker-indicator,
+.games-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.games-shell input[type="month"]::-webkit-calendar-picker-indicator,
+.games-shell input[type="week"]::-webkit-calendar-picker-indicator,
+.games-shell input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(77%) sepia(48%) saturate(900%) hue-rotate(340deg) brightness(102%) contrast(90%);
+  opacity: 1;
+  cursor: pointer;
+  transform: scale(1.2);
+  padding: 4px;
+  border-radius: 5px;
+  background-color: rgba(255,255,255,.06);
+}
+
+.games-shell input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.games-shell input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+.games-shell input[type="month"]::-webkit-calendar-picker-indicator:hover,
+.games-shell input[type="week"]::-webkit-calendar-picker-indicator:hover,
+.games-shell input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(216,153,75,.16);
+}
