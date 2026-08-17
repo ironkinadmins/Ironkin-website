@@ -100,3 +100,34 @@
   .games-book-picker{width:100%}
   .games-book-picker .games-book-time{flex:1;min-width:0}
 }
+
+
+/* Public challenge availability window */
+.challenge-availability{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:12px 0 2px;
+  padding:10px 12px;
+  border:1px solid rgba(216,153,75,.22);
+  border-radius:10px;
+  background:rgba(216,153,75,.07);
+  font-size:.82rem;
+}
+.challenge-availability span{
+  color:#f0a63d;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+.challenge-availability strong{
+  font-weight:650;
+  text-align:right;
+  color:rgba(244,241,236,.9);
+}
+@media(max-width:600px){
+  .challenge-availability{align-items:flex-start;flex-direction:column}
+  .challenge-availability strong{text-align:left}
+}
