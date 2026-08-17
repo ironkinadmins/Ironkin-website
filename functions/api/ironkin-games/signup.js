@@ -134,8 +134,24 @@ export async function onRequestDelete({ request, env }) {
   if (!session) return Response.json({ error:"Sign in first." }, { status:401 });
   const state = await loadGames(env);
   if (state.rosterLocked) return Response.json({ error:"Ironkin Games teams are locked. Staff must unlock the roster before you can withdraw." }, { status:403 });
-  state.signups = (state.signups || []).filter(s => String(s.discordId) !== String(session.id));
+  const discordId = String(session.id);
+
+  // Remove the player from the signup list.
+  state.signups = (state.signups || []).filter(s => String(s.discordId) !== discordId);
+
+  // Always remove the player from their assigned team, even when automatic
+  // signup balancing is disabled. Otherwise the signup count and team roster
+  // can become out of sync after a withdrawal.
+  state.teams = (state.teams || []).map(team => ({
+    ...team,
+    members: (team.members || []).filter(member =>
+      String(member.discordId || member.id || "") !== discordId
+    )
+  }));
+
+  // Rebalance the remaining signups only when automatic balancing is enabled.
   if (state.autoBalanceSignups !== false) balanceSignups(state);
+
   await saveGames(env, state);
-  return Response.json({ ok:true }, { headers:{"Cache-Control":"no-store"} });
+  return Response.json({ ok:true, teams:state.teams }, { headers:{"Cache-Control":"no-store"} });
 }
