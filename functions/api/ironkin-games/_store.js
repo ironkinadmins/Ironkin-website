@@ -85,6 +85,24 @@ export function memberTeam(state, session) {
   ) || null;
 }
 
+export function challengeMinimumParticipants(challenge) {
+  const text = String(challenge?.participants || "").trim();
+  const match = text.match(/\d+/);
+  return match ? Math.max(0, Number(match[0]) || 0) : 0;
+}
+
+export function teamMemberCount(team) {
+  if (!team) return 0;
+  const ids = new Set();
+  for (const member of team.members || []) {
+    const id = String(member?.discordId || member?.id || "").trim();
+    if (id) ids.add(id);
+  }
+  const captainId = String(team.captainDiscordId || "").trim();
+  if (captainId) ids.add(captainId);
+  return ids.size || (team.members || []).length;
+}
+
 
 export function progressionScore(signups, signup, weights = {}) {
   const list = Array.isArray(signups) ? signups : [];

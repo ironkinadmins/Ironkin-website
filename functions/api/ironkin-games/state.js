@@ -1,11 +1,11 @@
 import { getSession, isStaffSession } from "../_auth.js";
-import { loadGames, memberTeam } from "./_store.js";
+import { loadGames, memberTeam, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
 
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: challenge.name, kind: challenge.kind || "main", status: challenge.status || "upcoming",
     durationMinutes: Number(challenge.durationMinutes || 0), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
-    participants: challenge.participants || "", proofRequired: challenge.proofRequired !== false,
+    participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };
   if (reveal) Object.assign(base, { objective:challenge.objective || "", rules:challenge.rules || [], instructions:challenge.instructions || "" });
@@ -47,7 +47,7 @@ export async function onRequestGet({ request, env }) {
       id:t.id, name:t.name, points:t.points || 0,
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
     })), weeks,
-    myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId } : null,
+    myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
     submissions: (state.submissions || []).filter(s => staff || state.resultsUnlocked || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
   }, { headers:{"Cache-Control":"no-store"} });

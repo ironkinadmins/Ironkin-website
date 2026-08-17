@@ -1,5 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
-import { loadGames, saveGames, memberTeam, challengeFor } from "./_store.js";
+import { loadGames, saveGames, memberTeam, challengeFor, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
 
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
@@ -16,6 +16,15 @@ export async function onRequestPost({ request, env }) {
   if (!allowedTeam) return Response.json({error:"Team not found."},{status:400});
   if (!staff && String(allowedTeam.captainDiscordId || "") && String(allowedTeam.captainDiscordId) !== String(session.id)) {
     return Response.json({error:"Only your team captain can start a Main Challenge."},{status:403});
+  }
+  const minimumParticipants = challengeMinimumParticipants(challenge);
+  const rosterCount = teamMemberCount(allowedTeam);
+  if (minimumParticipants > 0 && rosterCount < minimumParticipants) {
+    return Response.json({
+      error:`This challenge requires at least ${minimumParticipants} participants. ${allowedTeam.name || "Your team"} currently has ${rosterCount} rostered member${rosterCount === 1 ? "" : "s"}.`,
+      minimumParticipants,
+      rosterCount
+    },{status:409});
   }
   const now = Date.now();
   if (!staff && challenge.opensAt && now < new Date(challenge.opensAt).getTime()) return Response.json({error:"This challenge window has not opened yet."},{status:409});
