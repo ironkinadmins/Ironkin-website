@@ -9,7 +9,8 @@ export function defaultGames() {
     subtitle: "Forged Alone. Bound as Kin. Tested Together.",
     season: "2026",
     timezone: "America/Toronto",
-    resultsUnlocked: false,
+    resultsUnlocked: false, // legacy compatibility
+    publishedResultWeeks: [],
     signupOpen: false,
     rosterLocked: false,
     autoBalanceSignups: true,
@@ -40,6 +41,7 @@ export async function loadGames(env) {
   if (!raw) return defaultGames();
   try {
     const state = { ...defaultGames(), ...JSON.parse(raw) };
+    state.publishedResultWeeks = Array.isArray(state.publishedResultWeeks) ? state.publishedResultWeeks.map(String) : [];
 
     // Migrate the original themed team slot IDs to neutral internal IDs.
     // Custom team names are preserved and are always the user-facing identity.

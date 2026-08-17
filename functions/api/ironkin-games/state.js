@@ -37,11 +37,23 @@ export async function onRequestGet({ request, env }) {
   const teamSessions = team ? allSessions.filter(s => s.teamId === team.id) : [];
   const started = new Set(teamSessions.filter(s => s.startedAt).map(s => `${s.weekId}:${s.challengeId}`));
   const now = Date.now();
+  const publishedWeeks = new Set((state.publishedResultWeeks || []).map(String));
+  // Backward compatibility for an older all-results toggle. If it was previously
+  // enabled, treat every configured week as published until the new per-week control is used.
+  if (state.resultsUnlocked && !publishedWeeks.size) {
+    for (const w of state.weeks || []) publishedWeeks.add(String(w.id));
+  }
+  const publicPoints = new Map((state.teams || []).map(t => [String(t.id), 0]));
+  for (const sub of state.submissions || []) {
+    if (String(sub.status || '').toLowerCase() !== 'approved') continue;
+    if (!publishedWeeks.has(String(sub.weekId))) continue;
+    publicPoints.set(String(sub.teamId), (publicPoints.get(String(sub.teamId)) || 0) + (Number(sub.points) || 0));
+  }
 
   const weeks = (state.weeks || []).map(week => ({
     id: week.id, name: week.name, startDate:week.startDate || "", endDate:week.endDate || "",
     challenges: (week.challenges || []).map(challenge => {
-      const publicReveal = challenge.kind === "side" || challenge.status === "complete" || state.resultsUnlocked;
+      const publicReveal = challenge.kind === "side" || challenge.status === "complete" || publishedWeeks.has(String(week.id));
       const teamReveal = team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
@@ -57,7 +69,7 @@ export async function onRequestGet({ request, env }) {
   return Response.json({
     enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), signupOpen:Boolean(state.signupOpen), rosterLocked:Boolean(state.rosterLocked), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
     rules:state.rules || [], scoring:state.scoring, teams:(state.teams || []).map(t => ({
-      id:t.id, name:t.name, points:t.points || 0,
+      id:t.id, name:t.name, points:publicPoints.get(String(t.id)) || 0,
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
     })), weeks,
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
@@ -72,7 +84,10 @@ export async function onRequestGet({ request, env }) {
         submissionStatus
       };
     }),
-    signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
-    submissions: (state.submissions || []).filter(s => staff || state.resultsUnlocked || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
+    signedIn:Boolean(session), isStaff:staff,
+    publishedResultWeeks:[...publishedWeeks],
+    hasPublishedResults:publishedWeeks.size > 0,
+    resultsUnlocked:false, // legacy field; public UI now publishes results per week
+    submissions: (state.submissions || []).filter(s => staff || publishedWeeks.has(String(s.weekId)) || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
   }, { headers:{"Cache-Control":"no-store"} });
 }
