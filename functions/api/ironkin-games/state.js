@@ -1,6 +1,18 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { loadGames, memberTeam, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
 
+
+function submissionReviewStatus(related) {
+  const list = [...(related || [])];
+  const reviewed = list.filter(x => ["approved", "rejected"].includes(String(x.status || "").toLowerCase()));
+  if (reviewed.length) {
+    reviewed.sort((a,b) => new Date(b.reviewedAt || b.submittedAt || b.createdAt || 0).getTime() - new Date(a.reviewedAt || a.submittedAt || a.createdAt || 0).getTime());
+    return String(reviewed[0].status || "").toLowerCase();
+  }
+  if (list.length) return "submitted";
+  return "";
+}
+
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: challenge.name, kind: challenge.kind || "main", status: challenge.status || "upcoming",
@@ -53,11 +65,11 @@ export async function onRequestGet({ request, env }) {
     // Never expose challenge names, objectives, rules, scores, proof, or other reveal-sensitive data here.
     scheduleSessions: allSessions.filter(s => s.scheduledAt).map(s => {
       const related = (state.submissions || []).filter(x => x.weekId === s.weekId && x.challengeId === s.challengeId && x.teamId === s.teamId);
-      const latest = related.sort((a,b) => new Date(b.submittedAt || b.createdAt || 0).getTime() - new Date(a.submittedAt || a.createdAt || 0).getTime())[0];
+      const submissionStatus = String(s.reviewStatus || submissionReviewStatus(related) || "").toLowerCase();
       return {
         weekId:s.weekId, challengeId:s.challengeId, teamId:s.teamId, scheduledAt:s.scheduledAt,
         startedAt:s.startedAt || "", endsAt:s.endsAt || "", status:s.status || "scheduled",
-        submissionStatus: latest ? (latest.status || "submitted") : ""
+        submissionStatus
       };
     }),
     signedIn:Boolean(session), isStaff:staff, resultsUnlocked:Boolean(state.resultsUnlocked),
