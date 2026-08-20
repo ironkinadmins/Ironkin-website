@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { resolveOsrsItemIdByName } from "../_osrsItems.js";
 import { upsertTrackedItem } from "../_supabase.js";
@@ -36,7 +37,7 @@ export async function onRequestPost({ request, env }) {
 
   const key = getDropListKey(eventId);
 
-  const existingValue = await env.DROPS_KV.get(key);
+  const existingValue = await hybridKv(env, "drops").get(key);
   const drops = existingValue ? JSON.parse(existingValue) : [];
 
   const existing = drops.find(drop => drop.name.toLowerCase() === name.toLowerCase());
@@ -51,7 +52,7 @@ export async function onRequestPost({ request, env }) {
     drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, itemId: itemId || null, count: 0 });
   }
 
-  await env.DROPS_KV.put(key, JSON.stringify(drops));
+  await hybridKv(env, "drops").put(key, JSON.stringify(drops));
 
   let supabase = { synced: false, reason: itemId ? "not-configured" : "missing-item-id" };
   if (itemId) {

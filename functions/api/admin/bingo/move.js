@@ -1,7 +1,8 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 const SIGNUPS_KEY = "bingo:signups";
 async function getSignups(env) {
-  const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const raw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   const signups = raw ? JSON.parse(raw) : [];
   return Array.isArray(signups) ? signups : [];
 }
@@ -41,7 +42,7 @@ export async function onRequestPost({ request, env }) {
   signup.movedBy = session.id;
   signup.movedAt = new Date().toISOString();
 
-  await env.DROPS_KV.put(SIGNUPS_KEY, JSON.stringify(signups));
+  await hybridKv(env, "drops").put(SIGNUPS_KEY, JSON.stringify(signups));
 
   return Response.json({
     success: true,

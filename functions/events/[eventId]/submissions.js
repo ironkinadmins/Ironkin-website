@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { requirePluginUser } from "../../api/_pluginAuth.js";
 import { listTrackedItems, insertEventSubmission, findActiveDuplicateSubmission } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
@@ -51,7 +52,7 @@ export async function onRequestPost(context) {
   if (!username) return Response.json({ error: "Missing username." }, { status: 400 });
   if (!itemId) return Response.json({ error: "Missing or invalid itemid." }, { status: 400 });
 
-  const events = safeJson(await env.DROPS_KV.get("events:active"), []);
+  const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
   let event = configured.find(entry => entry?.active === true && entry?.dropsEnabled === true && makePluginEventId(entry) === requestedEventId);
   if (requestedEventId === "pvm-entry") {
@@ -99,7 +100,7 @@ export async function onRequestPost(context) {
   if (imageData) {
     if (base64ByteLength(imageData) > MAX_IMAGE_BYTES) return Response.json({ error: "imageData is too large." }, { status: 413 });
     const proofId = crypto.randomUUID();
-    await env.DROPS_KV.put(`event-submission-image:${proofId}`, imageData, { metadata: { contentType: "image/png", createdAt: new Date().toISOString() } });
+    await hybridKv(env, "drops").put(`event-submission-image:${proofId}`, imageData, { metadata: { contentType: "image/png", createdAt: new Date().toISOString() } });
     proofUrl = `${new URL(request.url).origin}/api/event-submission-image?id=${encodeURIComponent(proofId)}`;
   }
 

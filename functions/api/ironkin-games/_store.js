@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 export const GAMES_KEY = "ironkin-games:v1";
 
 export function defaultGames() {
@@ -44,7 +45,7 @@ export function defaultGames() {
 }
 
 export async function loadGames(env) {
-  const raw = await env.DROPS_KV.get(GAMES_KEY);
+  const raw = await hybridKv(env, "drops").get(GAMES_KEY);
   if (!raw) return defaultGames();
   try {
     const state = { ...defaultGames(), ...JSON.parse(raw) };
@@ -81,7 +82,7 @@ export async function loadGames(env) {
 
 export async function saveGames(env, state) {
   state.updatedAt = new Date().toISOString();
-  await env.DROPS_KV.put(GAMES_KEY, JSON.stringify(state));
+  await hybridKv(env, "drops").put(GAMES_KEY, JSON.stringify(state));
   return state;
 }
 

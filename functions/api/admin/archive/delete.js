@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
@@ -17,7 +18,7 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  const archiveValue = await env.DROPS_KV.get("events:archive");
+  const archiveValue = await hybridKv(env, "drops").get("events:archive");
   const archive = archiveValue ? JSON.parse(archiveValue) : [];
   const updatedArchive = archive.filter(entry => entry.id !== archiveId);
 
@@ -28,7 +29,7 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  await env.DROPS_KV.put(
+  await hybridKv(env, "drops").put(
     "events:archive",
     JSON.stringify(updatedArchive)
   );

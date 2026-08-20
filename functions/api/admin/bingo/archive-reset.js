@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { enforceStateIntegrity } from "../../bingo/_stateIntegrity.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "../../bingo/_teams.js";
@@ -87,7 +88,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  const raw = await env.DROPS_KV.get(STATE_KEY);
+  const raw = await hybridKv(env, "drops").get(STATE_KEY);
   if (!raw) {
     return Response.json({ error: "There is no Battleship Bingo game to archive." }, { status: 404 });
   }
@@ -98,7 +99,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const signupsRaw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const signupsRaw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   const signups = signupsRaw ? JSON.parse(signupsRaw) : [];
   const safeSignups = Array.isArray(signups) ? signups : [];
   const archivedAt = new Date().toISOString();
@@ -145,7 +146,7 @@ export async function onRequestPost({ request, env }) {
     state
   };
 
-  const indexRaw = await env.DROPS_KV.get(ARCHIVE_INDEX_KEY);
+  const indexRaw = await hybridKv(env, "drops").get(ARCHIVE_INDEX_KEY);
   const index = indexRaw ? JSON.parse(indexRaw) : [];
   index.unshift({
     id: archiveId,
@@ -159,9 +160,9 @@ export async function onRequestPost({ request, env }) {
   });
 
   // Save the snapshot first. Only reset the live game after both archive writes succeed.
-  await env.DROPS_KV.put(`${ARCHIVE_PREFIX}${archiveId}`, JSON.stringify(snapshot));
-  await env.DROPS_KV.put(ARCHIVE_INDEX_KEY, JSON.stringify(index.slice(0, 100)));
-  await env.DROPS_KV.put(STATE_KEY, JSON.stringify(freshState(Number(state.stateRevision || 0))));
+  await hybridKv(env, "drops").put(`${ARCHIVE_PREFIX}${archiveId}`, JSON.stringify(snapshot));
+  await hybridKv(env, "drops").put(ARCHIVE_INDEX_KEY, JSON.stringify(index.slice(0, 100)));
+  await hybridKv(env, "drops").put(STATE_KEY, JSON.stringify(freshState(Number(state.stateRevision || 0))));
 
   return Response.json({ ok: true, archiveId, archive: index[0] }, {
     headers: { "Cache-Control": "no-store" }

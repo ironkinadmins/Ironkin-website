@@ -1,11 +1,12 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { syncDiscordCalendarBoard } from "../../_discordCalendar.js";
 
 const CUSTOM_EVENTS_KEY = "calendar:custom-events";
 
 async function getCustomEvents(env) {
-  if (!env.CALENDAR_KV) return [];
+  if (!hybridKv(env, "calendar")) return [];
 
-  const saved = await env.CALENDAR_KV.get(CUSTOM_EVENTS_KEY);
+  const saved = await hybridKv(env, "calendar").get(CUSTOM_EVENTS_KEY);
   if (!saved) return [];
 
   try {

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { listTrackedItems, supabaseRest, insertEventSubmission } from "../../_supabase.js";
 
@@ -15,7 +16,7 @@ function playerKey(value) {
 }
 
 async function getStoredEvent(env, websiteEventId) {
-  const raw = await env.DROPS_KV.get("events:active");
+  const raw = await hybridKv(env, "drops").get("events:active");
   let events = [];
   try { events = raw ? JSON.parse(raw) : []; } catch { events = []; }
   return (Array.isArray(events) ? events : []).find(event =>

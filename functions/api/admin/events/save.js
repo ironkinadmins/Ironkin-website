@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { eventTypeSlug } from "../../_pluginEvents.js";
 export async function onRequestPost({ request, env }) {
@@ -19,7 +20,7 @@ export async function onRequestPost({ request, env }) {
   }
 
 
-  const previousRaw = await env.DROPS_KV.get("events:active");
+  const previousRaw = await hybridKv(env, "drops").get("events:active");
   let previousEvents = [];
   try { previousEvents = previousRaw ? JSON.parse(previousRaw) : []; } catch { previousEvents = []; }
   const previousById = new Map((Array.isArray(previousEvents) ? previousEvents : []).map(event => [event?.id, event]));
@@ -79,7 +80,7 @@ export async function onRequestPost({ request, env }) {
   const eventsToStore = eventsWithPluginIds.filter(event => event?.id !== "bounties" && event?.type !== "bounties");
   if (canonicalBounty) eventsToStore.push(canonicalBounty);
 
-  await env.DROPS_KV.put(
+  await hybridKv(env, "drops").put(
     "events:active",
     JSON.stringify(eventsToStore)
   );

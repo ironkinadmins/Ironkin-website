@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { getDropListKey, LEGACY_CLAN_GOAL_DROP_IDS, readDropsWithClanGoalFallback } from "./_dropKeys.js";
 import { deleteTrackedItem } from "../_supabase.js";
@@ -29,7 +30,7 @@ export async function onRequestPost({ request, env }) {
   const removedDrop = drops.find(drop => drop.name === name);
   const updatedDrops = drops.filter(drop => drop.name !== name);
 
-  await env.DROPS_KV.put(key, JSON.stringify(updatedDrops));
+  await hybridKv(env, "drops").put(key, JSON.stringify(updatedDrops));
   if (removedDrop?.itemId) {
     await deleteTrackedItem(env, eventId, removedDrop.itemId).catch(() => null);
   }
@@ -40,7 +41,7 @@ export async function onRequestPost({ request, env }) {
   if (String(eventId).toLowerCase() === "clan-goal") {
     for (const legacyEventId of LEGACY_CLAN_GOAL_DROP_IDS) {
       const legacyKey = getDropListKey(legacyEventId);
-      const legacyValue = await env.DROPS_KV.get(legacyKey);
+      const legacyValue = await hybridKv(env, "drops").get(legacyKey);
       if (!legacyValue) continue;
 
       let legacyDrops = [];
@@ -52,7 +53,7 @@ export async function onRequestPost({ request, env }) {
       }
 
       const updatedLegacyDrops = legacyDrops.filter(drop => drop?.name !== name);
-      await env.DROPS_KV.put(legacyKey, JSON.stringify(updatedLegacyDrops));
+      await hybridKv(env, "drops").put(legacyKey, JSON.stringify(updatedLegacyDrops));
     }
   }
 

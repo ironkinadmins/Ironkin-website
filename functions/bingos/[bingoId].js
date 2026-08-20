@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 import { lookupTileItemIds } from "./itemLookup.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "../api/bingo/_stateIntegrity.js";
 import { sendPendingProofToDiscord } from "../api/bingo/_discordProofs.js";
@@ -47,18 +48,18 @@ async function idsFromTile(env, tile) {
 }
 
 async function getBoard(env) {
-  const raw = await env.DROPS_KV.get(BOARD_KEY);
+  const raw = await hybridKv(env, "drops").get(BOARD_KEY);
   const board = safeJsonParse(raw, null);
   return board ? enforceStateIntegrity(board) : null;
 }
 
 async function saveBoard(env, board) {
   prepareStateForWrite(board, board.stateRevision);
-  await env.DROPS_KV.put(BOARD_KEY, JSON.stringify(board));
+  await hybridKv(env, "drops").put(BOARD_KEY, JSON.stringify(board));
 }
 
 async function getSignups(env) {
-  const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const raw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   const signups = safeJsonParse(raw, []);
   return Array.isArray(signups) ? signups : [];
 }
@@ -146,7 +147,7 @@ function getOrigin(request) {
 }
 
 async function storeProofImage(env, proofId, imageData) {
-  await env.DROPS_KV.put(`bingo:proof-image:${proofId}`, imageData, {
+  await hybridKv(env, "drops").put(`bingo:proof-image:${proofId}`, imageData, {
     metadata: { contentType: "image/png", createdAt: new Date().toISOString() }
   });
 }

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 const EVENT_TEMPLATES_KEY = "calendar:event-templates";
 
@@ -59,7 +60,7 @@ function normalizeTemplates(input) {
 }
 
 async function getTemplates(env) {
-  const kv = env.CALENDAR_KV || env.DROPS_KV;
+  const kv = hybridKv(env, "calendar") || hybridKv(env, "drops");
   if (!kv) return DEFAULT_TEMPLATES;
   const saved = await kv.get(EVENT_TEMPLATES_KEY);
   if (!saved) return DEFAULT_TEMPLATES;
@@ -85,7 +86,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Staff access required." }, { status: 403 });
   }
 
-  const kv = env.CALENDAR_KV || env.DROPS_KV;
+  const kv = hybridKv(env, "calendar") || hybridKv(env, "drops");
   if (!kv) {
     return Response.json({ error: "Calendar KV is not configured." }, { status: 500 });
   }

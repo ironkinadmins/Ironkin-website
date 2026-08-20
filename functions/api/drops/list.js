@@ -1,8 +1,9 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { readDropsWithClanGoalFallback } from "./_dropKeys.js";
 import { hasSupabase, supabaseRest } from "../_supabase.js";
 
 async function resolveWebsiteEventId(env, requestedEventId) {
-  const raw = await env.DROPS_KV.get("events:active");
+  const raw = await hybridKv(env, "drops").get("events:active");
   let events = [];
   try { events = raw ? JSON.parse(raw) : []; } catch { events = []; }
   const match = (Array.isArray(events) ? events : []).find(event =>

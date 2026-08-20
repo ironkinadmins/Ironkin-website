@@ -1,3 +1,4 @@
+import { hybridKv } from "./_hybridKv.js";
 const WOM_CACHE_PREFIX = "wom:competition:";
 const ACTIVE_TTL_SECONDS = 10 * 60;
 const UPCOMING_TTL_SECONDS = 60 * 60;
@@ -69,7 +70,7 @@ export function buildWomStandingsPayload(details, meta = {}) {
 }
 
 function getKv(env) {
-  return env.CALENDAR_KV || env.DROPS_KV || null;
+  return hybridKv(env, "calendar") || hybridKv(env, "drops") || null;
 }
 
 export async function readWomStoredCache(env, competitionId) {

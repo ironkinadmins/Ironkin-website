@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME, rosterTeamForSession, rosterTeamForName } from "./_teams.js";
 const SIGNUPS_KEY = "bingo:signups";
@@ -11,13 +12,13 @@ function getDisplayName(session) {
 }
 
 async function getSignups(env) {
-  const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const raw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   const signups = raw ? JSON.parse(raw) : [];
   return Array.isArray(signups) ? signups : [];
 }
 
 async function saveSignups(env, signups) {
-  await env.DROPS_KV.put(SIGNUPS_KEY, JSON.stringify(signups));
+  await hybridKv(env, "drops").put(SIGNUPS_KEY, JSON.stringify(signups));
 }
 
 function hasDeadlinePassed(value) {
@@ -27,7 +28,7 @@ function hasDeadlinePassed(value) {
 }
 
 async function getBingoSettings(env) {
-  const raw = await env.DROPS_KV.get("bingo:settings");
+  const raw = await hybridKv(env, "drops").get("bingo:settings");
   const parsed = raw ? JSON.parse(raw) : {};
   const registrationEndsAt = typeof parsed.registrationEndsAt === "string" ? parsed.registrationEndsAt : "";
   const boardRevealAt = typeof parsed.boardRevealAt === "string" ? parsed.boardRevealAt : "";

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { getDropListKey, readDropsWithClanGoalFallback } from "./_dropKeys.js";
 
@@ -38,7 +39,7 @@ export async function onRequestPost({ request, env }) {
 
   drop.count += 1;
 
-  await env.DROPS_KV.put(key, JSON.stringify(drops));
+  await hybridKv(env, "drops").put(key, JSON.stringify(drops));
 
   return Response.json({
     success: true,

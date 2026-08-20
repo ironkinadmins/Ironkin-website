@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 
 const GIVEAWAYS_KEY = "giveaways:kc";
@@ -11,13 +12,13 @@ function cleanText(value, fallback = "", max = 300) {
 }
 
 async function getGiveaways(env) {
-  const raw = await env.DROPS_KV.get(GIVEAWAYS_KEY);
+  const raw = await hybridKv(env, "drops").get(GIVEAWAYS_KEY);
   const parsed = raw ? JSON.parse(raw) : [];
   return Array.isArray(parsed) ? parsed : [];
 }
 
 async function saveGiveaways(env, giveaways) {
-  await env.DROPS_KV.put(GIVEAWAYS_KEY, JSON.stringify(giveaways));
+  await hybridKv(env, "drops").put(GIVEAWAYS_KEY, JSON.stringify(giveaways));
 }
 
 function publicGiveaway(giveaway, includeSubmissions = false) {

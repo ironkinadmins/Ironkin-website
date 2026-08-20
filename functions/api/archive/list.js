@@ -1,7 +1,8 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { repairArchiveEntryFromWom } from "../../_womCompetition.js";
 
 export async function onRequestGet({ env }) {
-  const value = await env.DROPS_KV.get("events:archive");
+  const value = await hybridKv(env, "drops").get("events:archive");
   let archive = value ? JSON.parse(value) : [];
   let repairedAny = false;
 
@@ -17,7 +18,7 @@ export async function onRequestGet({ env }) {
   archive = repaired;
 
   if (repairedAny) {
-    await env.DROPS_KV.put("events:archive", JSON.stringify(archive));
+    await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
   }
 
   archive.sort((a, b) => {

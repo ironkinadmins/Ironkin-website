@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 const PROFILE_SYNC_META_KEY = "member-profiles:discord-sync";
 const DEFAULT_SYNC_TTL_MS = 6 * 60 * 60 * 1000;
@@ -117,7 +118,7 @@ async function writeProfileRecord(env, member, now) {
   const discordId = String(user?.id || "");
   if (!discordId || user?.bot) return { skipped: true };
 
-  const existing = safeJsonParse(await env.DROPS_KV.get(`member-profile:${discordId}`), {});
+  const existing = safeJsonParse(await hybridKv(env, "drops").get(`member-profile:${discordId}`), {});
   const roles = Array.isArray(member.roles) ? member.roles : [];
   const displayName = member.nick || user.global_name || user.username || existing.displayName || "Unknown member";
   const avatarUrl = discordAvatarUrl(user);
@@ -137,7 +138,7 @@ async function writeProfileRecord(env, member, now) {
     discordSyncedAt: now
   };
 
-  await env.DROPS_KV.put(`member-profile:${discordId}`, JSON.stringify(record));
+  await hybridKv(env, "drops").put(`member-profile:${discordId}`, JSON.stringify(record));
   return { skipped: false };
 }
 
@@ -156,12 +157,12 @@ async function runInBatches(items, batchSize, worker) {
 }
 
 export async function getDiscordProfileSyncMeta(env) {
-  return safeJsonParse(await env.DROPS_KV.get(PROFILE_SYNC_META_KEY), null);
+  return safeJsonParse(await hybridKv(env, "drops").get(PROFILE_SYNC_META_KEY), null);
 }
 
 export async function syncDiscordProfiles(env) {
   const startedAt = Date.now();
-  const previousIndex = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
+  const previousIndex = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
   const members = await fetchGuildMembers(env);
   const now = new Date().toISOString();
   const nonBotMembers = members.filter(member => member?.user?.id && !member?.user?.bot);
@@ -201,7 +202,7 @@ export async function syncDiscordProfiles(env) {
   // CRITICAL: publish the complete Discord directory FIRST. The old implementation only
   // wrote the index after hundreds of per-member KV reads/writes, so a timeout/failure
   // left search stuck on the old partial directory.
-  await env.DROPS_KV.put(PROFILE_INDEX_KEY, JSON.stringify(index));
+  await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
 
   const preliminaryMeta = {
     syncedAt: now,
@@ -216,7 +217,7 @@ export async function syncDiscordProfiles(env) {
     durationMs: Date.now() - startedAt,
     directoryReady: true
   };
-  await env.DROPS_KV.put(PROFILE_SYNC_META_KEY, JSON.stringify(preliminaryMeta));
+  await hybridKv(env, "drops").put(PROFILE_SYNC_META_KEY, JSON.stringify(preliminaryMeta));
 
   // Hydrate the full profile records afterwards, in bounded parallel batches. A failure
   // here no longer prevents everyone from appearing in search.
@@ -227,7 +228,7 @@ export async function syncDiscordProfiles(env) {
     profileRecordFailures: writeResult.failed,
     durationMs: Date.now() - startedAt
   };
-  await env.DROPS_KV.put(PROFILE_SYNC_META_KEY, JSON.stringify(meta));
+  await hybridKv(env, "drops").put(PROFILE_SYNC_META_KEY, JSON.stringify(meta));
   return meta;
 }
 

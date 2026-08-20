@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 // Shared logic for the Battleship Bingo boss kill tracker.
 // Takes a baseline snapshot of every participant's boss kill counts from the
 // Wise Old Man API, then refreshes in small chunks so each run stays inside
@@ -24,7 +25,7 @@ function safeJsonParse(value, fallback) {
 }
 
 export async function getTrackerState(env) {
-  const raw = await env.DROPS_KV.get(TRACKER_KEY);
+  const raw = await hybridKv(env, "drops").get(TRACKER_KEY);
   const state = safeJsonParse(raw, {});
   return {
     startedAt: state.startedAt || null,
@@ -36,11 +37,11 @@ export async function getTrackerState(env) {
 }
 
 export async function saveTrackerState(env, state) {
-  await env.DROPS_KV.put(TRACKER_KEY, JSON.stringify(state));
+  await hybridKv(env, "drops").put(TRACKER_KEY, JSON.stringify(state));
 }
 
 export async function getTrackerSettings(env) {
-  const raw = await env.DROPS_KV.get(SETTINGS_KEY);
+  const raw = await hybridKv(env, "drops").get(SETTINGS_KEY);
   const parsed = safeJsonParse(raw, {});
   return {
     active: parsed.active === true,
@@ -51,7 +52,7 @@ export async function getTrackerSettings(env) {
 }
 
 export async function getSignups(env) {
-  const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const raw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   const signups = safeJsonParse(raw, []);
   return Array.isArray(signups) ? signups : [];
 }

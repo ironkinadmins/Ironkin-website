@@ -1,7 +1,8 @@
+import { hybridKv } from "../_hybridKv.js";
 export async function onRequestGet({ request, env }) {
   const id = String(new URL(request.url).searchParams.get("id") || "").trim();
   if (!id) return new Response("Missing image id.", { status: 400 });
-  const image = await env.DROPS_KV.get(`event-submission-image:${id}`);
+  const image = await hybridKv(env, "drops").get(`event-submission-image:${id}`);
   if (!image) return new Response("Image not found.", { status: 404 });
   try {
     const bytes = Uint8Array.from(atob(image), c => c.charCodeAt(0));

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 // Event timeline for the Battleship Bingo boss tracker.
 //
 // The tracker itself only keeps `baseline` and `current` per player and
@@ -49,7 +50,7 @@ function safeJsonParse(value, fallback) {
 }
 
 export async function getTimelineState(env) {
-  const raw = await env.DROPS_KV.get(TIMELINE_KEY);
+  const raw = await hybridKv(env, "drops").get(TIMELINE_KEY);
   const state = safeJsonParse(raw, {});
   return {
     revealAt: typeof state.revealAt === "string" ? state.revealAt : null,
@@ -62,7 +63,7 @@ export async function getTimelineState(env) {
 }
 
 export async function saveTimelineState(env, state) {
-  await env.DROPS_KV.put(TIMELINE_KEY, JSON.stringify(state));
+  await hybridKv(env, "drops").put(TIMELINE_KEY, JSON.stringify(state));
 }
 
 function eventBossSet() {

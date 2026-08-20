@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
 
 function emptyProgress() {
@@ -68,7 +69,7 @@ function resolveAttack(state, proof) {
 }
 
 export async function getBingoState(env) {
-  const raw = await env.DROPS_KV.get("bingo:state:v2");
+  const raw = await hybridKv(env, "drops").get("bingo:state:v2");
   return raw ? enforceStateIntegrity(JSON.parse(raw)) : null;
 }
 
@@ -96,7 +97,7 @@ export async function decideProof(env, { proofId, decision, reviewerId = "", rev
     proof.status = decision === "approve" ? "approved" : "rejected";
     appendLog(state, `${proof.status === "approved" ? "Approved" : "Rejected"} plugin test proof for ${proof.player || "Unknown"} by ${proof.reviewedBy}.`);
     prepareStateForWrite(state, state.stateRevision);
-    await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+    await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
     return { ok: true, proof, state, attack: null, completed: false };
   }
 
@@ -117,7 +118,7 @@ export async function decideProof(env, { proofId, decision, reviewerId = "", rev
     if (progress.proofId === proof.id) progress.proofId = "";
     appendLog(state, `Rejected proof for ${tile.name || `Tile ${tileIndex + 1}`} by ${proof.player || "Unknown"}; reviewed by ${proof.reviewedBy}.`);
     prepareStateForWrite(state, state.stateRevision);
-    await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+    await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
     return { ok: true, proof, state, attack: null, completed: false };
   }
 
@@ -141,6 +142,6 @@ export async function decideProof(env, { proofId, decision, reviewerId = "", rev
   }
 
   prepareStateForWrite(state, state.stateRevision);
-  await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+  await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
   return { ok: true, proof, state, attack, completed };
 }

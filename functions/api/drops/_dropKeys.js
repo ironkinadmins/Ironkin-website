@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 export function getDropListKey(eventId) {
   return `drops:${eventId || "global"}`;
 }
@@ -24,7 +25,7 @@ function parseDrops(value) {
 export async function readDropsWithClanGoalFallback(env, eventId) {
   const normalizedEventId = eventId || "global";
   const key = getDropListKey(normalizedEventId);
-  const value = await env.DROPS_KV.get(key);
+  const value = await hybridKv(env, "drops").get(key);
   const drops = parseDrops(value);
 
   if (!isClanGoalEventId(normalizedEventId) || drops.length) {
@@ -33,17 +34,17 @@ export async function readDropsWithClanGoalFallback(env, eventId) {
 
   for (const legacyEventId of LEGACY_CLAN_GOAL_DROP_IDS) {
     const legacyKey = getDropListKey(legacyEventId);
-    const legacyValue = await env.DROPS_KV.get(legacyKey);
+    const legacyValue = await hybridKv(env, "drops").get(legacyKey);
     const legacyDrops = parseDrops(legacyValue);
 
     if (legacyDrops.length) {
-      await env.DROPS_KV.put(key, JSON.stringify(legacyDrops));
+      await hybridKv(env, "drops").put(key, JSON.stringify(legacyDrops));
 
       // The canonical Clan Goal key is now the only source of truth. Purging
       // the old event-specific keys prevents deleted drops from reappearing
       // later if the canonical list becomes empty.
       for (const staleEventId of LEGACY_CLAN_GOAL_DROP_IDS) {
-        await env.DROPS_KV.delete(getDropListKey(staleEventId));
+        await hybridKv(env, "drops").delete(getDropListKey(staleEventId));
       }
 
       return {

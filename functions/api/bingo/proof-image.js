@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 function jsonError(message, status = 400) {
   return Response.json({ error: message }, { status });
 }
@@ -10,7 +11,7 @@ export async function onRequestGet({ request, env }) {
     return jsonError("Missing proof image id.", 400);
   }
 
-  const imageData = await env.DROPS_KV.get(`bingo:proof-image:${id}`);
+  const imageData = await hybridKv(env, "drops").get(`bingo:proof-image:${id}`);
   if (!imageData) {
     return jsonError("Proof image not found.", 404);
   }

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "../../bingo/_stateIntegrity.js";
 
@@ -80,7 +81,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Invalid team, tile, or result." }, { status: 400, headers: noStore() });
   }
 
-  const raw = await env.DROPS_KV.get(STATE_KEY);
+  const raw = await hybridKv(env, "drops").get(STATE_KEY);
   if (!raw) {
     return Response.json({ error: "The Bingo board has not been created yet." }, { status: 404, headers: noStore() });
   }
@@ -172,6 +173,6 @@ export async function onRequestPost({ request, env }) {
   state.log.unshift({ at: finalNow, text });
   state.log = state.log.slice(0, 2000);
 
-  await env.DROPS_KV.put(STATE_KEY, JSON.stringify(state));
+  await hybridKv(env, "drops").put(STATE_KEY, JSON.stringify(state));
   return Response.json({ ok: true, attackingTeam, defendingTeam, targetIndex, result, updatedAt: finalNow, stateRevision: state.stateRevision }, { headers: noStore() });
 }

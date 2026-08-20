@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
 import { updateProofDiscordMessage } from "./_discordProofs.js";
@@ -73,13 +74,13 @@ function buildStatusEmbed(state, proof, action) {
 }
 
 async function getState(env) {
-  const saved = await env.DROPS_KV.get("bingo:state:v2");
+  const saved = await hybridKv(env, "drops").get("bingo:state:v2");
   return saved ? enforceStateIntegrity(JSON.parse(saved)) : null;
 }
 
 async function saveState(env, state) {
   prepareStateForWrite(state, state.stateRevision);
-  await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+  await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
 }
 
 export async function onRequestPost({ request, env }) {

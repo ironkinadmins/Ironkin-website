@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 
 const DEFAULT_EVENTS = [
@@ -177,7 +178,7 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  const saved = await env.DROPS_KV.get("events:active");
+  const saved = await hybridKv(env, "drops").get("events:active");
   const rawEvents = saved ? JSON.parse(saved) : [];
   const events = ensureAdminEvents(rawEvents);
 

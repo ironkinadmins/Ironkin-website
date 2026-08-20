@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 const DEFAULT_EVENTS = [
   {
     id: "sotw-current",
@@ -144,7 +145,7 @@ function isCurrentEventActive(event, now = Date.now()) {
 }
 
 export async function onRequestGet({ env }) {
-  const saved = await env.DROPS_KV.get("events:active");
+  const saved = await hybridKv(env, "drops").get("events:active");
   const rawEvents = saved ? JSON.parse(saved) : [];
   const normalized = normalizeBotwEvents(rawEvents);
   const clanGoalCandidates = normalized.filter(event => String(event?.type || "").includes("clan-goal") || event?.id === "clan-goal");

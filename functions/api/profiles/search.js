@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession } from "../_auth.js";
 import { ensureDiscordProfilesSynced } from "../_discordProfiles.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
@@ -72,7 +73,7 @@ export async function onRequestGet({ request, env }) {
 
   // Only members present in the profile index are eligible to appear in search.
   // Supabase is used solely to enrich those real profiles with Ember data.
-  const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
+  const index = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
   const balances = await getSupabaseBalances(env);
   const balanceById = new Map();
 

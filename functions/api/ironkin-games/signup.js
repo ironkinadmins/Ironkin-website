@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession } from "../_auth.js";
 import { loadGames, saveGames, balanceSignups } from "./_store.js";
 
@@ -30,7 +31,7 @@ async function womFetch(env, path) {
 }
 
 async function groupMembers(env) {
-  const cached = await env.DROPS_KV.get(GROUP_CACHE_KEY);
+  const cached = await hybridKv(env, "drops").get(GROUP_CACHE_KEY);
   if (cached) {
     try { return new Set(JSON.parse(cached)); } catch {}
   }
@@ -39,7 +40,7 @@ async function groupMembers(env) {
   const names = memberships
     .map(item => normalizeRsn(item?.player?.displayName || item?.player?.username))
     .filter(Boolean);
-  await env.DROPS_KV.put(GROUP_CACHE_KEY, JSON.stringify(names), { expirationTtl: 600 });
+  await hybridKv(env, "drops").put(GROUP_CACHE_KEY, JSON.stringify(names), { expirationTtl: 600 });
   return new Set(names);
 }
 

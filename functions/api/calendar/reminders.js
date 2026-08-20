@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
 const EVENT_ANNOUNCEMENT_CHANNEL_ID = "1368582354960121927";
 const IRONKIN_ADMIN_TIME_ZONE = "America/Toronto";
@@ -144,8 +145,8 @@ async function sendDiscordMessage(env, payload) {
 }
 
 export async function processCalendarReminders(env) {
-  if (!env.CALENDAR_KV) return { checked: 0, sent: 0, error: "Missing CALENDAR_KV binding." };
-  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  if (!hybridKv(env, "calendar")) return { checked: 0, sent: 0, error: "Missing CALENDAR_KV binding." };
+  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
   const now = Date.now();
   let changed = false;
   let sent = 0;
@@ -188,7 +189,7 @@ export async function processCalendarReminders(env) {
 
   if (changed) {
     events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
-    await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, events);
+    await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, events);
   }
 
   return { checked: events.length, sent };

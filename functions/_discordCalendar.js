@@ -1,3 +1,4 @@
+import { hybridKv } from "./_hybridKv.js";
 const DISCORD_API = "https://discord.com/api/v10";
 const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
 const DISCORD_BOARD_MESSAGE_KEY = "discord:current-events-message-id";
@@ -223,9 +224,9 @@ async function deleteDiscordScheduledEvent(env, discordScheduledEventId) {
 }
 
 async function saveDiscordScheduledEventId(env, eventId, discordScheduledEventId) {
-  if (!env?.CALENDAR_KV || !eventId || !discordScheduledEventId) return;
+  if (!hybridKv(env, "calendar") || !eventId || !discordScheduledEventId) return;
 
-  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
   const index = events.findIndex(event => event.id === eventId);
   if (index < 0) return;
 
@@ -235,7 +236,7 @@ async function saveDiscordScheduledEventId(env, eventId, discordScheduledEventId
     discordSyncedAt: new Date().toISOString()
   };
 
-  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, events);
+  await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, events);
 }
 
 function buildCurrentEventsEmbed(env, events) {
@@ -301,13 +302,13 @@ function buildCurrentEventsEmbed(env, events) {
 }
 
 async function upsertCurrentEventsMessage(env, events) {
-  if (!hasDiscordConfig(env) || !env?.CALENDAR_KV) return;
+  if (!hasDiscordConfig(env) || !hybridKv(env, "calendar")) return;
 
   const payload = {
     embeds: [buildCurrentEventsEmbed(env, events)]
   };
 
-  const existingMessageId = await env.CALENDAR_KV.get(DISCORD_BOARD_MESSAGE_KEY);
+  const existingMessageId = await hybridKv(env, "calendar").get(DISCORD_BOARD_MESSAGE_KEY);
 
   if (existingMessageId) {
     const patch = await fetch(`${DISCORD_API}/channels/${env.CURRENT_EVENTS_CHANNEL_ID}/messages/${existingMessageId}`, {
@@ -338,13 +339,13 @@ async function upsertCurrentEventsMessage(env, events) {
   }
 
   if (data.id) {
-    await env.CALENDAR_KV.put(DISCORD_BOARD_MESSAGE_KEY, String(data.id));
+    await hybridKv(env, "calendar").put(DISCORD_BOARD_MESSAGE_KEY, String(data.id));
   }
 }
 
 export async function syncDiscordCalendarBoard(env) {
-  if (!hasDiscordConfig(env) || !env?.CALENDAR_KV) return;
-  const events = await getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  if (!hasDiscordConfig(env) || !hybridKv(env, "calendar")) return;
+  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
   await upsertCurrentEventsMessage(env, events);
 }
 

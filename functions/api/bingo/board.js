@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { TEAM_ONE_NAME, TEAM_TWO_NAME } from "./_teams.js";
 import { boardTeam as boardKeyForAccessTeam, getConfig as getAccessConfig, getTeamSession as getTeamAccess } from "./_teamAccess.js";
@@ -424,19 +425,19 @@ export async function onRequestGet({ request, env }) {
     return state;
   };
 
-  const saved = await env.DROPS_KV.get("bingo:state:v2");
+  const saved = await hybridKv(env, "drops").get("bingo:state:v2");
   if (saved) {
     const rawState = JSON.parse(saved);
     const state = applyNames(canonicaliseTeamSlots(rawState));
     if (JSON.stringify(rawState) !== JSON.stringify(state)) {
-      await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+      await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
     }
     return Response.json(publicStateForRequest(state, forceTeamView ? false : isStaff, memberTeam), {
       headers: { "Cache-Control": "no-store" }
     });
   }
 
-  const oldSaved = await env.DROPS_KV.get("bingo:board");
+  const oldSaved = await hybridKv(env, "drops").get("bingo:board");
   if (oldSaved) {
     const old = JSON.parse(oldSaved);
     const migrated = applyNames(defaultState());
@@ -460,7 +461,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  const previousRaw = await env.DROPS_KV.get("bingo:state:v2");
+  const previousRaw = await hybridKv(env, "drops").get("bingo:state:v2");
   const previousState = enforceStateIntegrity(previousRaw ? JSON.parse(previousRaw) : defaultState());
   const body = await request.json();
   const incomingRevision = Math.max(0, Number.parseInt(body?.stateRevision ?? 0, 10) || 0);
@@ -480,6 +481,6 @@ export async function onRequestPost({ request, env }) {
     console.warn("Could not update Discord proof notification", error);
   });
 
-  await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+  await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
   return Response.json(state);
 }

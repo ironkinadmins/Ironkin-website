@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 import { getSession, isStaffSession } from "./_auth.js";
 import { ensureDiscordProfilesSynced } from "./_discordProfiles.js";
 import { TEAM_ONE_KEY, TEAM_TWO_KEY, rosterTeamForName } from "./bingo/_teams.js";
@@ -60,7 +61,7 @@ function randomApiKey() {
 
 async function upsertPluginApiKey(env, record) {
   if (record.pluginApiKey) {
-    await env.DROPS_KV.put(`plugin-api-key:${record.pluginApiKey}`, JSON.stringify({
+    await hybridKv(env, "drops").put(`plugin-api-key:${record.pluginApiKey}`, JSON.stringify({
       discordId: record.discordId,
       displayName: record.displayName || "Unknown member",
       username: record.username || "",
@@ -73,7 +74,7 @@ async function upsertPluginApiKey(env, record) {
   const pluginApiKey = randomApiKey();
   record.pluginApiKey = pluginApiKey;
   record.pluginApiKeyCreatedAt = new Date().toISOString();
-  await env.DROPS_KV.put(`plugin-api-key:${pluginApiKey}`, JSON.stringify({
+  await hybridKv(env, "drops").put(`plugin-api-key:${pluginApiKey}`, JSON.stringify({
     discordId: record.discordId,
     displayName: record.displayName || "Unknown member",
     username: record.username || "",
@@ -85,7 +86,7 @@ async function upsertPluginApiKey(env, record) {
 
 async function rotatePluginApiKey(env, record) {
   if (record.pluginApiKey) {
-    await env.DROPS_KV.delete(`plugin-api-key:${record.pluginApiKey}`);
+    await hybridKv(env, "drops").delete(`plugin-api-key:${record.pluginApiKey}`);
   }
   record.pluginApiKey = randomApiKey();
   record.pluginApiKeyCreatedAt = new Date().toISOString();
@@ -95,14 +96,14 @@ async function rotatePluginApiKey(env, record) {
 
 async function getProfileRecord(env, discordId) {
   if (!discordId) return {};
-  const raw = await env.DROPS_KV.get(`member-profile:${discordId}`);
+  const raw = await hybridKv(env, "drops").get(`member-profile:${discordId}`);
   return safeJsonParse(raw, {});
 }
 
 async function saveProfileRecord(env, discordId, record) {
-  await env.DROPS_KV.put(`member-profile:${discordId}`, JSON.stringify(record));
+  await hybridKv(env, "drops").put(`member-profile:${discordId}`, JSON.stringify(record));
 
-  const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
+  const index = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
   const nextIndex = Array.isArray(index) ? index.filter(item => item.discordId !== discordId) : [];
   nextIndex.push({
     discordId,
@@ -116,7 +117,7 @@ async function saveProfileRecord(env, discordId, record) {
     memberSince: record.memberSince || null,
     updatedAt: new Date().toISOString()
   });
-  await env.DROPS_KV.put(PROFILE_INDEX_KEY, JSON.stringify(nextIndex));
+  await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(nextIndex));
 }
 
 async function getEmberBalance(env, discordId, displayName) {
@@ -168,7 +169,7 @@ function getWomCacheKey(rsn) {
 
 async function getCachedWomStats(env, rsn) {
   const cacheKey = getWomCacheKey(rsn);
-  const cached = safeJsonParse(await env.DROPS_KV.get(cacheKey), null);
+  const cached = safeJsonParse(await hybridKv(env, "drops").get(cacheKey), null);
 
   if (!cached?.stats || !cached?.fetchedAt) return null;
 
@@ -181,7 +182,7 @@ async function getCachedWomStats(env, rsn) {
 
 async function saveCachedWomStats(env, rsn, stats) {
   const cacheKey = getWomCacheKey(rsn);
-  await env.DROPS_KV.put(cacheKey, JSON.stringify({
+  await hybridKv(env, "drops").put(cacheKey, JSON.stringify({
     fetchedAt: new Date().toISOString(),
     stats
   }));
@@ -291,8 +292,8 @@ async function getEventPlacements(env, rsn) {
   }
 
   const [eventsRaw, bingoRaw] = await Promise.all([
-    env.DROPS_KV.get("events:archive"),
-    env.DROPS_KV.get("bingo:archive:index:v1")
+    hybridKv(env, "drops").get("events:archive"),
+    hybridKv(env, "drops").get("bingo:archive:index:v1")
   ]);
   const archive = safeJsonParse(eventsRaw, []);
   const bingoArchive = safeJsonParse(bingoRaw, []);

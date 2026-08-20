@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, mirrorCalendarEventCancel } from "../../../_discordCalendar.js";
 
@@ -515,7 +516,7 @@ async function upsertEventAnnouncement(env, event, mode = "created") {
 }
 
 async function getCustomCalendarEvents(env) {
-  return getJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, []);
+  return getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
 }
 
 async function saveCustomCalendarEvent(env, event) {
@@ -536,7 +537,7 @@ async function saveCustomCalendarEvent(env, event) {
   else events.push(savedEvent);
 
   events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
-  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, events);
+  await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, events);
 
   return { events, event: savedEvent };
 }
@@ -552,7 +553,7 @@ async function saveCustomCalendarEvents(env, newEvents) {
 
   merged.push(...newEvents);
   merged.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
-  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, merged);
+  await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, merged);
   return { events: merged, savedEvents: newEvents };
 }
 
@@ -563,15 +564,15 @@ async function deleteCustomCalendarEvent(env, eventId) {
   if (!event) return null;
 
   const remaining = events.filter(item => item.id !== eventId);
-  await putJson(env.CALENDAR_KV, CUSTOM_CALENDAR_EVENTS_KEY, remaining);
+  await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, remaining);
 
   return event;
 }
 
 async function deleteActiveEvent(env, eventId) {
-  if (!env.DROPS_KV) return;
+  if (!hybridKv(env, "drops")) return;
 
-  const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
+  const events = await getJson(hybridKv(env, "drops"), ACTIVE_EVENTS_KEY, []);
   const source = typeof eventId === "object" ? eventId : null;
   const activeId = source ? getActiveEventIdForCalendarEvent(source) : eventId;
   const remaining = events.filter(item => {
@@ -582,17 +583,17 @@ async function deleteActiveEvent(env, eventId) {
   });
 
   if (remaining.length !== events.length) {
-    await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(remaining));
+    await hybridKv(env, "drops").put(ACTIVE_EVENTS_KEY, JSON.stringify(remaining));
   }
 }
 
 async function addOrUpdateActiveEvent(env, calendarEvent) {
-  if (!env.DROPS_KV || !calendarEvent.womCompetitionId || calendarEvent.status === "cancelled") {
+  if (!hybridKv(env, "drops") || !calendarEvent.womCompetitionId || calendarEvent.status === "cancelled") {
     if (calendarEvent.status === "cancelled") await deleteActiveEvent(env, calendarEvent);
     return;
   }
 
-  const events = await getJson(env.DROPS_KV, ACTIVE_EVENTS_KEY, []);
+  const events = await getJson(hybridKv(env, "drops"), ACTIVE_EVENTS_KEY, []);
   const activeEvent = {
     id: getActiveEventIdForCalendarEvent(calendarEvent),
     calendarEventId: calendarEvent.id,
@@ -640,7 +641,7 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
   });
 
   cleanedEvents.push(activeEvent);
-  await env.DROPS_KV.put(ACTIVE_EVENTS_KEY, JSON.stringify(cleanedEvents));
+  await hybridKv(env, "drops").put(ACTIVE_EVENTS_KEY, JSON.stringify(cleanedEvents));
 }
 
 async function createWomCompetition(env, event) {
@@ -686,7 +687,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  if (!env.CALENDAR_KV) {
+  if (!hybridKv(env, "calendar")) {
     return Response.json({ error: "Missing CALENDAR_KV binding." }, { status: 500 });
   }
 
@@ -726,7 +727,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
-  if (!env.CALENDAR_KV) {
+  if (!hybridKv(env, "calendar")) {
     return Response.json({ error: "Missing CALENDAR_KV binding." }, { status: 500 });
   }
 

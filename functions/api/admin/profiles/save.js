@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
 function safeJsonParse(value, fallback) {
@@ -9,14 +10,14 @@ function safeJsonParse(value, fallback) {
 }
 
 async function getProfileRecord(env, discordId) {
-  const raw = await env.DROPS_KV.get(`member-profile:${discordId}`);
+  const raw = await hybridKv(env, "drops").get(`member-profile:${discordId}`);
   return safeJsonParse(raw, {});
 }
 
 async function saveProfileRecord(env, discordId, record) {
-  await env.DROPS_KV.put(`member-profile:${discordId}`, JSON.stringify(record));
+  await hybridKv(env, "drops").put(`member-profile:${discordId}`, JSON.stringify(record));
 
-  const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
+  const index = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
   const nextIndex = Array.isArray(index) ? index.filter(item => item.discordId !== discordId) : [];
   nextIndex.push({
     discordId,
@@ -24,7 +25,7 @@ async function saveProfileRecord(env, discordId, record) {
     username: record.username || "",
     updatedAt: new Date().toISOString()
   });
-  await env.DROPS_KV.put(PROFILE_INDEX_KEY, JSON.stringify(nextIndex));
+  await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(nextIndex));
 }
 
 export async function onRequestPost({ request, env }) {

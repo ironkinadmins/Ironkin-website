@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { ensureDiscordProfilesSynced } from "../../_discordProfiles.js";
 const PROFILE_INDEX_KEY = "member-profiles:index";
@@ -67,7 +68,7 @@ export async function onRequestGet({ request, env }) {
     syncWarning = error?.message || "Discord profile sync failed.";
   }
 
-  const index = safeJsonParse(await env.DROPS_KV.get(PROFILE_INDEX_KEY), []);
+  const index = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
   const balances = await getSupabaseBalances(env);
   const byId = new Map();
 

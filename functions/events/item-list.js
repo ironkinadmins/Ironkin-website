@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 import { requirePluginUser } from "../api/_pluginAuth.js";
 import { listTrackedItems, upsertTrackedItem } from "../api/_supabase.js";
 import { resolveOsrsItemIdByName } from "../api/_osrsItems.js";
@@ -11,7 +12,7 @@ function safeJson(value, fallback) {
 export async function onRequestGet({ request, env }) {
   const auth = await requirePluginUser(request, env);
   if (!auth.ok) return auth.response;
-  const events = safeJson(await env.DROPS_KV.get("events:active"), []);
+  const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
   const pvmEntry = configured.find(event => event?.id === "pvm-entry" || event?.type === "pvm-entry") || {
     id: "pvm-entry",
@@ -65,7 +66,7 @@ export async function onRequestGet({ request, env }) {
           }).catch(() => null);
         }
       }
-      if (updatedDrops.length) await env.DROPS_KV.put(dropResult.key || getDropListKey(websiteEventId), JSON.stringify(updatedDrops));
+      if (updatedDrops.length) await hybridKv(env, "drops").put(dropResult.key || getDropListKey(websiteEventId), JSON.stringify(updatedDrops));
     }
 
     itemIds = [...new Set(itemIds)];

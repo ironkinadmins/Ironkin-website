@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { readDropsWithClanGoalFallback } from "../../drops/_dropKeys.js";
 import {
@@ -103,12 +104,12 @@ export async function onRequestPost({ request, env }) {
     drops
   };
 
-  const archiveValue = await env.DROPS_KV.get("events:archive");
+  const archiveValue = await hybridKv(env, "drops").get("events:archive");
   const archive = archiveValue ? JSON.parse(archiveValue) : [];
 
   archive.unshift(archiveEntry);
 
-  await env.DROPS_KV.put(
+  await hybridKv(env, "drops").put(
     "events:archive",
     JSON.stringify(archive)
   );
@@ -146,7 +147,7 @@ export async function onRequestPost({ request, env }) {
       return sanitized;
     });
 
-    await env.DROPS_KV.put(
+    await hybridKv(env, "drops").put(
       "events:active",
       JSON.stringify(sanitizedEvents)
     );

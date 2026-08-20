@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getTeamSession, boardTeam } from "./_teamAccess.js";
 import { requireBingoTeam } from "./_teamAuthorization.js";
 import { enforceStateIntegrity, prepareStateForWrite } from "./_stateIntegrity.js";
@@ -31,7 +32,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error: "Enter a valid http or https proof link." }, { status: 400, headers });
   }
 
-  const raw = await env.DROPS_KV.get("bingo:state:v2");
+  const raw = await hybridKv(env, "drops").get("bingo:state:v2");
   if (!raw) return Response.json({ error: "Board not found." }, { status: 404, headers });
   const state = enforceStateIntegrity(JSON.parse(raw));
   if (!["active", "complete"].includes(state.phase)) {
@@ -73,6 +74,6 @@ export async function onRequestPost({ request, env }) {
   state.log.unshift({ at: new Date().toISOString(), text: `${player} submitted proof for ${tile.name} x${proof.quantity} (${team}).` });
   await sendPendingProofToDiscord(env, state, proof).catch(error => console.warn("Discord proof notification failed", error));
   prepareStateForWrite(state, state.stateRevision);
-  await env.DROPS_KV.put("bingo:state:v2", JSON.stringify(state));
+  await hybridKv(env, "drops").put("bingo:state:v2", JSON.stringify(state));
   return Response.json({ ok: true, proof }, { headers });
 }

@@ -1,3 +1,4 @@
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { rosterTeamForSession } from "./_teams.js";
 
@@ -15,7 +16,7 @@ function displayNameForSession(session, signup = null) {
 
 async function signupForSession(session, env) {
   if (!session?.id) return null;
-  const raw = await env.DROPS_KV.get(SIGNUPS_KEY);
+  const raw = await hybridKv(env, "drops").get(SIGNUPS_KEY);
   if (!raw) return null;
   try {
     const signups = JSON.parse(raw);

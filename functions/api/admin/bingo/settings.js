@@ -1,3 +1,4 @@
+import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 const DEFAULT_SETTINGS = {
   title: "Battleship Bingo",
@@ -48,7 +49,7 @@ export async function onRequestPost({ request, env }) {
     teamTwoName: cleanString(body.teamTwoName, DEFAULT_SETTINGS.teamTwoName, 40)
   };
 
-  await env.DROPS_KV.put("bingo:settings", JSON.stringify(settings));
+  await hybridKv(env, "drops").put("bingo:settings", JSON.stringify(settings));
 
   return Response.json({
     success: true,

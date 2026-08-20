@@ -1,3 +1,4 @@
+import { hybridKv } from "../_hybridKv.js";
 function jsonError(message, status = 400) {
   return Response.json({ error: message }, { status });
 }
@@ -8,7 +9,7 @@ export async function requirePluginUser(request, env) {
     return { ok: false, response: jsonError("Missing x-api-key header.", 401) };
   }
 
-  const raw = await env.DROPS_KV.get(`plugin-api-key:${apiKey}`);
+  const raw = await hybridKv(env, "drops").get(`plugin-api-key:${apiKey}`);
   if (!raw) {
     return { ok: false, response: jsonError("Invalid API key.", 401) };
   }
