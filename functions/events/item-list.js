@@ -57,6 +57,7 @@ export async function onRequestGet({ request, env }) {
           itemIds.push(itemId);
           await upsertTrackedItem(env, {
             websiteEventId,
+            pluginEventId: makePluginEventId(event),
             itemId,
             itemName: drop.name,
             imageUrl: drop.image,

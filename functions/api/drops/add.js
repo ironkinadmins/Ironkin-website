@@ -2,8 +2,17 @@ import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { resolveOsrsItemIdByName } from "../_osrsItems.js";
 import { upsertTrackedItem } from "../_supabase.js";
+import { makePluginEventId } from "../_pluginEvents.js";
 function getDropListKey(eventId) {
   return `drops:${eventId}`;
+}
+
+async function resolvePluginEventId(env, websiteEventId) {
+  const raw = await hybridKv(env, "drops").get("events:active");
+  let events = [];
+  try { events = raw ? JSON.parse(raw) : []; } catch { events = []; }
+  const event = (Array.isArray(events) ? events : []).find(entry => String(entry?.id || "") === String(websiteEventId || ""));
+  return event ? makePluginEventId(event) : String(websiteEventId || "");
 }
 
 export async function onRequestPost({ request, env }) {
@@ -56,8 +65,10 @@ export async function onRequestPost({ request, env }) {
 
   let supabase = { synced: false, reason: itemId ? "not-configured" : "missing-item-id" };
   if (itemId) {
+    const pluginEventId = await resolvePluginEventId(env, eventId);
     supabase = await upsertTrackedItem(env, {
       websiteEventId: eventId,
+      pluginEventId,
       itemId,
       itemName: name,
       imageUrl: image,

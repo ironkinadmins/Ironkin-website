@@ -1,6 +1,47 @@
 import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
-import { eventTypeSlug } from "../../_pluginEvents.js";
+import { eventTypeSlug, makePluginEventId } from "../../_pluginEvents.js";
+import { upsertTrackedItem } from "../../_supabase.js";
+import { resolveOsrsItemIdByName } from "../../_osrsItems.js";
+
+async function syncEventCatalog(env, events) {
+  const results = { synced: 0, skipped: 0, warnings: [] };
+  for (const event of Array.isArray(events) ? events : []) {
+    const websiteEventId = String(event?.id || "").trim();
+    if (!websiteEventId) continue;
+    const raw = await hybridKv(env, "drops").get(`drops:${websiteEventId}`);
+    let drops = [];
+    try { drops = raw ? JSON.parse(raw) : []; } catch { drops = []; }
+    if (!Array.isArray(drops)) continue;
+    let changed = false;
+    for (const drop of drops) {
+      let itemId = Number(drop?.itemId);
+      if (!Number.isInteger(itemId) || itemId <= 0) {
+        itemId = await resolveOsrsItemIdByName(drop?.name).catch(() => null);
+        if (itemId) { drop.itemId = itemId; changed = true; }
+      }
+      if (!itemId) { results.skipped++; continue; }
+      try {
+        await upsertTrackedItem(env, {
+          websiteEventId,
+          pluginEventId: makePluginEventId(event),
+          itemId,
+          itemName: String(drop?.name || ""),
+          imageUrl: String(drop?.image || ""),
+          wikiUrl: String(drop?.wikiUrl || ""),
+          rewardEmbers: Math.max(0, Number(drop?.rewardEmbers || 0)),
+          trackingRule: String(drop?.trackingRule || "repeatable")
+        });
+        results.synced++;
+      } catch (error) {
+        results.warnings.push(`${websiteEventId}/${itemId}: ${error?.message || error}`);
+      }
+    }
+    if (changed) await hybridKv(env, "drops").put(`drops:${websiteEventId}`, JSON.stringify(drops));
+  }
+  return results;
+}
+
 export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
     return Response.json(
@@ -85,8 +126,11 @@ export async function onRequestPost({ request, env }) {
     JSON.stringify(eventsToStore)
   );
 
+  const catalogSync = await syncEventCatalog(env, eventsToStore);
+
   return Response.json({
     success: true,
-    events: eventsToStore
+    events: eventsToStore,
+    catalogSync
   });
 }
