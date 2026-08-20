@@ -1,0 +1,382 @@
+import { hybridKv } from "./_hybridKv.js";
+const DISCORD_API = "https://discord.com/api/v10";
+const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
+const DISCORD_BOARD_MESSAGE_KEY = "discord:current-events-message-id";
+
+function hasDiscordConfig(env) {
+  return Boolean(
+    env?.DISCORD_BOT_TOKEN &&
+    env?.DISCORD_GUILD_ID &&
+    env?.CURRENT_EVENTS_CHANNEL_ID
+  );
+}
+
+function getSiteUrl(env) {
+  return String(env?.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+}
+
+function getHeaders(env) {
+  return {
+    "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`,
+    "Content-Type": "application/json",
+    "User-Agent": "Ironkin-Website-Calendar"
+  };
+}
+
+function cleanText(value, fallback = "") {
+  return String(value || fallback).trim();
+}
+
+function truncate(value, max) {
+  const text = cleanText(value);
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function toDiscordTimestamp(value, style = "f") {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "TBD";
+  return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
+}
+
+function isClanGoalEvent(event) {
+  const type = String(event?.eventType || event?.type || event?.category || "").toLowerCase();
+  return type.includes("clan-goal") || type === "clan_goal";
+}
+
+function getEventUrl(env, event) {
+  const siteUrl = getSiteUrl(env);
+  if (isClanGoalEvent(event)) {
+    return `${siteUrl}/event.html?id=clan-goal`;
+  }
+  if (event?.womCompetitionId) {
+    return `${siteUrl}/event.html?id=${encodeURIComponent(event.id)}`;
+  }
+  return `${siteUrl}/calendar`;
+}
+
+function getEventKind(event) {
+  const type = String(event?.eventType || event?.type || event?.category || "event");
+  const labels = {
+    normal: "Normal Event",
+    mass: "Clan Mass",
+    sotw: "Skill of the Week",
+    botw: "Boss of the Week",
+    "clan-goal": "Clan Goal",
+    "clan-goal-skill": "Clan Goal",
+    "clan-goal-boss": "Clan Goal"
+  };
+  return labels[type] || "Event";
+}
+
+async function getJson(kv, key, fallback) {
+  if (!kv) return fallback;
+  const saved = await kv.get(key);
+  if (!saved) return fallback;
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return fallback;
+  }
+}
+
+async function putJson(kv, key, value) {
+  if (!kv) return;
+  await kv.put(key, JSON.stringify(value));
+}
+
+function normalizeEvents(events) {
+  return (Array.isArray(events) ? events : [])
+    .filter(event => event && event.start && Number.isFinite(new Date(event.start).getTime()))
+    .sort((a, b) => new Date(a.start) - new Date(b.start));
+}
+
+function getUnifiedEventType(event) {
+  return String(event?.eventType || event?.type || event?.category || "").toLowerCase();
+}
+
+function getEventStartTime(event) {
+  const date = new Date(event?.start || event?.startDate || event?.date || "");
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function getEventEndTime(event) {
+  const date = new Date(event?.end || event?.endDate || event?.start || event?.startDate || event?.date || "");
+  return Number.isFinite(date.getTime()) ? date.getTime() : null;
+}
+
+function isActiveByDates(event, now = Date.now()) {
+  const start = getEventStartTime(event);
+  const end = getEventEndTime(event);
+  return start !== null && end !== null && start <= now && end >= now;
+}
+
+function isUpcomingByDates(event, now = Date.now()) {
+  const start = getEventStartTime(event);
+  return start !== null && start > now;
+}
+
+function featuredPriorityScore(event, now = Date.now()) {
+  const type = getUnifiedEventType(event);
+  const active = isActiveByDates(event, now);
+  const upcoming = isUpcomingByDates(event, now);
+
+  if (active && type.includes("clan-goal")) return 1;
+  if (active && type === "botw") return 2;
+  if (active && type === "sotw") return 3;
+  if (upcoming && type.includes("clan-goal")) return 4;
+  if (upcoming && type === "botw") return 5;
+  if (upcoming && type === "sotw") return 6;
+  if (upcoming && (type === "mass" || type === "clan-mass")) return 7;
+  if (upcoming && type === "giveaway") return 8;
+  if (upcoming) return 9;
+  return 99;
+}
+
+function chooseFeaturedEvent(events) {
+  const now = Date.now();
+  const list = (Array.isArray(events) ? events : [])
+    .filter(event => event && String(event.status || "").toLowerCase() !== "cancelled")
+    .filter(event => isActiveByDates(event, now) || isUpcomingByDates(event, now));
+
+  const manual = list.find(event => event.featured === true);
+  if (manual) return manual;
+
+  return list
+    .slice()
+    .sort((a, b) => {
+      const scoreDiff = featuredPriorityScore(a, now) - featuredPriorityScore(b, now);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const aStart = getEventStartTime(a) ?? Number.MAX_SAFE_INTEGER;
+      const bStart = getEventStartTime(b) ?? Number.MAX_SAFE_INTEGER;
+      return aStart - bStart;
+    })[0] || null;
+}
+
+function buildScheduledEventPayload(env, event) {
+  const start = new Date(event.start);
+  const end = new Date(event.end || start.getTime() + 60 * 60 * 1000);
+  const siteUrl = getSiteUrl(env);
+
+  return {
+    name: truncate(event.title || "Ironkin Event", 100),
+    description: truncate(event.description || `${getEventKind(event)} from Ironkin.`, 1000),
+    privacy_level: 2,
+    scheduled_start_time: start.toISOString(),
+    scheduled_end_time: end.toISOString(),
+    entity_type: 3,
+    entity_metadata: {
+      location: getEventUrl(env, event) || `${siteUrl}/calendar`
+    }
+  };
+}
+
+async function createDiscordScheduledEvent(env, event) {
+  if (!hasDiscordConfig(env) || !event?.start) return null;
+
+  const response = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/scheduled-events`, {
+    method: "POST",
+    headers: getHeaders(env),
+    body: JSON.stringify(buildScheduledEventPayload(env, event))
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.warn("Discord scheduled event create failed", response.status, data);
+    return null;
+  }
+
+  return data;
+}
+
+async function updateDiscordScheduledEvent(env, event) {
+  if (!hasDiscordConfig(env) || !event?.discordScheduledEventId || !event?.start) return null;
+
+  const response = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${event.discordScheduledEventId}`, {
+    method: "PATCH",
+    headers: getHeaders(env),
+    body: JSON.stringify(buildScheduledEventPayload(env, event))
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.warn("Discord scheduled event update failed", response.status, data);
+    return null;
+  }
+
+  return data;
+}
+
+async function deleteDiscordScheduledEvent(env, discordScheduledEventId) {
+  if (!hasDiscordConfig(env) || !discordScheduledEventId) return;
+
+  const response = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${discordScheduledEventId}`, {
+    method: "DELETE",
+    headers: getHeaders(env)
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const data = await response.json().catch(() => ({}));
+    console.warn("Discord scheduled event delete failed", response.status, data);
+  }
+}
+
+async function saveDiscordScheduledEventId(env, eventId, discordScheduledEventId) {
+  if (!hybridKv(env, "calendar") || !eventId || !discordScheduledEventId) return;
+
+  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const index = events.findIndex(event => event.id === eventId);
+  if (index < 0) return;
+
+  events[index] = {
+    ...events[index],
+    discordScheduledEventId: String(discordScheduledEventId),
+    discordSyncedAt: new Date().toISOString()
+  };
+
+  await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, events);
+}
+
+function buildCurrentEventsEmbed(env, events) {
+  const siteUrl = getSiteUrl(env);
+  const now = Date.now();
+  const normalized = normalizeEvents(events);
+  const visible = normalized.filter(event => String(event.status || "scheduled").toLowerCase() !== "cancelled");
+  const active = visible.filter(event => {
+    const start = new Date(event.start).getTime();
+    const end = new Date(event.end || event.start).getTime();
+    return start <= now && end >= now;
+  });
+  const upcoming = visible.filter(event => new Date(event.start).getTime() > now).slice(0, 8);
+  const cancelled = normalized
+    .filter(event => String(event.status || "").toLowerCase() === "cancelled")
+    .slice(0, 3);
+  const featured = chooseFeaturedEvent(visible);
+
+  const fields = [];
+
+  if (featured) {
+    fields.push({
+      name: "🔥 Featured Event",
+      value: `**[${truncate(featured.title, 80)}](${getEventUrl(env, featured)})**\n${getEventKind(featured)} · ${toDiscordTimestamp(featured.start, "R")}\nStarts ${toDiscordTimestamp(featured.start, "f")}`,
+      inline: false
+    });
+  }
+
+  fields.push({
+    name: "🟢 Active Now",
+    value: active.length
+      ? active.slice(0, 5).map(event => `• **[${truncate(event.title, 70)}](${getEventUrl(env, event)})** · ends ${toDiscordTimestamp(event.end || event.start, "R")}`).join("\n")
+      : "No active events right now.",
+    inline: false
+  });
+
+  fields.push({
+    name: "🗓 Upcoming",
+    value: upcoming.length
+      ? upcoming.map(event => `• ${toDiscordTimestamp(event.start, "D")} · **[${truncate(event.title, 70)}](${getEventUrl(env, event)})** · ${toDiscordTimestamp(event.start, "t")}`).join("\n")
+      : "No upcoming events found.",
+    inline: false
+  });
+
+  if (cancelled.length) {
+    fields.push({
+      name: "❌ Recently Cancelled",
+      value: cancelled.map(event => `• ~~${truncate(event.title, 70)}~~`).join("\n"),
+      inline: false
+    });
+  }
+
+  return {
+    title: "📅 Ironkin Current Events",
+    description: `Updated automatically from [ironkinclan.com](${siteUrl}/calendar).`,
+    color: 0xff7a1a,
+    fields,
+    footer: {
+      text: "🕒 Event times are shown in your local timezone."
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function upsertCurrentEventsMessage(env, events) {
+  if (!hasDiscordConfig(env) || !hybridKv(env, "calendar")) return;
+
+  const payload = {
+    embeds: [buildCurrentEventsEmbed(env, events)]
+  };
+
+  const existingMessageId = await hybridKv(env, "calendar").get(DISCORD_BOARD_MESSAGE_KEY);
+
+  if (existingMessageId) {
+    const patch = await fetch(`${DISCORD_API}/channels/${env.CURRENT_EVENTS_CHANNEL_ID}/messages/${existingMessageId}`, {
+      method: "PATCH",
+      headers: getHeaders(env),
+      body: JSON.stringify(payload)
+    });
+
+    if (patch.ok) return;
+    if (patch.status !== 404) {
+      const data = await patch.json().catch(() => ({}));
+      console.warn("Discord current-events message update failed", patch.status, data);
+      return;
+    }
+  }
+
+  const post = await fetch(`${DISCORD_API}/channels/${env.CURRENT_EVENTS_CHANNEL_ID}/messages`, {
+    method: "POST",
+    headers: getHeaders(env),
+    body: JSON.stringify(payload)
+  });
+
+  const data = await post.json().catch(() => ({}));
+
+  if (!post.ok) {
+    console.warn("Discord current-events message create failed", post.status, data);
+    return;
+  }
+
+  if (data.id) {
+    await hybridKv(env, "calendar").put(DISCORD_BOARD_MESSAGE_KEY, String(data.id));
+  }
+}
+
+export async function syncDiscordCalendarBoard(env) {
+  if (!hasDiscordConfig(env) || !hybridKv(env, "calendar")) return;
+  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
+  await upsertCurrentEventsMessage(env, events);
+}
+
+export async function mirrorCalendarEventCreate(env, event) {
+  if (!hasDiscordConfig(env)) return event;
+
+  try {
+    await syncDiscordCalendarBoard(env);
+    return event;
+  } catch (error) {
+    console.warn("Discord calendar create/update mirror failed", error?.message || error);
+    return event;
+  }
+}
+
+export async function mirrorCalendarEventCancel(env, event) {
+  if (!hasDiscordConfig(env)) return;
+
+  try {
+    await syncDiscordCalendarBoard(env);
+  } catch (error) {
+    console.warn("Discord calendar cancel mirror failed", error?.message || error);
+  }
+}
+
+export async function mirrorCalendarEventDelete(env, event) {
+  if (!hasDiscordConfig(env)) return;
+
+  try {
+    await syncDiscordCalendarBoard(env);
+  } catch (error) {
+    console.warn("Discord calendar delete mirror failed", error?.message || error);
+  }
+}
