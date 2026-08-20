@@ -1,4 +1,4 @@
-import { getOsrsItemMapping } from "../_osrsItems.js";
+import { getOsrsItemMapping, getCanonicalOsrsItemMapping } from "../_osrsItems.js";
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get("q") || "").trim();
@@ -29,7 +29,8 @@ gsrsearch: q,
     const pages = data?.query?.pages || {};
 
     const mapping = await getOsrsItemMapping().catch(() => []);
-    const idsByName = new Map(mapping.map(item => [String(item?.name || "").trim().toLowerCase(), Number(item?.id)]));
+    const canonicalMapping = getCanonicalOsrsItemMapping(mapping);
+    const idsByName = new Map(canonicalMapping.map(item => [String(item?.name || "").trim().toLowerCase(), Number(item?.id)]));
 
     const results = Object.values(pages)
       .map(page => ({
@@ -49,6 +50,11 @@ gsrsearch: q,
     !name.includes("module:") &&
     !name.includes("user:") &&
     !name.includes("league") &&
+    !name.includes("last man standing") &&
+    !name.includes("deadman") &&
+    !name.includes("tournament") &&
+    !name.includes("beta") &&
+    !name.includes("placeholder") &&
     !name.includes("quest") &&
     !name.includes("area") &&
     !name.includes("music") &&

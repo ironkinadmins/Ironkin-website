@@ -1712,7 +1712,7 @@ async function loadAdminDrops() {
     row.innerHTML = `
       <div class="bounty-drop-main">
         ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
-        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small>${isBountiesEvent(getSelectedEvent()) ? `<small>${Number(drop.rewardEmbers || 0)} Embers each</small>` : ""}<small>${formatDropTrackingRule(drop.trackingRule)}</small></span>
+        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small><small>${Number(drop.rewardEmbers || 0)} Embers each</small><small>${formatDropTrackingRule(drop.trackingRule)}</small></span>
       </div>
       <div class="drop-controls">
         <strong>${drop.count}</strong>
@@ -1733,13 +1733,14 @@ async function addDrop() {
   const name = input.value.trim();
   const itemId = Number(itemIdInput?.value || 0);
   const trackingRule = String(document.getElementById("dropTrackingRuleInput")?.value || "repeatable");
+  const rewardEmbers = Math.max(0, Math.floor(Number(document.getElementById("dropRewardInput")?.value || 0)));
   if (!name || !selectedEventId) return;
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
 
   const response = await fetch("/api/drops/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "", trackingRule })
+    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add tracked item."); return; }
@@ -1748,6 +1749,12 @@ async function addDrop() {
   input.value = "";
   if (itemIdInput) itemIdInput.value = "";
   if (imageInput) { imageInput.value = ""; imageInput.dataset.wikiUrl = ""; }
+  const reward = document.getElementById("dropRewardInput");
+  if (reward) reward.value = "";
+  const idLookup = document.getElementById("dropItemIdLookupInput");
+  if (idLookup) idLookup.value = "";
+  const idStatus = document.getElementById("dropItemIdLookupStatus");
+  if (idStatus) idStatus.textContent = "";
   const search = document.getElementById("dropItemSearchInput");
   if (search) search.value = "";
   const results = document.getElementById("dropWikiSearchResults");
@@ -1776,6 +1783,61 @@ async function searchStandardDropWiki(query) {
       resultsEl.innerHTML = "";
     }));
   } catch { resultsEl.innerHTML = `<div class="wiki-loading">Could not search OSRS items.</div>`; }
+}
+
+
+async function lookupItemByExactId({ inputId, statusId, nameId, hiddenId, imageId, resultsId, datasetId = false }) {
+  const input = document.getElementById(inputId);
+  const status = document.getElementById(statusId);
+  const itemId = Number(input?.value || 0);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    if (status) status.textContent = "Enter a valid positive OSRS item ID.";
+    return;
+  }
+  if (status) status.textContent = "Looking up item ID...";
+  try {
+    const response = await fetch(`/api/osrs/item-id-search?q=${encodeURIComponent(itemId)}&t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error || "Lookup failed.");
+    const results = Array.isArray(data) ? data : [];
+    const exact = results.find(item => Number(item?.id) === itemId && !item?.excluded);
+    const replacement = results.find(item => item?.excluded && Number(item?.canonicalId) > 0);
+    if (!exact) {
+      if (replacement) {
+        if (status) status.textContent = `ID ${itemId} is an alternate/variant item. Use canonical ID ${Number(replacement.canonicalId)} (${replacement.canonicalName || replacement.name}).`;
+      } else if (status) {
+        status.textContent = `No selectable canonical OSRS item found for ID ${itemId}.`;
+      }
+      return;
+    }
+    let enriched = exact;
+    try {
+      const wikiResponse = await fetch(`/api/osrs/search?q=${encodeURIComponent(exact.name || "")}&t=${Date.now()}`, { cache: "no-store" });
+      const wikiData = await wikiResponse.json();
+      const wikiResults = Array.isArray(wikiData) ? wikiData : wikiData?.results || [];
+      enriched = wikiResults.find(item => Number(item?.id) === Number(exact.id)) || exact;
+    } catch {}
+
+    const nameInput = document.getElementById(nameId);
+    if (nameInput) {
+      nameInput.value = exact.name || "";
+      if (datasetId) nameInput.dataset.itemId = String(exact.id);
+    }
+    if (!datasetId) {
+      const idInput = document.getElementById(hiddenId);
+      if (idInput) idInput.value = String(exact.id);
+    }
+    const imageInput = document.getElementById(imageId);
+    if (imageInput) {
+      imageInput.value = enriched.image || "";
+      imageInput.dataset.wikiUrl = enriched.url || "";
+    }
+    const resultsEl = document.getElementById(resultsId);
+    if (resultsEl) resultsEl.innerHTML = "";
+    if (status) status.textContent = `Selected ${exact.name} (ID ${exact.id}).`;
+  } catch (error) {
+    if (status) status.textContent = error?.message || "Could not look up that OSRS item ID.";
+  }
 }
 
 async function changeDrop(name, direction) {
@@ -1836,6 +1898,10 @@ async function addBountyItem() {
   document.getElementById("bountySelectedItemInput").dataset.itemId = "";
   imageInput.value = "";
   document.getElementById("bountyRewardInput").value = "";
+  const bountyIdLookup = document.getElementById("bountyItemIdLookupInput");
+  if (bountyIdLookup) bountyIdLookup.value = "";
+  const bountyIdStatus = document.getElementById("bountyItemIdLookupStatus");
+  if (bountyIdStatus) bountyIdStatus.textContent = "";
   document.getElementById("bountyItemSearchInput").value = "";
   loadAdminDrops();
 }
@@ -1844,4 +1910,6 @@ loadAdmin();
 
 document.getElementById("dropItemSearchInput")?.addEventListener("input", event => { clearTimeout(standardDropWikiTimer); standardDropWikiTimer = setTimeout(() => searchStandardDropWiki(event.target.value.trim()), 250); });
 document.getElementById("bountyItemSearchInput")?.addEventListener("input", event => { clearTimeout(bountyWikiTimer); bountyWikiTimer = setTimeout(() => searchBountyWiki(event.target.value.trim()), 250); });
+document.getElementById("dropItemIdLookupBtn")?.addEventListener("click", () => lookupItemByExactId({ inputId:"dropItemIdLookupInput", statusId:"dropItemIdLookupStatus", nameId:"dropNameInput", hiddenId:"dropItemIdInput", imageId:"dropImageInput", resultsId:"dropWikiSearchResults" }));
+document.getElementById("bountyItemIdLookupBtn")?.addEventListener("click", () => lookupItemByExactId({ inputId:"bountyItemIdLookupInput", statusId:"bountyItemIdLookupStatus", nameId:"bountySelectedItemInput", hiddenId:null, imageId:"bountySelectedImageInput", resultsId:"bountyWikiSearchResults", datasetId:true }));
 document.getElementById("addBountyItemBtn")?.addEventListener("click", addBountyItem);

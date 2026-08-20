@@ -149,6 +149,18 @@
         <div id="dropWikiSearchResults" class="wiki-results"></div>
       </div>
       <div class="admin-field">
+        <label for="dropItemIdLookupInput">Lookup by OSRS Item ID</label>
+        <div class="admin-inline-row">
+          <input id="dropItemIdLookupInput" type="number" min="1" step="1" placeholder="Example: 21018" />
+          <button type="button" class="btn" id="dropItemIdLookupBtn">Lookup ID</button>
+        </div>
+        <small id="dropItemIdLookupStatus"></small>
+      </div>
+      <div class="admin-field">
+        <label for="dropRewardInput">Reward per Item</label>
+        <div class="admin-inline-row"><input id="dropRewardInput" type="number" min="0" step="1" placeholder="Example: 50" /><span>Embers</span></div>
+      </div>
+      <div class="admin-field">
         <label for="dropNameInput">Selected Item</label>
         <div class="admin-add-row">
           <input id="dropNameInput" type="text" readonly placeholder="Select an item above" />
@@ -177,6 +189,14 @@
           <label for="bountyItemSearchInput">Search OSRS Wiki</label>
           <input id="bountyItemSearchInput" type="text" placeholder="Type an item name..." autocomplete="off" />
           <div id="bountyWikiSearchResults" class="wiki-results bounty-wiki-results"></div>
+        </div>
+        <div class="admin-field">
+          <label for="bountyItemIdLookupInput">Lookup by OSRS Item ID</label>
+          <div class="admin-inline-row">
+            <input id="bountyItemIdLookupInput" type="number" min="1" step="1" placeholder="Example: 21018" />
+            <button type="button" class="btn" id="bountyItemIdLookupBtn">Lookup ID</button>
+          </div>
+          <small id="bountyItemIdLookupStatus"></small>
         </div>
         <div class="admin-field">
           <label for="bountySelectedItemInput">Selected Item</label>

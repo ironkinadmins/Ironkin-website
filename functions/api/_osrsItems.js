@@ -5,6 +5,55 @@ function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+
+function variantPenalty(item) {
+  const constant = String(item?.constant || "").toUpperCase();
+  const name = normalize(item?.name);
+  let penalty = 0;
+
+  // Prefer canonical RuneLite constants over duplicate suffixed variants.
+  if (/_\d+$/.test(constant)) penalty += 20;
+
+  const variantMarkers = [
+    "LEAGUE", "TRAILBLAZER", "SHATTERED_RELICS", "TWISTED",
+    "LAST_MAN_STANDING", "LMS", "DEADMAN", "DMM",
+    "TOURNAMENT", "PVP_ARENA", "BETA", "PLACEHOLDER",
+    "TEST", "UNUSED", "NULL"
+  ];
+  if (variantMarkers.some(marker => constant.includes(marker))) penalty += 100;
+  if (/\b(league|last man standing|lms|deadman|dmm|tournament|beta|placeholder|test)\b/.test(name)) penalty += 100;
+
+  // The prices/wiki mapping overwhelmingly represents the normal live-game item.
+  if (String(item?.source || "").includes("wiki")) penalty -= 50;
+  return penalty;
+}
+
+function chooseCanonical(candidates) {
+  return [...candidates].sort((a, b) =>
+    variantPenalty(a) - variantPenalty(b) || Number(a.id) - Number(b.id)
+  )[0] || null;
+}
+
+export function getCanonicalOsrsItemMapping(mapping) {
+  const groups = new Map();
+  for (const item of Array.isArray(mapping) ? mapping : []) {
+    const key = normalize(item?.name);
+    if (!key) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return [...groups.values()].map(chooseCanonical).filter(Boolean);
+}
+
+export function canonicalItemForId(mapping, itemId) {
+  const id = Number(itemId);
+  const selected = (Array.isArray(mapping) ? mapping : []).find(item => Number(item?.id) === id);
+  if (!selected) return { selected: null, canonical: null, isCanonical: false };
+  const sameName = (Array.isArray(mapping) ? mapping : []).filter(item => normalize(item?.name) === normalize(selected.name));
+  const canonical = chooseCanonical(sameName);
+  return { selected, canonical, isCanonical: Number(canonical?.id) === id };
+}
+
 function titleFromConstant(constantName) {
   const cleaned = String(constantName || "")
     .replace(/_\d+$/g, "")
@@ -78,13 +127,15 @@ export async function resolveOsrsItemIdByName(name) {
   if (!target) return null;
   const mapping = await getOsrsItemMapping();
 
-  const exact = mapping.find(item => normalize(item?.name) === target);
+  const exactCandidates = mapping.filter(item => normalize(item?.name) === target);
+  const exact = chooseCanonical(exactCandidates);
   if (exact) return Number(exact.id) || null;
 
   // Also accept an exact RuneLite constant-name equivalent, e.g.
-  // "Mr mcgroot" -> MR_MCGROOT. This does not allow fuzzy substitution.
+  // "Mr mcgroot" -> MR_MCGROOT. Prefer the unsuffixed/canonical live-game ID.
   const targetConstant = target.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toUpperCase();
-  const byConstant = mapping.find(item => String(item?.constant || "").replace(/_\d+$/g, "") === targetConstant);
+  const constantCandidates = mapping.filter(item => String(item?.constant || "").replace(/_\d+$/g, "") === targetConstant);
+  const byConstant = chooseCanonical(constantCandidates);
   const id = Number(byConstant?.id);
   return Number.isInteger(id) && id > 0 ? id : null;
 }

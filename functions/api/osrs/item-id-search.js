@@ -1,4 +1,4 @@
-import { getOsrsItemMapping } from "../_osrsItems.js";
+import { getOsrsItemMapping, getCanonicalOsrsItemMapping, canonicalItemForId } from "../_osrsItems.js";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -15,9 +15,27 @@ export async function onRequestGet({ request }) {
 
   try {
     const mapping = await getOsrsItemMapping();
+
+    if (/^\d+$/.test(q)) {
+      const lookup = canonicalItemForId(mapping, Number(q));
+      if (!lookup.selected) return Response.json([]);
+      if (!lookup.isCanonical && lookup.canonical) {
+        return Response.json([{
+          id: Number(lookup.selected.id),
+          name: String(lookup.selected.name || ""),
+          source: lookup.selected.source || "runelite",
+          excluded: true,
+          canonicalId: Number(lookup.canonical.id),
+          canonicalName: String(lookup.canonical.name || "")
+        }], { headers: { "Cache-Control": "public, max-age=300" } });
+      }
+      return Response.json([{ id: Number(lookup.selected.id), name: String(lookup.selected.name || ""), source: lookup.selected.source || "runelite" }], { headers: { "Cache-Control": "public, max-age=300" } });
+    }
+
+    const canonicalMapping = getCanonicalOsrsItemMapping(mapping);
     const qCompact = compact(q);
 
-    const scored = mapping
+    const scored = canonicalMapping
       .map(item => {
         const name = String(item?.name || "").trim();
         const constant = String(item?.constant || "");
