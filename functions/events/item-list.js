@@ -12,6 +12,7 @@ function safeJson(value, fallback) {
 export async function onRequestGet({ request, env }) {
   const auth = await requirePluginUser(request, env);
   if (!auth.ok) return auth.response;
+  const debug = new URL(request.url).searchParams.get("debug") === "1";
   const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
   const pvmEntry = configured.find(event => event?.id === "pvm-entry" || event?.type === "pvm-entry") || {
@@ -43,7 +44,7 @@ export async function onRequestGet({ request, env }) {
   }
   const dbByEvent = new Map();
   for (const row of dbRows) {
-    const key = String(row.website_event_id || "");
+    const key = String(row.website_event_id || "").trim();
     if (!dbByEvent.has(key)) dbByEvent.set(key, []);
     dbByEvent.get(key).push(Number(row.item_id));
   }
@@ -91,5 +92,26 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  return Response.json({ events: result }, { headers: { "Cache-Control": "no-store" } });
+  const payload = { events: result };
+  if (debug) {
+    payload.debug = {
+      supabaseConfigured: Boolean(env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY)),
+      dbRowCount: Array.isArray(dbRows) ? dbRows.length : null,
+      dbRows: (Array.isArray(dbRows) ? dbRows : []).map(row => ({
+        website_event_id: row.website_event_id,
+        plugin_event_id: row.plugin_event_id,
+        item_id: row.item_id,
+        item_name: row.item_name
+      })),
+      activeEvents: activeEvents.map(event => ({
+        id: event?.id,
+        type: event?.type,
+        pluginEventId: makePluginEventId(event),
+        active: event?.active,
+        dropsEnabled: event?.dropsEnabled
+      })),
+      mappedEventKeys: [...dbByEvent.keys()]
+    };
+  }
+  return Response.json(payload, { headers: { "Cache-Control": "no-store" } });
 }
