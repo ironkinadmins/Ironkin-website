@@ -28,7 +28,19 @@ export async function onRequestGet({ request, env }) {
     ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true && event?.dropsEnabled === true),
     { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true }
   ];
-  const dbRows = await listTrackedItems(env).catch(() => []);
+  let dbRows;
+  try {
+    dbRows = await listTrackedItems(env);
+  } catch (error) {
+    return Response.json({
+      error: "Failed to load tracked items from Supabase.",
+      details: String(error?.message || error),
+      supabaseConfigured: Boolean(env.SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY))
+    }, {
+      status: 500,
+      headers: { "Cache-Control": "no-store" }
+    });
+  }
   const dbByEvent = new Map();
   for (const row of dbRows) {
     const key = String(row.website_event_id || "");
