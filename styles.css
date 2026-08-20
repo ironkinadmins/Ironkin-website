@@ -10075,3 +10075,21 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
     grid-template-columns: 1fr;
   }
 }
+
+/* Event item spreadsheet import */
+.admin-import-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+}
+.admin-import-checkbox input { width: auto; }
+.admin-import-status {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 127, 27, .24);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .025);
+  line-height: 1.55;
+}
+.admin-import-status code { white-space: nowrap; }

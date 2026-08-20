@@ -1925,3 +1925,218 @@ document.getElementById("bountyItemSearchInput")?.addEventListener("input", even
 document.getElementById("dropItemIdLookupBtn")?.addEventListener("click", () => lookupItemByExactId({ inputId:"dropItemIdLookupInput", statusId:"dropItemIdLookupStatus", nameId:"dropNameInput", hiddenId:"dropItemIdInput", imageId:"dropImageInput", resultsId:"dropWikiSearchResults" }));
 document.getElementById("bountyItemIdLookupBtn")?.addEventListener("click", () => lookupItemByExactId({ inputId:"bountyItemIdLookupInput", statusId:"bountyItemIdLookupStatus", nameId:"bountySelectedItemInput", hiddenId:null, imageId:"bountySelectedImageInput", resultsId:"bountyWikiSearchResults", datasetId:true }));
 document.getElementById("addBountyItemBtn")?.addEventListener("click", addBountyItem);
+
+
+// ---- Event item spreadsheet import -------------------------------------------------
+let pendingEventItemImportRows = [];
+
+function normalizeImportHeader(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-\/]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_");
+}
+
+function normalizedImportRow(row) {
+  const out = {};
+  Object.entries(row || {}).forEach(([key, value]) => {
+    out[normalizeImportHeader(key)] = value;
+  });
+  return out;
+}
+
+function firstImportValue(row, aliases) {
+  for (const alias of aliases) {
+    const value = row[alias];
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
+function normalizeTrackingRuleForImport(value) {
+  const raw = String(value || "repeatable").trim().toLowerCase().replace(/[\s\-]+/g, "_");
+  if (["once_per_player", "onceplayer", "per_player", "player"].includes(raw)) return "once_per_player";
+  if (["once_per_event", "onceevent", "per_event", "event"].includes(raw)) return "once_per_event";
+  return "repeatable";
+}
+
+function parseRewardEmbersForImport(value) {
+  const numeric = Number(String(value ?? "").replace(/,/g, "").trim());
+  return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+}
+
+function parseItemIdForImport(value) {
+  const numeric = Number(String(value ?? "").replace(/,/g, "").trim());
+  return Number.isInteger(numeric) && numeric > 0 ? numeric : null;
+}
+
+function eventItemImportRowFromSheet(rawRow, rowNumber) {
+  const row = normalizedImportRow(rawRow);
+  return {
+    rowNumber,
+    websiteEventId: String(firstImportValue(row, ["website_event_id", "event_id", "eventid", "websiteeventid", "event"]) || "").trim(),
+    itemId: parseItemIdForImport(firstImportValue(row, ["item_id", "osrs_item_id", "osrs_id", "itemid", "osrsid", "id"])),
+    itemName: String(firstImportValue(row, ["item_name", "item", "name", "itemname"]) || "").trim(),
+    rewardEmbers: parseRewardEmbersForImport(firstImportValue(row, ["reward_embers", "embers", "reward", "ember_reward", "rewardembers"])),
+    trackingRule: normalizeTrackingRuleForImport(firstImportValue(row, ["tracking_rule", "tracking", "duplicate_rule", "rule", "trackingrule"])),
+    imageUrl: String(firstImportValue(row, ["image_url", "image", "imageurl"]) || "").trim(),
+    wikiUrl: String(firstImportValue(row, ["wiki_url", "wiki", "wikiurl", "url"]) || "").trim()
+  };
+}
+
+function renderEventItemImportPreview(rows) {
+  const status = document.getElementById("eventItemsImportStatus");
+  const button = document.getElementById("importEventItemsBtn");
+  if (!status || !button) return;
+
+  if (!rows.length) {
+    status.innerHTML = "No importable rows were found. Make sure the sheet has <code>item_id</code> and <code>item_name</code> columns.";
+    button.disabled = true;
+    return;
+  }
+
+  const valid = rows.filter(row => row.itemId && row.itemName);
+  const invalid = rows.length - valid.length;
+  const eventCounts = new Map();
+  valid.forEach(row => {
+    const key = row.websiteEventId || "(selected event)";
+    eventCounts.set(key, (eventCounts.get(key) || 0) + 1);
+  });
+  const summary = [...eventCounts.entries()].slice(0, 8).map(([eventId, count]) => `${escapeHtml(eventId)}: ${count}`).join(" · ");
+
+  status.innerHTML = `<strong>${valid.length}</strong> importable item${valid.length === 1 ? "" : "s"}${invalid ? ` · ${invalid} row${invalid === 1 ? "" : "s"} skipped (missing item ID/name)` : ""}<br><small>${summary}</small>`;
+  button.disabled = valid.length === 0;
+}
+
+async function readEventItemsImportFile(file) {
+  if (!window.XLSX) throw new Error("Excel parser did not load. Refresh the admin page and try again.");
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames?.[0];
+  if (!sheetName) throw new Error("The workbook does not contain a worksheet.");
+  const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: false });
+  return rawRows.map((row, index) => eventItemImportRowFromSheet(row, index + 2));
+}
+
+async function handleEventItemsImportFile(event) {
+  const file = event.target.files?.[0];
+  const status = document.getElementById("eventItemsImportStatus");
+  const button = document.getElementById("importEventItemsBtn");
+  pendingEventItemImportRows = [];
+  if (button) button.disabled = true;
+  if (!file) {
+    if (status) status.textContent = "Choose an Excel or CSV file to preview the import.";
+    return;
+  }
+
+  if (status) status.textContent = `Reading ${file.name}...`;
+  try {
+    pendingEventItemImportRows = await readEventItemsImportFile(file);
+    renderEventItemImportPreview(pendingEventItemImportRows);
+  } catch (error) {
+    if (status) status.textContent = error?.message || "Could not read that spreadsheet.";
+  }
+}
+
+async function importOneEventItemRow(row, targetEventId) {
+  const response = await fetch("/api/drops/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      eventId: targetEventId,
+      itemId: row.itemId,
+      name: row.itemName,
+      image: row.imageUrl,
+      wikiUrl: row.wikiUrl,
+      rewardEmbers: row.rewardEmbers,
+      trackingRule: row.trackingRule
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  return data;
+}
+
+async function importEventItemsFromSpreadsheet() {
+  const status = document.getElementById("eventItemsImportStatus");
+  const button = document.getElementById("importEventItemsBtn");
+  const useRowEvent = Boolean(document.getElementById("eventItemsImportUseRowEvent")?.checked);
+  const validRows = pendingEventItemImportRows.filter(row => row.itemId && row.itemName);
+  if (!validRows.length) return;
+  if (!selectedEventId && !useRowEvent) {
+    alert("Select an event first, or enable use of website_event_id from the spreadsheet.");
+    return;
+  }
+
+  const knownEventIds = new Set((Array.isArray(allEvents) ? allEvents : []).map(event => String(event?.id || "").trim()).filter(Boolean));
+  knownEventIds.add("pvm-entry");
+  const jobs = [];
+  const skipped = [];
+
+  for (const row of validRows) {
+    const targetEventId = useRowEvent && row.websiteEventId ? row.websiteEventId : selectedEventId;
+    if (!targetEventId) {
+      skipped.push(`Row ${row.rowNumber}: no target event`);
+      continue;
+    }
+    if (knownEventIds.size && !knownEventIds.has(targetEventId)) {
+      skipped.push(`Row ${row.rowNumber}: unknown event '${targetEventId}'`);
+      continue;
+    }
+    jobs.push({ row, targetEventId });
+  }
+
+  if (!jobs.length) {
+    if (status) status.innerHTML = `Nothing was imported. ${escapeHtml(skipped.join(" · "))}`;
+    return;
+  }
+
+  if (button) button.disabled = true;
+  let succeeded = 0;
+  const failed = [];
+  if (status) status.textContent = `Importing 0 / ${jobs.length}...`;
+
+  // Keep concurrency low so a large spreadsheet does not hammer the Cloudflare API.
+  const concurrency = 4;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < jobs.length) {
+      const index = cursor++;
+      const job = jobs[index];
+      try {
+        await importOneEventItemRow(job.row, job.targetEventId);
+        succeeded += 1;
+      } catch (error) {
+        failed.push(`Row ${job.row.rowNumber} (${job.row.itemName}): ${error?.message || "failed"}`);
+      }
+      if (status) status.textContent = `Importing ${succeeded + failed.length} / ${jobs.length}...`;
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, () => worker()));
+
+  const parts = [`Imported/updated ${succeeded} item${succeeded === 1 ? "" : "s"}.`];
+  if (skipped.length) parts.push(`Skipped ${skipped.length}.`);
+  if (failed.length) parts.push(`Failed ${failed.length}.`);
+  if (status) {
+    status.innerHTML = `<strong>${escapeHtml(parts.join(" "))}</strong>${failed.length ? `<br><small>${escapeHtml(failed.slice(0, 6).join(" · "))}${failed.length > 6 ? " …" : ""}</small>` : ""}${skipped.length ? `<br><small>${escapeHtml(skipped.slice(0, 6).join(" · "))}${skipped.length > 6 ? " …" : ""}</small>` : ""}`;
+  }
+
+  if (button) button.disabled = false;
+  await loadAdminDrops();
+}
+
+function clearEventItemsImport() {
+  pendingEventItemImportRows = [];
+  const file = document.getElementById("eventItemsImportFile");
+  const status = document.getElementById("eventItemsImportStatus");
+  const button = document.getElementById("importEventItemsBtn");
+  if (file) file.value = "";
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Choose an Excel or CSV file to preview the import.";
+}
+
+document.getElementById("eventItemsImportFile")?.addEventListener("change", handleEventItemsImportFile);
+document.getElementById("importEventItemsBtn")?.addEventListener("click", importEventItemsFromSpreadsheet);
+document.getElementById("clearEventItemsImportBtn")?.addEventListener("click", clearEventItemsImport);

@@ -229,6 +229,37 @@
       <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
     </section>
 
+    <section class="admin-card" id="eventItemImportCard">
+      <div class="admin-section-header">
+        <h2>Import Event Items</h2>
+        <p>Import a Supabase <code>ironkin_event_items</code> export from Excel or CSV. Existing items are updated; new items are added with a starting count of 0.</p>
+      </div>
+
+      <div class="admin-form-grid">
+        <div class="admin-field admin-field-wide">
+          <label for="eventItemsImportFile">Excel / CSV File</label>
+          <input id="eventItemsImportFile" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          <small class="admin-muted">Recognized columns: <code>website_event_id</code>, <code>item_id</code>, <code>item_name</code>, <code>reward_embers</code>, <code>tracking_rule</code>, <code>image_url</code>, <code>wiki_url</code>. Header names are matched flexibly.</small>
+        </div>
+
+        <div class="admin-field admin-field-wide">
+          <label class="admin-import-checkbox">
+            <input id="eventItemsImportUseRowEvent" type="checkbox" checked />
+            Use each row's <code>website_event_id</code> when present
+          </label>
+          <small class="admin-muted">If unchecked, or if a row has no event ID, the item is imported into the event currently selected above.</small>
+        </div>
+      </div>
+
+      <div class="admin-action-row">
+        <button type="button" class="btn primary" id="importEventItemsBtn" disabled>Import Items</button>
+        <button type="button" class="btn secondary" id="clearEventItemsImportBtn">Clear</button>
+      </div>
+
+      <div id="eventItemsImportStatus" class="admin-import-status admin-muted">Choose an Excel or CSV file to preview the import.</div>
+    </section>
+
+
       </div>
 
       <div class="event-subtab-panel" id="eventSubtab-bingo">
@@ -483,6 +514,7 @@
   </main>
 
   <script src="/script.js?v=20260807-premium-v4"></script>
-  <script src="admin.js?v=20260807-profile-sync-ui-1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
+  <script src="admin.js?v=20260820-event-item-import-1"></script>
 </body>
 </html>
