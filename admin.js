@@ -1027,6 +1027,24 @@ function populateEventFields() {
 
 
 
+function activateAdminPanel(target) {
+  const panels = Array.from(document.querySelectorAll(".admin-tab-panel"));
+  const adminButtons = Array.from(document.querySelectorAll(".admin-tab-btn"));
+  const eventButtons = Array.from(document.querySelectorAll(".event-subtab-btn"));
+
+  panels.forEach(panel => {
+    panel.classList.toggle("active", panel.id === `adminTab-${target}`);
+  });
+
+  adminButtons.forEach(button => {
+    button.classList.toggle("active", button.dataset.adminTab === target);
+  });
+
+  if (target !== "events") {
+    eventButtons.forEach(button => button.classList.remove("active"));
+  }
+}
+
 function setupAdminTabs() {
   const buttons = Array.from(document.querySelectorAll(".admin-tab-btn"));
   const panels = Array.from(document.querySelectorAll(".admin-tab-panel"));
@@ -1035,15 +1053,7 @@ function setupAdminTabs() {
 
   buttons.forEach(button => {
     button.addEventListener("click", () => {
-      const target = button.dataset.adminTab;
-
-      buttons.forEach(item => {
-        item.classList.toggle("active", item === button);
-      });
-
-      panels.forEach(panel => {
-        panel.classList.toggle("active", panel.id === `adminTab-${target}`);
-      });
+      activateAdminPanel(button.dataset.adminTab);
     });
   });
 }
@@ -1056,6 +1066,8 @@ function setupEventSubtabs() {
   buttons.forEach(button => {
     button.addEventListener("click", () => {
       const target = button.dataset.eventSubtab;
+
+      activateAdminPanel("events");
       buttons.forEach(item => item.classList.toggle("active", item === button));
       panels.forEach(panel => panel.classList.toggle("active", panel.id === `eventSubtab-${target}`));
     });

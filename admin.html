@@ -16,19 +16,27 @@
       <p>Manage Ironkin events, WOM tracking, rewards, and admin tools.</p>
     </section>
 
-    <div class="admin-tabs" role="tablist" aria-label="Admin sections">
-      <button type="button" class="admin-tab-btn active" data-admin-tab="events">Events</button>
-      <a class="admin-tab-btn" href="/ironkin-games-admin.html">Ironkin Games</a>
-      <button type="button" class="admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
-      <button type="button" class="admin-tab-btn" data-admin-tab="profiles">User Management</button>
-    </div>
+    <nav class="admin-command-nav" aria-label="Admin sections">
+      <section class="admin-nav-group" aria-labelledby="adminNavEventsLabel">
+        <div class="admin-nav-group-label" id="adminNavEventsLabel">Events &amp; Rewards</div>
+        <div class="admin-nav-actions" role="tablist" aria-label="Event and reward tools">
+          <button type="button" class="admin-nav-btn event-subtab-btn active" data-event-subtab="standard">Manage Events</button>
+          <a class="admin-nav-btn" href="/ironkin-games-admin.html">Ironkin Games</a>
+          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="bingo">Battleship Bingo</button>
+          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="guess-kc">Guess the KC</button>
+        </div>
+      </section>
+
+      <section class="admin-nav-group" aria-labelledby="adminNavClanLabel">
+        <div class="admin-nav-group-label" id="adminNavClanLabel">Clan Management</div>
+        <div class="admin-nav-actions" role="tablist" aria-label="Clan management tools">
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="profiles">User Management</button>
+        </div>
+      </section>
+    </nav>
 
     <div class="admin-tab-panel active" id="adminTab-events">
-      <div class="admin-tabs event-subtabs" role="tablist" aria-label="Event admin sections">
-        <button type="button" class="event-subtab-btn active" data-event-subtab="standard">Event Management</button>
-        <button type="button" class="event-subtab-btn" data-event-subtab="bingo">Battleship Bingo</button>
-        <button type="button" class="event-subtab-btn" data-event-subtab="guess-kc">Guess the KC</button>
-      </div>
 
       <div class="event-subtab-panel active" id="eventSubtab-standard">
     <section class="admin-card">
