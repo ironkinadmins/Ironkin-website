@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Admin Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
+  <link rel="stylesheet" href="/styles.css?v=20260820-handbook-cms-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -31,6 +31,7 @@
         <div class="admin-nav-group-label" id="adminNavClanLabel">Clan Management</div>
         <div class="admin-nav-actions" role="tablist" aria-label="Clan management tools">
           <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="handbook">Staff Handbook</button>
           <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="profiles">User Management</button>
         </div>
       </section>
@@ -416,6 +417,45 @@
       </section>
     </div>
 
+
+    <div class="admin-tab-panel" id="adminTab-handbook">
+      <section class="admin-card handbook-admin-shell">
+        <div class="admin-section-header">
+          <p class="eyebrow">Staff Resource</p>
+          <h2>Staff Handbook Editor</h2>
+          <p class="admin-muted">Edit the live staff handbook without changing website code. Add screenshots, reorder sections, or import an updated handbook file from ChatGPT.</p>
+        </div>
+
+        <div class="handbook-admin-toolbar">
+          <div class="admin-field">
+            <label for="handbookTitleInput">Handbook title</label>
+            <input id="handbookTitleInput" type="text" value="Staff Handbook" maxlength="200" />
+          </div>
+          <div class="handbook-toolbar-actions">
+            <button type="button" class="btn secondary" id="handbookAddSectionBtn">+ Add Section</button>
+            <button type="button" class="btn primary" id="handbookSaveBtn">Save Handbook</button>
+            <a class="btn secondary" href="/staff-handbook.html" target="_blank" rel="noopener">Open Live Handbook</a>
+          </div>
+        </div>
+
+        <div class="handbook-import-card">
+          <div>
+            <strong>Import / Replace from File</strong>
+            <p class="admin-muted">Upload a handbook generated or updated elsewhere. Supported: DOCX, Markdown, TXT, HTML, or a handbook JSON export. You can review everything before saving.</p>
+          </div>
+          <div class="handbook-import-controls">
+            <input id="handbookImportFile" type="file" accept=".docx,.md,.markdown,.txt,.html,.htm,.json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain,text/html,application/json" />
+            <button type="button" class="btn secondary" id="handbookImportBtn">Import File</button>
+            <button type="button" class="btn secondary" id="handbookExportBtn">Export JSON</button>
+          </div>
+          <p class="admin-muted" id="handbookImportStatus">Importing replaces the editor contents only. Nothing goes live until you click Save Handbook.</p>
+        </div>
+
+        <div class="handbook-editor-status" id="handbookEditorStatus">Open this tab to load the current handbook.</div>
+        <div id="handbookSectionsEditor" class="handbook-sections-editor"></div>
+      </section>
+    </div>
+
     <div class="admin-tab-panel" id="adminTab-profiles">
       <section class="admin-card">
         <div class="admin-section-header">
@@ -515,6 +555,7 @@
 
   <script src="/script.js?v=20260807-premium-v4"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260820-event-item-import-1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
+  <script src="admin.js?v=20260820-handbook-cms-1"></script>
 </body>
 </html>

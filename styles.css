@@ -10093,3 +10093,202 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   line-height: 1.55;
 }
 .admin-import-status code { white-space: nowrap; }
+
+
+/* Staff Handbook CMS */
+.handbook-admin-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.handbook-admin-toolbar,
+.handbook-import-card,
+.handbook-section-editor {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.025);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.handbook-admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+}
+
+.handbook-toolbar-actions,
+.handbook-import-controls,
+.handbook-section-actions,
+.handbook-media-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.handbook-import-card {
+  display: grid;
+  gap: 12px;
+}
+
+.handbook-import-card p {
+  margin: 6px 0 0;
+}
+
+.handbook-import-controls input[type="file"] {
+  min-width: min(100%, 360px);
+}
+
+.handbook-editor-status {
+  color: var(--muted);
+  padding: 10px 2px;
+}
+
+.handbook-sections-editor {
+  display: grid;
+  gap: 18px;
+}
+
+.handbook-section-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.handbook-section-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 12px;
+}
+
+.handbook-section-number {
+  display: block;
+  color: var(--ember);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.handbook-editor-label {
+  font-weight: 800;
+}
+
+.handbook-rich-editor {
+  min-height: 160px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.22);
+  color: var(--text);
+  line-height: 1.6;
+  outline: none;
+}
+
+.handbook-rich-editor:focus {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 2px rgba(255,122,26,.12);
+}
+
+.handbook-rich-editor p:first-child,
+.handbook-managed-body p:first-child {
+  margin-top: 0;
+}
+
+.handbook-rich-editor p:last-child,
+.handbook-managed-body p:last-child {
+  margin-bottom: 0;
+}
+
+.handbook-section-media {
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding-top: 14px;
+}
+
+.handbook-media-header {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.handbook-admin-image-grid,
+.handbook-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.handbook-admin-image-card,
+.handbook-figure {
+  margin: 0;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(0,0,0,.18);
+  border-radius: 14px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.handbook-admin-image-card img,
+.handbook-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #0a0807;
+}
+
+.handbook-admin-image-card input {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.handbook-figure figcaption {
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.45;
+  padding: 10px 4px 2px;
+}
+
+.handbook-managed-body {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.handbook-managed-body h3,
+.handbook-managed-body h4 {
+  color: var(--text);
+  margin-top: 1.25em;
+}
+
+.handbook-managed-body a {
+  color: var(--ember);
+  text-decoration: underline;
+}
+
+.handbook-managed-body code {
+  background: rgba(255,255,255,.07);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+@media (max-width: 760px) {
+  .handbook-admin-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .handbook-section-editor-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .handbook-toolbar-actions,
+  .handbook-import-controls,
+  .handbook-section-actions {
+    width: 100%;
+  }
+}

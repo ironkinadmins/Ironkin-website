@@ -2140,3 +2140,581 @@ function clearEventItemsImport() {
 document.getElementById("eventItemsImportFile")?.addEventListener("change", handleEventItemsImportFile);
 document.getElementById("importEventItemsBtn")?.addEventListener("click", importEventItemsFromSpreadsheet);
 document.getElementById("clearEventItemsImportBtn")?.addEventListener("click", clearEventItemsImport);
+
+
+// -----------------------------------------------------------------------------
+// Staff Handbook CMS
+// -----------------------------------------------------------------------------
+let handbookEditorLoaded = false;
+let handbookEditorSections = [];
+let handbookEditorMeta = { updatedAt: "", updatedBy: "" };
+
+function handbookSlug(value, fallback = "section") {
+  const slug = String(value || "")
+    .trim().toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return slug || fallback;
+}
+
+function handbookUniqueId(base, index, sections = handbookEditorSections) {
+  const root = handbookSlug(base, `section-${index + 1}`);
+  let candidate = root;
+  let suffix = 2;
+  const used = new Set(sections.map(section => section.id).filter(Boolean));
+  while (used.has(candidate)) candidate = `${root}-${suffix++}`;
+  return candidate;
+}
+
+function handbookSanitizeHtml(htmlValue) {
+  const template = document.createElement("template");
+  template.innerHTML = String(htmlValue || "");
+  template.content.querySelectorAll("script,style,iframe,object,embed,form,input,button,textarea,select,link,meta").forEach(node => node.remove());
+  template.content.querySelectorAll("*").forEach(node => {
+    [...node.attributes].forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const value = String(attr.value || "").trim();
+      if (name.startsWith("on") || name === "srcdoc") node.removeAttribute(attr.name);
+      if ((name === "href" || name === "src") && /^javascript:/i.test(value)) node.removeAttribute(attr.name);
+      if (name === "style") node.removeAttribute("style");
+    });
+  });
+  return template.innerHTML;
+}
+
+function handbookTextToHtml(text) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n");
+  let html = "";
+  let listType = "";
+  function closeList() {
+    if (listType) html += `</${listType}>`;
+    listType = "";
+  }
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      closeList();
+      continue;
+    }
+    const bullet = line.match(/^[-*•]\s+(.+)/);
+    const numbered = line.match(/^\d+[.)]\s+(.+)/);
+    if (bullet) {
+      if (listType !== "ul") { closeList(); html += "<ul>"; listType = "ul"; }
+      html += `<li>${escapeHtml(bullet[1])}</li>`;
+      continue;
+    }
+    if (numbered) {
+      if (listType !== "ol") { closeList(); html += "<ol>"; listType = "ol"; }
+      html += `<li>${escapeHtml(numbered[1])}</li>`;
+      continue;
+    }
+    closeList();
+    html += `<p>${escapeHtml(line)}</p>`;
+  }
+  closeList();
+  return html;
+}
+
+function handbookMarkdownInline(text) {
+  let value = escapeHtml(text);
+  value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  value = value.replace(/`([^`]+)`/g, "<code>$1</code>");
+  value = value.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  return value;
+}
+
+function handbookMarkdownBodyToHtml(text) {
+  const lines = String(text || "").replace(/\r/g, "").split("\n");
+  let html = "";
+  let listType = "";
+  const closeList = () => {
+    if (listType) html += `</${listType}>`;
+    listType = "";
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeList(); continue; }
+    const h = line.match(/^(#{3,6})\s+(.+)/);
+    if (h) {
+      closeList();
+      const level = Math.min(4, h[1].length);
+      html += `<h${level}>${handbookMarkdownInline(h[2])}</h${level}>`;
+      continue;
+    }
+    const bullet = line.match(/^[-*+]\s+(.+)/);
+    const number = line.match(/^\d+[.)]\s+(.+)/);
+    if (bullet) {
+      if (listType !== "ul") { closeList(); html += "<ul>"; listType = "ul"; }
+      html += `<li>${handbookMarkdownInline(bullet[1])}</li>`;
+      continue;
+    }
+    if (number) {
+      if (listType !== "ol") { closeList(); html += "<ol>"; listType = "ol"; }
+      html += `<li>${handbookMarkdownInline(number[1])}</li>`;
+      continue;
+    }
+    closeList();
+    html += `<p>${handbookMarkdownInline(line)}</p>`;
+  }
+  closeList();
+  return handbookSanitizeHtml(html);
+}
+
+function handbookSectionsFromMarkdown(markdown) {
+  const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+  const sections = [];
+  let current = null;
+
+  function flush() {
+    if (!current) return;
+    current.bodyHtml = handbookMarkdownBodyToHtml(current.lines.join("\n"));
+    delete current.lines;
+    sections.push(current);
+  }
+
+  for (const raw of lines) {
+    const match = raw.match(/^#{1,2}\s+(.+)\s*$/);
+    if (match) {
+      flush();
+      current = {
+        id: handbookUniqueId(match[1], sections.length, sections),
+        eyebrow: "",
+        title: match[1].trim(),
+        lines: [],
+        images: [],
+        visible: true
+      };
+    } else {
+      if (!current) {
+        current = {
+          id: "overview",
+          eyebrow: "",
+          title: "Overview",
+          lines: [],
+          images: [],
+          visible: true
+        };
+      }
+      current.lines.push(raw);
+    }
+  }
+  flush();
+  return sections.filter(section => section.title || section.bodyHtml);
+}
+
+function handbookSectionsFromHtml(htmlValue) {
+  const doc = new DOMParser().parseFromString(String(htmlValue || ""), "text/html");
+  doc.querySelectorAll("script,style,iframe,object,embed").forEach(node => node.remove());
+
+  const existingArticles = [...doc.querySelectorAll("article.handbook-card")];
+  if (existingArticles.length) {
+    return existingArticles.map((article, index) => {
+      const titleNode = article.querySelector("h1,h2");
+      const eyebrowNode = article.querySelector(".eyebrow");
+      const clone = article.cloneNode(true);
+      clone.querySelector("h1,h2")?.remove();
+      clone.querySelector(".eyebrow")?.remove();
+      clone.querySelectorAll("img").forEach(img => img.remove());
+      return {
+        id: article.id || handbookUniqueId(titleNode?.textContent, index, []),
+        eyebrow: eyebrowNode?.textContent?.trim() || "",
+        title: titleNode?.textContent?.trim() || `Section ${index + 1}`,
+        bodyHtml: handbookSanitizeHtml(clone.innerHTML),
+        images: [],
+        visible: true
+      };
+    });
+  }
+
+  const body = doc.body;
+  const sections = [];
+  let current = null;
+  for (const node of [...body.childNodes]) {
+    const isElement = node.nodeType === Node.ELEMENT_NODE;
+    const nodeText = isElement ? String(node.textContent || "").trim() : "";
+    const strongOnlyHeading = isElement
+      && node.nodeName === "P"
+      && nodeText.length > 0
+      && nodeText.length <= 140
+      && node.children.length >= 1
+      && [...node.children].every(child => child.nodeName === "STRONG" || child.nodeName === "B");
+    const isHeading = isElement && (/^(H1|H2)$/i.test(node.nodeName) || strongOnlyHeading);
+
+    if (isHeading) {
+      if (current) sections.push(current);
+      const title = nodeText;
+      current = {
+        id: handbookUniqueId(title, sections.length, sections),
+        eyebrow: "",
+        title,
+        bodyHtml: "",
+        images: [],
+        visible: true
+      };
+    } else {
+      if (!current) current = { id: "overview", eyebrow: "", title: "Overview", bodyHtml: "", images: [], visible: true };
+      if (isElement) current.bodyHtml += node.outerHTML;
+      else if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) current.bodyHtml += `<p>${escapeHtml(node.textContent.trim())}</p>`;
+    }
+  }
+  if (current) sections.push(current);
+  sections.forEach(section => { section.bodyHtml = handbookSanitizeHtml(section.bodyHtml); });
+  return sections;
+}
+
+async function handbookLoadFallbackSections() {
+  const response = await fetch("/staff-handbook.html", { cache: "no-store" });
+  if (!response.ok) throw new Error("Could not load the current handbook fallback.");
+  const text = await response.text();
+  const sections = handbookSectionsFromHtml(text);
+  if (!sections.length) throw new Error("The current handbook did not contain any editable sections.");
+  return sections;
+}
+
+function handbookCollectEditor() {
+  document.querySelectorAll(".handbook-section-editor").forEach((card, index) => {
+    if (!handbookEditorSections[index]) return;
+    const section = handbookEditorSections[index];
+    section.eyebrow = card.querySelector("[data-handbook-eyebrow]")?.value.trim() || "";
+    section.title = card.querySelector("[data-handbook-title]")?.value.trim() || `Section ${index + 1}`;
+    section.bodyHtml = handbookSanitizeHtml(card.querySelector("[data-handbook-body]")?.innerHTML || "");
+    section.visible = Boolean(card.querySelector("[data-handbook-visible]")?.checked);
+    if (!section.id) section.id = handbookUniqueId(section.title, index);
+  });
+}
+
+function handbookRenderImages(section, index) {
+  if (!section.images?.length) return '<p class="admin-muted">No screenshots attached to this section.</p>';
+  return `<div class="handbook-admin-image-grid">${section.images.map((image, imageIndex) => `
+    <div class="handbook-admin-image-card">
+      <img src="/api/handbook-image?path=${encodeURIComponent(image.path)}" alt="${escapeHtml(image.caption || section.title || "Handbook screenshot")}" loading="lazy" />
+      <input type="text" value="${escapeHtml(image.caption || "")}" data-handbook-image-caption="${imageIndex}" placeholder="Screenshot caption" />
+      <button type="button" class="btn secondary handbook-remove-image-btn" data-section-index="${index}" data-image-index="${imageIndex}">Remove Image</button>
+    </div>
+  `).join("")}</div>`;
+}
+
+function handbookRenderEditor() {
+  const container = document.getElementById("handbookSectionsEditor");
+  if (!container) return;
+  if (!handbookEditorSections.length) {
+    container.innerHTML = '<div class="admin-info-box">No sections yet. Click <strong>+ Add Section</strong> or import a handbook file.</div>';
+    return;
+  }
+
+  container.innerHTML = handbookEditorSections.map((section, index) => `
+    <section class="handbook-section-editor" data-section-index="${index}">
+      <div class="handbook-section-editor-head">
+        <div>
+          <span class="handbook-section-number">Section ${index + 1}</span>
+          <strong>${escapeHtml(section.title || `Section ${index + 1}`)}</strong>
+        </div>
+        <div class="handbook-section-actions">
+          <button type="button" class="btn secondary handbook-move-up" data-index="${index}" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="btn secondary handbook-move-down" data-index="${index}" ${index === handbookEditorSections.length - 1 ? "disabled" : ""}>↓</button>
+          <button type="button" class="btn secondary handbook-delete-section" data-index="${index}">Delete</button>
+        </div>
+      </div>
+
+      <div class="admin-form-grid">
+        <div class="admin-field">
+          <label>Eyebrow / Category</label>
+          <input type="text" data-handbook-eyebrow value="${escapeHtml(section.eyebrow || "")}" placeholder="Example: Work Instruction" />
+        </div>
+        <div class="admin-field">
+          <label>Section title</label>
+          <input type="text" data-handbook-title value="${escapeHtml(section.title || "")}" />
+        </div>
+        <div class="admin-field">
+          <label><input type="checkbox" data-handbook-visible ${section.visible !== false ? "checked" : ""} /> Show this section</label>
+        </div>
+      </div>
+
+      <label class="handbook-editor-label">Content</label>
+      <div class="handbook-rich-editor" data-handbook-body contenteditable="true">${handbookSanitizeHtml(section.bodyHtml || "")}</div>
+      <p class="admin-muted">Paste formatted text here. Basic headings, lists, links, bold, and italics are preserved.</p>
+
+      <div class="handbook-section-media">
+        <div class="handbook-media-header">
+          <div>
+            <strong>Screenshots</strong>
+            <p class="admin-muted">PNG, JPG, WEBP, or GIF up to 6 MB.</p>
+          </div>
+          <label class="btn secondary handbook-upload-label">
+            Upload Screenshot
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-handbook-image-upload="${index}" hidden />
+          </label>
+        </div>
+        ${handbookRenderImages(section, index)}
+      </div>
+    </section>
+  `).join("");
+
+  container.querySelectorAll(".handbook-move-up").forEach(button => button.addEventListener("click", () => handbookMoveSection(Number(button.dataset.index), -1)));
+  container.querySelectorAll(".handbook-move-down").forEach(button => button.addEventListener("click", () => handbookMoveSection(Number(button.dataset.index), 1)));
+  container.querySelectorAll(".handbook-delete-section").forEach(button => button.addEventListener("click", () => handbookDeleteSection(Number(button.dataset.index))));
+  container.querySelectorAll("[data-handbook-image-upload]").forEach(input => input.addEventListener("change", event => handbookUploadImage(Number(input.dataset.handbookImageUpload), event.target.files?.[0])));
+  container.querySelectorAll(".handbook-remove-image-btn").forEach(button => button.addEventListener("click", () => handbookRemoveImage(Number(button.dataset.sectionIndex), Number(button.dataset.imageIndex))));
+  container.querySelectorAll("[data-handbook-image-caption]").forEach(input => input.addEventListener("change", () => {
+    const card = input.closest(".handbook-section-editor");
+    const sectionIndex = Number(card?.dataset.sectionIndex);
+    const imageIndex = Number(input.dataset.handbookImageCaption);
+    if (handbookEditorSections[sectionIndex]?.images?.[imageIndex]) handbookEditorSections[sectionIndex].images[imageIndex].caption = input.value.trim();
+  }));
+}
+
+async function handbookLoadEditor(force = false) {
+  if (handbookEditorLoaded && !force) return;
+  const status = document.getElementById("handbookEditorStatus");
+  if (status) status.textContent = "Loading handbook…";
+  try {
+    const response = await fetch("/api/admin/handbook", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not load handbook.");
+
+    const handbook = data.handbook;
+    if (handbook?.document?.sections?.length) {
+      handbookEditorSections = handbook.document.sections.map(section => ({
+        id: String(section.id || ""),
+        eyebrow: String(section.eyebrow || ""),
+        title: String(section.title || ""),
+        bodyHtml: handbookSanitizeHtml(section.bodyHtml || ""),
+        images: Array.isArray(section.images) ? section.images : [],
+        visible: section.visible !== false
+      }));
+      const titleInput = document.getElementById("handbookTitleInput");
+      if (titleInput) titleInput.value = handbook.title || "Staff Handbook";
+      handbookEditorMeta.updatedAt = handbook.updated_at || "";
+      handbookEditorMeta.updatedBy = handbook.updated_by || "";
+      if (status) status.textContent = `Loaded saved handbook${handbook.updated_by ? ` · Last updated by ${handbook.updated_by}` : ""}.`;
+    } else {
+      handbookEditorSections = await handbookLoadFallbackSections();
+      if (status) status.textContent = "Loaded the current code-based handbook as your starting point. Click Save Handbook once to move it into the editor system.";
+    }
+
+    handbookEditorLoaded = true;
+    handbookRenderEditor();
+  } catch (error) {
+    if (status) status.textContent = error.message || "Could not load handbook.";
+  }
+}
+
+function handbookAddSection() {
+  handbookCollectEditor();
+  const index = handbookEditorSections.length;
+  handbookEditorSections.push({
+    id: handbookUniqueId(`section-${index + 1}`, index),
+    eyebrow: "",
+    title: "New Section",
+    bodyHtml: "<p>Add handbook instructions here.</p>",
+    images: [],
+    visible: true
+  });
+  handbookRenderEditor();
+  document.querySelector(".handbook-section-editor:last-child")?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function handbookMoveSection(index, direction) {
+  handbookCollectEditor();
+  const next = index + direction;
+  if (index < 0 || next < 0 || index >= handbookEditorSections.length || next >= handbookEditorSections.length) return;
+  [handbookEditorSections[index], handbookEditorSections[next]] = [handbookEditorSections[next], handbookEditorSections[index]];
+  handbookRenderEditor();
+}
+
+function handbookDeleteSection(index) {
+  if (!handbookEditorSections[index]) return;
+  const title = handbookEditorSections[index].title || `Section ${index + 1}`;
+  if (!confirm(`Delete "${title}" from the handbook editor? This is not live until you click Save Handbook.`)) return;
+  handbookCollectEditor();
+  handbookEditorSections.splice(index, 1);
+  handbookRenderEditor();
+}
+
+async function handbookUploadImage(sectionIndex, file) {
+  if (!file || !handbookEditorSections[sectionIndex]) return;
+  handbookCollectEditor();
+  const status = document.getElementById("handbookEditorStatus");
+  if (status) status.textContent = `Uploading ${file.name}…`;
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch("/api/admin/handbook-image", { method: "POST", body: form });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not upload image.");
+    handbookEditorSections[sectionIndex].images = handbookEditorSections[sectionIndex].images || [];
+    handbookEditorSections[sectionIndex].images.push({ path: data.path, caption: "" });
+    handbookRenderEditor();
+    if (status) status.textContent = "Screenshot uploaded. Click Save Handbook to publish the section changes.";
+  } catch (error) {
+    if (status) status.textContent = error.message || "Could not upload image.";
+  }
+}
+
+async function handbookRemoveImage(sectionIndex, imageIndex) {
+  handbookCollectEditor();
+  const image = handbookEditorSections[sectionIndex]?.images?.[imageIndex];
+  if (!image) return;
+  if (!confirm("Remove this screenshot from the handbook?")) return;
+
+  handbookEditorSections[sectionIndex].images.splice(imageIndex, 1);
+  handbookRenderEditor();
+  // Remove the stored object as best effort. The handbook save is separate.
+  fetch("/api/admin/handbook-image", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: image.path })
+  }).catch(() => {});
+}
+
+async function handbookSave() {
+  handbookCollectEditor();
+  const status = document.getElementById("handbookEditorStatus");
+  const button = document.getElementById("handbookSaveBtn");
+  if (!handbookEditorSections.length) {
+    alert("Add at least one handbook section before saving.");
+    return;
+  }
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Saving handbook…";
+
+  try {
+    // Rebuild stable, unique IDs before save.
+    const used = new Set();
+    handbookEditorSections.forEach((section, index) => {
+      const root = handbookSlug(section.id || section.title, `section-${index + 1}`);
+      let candidate = root;
+      let suffix = 2;
+      while (used.has(candidate)) candidate = `${root}-${suffix++}`;
+      used.add(candidate);
+      section.id = candidate;
+    });
+
+    const response = await fetch("/api/admin/handbook", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: document.getElementById("handbookTitleInput")?.value.trim() || "Staff Handbook",
+        document: { version: 1, sections: handbookEditorSections }
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not save handbook.");
+
+    handbookEditorLoaded = false;
+    await handbookLoadEditor(true);
+    if (status) status.textContent = `Saved. The live staff handbook now uses this version${data.handbook?.updated_by ? ` · Updated by ${data.handbook.updated_by}` : ""}.`;
+  } catch (error) {
+    if (status) status.textContent = error.message || "Could not save handbook.";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handbookImportFile() {
+  const input = document.getElementById("handbookImportFile");
+  const status = document.getElementById("handbookImportStatus");
+  const file = input?.files?.[0];
+  if (!file) {
+    if (status) status.textContent = "Choose a handbook file first.";
+    return;
+  }
+
+  if (status) status.textContent = `Reading ${file.name}…`;
+  try {
+    const name = file.name.toLowerCase();
+    let sections = [];
+    let importedTitle = "";
+
+    if (name.endsWith(".json")) {
+      const parsed = JSON.parse(await file.text());
+      const source = parsed.handbook?.document || parsed.document || parsed;
+      sections = Array.isArray(source.sections) ? source.sections.map(section => ({
+        id: String(section.id || ""),
+        eyebrow: String(section.eyebrow || ""),
+        title: String(section.title || ""),
+        bodyHtml: handbookSanitizeHtml(section.bodyHtml || ""),
+        images: Array.isArray(section.images) ? section.images : [],
+        visible: section.visible !== false
+      })) : [];
+      importedTitle = parsed.handbook?.title || parsed.title || "";
+    } else if (name.endsWith(".docx")) {
+      if (!window.mammoth) throw new Error("The DOCX importer did not load. Refresh the page and try again.");
+      const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      sections = handbookSectionsFromHtml(result.value);
+      if (result.messages?.length && status) {
+        status.textContent = `DOCX converted with ${result.messages.length} note(s). Review the imported formatting before saving.`;
+      }
+    } else if (name.endsWith(".html") || name.endsWith(".htm")) {
+      sections = handbookSectionsFromHtml(await file.text());
+    } else if (name.endsWith(".md") || name.endsWith(".markdown")) {
+      sections = handbookSectionsFromMarkdown(await file.text());
+    } else if (name.endsWith(".txt")) {
+      const text = await file.text();
+      sections = [{
+        id: "overview",
+        eyebrow: "",
+        title: file.name.replace(/\.[^.]+$/, "") || "Imported Handbook",
+        bodyHtml: handbookTextToHtml(text),
+        images: [],
+        visible: true
+      }];
+    } else {
+      throw new Error("Supported handbook files: DOCX, Markdown, TXT, HTML, and JSON.");
+    }
+
+    sections = sections.filter(section => String(section.title || "").trim() || String(section.bodyHtml || "").trim());
+    if (!sections.length) throw new Error("No handbook sections could be found in that file.");
+
+    handbookEditorSections = sections.map((section, index) => ({
+      id: section.id || handbookUniqueId(section.title, index, sections),
+      eyebrow: String(section.eyebrow || ""),
+      title: String(section.title || `Section ${index + 1}`),
+      bodyHtml: handbookSanitizeHtml(section.bodyHtml || ""),
+      images: Array.isArray(section.images) ? section.images : [],
+      visible: section.visible !== false
+    }));
+    if (importedTitle) {
+      const titleInput = document.getElementById("handbookTitleInput");
+      if (titleInput) titleInput.value = importedTitle;
+    }
+    handbookEditorLoaded = true;
+    handbookRenderEditor();
+    if (status) status.textContent = `Imported ${sections.length} section${sections.length === 1 ? "" : "s"} from ${file.name}. Review them below, then click Save Handbook to publish.`;
+  } catch (error) {
+    if (status) status.textContent = error.message || "Could not import handbook file.";
+  }
+}
+
+function handbookExportJson() {
+  handbookCollectEditor();
+  const payload = {
+    title: document.getElementById("handbookTitleInput")?.value.trim() || "Staff Handbook",
+    document: { version: 1, sections: handbookEditorSections }
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `ironkin-staff-handbook-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function setupHandbookEditor() {
+  document.querySelectorAll('[data-admin-tab="handbook"]').forEach(button => {
+    button.addEventListener("click", () => handbookLoadEditor());
+  });
+  document.getElementById("handbookAddSectionBtn")?.addEventListener("click", handbookAddSection);
+  document.getElementById("handbookSaveBtn")?.addEventListener("click", handbookSave);
+  document.getElementById("handbookImportBtn")?.addEventListener("click", handbookImportFile);
+  document.getElementById("handbookExportBtn")?.addEventListener("click", handbookExportJson);
+}
+
+setupHandbookEditor();
