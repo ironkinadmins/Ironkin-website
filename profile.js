@@ -30,9 +30,15 @@ function getPlacementIcon(place) {
 }
 
 
+function profileDiscordBadgeIcon(url, emoji, fallback) {
+  if (url) return `<img class="profile-discord-role-icon" src="${profileEscapeHtml(url)}" alt="" loading="lazy" onerror="this.remove();" />`;
+  if (emoji) return `<span class="profile-discord-role-emoji" aria-hidden="true">${profileEscapeHtml(emoji)}</span>`;
+  return `<i>${fallback}</i>`;
+}
+
 function buildProfileBadges(profile) {
   const badges = [];
-  const rank = String(profile.rank || "");
+  const clanRank = String(profile.clanRank || "");
   const staffRank = String(profile.staffRank || "");
   const wins = profile.placements?.wins || {};
   const botwWins = Number(wins.botw || 0);
@@ -42,22 +48,22 @@ function buildProfileBadges(profile) {
   const embers = Number(profile.embers?.balance || 0);
 
   if (staffRank) badges.push({
-    icon: "◆",
+    iconHtml: profileDiscordBadgeIcon(profile.staffRankIconUrl, profile.staffRankUnicodeEmoji, "◆"),
     label: staffRank,
     tone: "staff",
     tooltip: `${staffRank} — Member of the Ironkin staff team.`
   });
-  if (rank === "Founder") badges.push({
-    icon: "♛",
+  if (clanRank === "Founder") badges.push({
+    iconHtml: profileDiscordBadgeIcon(profile.rankIconUrl, profile.rankUnicodeEmoji, "♛"),
     label: "Founder",
     tone: "founder",
     tooltip: "Founder — Created Ironkin."
   });
-  else if (rank) badges.push({
-    icon: "◇",
-    label: rank,
+  else if (clanRank && clanRank !== "Member") badges.push({
+    iconHtml: profileDiscordBadgeIcon(profile.rankIconUrl, profile.rankUnicodeEmoji, "◇"),
+    label: clanRank,
     tone: "rank",
-    tooltip: `Clan Rank: ${rank}`
+    tooltip: `Clan Rank: ${clanRank}`
   });
   if (botwWins > 0) badges.push({
     icon: "⚔",
@@ -127,7 +133,7 @@ function renderProfileHero(profile) {
           ${memberSincePill}
         </div>
         <div class="profile-badge-row">
-          ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0"><i>${badge.icon}</i>${profileEscapeHtml(badge.label)}</span>`).join("")}
+          ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0">${badge.iconHtml || `<i>${badge.icon}</i>`}${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
       </div>

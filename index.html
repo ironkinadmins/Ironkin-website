@@ -6,7 +6,7 @@
   <title>Ironkin Clan</title>
   <meta name="description" content="Ironkin is an Old School RuneScape Ironman clan built around events, progression, competition, and community." />
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
-  <link rel="stylesheet" href="/styles.css?v=20260822-home-v2" />
+  <link rel="stylesheet" href="/styles.css?v=20260823-profile-events-v1" />
   <link rel="stylesheet" href="/ironkin-games.css?v=20260812-games-2" />
 </head>
 <body class="home-premium-page premium-ui">
@@ -29,24 +29,18 @@
       <a class="btn primary" href="/bingo">Enter Bingo</a>
     </section>
 
-    <section class="home-hero-shell home-hero-compact" aria-labelledby="homeHeroTitle">
+    <section class="home-hero-shell" aria-labelledby="homeHeroTitle">
       <div class="home-hero-copy">
-        <div class="home-kicker"><span></span> Ironkin Clan Hub</div>
-        <h1 id="homeHeroTitle">Forged Alone. <em>Bound as Kin.</em></h1>
-        <p class="home-hero-member-note">Your hub for clan events, progress, activity, and achievements.</p>
+        <div class="home-kicker"><span></span> Old School RuneScape Ironman Clan</div>
+        <h1 id="homeHeroTitle">Forged Alone.<br><em>Bound as Kin.</em></h1>
+        <p class="home-hero-lead">A home for ironmen who value progression, competition, and the people behind every achievement.</p>
+        <div class="home-hero-actions">
+          <a class="btn primary home-hero-primary" href="https://discord.gg/ironkin" target="_blank" rel="noopener">Join Ironkin</a>
+          <a class="btn secondary" href="events.html">Explore Events</a>
+        </div>
       </div>
-      <div class="home-hero-watermark" aria-hidden="true"><img src="assets/ironkin-emblem.png" alt=""></div>
-    </section>
 
-    <section class="home-status-rail" aria-label="Live clan status">
-      <article><span class="home-status-icon">◆</span><div><strong id="homeDiscordMembers">—</strong><small>Discord Members</small></div></article>
-      <article><span class="home-status-icon">●</span><div><strong id="homeDiscordOnline">—</strong><small>Online Now</small></div></article>
-      <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Active Events</small></div></article>
-      <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
-    </section>
-
-    <section class="home-command-grid" aria-label="Ironkin activity overview">
-      <article class="home-feature-panel member-featured-event home-feature-main">
+      <article class="home-feature-panel member-featured-event">
         <div class="home-feature-topline">
           <div>
             <p id="homeEventPercent" class="eyebrow">Featured Event</p>
@@ -70,38 +64,47 @@
         <div id="homeFeaturedControls" class="featured-rotation-controls" aria-label="Featured event controls"></div>
         <a id="homeFeaturedLink" class="btn primary home-feature-button" href="events.html">View Event</a>
       </article>
+    </section>
 
-      <div class="home-side-stack">
-        <article class="home-panel home-calendar-panel">
-          <div class="home-panel-heading">
-            <div>
-              <p class="eyebrow">On the Horizon</p>
-              <h2>Upcoming Events</h2>
-            </div>
-            <a href="calendar.html">Calendar <span>→</span></a>
-          </div>
-          <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">
-            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-          </div>
-        </article>
 
-        <article class="home-panel member-achievements home-achievement-panel">
-          <div class="home-panel-heading">
-            <div>
-              <p class="eyebrow">Live Clan Feed</p>
-              <h2>Clan Activity</h2>
-            </div>
-            <a href="profile.html">Profiles <span>→</span></a>
+    <section class="home-status-rail" aria-label="Live clan status">
+      <article><span class="home-status-icon">◆</span><div><strong id="homeDiscordMembers">—</strong><small>Discord Members</small></div></article>
+      <article><span class="home-status-icon">●</span><div><strong id="homeDiscordOnline">—</strong><small>Online Now</small></div></article>
+      <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Active Events</small></div></article>
+      <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
+    </section>
+
+<section class="home-section home-dashboard" aria-label="Ironkin activity overview">
+      <article class="home-panel home-calendar-panel">
+        <div class="home-panel-heading">
+          <div>
+            <p class="eyebrow">On the Horizon</p>
+            <h2>Upcoming Events</h2>
           </div>
-          <div id="recentActivity" class="activity-scroll home-activity-list">
-            <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-            <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-            <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <a href="calendar.html">Full calendar <span>→</span></a>
+        </div>
+        <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+        </div>
+      </article>
+
+      <article class="home-panel member-achievements home-achievement-panel">
+        <div class="home-panel-heading">
+          <div>
+            <p class="eyebrow">Live Clan Feed</p>
+            <h2>Clan Activity</h2>
           </div>
-        </article>
-      </div>
+          <a href="profile.html">View profiles <span>→</span></a>
+        </div>
+        <p class="home-panel-intro">Live milestones and progression from Ironkin members, refreshed automatically.</p>
+        <div id="recentActivity" class="activity-scroll home-activity-list">
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+        </div>
+      </article>
     </section>
 
 
@@ -132,6 +135,6 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="/script.js?v=20260822-home-v3"></script>
+  <script src="/script.js?v=20260823-profile-events-v1"></script>
 </body>
 </html>

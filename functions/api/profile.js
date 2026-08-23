@@ -114,6 +114,10 @@ async function saveProfileRecord(env, discordId, record) {
     roles: Array.isArray(record.roles) ? record.roles : [],
     rank: record.rank || "",
     staffRank: record.staffRank || "",
+    rankIconUrl: record.rankIconUrl || "",
+    rankUnicodeEmoji: record.rankUnicodeEmoji || "",
+    staffRankIconUrl: record.staffRankIconUrl || "",
+    staffRankUnicodeEmoji: record.staffRankUnicodeEmoji || "",
     memberSince: record.memberSince || null,
     updatedAt: new Date().toISOString()
   });
@@ -405,6 +409,10 @@ const displayRank =
     rank: displayRank,
     staffRank,
     clanRank,
+    rankIconUrl: record.rankIconUrl || "",
+    rankUnicodeEmoji: record.rankUnicodeEmoji || "",
+    staffRankIconUrl: record.staffRankIconUrl || "",
+    staffRankUnicodeEmoji: record.staffRankUnicodeEmoji || "",
     memberSince,
     avatarUrl,
     discordAvatarUrl,

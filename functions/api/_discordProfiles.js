@@ -58,6 +58,37 @@ function discordErrorMessage(status, detail) {
   return `Discord member sync failed (${status})${detail ? `: ${detail.slice(0, 180)}` : ""}`;
 }
 
+function discordRoleIconUrl(role) {
+  if (!role?.id || !role?.icon) return "";
+  const extension = String(role.icon).startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/role-icons/${role.id}/${role.icon}.${extension}?size=64`;
+}
+
+async function fetchGuildRoles(env) {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return [];
+  const response = await fetch(`https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/roles`, {
+    headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` }
+  });
+  if (!response.ok) return [];
+  const roles = await response.json().catch(() => []);
+  return Array.isArray(roles) ? roles : [];
+}
+
+function roleVisual(roleIds, ranks, guildRoles) {
+  const roles = Array.isArray(roleIds) ? roleIds : [];
+  for (let i = ranks.length - 1; i >= 0; i -= 1) {
+    const rank = ranks[i];
+    if (!roles.includes(rank.id)) continue;
+    const discordRole = (guildRoles || []).find(role => String(role?.id || "") === rank.id) || null;
+    return {
+      name: rank.name,
+      iconUrl: discordRoleIconUrl(discordRole),
+      unicodeEmoji: discordRole?.unicode_emoji || ""
+    };
+  }
+  return { name: null, iconUrl: "", unicodeEmoji: "" };
+}
+
 async function fetchGuildMembers(env) {
   if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) {
     throw new Error("Missing DISCORD_BOT_TOKEN or DISCORD_GUILD_ID.");
@@ -94,11 +125,13 @@ async function fetchGuildMembers(env) {
   return members;
 }
 
-function buildDirectoryEntry(member, now) {
+function buildDirectoryEntry(member, now, guildRoles = []) {
   const user = member?.user || {};
   const discordId = String(user.id || "");
   const roles = Array.isArray(member?.roles) ? member.roles : [];
   const displayName = member?.nick || user.global_name || user.username || "Unknown member";
+  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles);
+  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles);
   return {
     discordId,
     displayName,
@@ -106,14 +139,18 @@ function buildDirectoryEntry(member, now) {
     avatar: user.avatar || "",
     avatarUrl: discordAvatarUrl(user),
     roles,
-    rank: highestRank(roles, CLAN_RANKS) || "Member",
-    staffRank: highestRank(roles, STAFF_RANKS) || null,
+    rank: clanRank.name || "Member",
+    rankIconUrl: clanRank.iconUrl,
+    rankUnicodeEmoji: clanRank.unicodeEmoji,
+    staffRank: staffRank.name || null,
+    staffRankIconUrl: staffRank.iconUrl,
+    staffRankUnicodeEmoji: staffRank.unicodeEmoji,
     memberSince: member?.joined_at || null,
     updatedAt: now
   };
 }
 
-async function writeProfileRecord(env, member, now) {
+async function writeProfileRecord(env, member, now, guildRoles = []) {
   const user = member?.user;
   const discordId = String(user?.id || "");
   if (!discordId || user?.bot) return { skipped: true };
@@ -122,6 +159,8 @@ async function writeProfileRecord(env, member, now) {
   const roles = Array.isArray(member.roles) ? member.roles : [];
   const displayName = member.nick || user.global_name || user.username || existing.displayName || "Unknown member";
   const avatarUrl = discordAvatarUrl(user);
+  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles);
+  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles);
 
   const record = {
     ...existing,
@@ -131,8 +170,12 @@ async function writeProfileRecord(env, member, now) {
     avatar: user.avatar || "",
     discordAvatarUrl: avatarUrl,
     roles,
-    rank: highestRank(roles, CLAN_RANKS) || existing.rank || "Member",
-    staffRank: highestRank(roles, STAFF_RANKS) || null,
+    rank: clanRank.name || existing.rank || "Member",
+    rankIconUrl: clanRank.iconUrl || existing.rankIconUrl || "",
+    rankUnicodeEmoji: clanRank.unicodeEmoji || existing.rankUnicodeEmoji || "",
+    staffRank: staffRank.name || null,
+    staffRankIconUrl: staffRank.iconUrl || "",
+    staffRankUnicodeEmoji: staffRank.unicodeEmoji || "",
     rsn: existing.rsn || displayName,
     memberSince: member.joined_at || existing.memberSince || null,
     discordSyncedAt: now
@@ -163,11 +206,11 @@ export async function getDiscordProfileSyncMeta(env) {
 export async function syncDiscordProfiles(env) {
   const startedAt = Date.now();
   const previousIndex = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
-  const members = await fetchGuildMembers(env);
+  const [members, guildRoles] = await Promise.all([fetchGuildMembers(env), fetchGuildRoles(env)]);
   const now = new Date().toISOString();
   const nonBotMembers = members.filter(member => member?.user?.id && !member?.user?.bot);
   const index = nonBotMembers
-    .map(member => buildDirectoryEntry(member, now))
+    .map(member => buildDirectoryEntry(member, now, guildRoles))
     .filter(item => item.discordId)
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" }));
 
@@ -190,6 +233,10 @@ export async function syncDiscordProfiles(env) {
       old.avatar !== item.avatar ||
       old.rank !== item.rank ||
       old.staffRank !== item.staffRank ||
+      old.rankIconUrl !== item.rankIconUrl ||
+      old.rankUnicodeEmoji !== item.rankUnicodeEmoji ||
+      old.staffRankIconUrl !== item.staffRankIconUrl ||
+      old.staffRankUnicodeEmoji !== item.staffRankUnicodeEmoji ||
       old.memberSince !== item.memberSince ||
       JSON.stringify(old.roles || []) !== JSON.stringify(item.roles || []);
     if (changed) updated += 1;
@@ -221,7 +268,7 @@ export async function syncDiscordProfiles(env) {
 
   // Hydrate the full profile records afterwards, in bounded parallel batches. A failure
   // here no longer prevents everyone from appearing in search.
-  const writeResult = await runInBatches(nonBotMembers, 20, member => writeProfileRecord(env, member, now));
+  const writeResult = await runInBatches(nonBotMembers, 20, member => writeProfileRecord(env, member, now, guildRoles));
   const meta = {
     ...preliminaryMeta,
     profileRecordsWritten: writeResult.ok,

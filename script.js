@@ -1185,8 +1185,6 @@ async function loadRecentActivity() {
         : "Recent";
 
       row.innerHTML = `
-        <span class="activity-feed-icon">✦</span>
-
         <div>
           <button type="button" class="activity-player-link" data-member-search="${escapeHtml(player)}">${escapeHtml(player)}</button>
           <span>${escapeHtml(achievement)}</span>
@@ -1215,7 +1213,7 @@ document.addEventListener("click", event => {
   }
 });
 
-function createEventHubCard({ type, href, icon, label, title, description, active = false, ctaLabel = "View Event →" }) {
+function createEventHubCard({ type, href, icon, label, title, description, teaser = "", active = false, ctaLabel = "View Event →" }) {
   const card = document.createElement(href ? "a" : "article");
 
   card.className = `event-hub-card event-${type}${active ? " is-active" : " is-inactive"}`;
@@ -1234,6 +1232,10 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
 
   const descriptionHtml = description
     ? `<p>${description}</p>`
+    : "";
+
+  const teaserHtml = teaser
+    ? `<div class="event-hub-teaser">${teaser}</div>`
     : "";
 
   let footerHtml = `
@@ -1267,6 +1269,7 @@ function createEventHubCard({ type, href, icon, label, title, description, activ
       <p class="eyebrow">${label}</p>
       ${titleHtml}
       ${descriptionHtml}
+      ${teaserHtml}
     </div>
 
     ${footerHtml}
@@ -1398,6 +1401,57 @@ async function loadHomeBingoSignupBanner() {
   }
 }
 
+
+function eventHubMetricSuffix(event, standings) {
+  const metric = String(standings?.metric || event?.metric || "").toLowerCase();
+  if (metric.includes("xp") || String(event?.type || "").includes("skill")) return "XP";
+  if (metric.includes("kill") || metric.includes("kc") || String(event?.type || "").includes("boss")) return "KC";
+  return "gained";
+}
+
+function buildEventHubStandingsTeaser(event, standings) {
+  if (!standings) return "";
+  const leader = Array.isArray(standings.standings) ? standings.standings[0] : null;
+  const suffix = eventHubMetricSuffix(event, standings);
+  const total = Number(standings.totalGained || 0);
+  const contributors = Number(standings.contributors || 0);
+  return `
+    <div class="event-teaser-stat"><span>Total</span><strong>${formatNumber(total)} ${suffix}</strong></div>
+    <div class="event-teaser-stat"><span>Contributors</span><strong>${formatNumber(contributors)}</strong></div>
+    ${leader ? `<div class="event-teaser-leader"><span>Leading</span><strong>${escapeHtml(leader.name || "Unknown")}</strong><small>${formatNumber(leader.gained || 0)} ${suffix}</small></div>` : ""}
+  `;
+}
+
+async function buildEventHubTeaser(event, type, botwEvents = []) {
+  if (type === "botw") {
+    const activeBotw = botwEvents.filter(isEventActive);
+    if (!activeBotw.length) return "";
+    const snapshots = await Promise.all(activeBotw.map(async item => ({
+      event: item,
+      standings: await fetchEventStandings(item).catch(() => null)
+    })));
+    return snapshots.map(({ event: item, standings }) => {
+      const tier = getBotwTierLabel(item) || "BOTW";
+      const leader = standings?.standings?.[0];
+      return `<div class="event-teaser-mini"><span>${escapeHtml(tier)}</span><strong>${leader ? escapeHtml(leader.name) : "Awaiting standings"}</strong>${leader ? `<small>${formatNumber(leader.gained || 0)} KC</small>` : ""}</div>`;
+    }).join("");
+  }
+
+  if (type === "bounties") {
+    try {
+      const response = await fetch(`/api/drops/list?eventId=bounties&t=${Date.now()}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      const drops = response.ok && Array.isArray(data.drops) ? data.drops : [];
+      const members = new Set(drops.map(item => item.player || item.member || item.rsn || "").filter(Boolean));
+      return `<div class="event-teaser-stat"><span>Completed</span><strong>${formatNumber(drops.length)} bounties</strong></div><div class="event-teaser-stat"><span>Hunters</span><strong>${formatNumber(members.size)}</strong></div>`;
+    } catch { return ""; }
+  }
+
+  if (!event?.womCompetitionId) return "";
+  const standings = await fetchEventStandings(event).catch(() => null);
+  return buildEventHubStandingsTeaser(event, standings);
+}
+
 async function loadEventsHub() {
   const grid = document.getElementById("eventHubGrid");
   if (!grid) return;
@@ -1419,17 +1473,19 @@ async function loadEventsHub() {
       { event:bounties, type:"bounties", icon:getEventIcon("bounties"), label:"Bounties", fallback:"Clan Bounties" }
     ];
 
-    permanentCards.forEach(item => {
+    for (const item of permanentCards) {
       const event = item.event;
       const active = item.active ?? isEventActive(event);
       const href = active ? (item.href || getEventPageHref(event)) : "";
+      const teaser = active ? await buildEventHubTeaser(event, item.type, botwEvents) : "";
       grid.appendChild(createEventHubCard({
         type:item.type, href, icon:item.icon, label:item.label,
         title: active ? displayEventTitle(event?.title || item.fallback, event?.type || item.type) : item.fallback,
         description: active ? (event?.description || item.description || "View the full Ironkin event dashboard.") : "Not active",
+        teaser,
         active
       }));
-    });
+    }
 
     await appendBattleshipBingoCard(grid);
     await appendGiveawaysHubCard(grid);
@@ -1662,26 +1718,21 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
   const medal = index => index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉";
 
   dashboard.innerHTML = `
-    <section class="event-detail-card clan-goal-dashboard-card clan-goal-modern-dashboard">
-      <div class="clan-goal-modern-hero">
-        <div class="clan-goal-modern-hero-copy">
-          <div class="clan-goal-modern-kicker"><span>ACTIVE CLAN GOAL</span><i></i><span>${escapeHtml(unit)} TRACKING</span></div>
+    <section class="event-detail-card clan-goal-dashboard-card">
+      <div class="event-detail-hero clan-goal-hero">
+        <div>
+          <p class="eyebrow">🔥 ${escapeHtml(event.label || "Clan Goal")}</p>
           <h1>${escapeHtml(displayEventTitle(standings?.title || event.title, event.type))}</h1>
-          <p class="clan-goal-modern-description">${escapeHtml(event.description || standings?.metric || "Push the clan forward together.")}</p>
-          <div class="clan-goal-modern-meta">
-            <span>📅 ${escapeHtml(eventDateText)}</span>
-            <span>👥 ${formatNumber(contributors)} contributors</span>
-            ${dates.end ? `<span>⏱ ${formatCompactDuration(dates.end - now)} remaining</span>` : ""}
-          </div>
+          <p>${escapeHtml(event.description || standings?.metric || "Push the clan forward together.")}</p>
+          <p class="clan-goal-date"><strong>Event Date:</strong> ${escapeHtml(eventDateText)}</p>
         </div>
-        <div class="clan-goal-modern-hero-score">
-          <span class="clan-goal-modern-live-dot">LIVE</span>
+        <div class="event-percent-box clan-goal-percent-box">
           <strong>${goal ? `${percent.toFixed(1)}%` : "ACTIVE"}</strong>
-          <small>${goal ? `${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}` : `${formatNumber(totalGained)} ${unit}`}</small>
+          <span>${goal ? "Goal Complete" : "Clan Goal"}</span>
         </div>
       </div>
 
-      <div class="event-detail-body clan-goal-body clan-goal-modern-body">
+      <div class="event-detail-body clan-goal-body">
         ${eventHasNotStarted ? `
           <div class="event-starting-soon-panel">
             <p class="eyebrow">Event Starting Soon</p>
@@ -1689,102 +1740,87 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
             <p>Progress tracking will begin when the Wise Old Man competition starts.</p>
           </div>` : ""}
 
-        <div class="clan-goal-kpi-grid clan-goal-modern-kpis">
-          <div class="clan-goal-kpi"><span>Total Progress</span><strong>${formatNumber(totalGained)}</strong><small>${goal ? `${formatNumber(goal)} ${unit} target` : `Live ${unit} total`}</small></div>
+        <div class="clan-goal-kpi-grid">
+          <div class="clan-goal-kpi"><span>Current ${unit}</span><strong>${formatNumber(totalGained)}</strong><small>${goal ? `${formatNumber(goal)} target` : "Live total"}</small></div>
           <div class="clan-goal-kpi"><span>Contributors</span><strong>${formatNumber(contributors)}</strong><small>Clan members contributing</small></div>
-          <div class="clan-goal-kpi"><span>Current Pace</span><strong>${formatNumber(Math.round(dailyPace))}</strong><small>${unit} gained per day</small></div>
-          <div class="clan-goal-kpi"><span>Daily Needed</span><strong>${remainingDays > 0 ? formatNumber(Math.ceil(requiredPace)) : "—"}</strong><small>${remainingDays > 0 ? `${unit} per day to finish` : "Goal period complete"}</small></div>
+          <div class="clan-goal-kpi"><span>Current Pace</span><strong>${formatNumber(Math.round(dailyPace))}</strong><small>${unit} per day</small></div>
+          <div class="clan-goal-kpi"><span>Time Remaining</span><strong>${dates.end ? formatCompactDuration(dates.end - now) : "—"}</strong><small>${remainingDays > 0 ? `${formatNumber(Math.ceil(requiredPace))} ${unit}/day needed` : "Goal period complete"}</small></div>
         </div>
 
-        <div class="clan-goal-modern-columns clan-goal-modern-workspace">
-          <main class="clan-goal-modern-main">
-            ${goal ? `
-              <section class="clan-goal-progress-card clan-goal-modern-progress-card clan-goal-modern-primary-layer">
-                <div class="clan-goal-progress-heading">
-                  <div><span>ACTIVE CLAN GOAL</span><strong>${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}</strong></div>
-                  <strong>${percent.toFixed(1)}%</strong>
-                </div>
-                <div class="event-progress-bar milestone-bar clan-goal-main-progress">
-                  <div style="width:${percent}%"></div>
-                  ${milestones.map(milestone => `
-                    <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent >= 75 ? "milestone-marker--near-end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
-                      <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
-                    </span>`).join("")}
-                </div>
-                <div class="clan-goal-progress-foot"><span>${formatNumber(remaining)} ${unit} remaining</span><span>${milestones.filter(item => item.reached).length}/${milestones.length} milestones unlocked</span></div>
-              </section>` : ""}
-
-            <section class="event-panel clan-goal-mvp-panel clan-goal-modern-panel clan-goal-modern-primary-layer">
-              <div class="clan-goal-section-heading">
-                <div><p class="eyebrow">MVP RACE</p><h2>Top Contributors</h2><p class="clan-goal-panel-subtitle">The members pushing this goal forward.</p></div>
-                <span class="clan-goal-live-pill">LIVE</span>
-              </div>
-              ${topThree.length ? `<div class="clan-goal-podium">${topThree.map((player, index) => `
-                <div class="clan-goal-podium-card ${podiumClass(index)} ${myRank === index + 1 ? "is-you" : ""}">
-                  <span class="clan-goal-medal">${medal(index)}</span><strong>${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} ${unit}</span>${myRank === index + 1 ? `<em>YOU</em>` : ""}
-                </div>`).join("")}</div>` : `<p>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No contribution has been recorded yet."}</p>`}
-              ${restTopTen.length ? `<div class="clan-goal-ranking-list">${restTopTen.map((player, index) => {
-                const rank = index + 4;
-                return `<div class="clan-goal-ranking-row ${myRank === rank ? "is-you" : ""}"><strong><span>#${rank}</span>${escapeHtml(player.name)}${myRank === rank ? `<em>YOU</em>` : ""}</strong><span>${formatNumber(player.gained)} ${unit}</span></div>`;
-              }).join("")}</div>` : ""}
-              ${myRank && myRank > 10 ? `<div class="clan-goal-your-rank"><span>Your current position</span><strong>#${myRank} · ${escapeHtml(myPlayer.name)}</strong><span>${formatNumber(myPlayer.gained)} ${unit}</span></div>` : ""}
-            </section>
-
-            <div class="clan-goal-modern-activity-grid">
-              ${event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
+        ${goal ? `
+          <section class="clan-goal-progress-card">
+            <div class="clan-goal-progress-heading">
+              <div><span>Clan Progress</span><strong>${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}</strong></div>
+              <strong>${percent.toFixed(1)}%</strong>
             </div>
+            <div class="event-progress-bar milestone-bar clan-goal-main-progress">
+              <div style="width:${percent}%"></div>
+              ${milestones.map(milestone => `
+                <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
+                  <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
+                </span>`).join("")}
+            </div>
+            <div class="clan-goal-progress-foot"><span>${formatNumber(remaining)} ${unit} remaining</span><span>${milestones.filter(item => item.reached).length}/${milestones.length} milestones unlocked</span></div>
+          </section>` : ""}
 
-            <section class="clan-goal-modern-rewards-layer">
-              ${renderRewardsSection(event)}
-            </section>
-          </main>
+        <div class="clan-goal-insight-grid">
+          <section class="event-panel clan-goal-next-card">
+            <p class="eyebrow">🎯 Next Milestone</p>
+            ${nextMilestone ? `
+              <h2>${nextMilestone.percent}% — ${escapeHtml(nextMilestone.title || "Milestone")}</h2>
+              <strong class="clan-goal-big-number">${formatNumber(nextMilestoneRemaining)} ${unit}</strong>
+              <p>remaining to unlock this reward.</p>` : `
+              <h2>All Milestones Unlocked</h2><strong class="clan-goal-big-number">Goal rewards cleared</strong><p>The clan has reached every configured milestone.</p>`}
+          </section>
 
-          <aside class="clan-goal-modern-sidebar">
-            <section class="event-panel clan-goal-personal-card clan-goal-modern-panel clan-goal-modern-personal">
-              <div class="clan-goal-section-heading"><div><p class="eyebrow">YOUR STANDING</p><h2>${profile ? escapeHtml(profile.rsn || profile.displayName || "Your contribution") : "Your contribution"}</h2></div>${profile ? `<a class="clan-goal-profile-link" href="profile.html">Profile →</a>` : ""}</div>
-              ${profile ? (myPlayer ? `
-                <div class="clan-goal-modern-rank-hero"><strong>#${myRank}</strong><span>of ${formatNumber(rankedPlayers.length)} contributors</span></div>
-                <div class="clan-goal-personal-stats">
-                  <div><span>Your ${unit}</span><strong>${formatNumber(myPlayer.gained)}</strong></div>
-                  <div><span>Progress Share</span><strong>${myShare.toFixed(1)}%</strong></div>
-                  <div><span>${myRank === 1 ? "Position" : "To Next Rank"}</span><strong>${myRank === 1 ? "MVP" : `${formatNumber(toNextRank)} ${unit}`}</strong></div>
-                </div>
-                <div class="clan-goal-badges">${myBadges.length ? myBadges.map(badge => `<span>${badge}</span>`).join("") : `<span>⚒️ Contributor</span>`}</div>` : `
-                <div class="clan-goal-empty-personal"><strong>No tracked contribution yet.</strong><span>Your personalized stats will appear here as soon as your WOM name records ${unit} in this goal.</span></div>`)
-              : `<div class="clan-goal-empty-personal"><strong>Sign in to personalize this dashboard.</strong><span>Your contribution, clan rank, progress share and achievement badges will appear here automatically.</span><a class="btn primary" href="/api/auth/login">Sign in with Discord</a></div>`}
-            </section>
-
-            <section class="event-panel clan-goal-next-card clan-goal-modern-panel clan-goal-modern-side-card">
-              <p class="eyebrow">NEXT MILESTONE</p>
-              ${nextMilestone ? `
-                <div class="clan-goal-modern-milestone-percent">${nextMilestone.percent}%</div>
-                <h2>${escapeHtml(nextMilestone.title || "Milestone")}</h2>
-                <strong class="clan-goal-big-number">${formatNumber(nextMilestoneRemaining)} ${unit}</strong>
-                <p>left to unlock this reward.</p>` : `
-                <div class="clan-goal-modern-milestone-percent">✓</div><h2>All Milestones Unlocked</h2><strong class="clan-goal-big-number">Goal rewards cleared</strong>`}
-            </section>
-
-            <section class="event-panel clan-goal-pace-card clan-goal-modern-panel clan-goal-modern-side-card ${onPace ? "is-on-pace" : "is-behind-pace"}">
-              <div class="clan-goal-section-heading"><div><p class="eyebrow">GOAL PACE</p><h2>${onPace ? "On Pace" : "Push Needed"}</h2></div><span class="clan-goal-modern-status-dot"></span></div>
-              <div class="clan-goal-pace-lines">
-                <span><small>Current</small><strong>${formatNumber(Math.round(dailyPace))} ${unit}/day</strong></span>
-                <span><small>Required</small><strong>${formatNumber(Math.ceil(requiredPace))} ${unit}/day</strong></span>
-              </div>
-              <p>${projectedFinish ? `Projected finish: <strong>${projectedFinish.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</strong>` : "A projection will appear once progress is recorded."}</p>
-            </section>
-
-            <section class="event-panel clan-goal-participation-panel clan-goal-modern-panel clan-goal-modern-side-card">
-              <p class="eyebrow">CLAN EFFORT</p><h2>Participation</h2>
-              <div class="clan-goal-participation-stats clan-goal-modern-participation-stats">
-                <span><strong>${formatNumber(contributors)}</strong><small>Contributors</small></span>
-                <span><strong>${rankedPlayers.length ? formatNumber(Math.round(totalGained / rankedPlayers.length)) : "0"}</strong><small>Avg. ${unit} / member</small></span>
-                <span><strong>${rankedPlayers[0] ? formatNumber(rankedPlayers[0].gained) : "0"}</strong><small>Top contribution</small></span>
-              </div>
-            </section>
-
-            ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `<a class="btn primary clan-goal-wom-link clan-goal-modern-wom-link" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">Open Full WOM Leaderboard ↗</a>` : ""}
-          </aside>
+          <section class="event-panel clan-goal-pace-card ${onPace ? "is-on-pace" : "is-behind-pace"}">
+            <p class="eyebrow">📈 Goal Pace</p>
+            <h2>${onPace ? "On Pace" : "Push Needed"}</h2>
+            <div class="clan-goal-pace-lines">
+              <span><small>Current</small><strong>${formatNumber(Math.round(dailyPace))} ${unit}/day</strong></span>
+              <span><small>Required</small><strong>${formatNumber(Math.ceil(requiredPace))} ${unit}/day</strong></span>
+            </div>
+            <p>${projectedFinish ? `Projected finish: <strong>${projectedFinish.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</strong>` : "A projection will appear once progress is recorded."}</p>
+          </section>
         </div>
+
+        <section class="event-panel clan-goal-personal-card">
+          <div class="clan-goal-section-heading"><div><p class="eyebrow">👤 Your Clan Goal</p><h2>${profile ? escapeHtml(profile.rsn || profile.displayName || "Your contribution") : "Your contribution"}</h2></div>${profile ? `<a class="clan-goal-profile-link" href="profile.html">View Profile →</a>` : ""}</div>
+          ${profile ? (myPlayer ? `
+            <div class="clan-goal-personal-stats">
+              <div><span>Your ${unit}</span><strong>${formatNumber(myPlayer.gained)}</strong></div>
+              <div><span>Clan Rank</span><strong>#${myRank}</strong></div>
+              <div><span>Share of Progress</span><strong>${myShare.toFixed(1)}%</strong></div>
+              <div><span>${myRank === 1 ? "Position" : "To Next Rank"}</span><strong>${myRank === 1 ? "MVP" : `${formatNumber(toNextRank)} ${unit}`}</strong></div>
+            </div>
+            <div class="clan-goal-badges">${myBadges.length ? myBadges.map(badge => `<span>${badge}</span>`).join("") : `<span>⚒️ Contributor</span>`}</div>` : `
+            <div class="clan-goal-empty-personal"><strong>No tracked contribution yet.</strong><span>Your personalized stats will appear here as soon as your WOM name records ${unit} in this goal.</span></div>`)
+          : `<div class="clan-goal-empty-personal"><strong>Sign in to personalize this dashboard.</strong><span>Your contribution, clan rank, progress share and achievement badges will appear here automatically.</span><a class="btn primary" href="/api/auth/login">Sign in with Discord</a></div>`}
+        </section>
+
+        <section class="event-panel clan-goal-mvp-panel">
+          <div class="clan-goal-section-heading"><div><p class="eyebrow">🏆 MVP Race</p><h2>Top Contributors</h2></div><span class="clan-goal-live-pill">LIVE</span></div>
+          ${topThree.length ? `<div class="clan-goal-podium">${topThree.map((player, index) => `
+            <div class="clan-goal-podium-card ${podiumClass(index)} ${myRank === index + 1 ? "is-you" : ""}">
+              <span class="clan-goal-medal">${medal(index)}</span><small>#${index + 1}</small><strong>${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} ${unit}</span>${myRank === index + 1 ? `<em>YOU</em>` : ""}
+            </div>`).join("")}</div>` : `<p>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No contribution has been recorded yet."}</p>`}
+          ${restTopTen.length ? `<div class="clan-goal-ranking-list">${restTopTen.map((player, index) => {
+            const rank = index + 4;
+            return `<div class="clan-goal-ranking-row ${myRank === rank ? "is-you" : ""}"><strong><span>#${rank}</span>${escapeHtml(player.name)}${myRank === rank ? `<em>YOU</em>` : ""}</strong><span>${formatNumber(player.gained)} ${unit}</span></div>`;
+          }).join("")}</div>` : ""}
+          ${myRank && myRank > 10 ? `<div class="clan-goal-your-rank"><span>Your current position</span><strong>#${myRank} · ${escapeHtml(myPlayer.name)}</strong><span>${formatNumber(myPlayer.gained)} ${unit}</span></div>` : ""}
+        </section>
+
+        <div class="event-detail-grid clan-goal-lower-grid">
+          ${event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
+          <section class="event-panel clan-goal-participation-panel">
+            <p class="eyebrow">👥 Participation</p><h2>Clan Effort</h2>
+            <div class="clan-goal-participation-stats"><span><strong>${formatNumber(contributors)}</strong><small>Contributors</small></span><span><strong>${rankedPlayers.length ? formatNumber(Math.round(totalGained / rankedPlayers.length)) : "0"}</strong><small>Avg. ${unit} / contributor</small></span><span><strong>${rankedPlayers[0] ? formatNumber(rankedPlayers[0].gained) : "0"}</strong><small>Top contribution</small></span></div>
+          </section>
+        </div>
+
+        ${renderRewardsSection(event)}
+        ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `<a class="btn primary clan-goal-wom-link" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">View Full WOM Leaderboard</a>` : ""}
       </div>
     </section>`;
 
@@ -2580,7 +2616,7 @@ async function loadClanNews() {
     if (!response.ok) throw new Error(data.error || "Could not load clan news.");
     const entries = Array.isArray(data.entries) ? data.entries : [];
     feed.innerHTML = entries.length
-      ? entries.slice(0, 6).map(renderClanNewsEntry).join("")
+      ? entries.slice(0, 4).map(renderClanNewsEntry).join("")
       : `<p class="admin-muted">No clan news has been posted yet.</p>`;
   } catch (error) {
     feed.innerHTML = `<p class="admin-muted">Could not load clan news: ${escapeHtml(error.message)}</p>`;
