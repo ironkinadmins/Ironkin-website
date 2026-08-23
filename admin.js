@@ -2178,23 +2178,57 @@ async function handleEventItemsImportFile(event) {
   }
 }
 
-async function importOneEventItemRow(row, targetEventId) {
-  const response = await fetch("/api/drops/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+async function resolveImportedItemMedia(row) {
+  if (row.imageUrl) {
+    return { imageUrl: row.imageUrl, wikiUrl: row.wikiUrl || "" };
+  }
+
+  try {
+    const response = await fetch(`/api/osrs/search?q=${encodeURIComponent(row.itemName)}`);
+    if (!response.ok) return { imageUrl: "", wikiUrl: row.wikiUrl || "" };
+    const data = await response.json().catch(() => []);
+    const results = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+
+    const exactId = results.find(item => Number(item?.id) === Number(row.itemId) && item?.image);
+    const exactName = results.find(item => String(item?.name || "").trim().toLowerCase() === String(row.itemName || "").trim().toLowerCase() && item?.image);
+    const selected = exactId || exactName || results.find(item => item?.image) || null;
+
+    return {
+      imageUrl: String(selected?.image || "").trim(),
+      wikiUrl: row.wikiUrl || String(selected?.url || "").trim()
+    };
+  } catch {
+    return { imageUrl: "", wikiUrl: row.wikiUrl || "" };
+  }
+}
+
+async function importEventItemBatch(jobs) {
+  // Resolve Wiki media up-front, then submit the whole spreadsheet in one
+  // server request. The server performs a single read/merge/write per event,
+  // so 19 rows cannot race and overwrite one another.
+  const prepared = await Promise.all(jobs.map(async ({ row, targetEventId }) => {
+    const media = await resolveImportedItemMedia(row);
+    return {
+      rowNumber: row.rowNumber,
       eventId: targetEventId,
       itemId: row.itemId,
       name: row.itemName,
-      image: row.imageUrl,
-      wikiUrl: row.wikiUrl,
+      image: media.imageUrl,
+      wikiUrl: media.wikiUrl,
       rewardEmbers: row.rewardEmbers,
-      trackingRule: row.trackingRule
-    })
+      trackingRule: row.trackingRule,
+      imageResolved: Boolean(media.imageUrl)
+    };
+  }));
+
+  const response = await fetch("/api/drops/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items: prepared })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-  return data;
+  return { ...data, prepared };
 }
 
 async function importEventItemsFromSpreadsheet() {
@@ -2232,36 +2266,26 @@ async function importEventItemsFromSpreadsheet() {
   }
 
   if (button) button.disabled = true;
-  let succeeded = 0;
-  const failed = [];
-  if (status) status.textContent = `Importing 0 / ${jobs.length}...`;
+  if (status) status.textContent = `Resolving item images and importing all ${jobs.length} items...`;
 
-  // Keep concurrency low so a large spreadsheet does not hammer the Cloudflare API.
-  const concurrency = 4;
-  let cursor = 0;
-  async function worker() {
-    while (cursor < jobs.length) {
-      const index = cursor++;
-      const job = jobs[index];
-      try {
-        await importOneEventItemRow(job.row, job.targetEventId);
-        succeeded += 1;
-      } catch (error) {
-        failed.push(`Row ${job.row.rowNumber} (${job.row.itemName}): ${error?.message || "failed"}`);
-      }
-      if (status) status.textContent = `Importing ${succeeded + failed.length} / ${jobs.length}...`;
+  try {
+    const result = await importEventItemBatch(jobs);
+    const succeeded = Number(result.imported || result.updated || result.processed || jobs.length);
+    const imagesResolved = result.prepared.filter(item => item.imageResolved).length;
+    const failed = Array.isArray(result.failures) ? result.failures : [];
+    const parts = [`Imported/updated ${succeeded} item${succeeded === 1 ? "" : "s"} in one batch.`];
+    if (imagesResolved) parts.push(`Resolved ${imagesResolved} item image${imagesResolved === 1 ? "" : "s"}.`);
+    if (skipped.length) parts.push(`Skipped ${skipped.length}.`);
+    if (failed.length) parts.push(`Supabase sync warnings: ${failed.length}.`);
+    if (status) {
+      status.innerHTML = `<strong>${escapeHtml(parts.join(" "))}</strong>${failed.length ? `<br><small>${escapeHtml(failed.slice(0, 6).map(f => f.message || f.error || String(f)).join(" · "))}${failed.length > 6 ? " …" : ""}</small>` : ""}${skipped.length ? `<br><small>${escapeHtml(skipped.slice(0, 6).join(" · "))}${skipped.length > 6 ? " …" : ""}</small>` : ""}`;
     }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, () => worker()));
-
-  const parts = [`Imported/updated ${succeeded} item${succeeded === 1 ? "" : "s"}.`];
-  if (skipped.length) parts.push(`Skipped ${skipped.length}.`);
-  if (failed.length) parts.push(`Failed ${failed.length}.`);
-  if (status) {
-    status.innerHTML = `<strong>${escapeHtml(parts.join(" "))}</strong>${failed.length ? `<br><small>${escapeHtml(failed.slice(0, 6).join(" · "))}${failed.length > 6 ? " …" : ""}</small>` : ""}${skipped.length ? `<br><small>${escapeHtml(skipped.slice(0, 6).join(" · "))}${skipped.length > 6 ? " …" : ""}</small>` : ""}`;
+  } catch (error) {
+    if (status) status.innerHTML = `<strong>Import failed.</strong><br><small>${escapeHtml(error?.message || "Could not import the spreadsheet.")}</small>`;
+  } finally {
+    if (button) button.disabled = false;
   }
 
-  if (button) button.disabled = false;
   await loadAdminDrops();
 }
 

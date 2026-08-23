@@ -2735,6 +2735,12 @@ function bountyRelativeTime(value) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+const EMBERS_EMOJI_ID = "1541168269355126925";
+const EMBERS_EMOJI_URL = `https://cdn.discordapp.com/emojis/${EMBERS_EMOJI_ID}.webp?size=32&quality=lossless`;
+function embersEmojiHtml(className = "") {
+  return `<img class="embers-emoji${className ? ` ${className}` : ""}" src="${EMBERS_EMOJI_URL}" alt="Embers" loading="lazy">`;
+}
+
 function bountyRewardTier(reward) {
   const amount = Number(reward || 0);
   if (amount >= 100) return "legendary";
@@ -2769,7 +2775,7 @@ function renderBountyBoard(data, event) {
     return `
       <article class="bounty-card bounty-tier-${tier}${claimed ? " is-claimed" : ""}" data-bounty-card data-status="${claimed ? "claimed" : "unclaimed"}" data-reward="${reward}" style="--bounty-order:${index}">
         <div class="bounty-card-top">
-          <span class="bounty-reward-badge">🔥 ${formatNumber(reward)} Embers</span>
+          <span class="bounty-reward-badge">${embersEmojiHtml()} ${formatNumber(reward)} Embers</span>
           ${claimed ? `<span class="bounty-claimed-badge">✓ CLAIMED${viewerCount > 1 ? ` ×${formatNumber(viewerCount)}` : ""}</span>` : `<span class="bounty-open-badge">AVAILABLE</span>`}
         </div>
         <div class="bounty-card-item">
@@ -2795,7 +2801,7 @@ function renderBountyBoard(data, event) {
             <span>${escapeHtml(claim.itemName || "Bounty")} ${Number(claim.quantity || 1) > 1 ? `×${formatNumber(claim.quantity)}` : ""}</span>
           </div>
           <div class="bounty-activity-meta">
-            <strong>+${formatNumber(claim.embers || 0)} 🔥</strong>
+            <strong>+${formatNumber(claim.embers || 0)} ${embersEmojiHtml()}</strong>
             <span>${escapeHtml(bountyRelativeTime(claim.claimedAt))}</span>
           </div>
         </div>`).join("")
@@ -2823,7 +2829,7 @@ function renderBountyBoard(data, event) {
     <section class="bounty-progress-panel">
       <div class="bounty-progress-copy">
         <div><span>Your Bounty Hunt</span><strong>${viewer.signedIn ? `${formatNumber(viewerUnique)} of ${formatNumber(totalDefinitions)} unique bounties` : "Sign in with Discord to see your claims"}</strong></div>
-        ${viewer.signedIn ? `<span>${formatNumber(viewer.embersEarned || 0)} 🔥 earned</span>` : ""}
+        ${viewer.signedIn ? `<span>${formatNumber(viewer.embersEarned || 0)} ${embersEmojiHtml()} earned</span>` : ""}
       </div>
       <div class="bounty-progress-track"><div style="width:${viewer.signedIn ? progress : 0}%"></div></div>
     </section>

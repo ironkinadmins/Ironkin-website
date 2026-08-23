@@ -11097,3 +11097,16 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   .bounty-summary-card strong { font-size:1.3rem; }
   .bounty-card-top { align-items:flex-start; flex-direction:column; }
 }
+
+/* Discord Embers custom emoji used by the live bounty board. */
+.embers-emoji {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: -0.14em;
+  flex: 0 0 auto;
+}
+.bounty-reward-badge .embers-emoji { width: 14px; height: 14px; }
+.bounty-activity-meta .embers-emoji,
+.bounty-progress-copy .embers-emoji { width: 15px; height: 15px; }
