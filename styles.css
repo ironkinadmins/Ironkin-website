@@ -10428,29 +10428,38 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   margin-top: 18px;
 }
 
-/* Give Clan Goal milestone labels a fixed footprint so long rewards do not
-   collide near the end of the progress bar. */
+/* Give Clan Goal milestone labels a predictable footprint so rewards stay
+   readable instead of collapsing into one another near the end of the bar. */
 .clan-goal-main-progress .milestone-marker {
-  width: 132px;
+  width: 118px;
   white-space: normal;
 }
 
 .clan-goal-main-progress .milestone-marker small {
-  line-height: 1.25;
-  overflow-wrap: normal;
+  display: block;
+  line-height: 1.22;
+  overflow-wrap: break-word;
 }
 
-/* Pull the 80% milestone slightly left, leaving a clear visual gap before 100%. */
-.clan-goal-main-progress .milestone-marker:nth-last-child(2) {
-  transform: translateX(-62%);
+/* The 80% reward gets its own left-biased footprint, creating a deliberate
+   gutter before the final 100% reward. */
+.clan-goal-main-progress .milestone-marker--near-end {
+  width: 126px;
+  transform: translateX(-82%);
+  text-align: center;
 }
 
-/* Keep the final milestone aligned to the right edge while allowing its
-   reward text to wrap cleanly over two lines. */
+/* Anchor 100% to the right edge with a narrower wrapped label. This reserves
+   space for the 80% milestone rather than letting both labels share the same area. */
 .clan-goal-main-progress .milestone-marker--end {
-  width: 150px;
+  width: 112px;
   transform: translateX(-100%);
   text-align: right;
+}
+
+.clan-goal-main-progress .milestone-marker--end small {
+  margin-left: auto;
+  max-width: 112px;
 }
 
 .clan-goal-main-progress .milestone-marker.is-reached strong,

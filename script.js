@@ -1707,7 +1707,7 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
                 <div class="event-progress-bar milestone-bar clan-goal-main-progress">
                   <div style="width:${percent}%"></div>
                   ${milestones.map(milestone => `
-                    <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
+                    <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent >= 75 ? "milestone-marker--near-end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
                       <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
                     </span>`).join("")}
                 </div>
@@ -1721,7 +1721,7 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
               </div>
               ${topThree.length ? `<div class="clan-goal-podium">${topThree.map((player, index) => `
                 <div class="clan-goal-podium-card ${podiumClass(index)} ${myRank === index + 1 ? "is-you" : ""}">
-                  <span class="clan-goal-medal">${medal(index)}</span><small>#${index + 1}</small><strong>${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} ${unit}</span>${myRank === index + 1 ? `<em>YOU</em>` : ""}
+                  <span class="clan-goal-medal">${medal(index)}</span><strong>${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} ${unit}</span>${myRank === index + 1 ? `<em>YOU</em>` : ""}
                 </div>`).join("")}</div>` : `<p>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No contribution has been recorded yet."}</p>`}
               ${restTopTen.length ? `<div class="clan-goal-ranking-list">${restTopTen.map((player, index) => {
                 const rank = index + 4;
