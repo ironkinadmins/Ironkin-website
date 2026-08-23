@@ -8,8 +8,263 @@
   <link rel="icon" type="image/png" href="assets/favicon-32x32.png">
   <link rel="stylesheet" href="/styles.css?v=20260823-profile-events-v1" />
   <link rel="stylesheet" href="/ironkin-games.css?v=20260812-games-2" />
+  <style>
+    /* Homepage-only dashboard refresh. Scoped here intentionally so no other page or bounty styling changes. */
+    body.home-ledger-v3 .home-premium {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 58px 0 70px;
+    }
+
+    body.home-ledger-v3 .home-ledger-hero {
+      position: relative;
+      padding: 18px 0 34px;
+      overflow: hidden;
+    }
+
+    body.home-ledger-v3 .home-ledger-hero::after {
+      content: "";
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      right: -190px;
+      top: -250px;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255,126,31,.09), transparent 66%);
+      filter: blur(8px);
+    }
+
+    body.home-ledger-v3 .home-kicker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      color: #c88249;
+      font-size: .7rem;
+      font-weight: 900;
+      letter-spacing: .21em;
+      text-transform: uppercase;
+    }
+
+    body.home-ledger-v3 .home-kicker span {
+      width: 28px;
+      height: 2px;
+      background: #ff7c21;
+      box-shadow: 0 0 12px rgba(255,124,33,.5);
+    }
+
+    body.home-ledger-v3 .home-ledger-hero h1 {
+      max-width: 760px;
+      margin: 0;
+      color: #fff7f0;
+      font-size: clamp(3.4rem, 7vw, 6.2rem);
+      line-height: .88;
+      letter-spacing: -.07em;
+      text-wrap: balance;
+    }
+
+    body.home-ledger-v3 .home-ledger-hero h1 em {
+      display: block;
+      color: #ff7d21;
+      font-style: normal;
+    }
+
+    body.home-ledger-v3 .home-hero-lead {
+      max-width: 620px;
+      margin: 28px 0 0;
+      color: rgba(255,248,242,.58);
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    body.home-ledger-v3 .home-status-rail {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 28px;
+      padding: 0;
+      background: none;
+      border: 0;
+      overflow: visible;
+    }
+
+    body.home-ledger-v3 .home-status-rail article {
+      min-height: 94px;
+      padding: 19px 20px 17px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(27,19,14,.86), rgba(14,11,9,.9));
+      box-shadow: inset 0 1px rgba(255,255,255,.025), 0 16px 36px rgba(0,0,0,.14);
+    }
+
+    body.home-ledger-v3 .home-status-icon { display: none; }
+    body.home-ledger-v3 .home-status-rail article > div { display: flex; flex-direction: column-reverse; gap: 8px; }
+    body.home-ledger-v3 .home-status-rail strong {
+      color: #fff6ee;
+      font-size: 1.5rem;
+      line-height: 1;
+      letter-spacing: -.04em;
+    }
+    body.home-ledger-v3 .home-status-rail small {
+      color: rgba(255,255,255,.38);
+      font-size: .62rem;
+      font-weight: 850;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    body.home-ledger-v3 .home-ledger-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.62fr) minmax(300px, .88fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    body.home-ledger-v3 .home-ledger-side {
+      display: grid;
+      gap: 16px;
+    }
+
+    body.home-ledger-v3 .home-feature-panel,
+    body.home-ledger-v3 .home-panel,
+    body.home-ledger-v3 .home-news-section {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 16px;
+      background: linear-gradient(150deg, rgba(29,20,15,.92), rgba(14,11,9,.95));
+      box-shadow: 0 18px 48px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.025);
+    }
+
+    body.home-ledger-v3 .home-feature-panel {
+      margin: 0;
+      padding: 26px;
+      min-height: 100%;
+    }
+
+    body.home-ledger-v3 .home-feature-topline h2 {
+      font-size: clamp(1.6rem, 3vw, 2.25rem);
+    }
+
+    body.home-ledger-v3 .home-event-progress {
+      height: 5px;
+      margin: 18px 0 20px;
+      background: rgba(255,255,255,.065);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    body.home-ledger-v3 .home-event-progress span {
+      display: block;
+      height: 100%;
+      min-width: 2px;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6e13, #ff9a39);
+    }
+
+    body.home-ledger-v3 .home-feature-panel .featured-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin: 18px 0 12px;
+    }
+    body.home-ledger-v3 .home-feature-panel .featured-stat {
+      min-height: 82px;
+      padding: 15px;
+      border: 1px solid rgba(255,129,38,.2);
+      border-radius: 12px;
+      background: rgba(255,255,255,.018);
+    }
+    body.home-ledger-v3 .home-feature-panel .featured-stat strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #ff8c2e;
+      font-size: 1.22rem;
+      line-height: 1.05;
+    }
+    body.home-ledger-v3 .home-feature-panel .featured-stat span {
+      color: rgba(255,255,255,.44);
+      font-size: .64rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    body.home-ledger-v3 .home-total-panel {
+      margin: 12px 0 18px;
+      padding: 19px 20px !important;
+      border-radius: 12px;
+      background: linear-gradient(110deg, rgba(255,111,16,.13), rgba(255,255,255,.018));
+    }
+    body.home-ledger-v3 .home-total-panel strong { font-size: clamp(2rem, 4vw, 2.8rem); }
+
+    body.home-ledger-v3 .home-rank-heading { margin-top: 4px; }
+    body.home-ledger-v3 .home-feature-panel .home-top-three div {
+      padding: 11px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      border-radius: 8px;
+    }
+    body.home-ledger-v3 .home-feature-panel .home-top-three div:nth-child(1) {
+      background: rgba(255,126,31,.045);
+    }
+
+    body.home-ledger-v3 .home-feature-button {
+      min-height: 44px;
+      border-radius: 11px;
+    }
+
+    body.home-ledger-v3 .home-panel {
+      min-height: 0;
+      padding: 22px;
+    }
+    body.home-ledger-v3 .home-panel-heading { margin-bottom: 14px; }
+    body.home-ledger-v3 .home-panel-heading h2 { font-size: 1.35rem; }
+    body.home-ledger-v3 .home-panel-intro { display: none; }
+    body.home-ledger-v3 .home-upcoming-list,
+    body.home-ledger-v3 .home-activity-list {
+      max-height: 290px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    body.home-ledger-v3 .activity-feed-row,
+    body.home-ledger-v3 .upcoming-event-row {
+      min-height: 62px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,.055) !important;
+    }
+    body.home-ledger-v3 .activity-feed-icon { display:none !important; }
+
+    body.home-ledger-v3 .premium-brand-story {
+      margin-top: 20px;
+      border-radius: 16px;
+    }
+
+    body.home-ledger-v3 .home-news-section {
+      margin-top: 20px;
+      padding: 28px;
+    }
+    body.home-ledger-v3 .home-news-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+    @media (max-width: 900px) {
+      body.home-ledger-v3 .home-status-rail { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      body.home-ledger-v3 .home-ledger-grid { grid-template-columns: 1fr; }
+      body.home-ledger-v3 .home-ledger-side { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      body.home-ledger-v3 .home-premium { width: min(100% - 22px, 1120px); padding-top: 34px; }
+      body.home-ledger-v3 .home-ledger-hero { padding-bottom: 26px; }
+      body.home-ledger-v3 .home-ledger-hero h1 { font-size: clamp(3.1rem, 18vw, 5rem); }
+      body.home-ledger-v3 .home-hero-lead { margin-top: 22px; font-size: .92rem; }
+      body.home-ledger-v3 .home-status-rail { gap: 9px; }
+      body.home-ledger-v3 .home-status-rail article { min-height: 82px; padding: 16px; }
+      body.home-ledger-v3 .home-ledger-side { grid-template-columns: 1fr; }
+      body.home-ledger-v3 .home-feature-panel { padding: 20px; }
+      body.home-ledger-v3 .home-feature-panel .featured-stats { grid-template-columns: 1fr; }
+      body.home-ledger-v3 .home-news-grid { grid-template-columns: 1fr; }
+      body.home-ledger-v3 .home-news-header { align-items: flex-start; }
+    }
+  </style>
 </head>
-<body class="home-premium-page premium-ui">
+<body class="home-premium-page premium-ui home-ledger-v3">
   <div id="siteNav"></div>
 
   <main class="member-home home-premium">
@@ -29,21 +284,24 @@
       <a class="btn primary" href="/bingo">Enter Bingo</a>
     </section>
 
-    <section class="home-hero-shell" aria-labelledby="homeHeroTitle">
-      <div class="home-hero-copy">
-        <div class="home-kicker"><span></span> Old School RuneScape Ironman Clan</div>
-        <h1 id="homeHeroTitle">Forged Alone.<br><em>Bound as Kin.</em></h1>
-        <p class="home-hero-lead">A home for ironmen who value progression, competition, and the people behind every achievement.</p>
-        <div class="home-hero-actions">
-          <a class="btn primary home-hero-primary" href="https://discord.gg/ironkin" target="_blank" rel="noopener">Join Ironkin</a>
-          <a class="btn secondary" href="events.html">Explore Events</a>
-        </div>
-      </div>
+    <section class="home-ledger-hero" aria-labelledby="homeHeroTitle">
+      <div class="home-kicker"><span></span> Old School RuneScape · Ironman Clan</div>
+      <h1 id="homeHeroTitle">Forged alone.<em>Bound as kin.</em></h1>
+      <p class="home-hero-lead">Progress earned together, tracked in one place. Events, milestones, and the people behind every achievement.</p>
+    </section>
 
+    <section class="home-status-rail" aria-label="Live clan status">
+      <article><span class="home-status-icon">◆</span><div><strong id="homeDiscordMembers">—</strong><small>Members</small></div></article>
+      <article><span class="home-status-icon">●</span><div><strong id="homeDiscordOnline">—</strong><small>Online Now</small></div></article>
+      <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Events Live</small></div></article>
+      <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
+    </section>
+
+    <section class="home-ledger-grid" aria-label="Ironkin activity overview">
       <article class="home-feature-panel member-featured-event">
         <div class="home-feature-topline">
           <div>
-            <p id="homeEventPercent" class="eyebrow">Featured Event</p>
+            <p id="homeEventPercent" class="eyebrow">Active Competition</p>
             <h2 id="homeEventTitle">Loading event...</h2>
           </div>
           <span class="home-live-pill">Live</span>
@@ -59,54 +317,44 @@
           <span id="homeTotalGainedLabel">Total Gained</span>
           <strong id="homeTotalGained">Loading...</strong>
         </div>
-        <div class="home-rank-heading"><span>Top competitors</span><span>Gained</span></div>
+        <div class="home-rank-heading"><span>Standings</span><span>Gained</span></div>
         <div id="homeTopThree" class="home-top-three">Loading top competitors...</div>
         <div id="homeFeaturedControls" class="featured-rotation-controls" aria-label="Featured event controls"></div>
         <a id="homeFeaturedLink" class="btn primary home-feature-button" href="events.html">View Event</a>
       </article>
-    </section>
 
-
-    <section class="home-status-rail" aria-label="Live clan status">
-      <article><span class="home-status-icon">◆</span><div><strong id="homeDiscordMembers">—</strong><small>Discord Members</small></div></article>
-      <article><span class="home-status-icon">●</span><div><strong id="homeDiscordOnline">—</strong><small>Online Now</small></div></article>
-      <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Active Events</small></div></article>
-      <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
-    </section>
-
-<section class="home-section home-dashboard" aria-label="Ironkin activity overview">
-      <article class="home-panel home-calendar-panel">
-        <div class="home-panel-heading">
-          <div>
-            <p class="eyebrow">On the Horizon</p>
-            <h2>Upcoming Events</h2>
+      <div class="home-ledger-side">
+        <article class="home-panel member-achievements home-achievement-panel">
+          <div class="home-panel-heading">
+            <div>
+              <p class="eyebrow">Live Clan Feed</p>
+              <h2>Clan Activity</h2>
+            </div>
+            <a href="profile.html">Profiles <span>→</span></a>
           </div>
-          <a href="calendar.html">Full calendar <span>→</span></a>
-        </div>
-        <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">
-          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-          <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-        </div>
-      </article>
-
-      <article class="home-panel member-achievements home-achievement-panel">
-        <div class="home-panel-heading">
-          <div>
-            <p class="eyebrow">Live Clan Feed</p>
-            <h2>Clan Activity</h2>
+          <div id="recentActivity" class="activity-scroll home-activity-list">
+            <div class="activity-feed-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+            <div class="activity-feed-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+            <div class="activity-feed-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
           </div>
-          <a href="profile.html">View profiles <span>→</span></a>
-        </div>
-        <p class="home-panel-intro">Live milestones and progression from Ironkin members, refreshed automatically.</p>
-        <div id="recentActivity" class="activity-scroll home-activity-list">
-          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-          <div class="activity-feed-row skeleton-row"><span class="activity-feed-icon"></span><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
-        </div>
-      </article>
-    </section>
+        </article>
 
+        <article class="home-panel home-calendar-panel">
+          <div class="home-panel-heading">
+            <div>
+              <p class="eyebrow">On the Horizon</p>
+              <h2>Upcoming Events</h2>
+            </div>
+            <a href="calendar.html">Calendar <span>→</span></a>
+          </div>
+          <div id="homeUpcomingEvents" class="home-list-widget home-upcoming-list">
+            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+            <div class="upcoming-event-row skeleton-row"><div><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+          </div>
+        </article>
+      </div>
+    </section>
 
     <section class="premium-brand-story reveal-on-scroll" aria-labelledby="premiumBrandTitle">
       <div class="premium-brand-mark"><img src="assets/ironkin-emblem.png" alt="" /></div>
