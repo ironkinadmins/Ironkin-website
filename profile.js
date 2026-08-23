@@ -38,8 +38,8 @@ function profileDiscordBadgeIcon(url, emoji, fallback) {
 
 function buildProfileBadges(profile) {
   const badges = [];
+  const displayRank = String(profile.rank || profile.clanRank || "");
   const clanRank = String(profile.clanRank || "");
-  const staffRank = String(profile.staffRank || "");
   const wins = profile.placements?.wins || {};
   const botwWins = Number(wins.botw || 0);
   const sotwWins = Number(wins.sotw || 0);
@@ -47,24 +47,15 @@ function buildProfileBadges(profile) {
   const topThree = Number(profile.placements?.topThreeFinishes || 0);
   const embers = Number(profile.embers?.balance || 0);
 
-  if (staffRank) badges.push({
-    iconHtml: profileDiscordBadgeIcon(profile.staffRankIconUrl, profile.staffRankUnicodeEmoji, "◆"),
-    label: staffRank,
-    tone: "staff",
-    tooltip: `${staffRank} — Member of the Ironkin staff team.`
-  });
-  if (clanRank === "Founder") badges.push({
-    iconHtml: profileDiscordBadgeIcon(profile.rankIconUrl, profile.rankUnicodeEmoji, "♛"),
-    label: "Founder",
-    tone: "founder",
-    tooltip: "Founder — Created Ironkin."
-  });
-  else if (clanRank && clanRank !== "Member") badges.push({
-    iconHtml: profileDiscordBadgeIcon(profile.rankIconUrl, profile.rankUnicodeEmoji, "◇"),
-    label: clanRank,
-    tone: "rank",
-    tooltip: `Clan Rank: ${clanRank}`
-  });
+  if (displayRank && displayRank !== "Member") {
+    const isFounder = displayRank === "Founder";
+    badges.push({
+      iconHtml: profileDiscordBadgeIcon(profile.displayRankIconUrl || profile.rankIconUrl, profile.displayRankUnicodeEmoji || profile.rankUnicodeEmoji, isFounder ? "♛" : "◇"),
+      label: displayRank,
+      tone: isFounder ? "founder" : "rank",
+      tooltip: isFounder ? "Founder — Created Ironkin." : `Rank: ${displayRank}`
+    });
+  }
   if (botwWins > 0) badges.push({
     icon: "⚔",
     label: `${botwWins}× BOTW Winner`,
@@ -114,10 +105,6 @@ function renderProfileHero(profile) {
     ? `<span>Member Since: ${profileEscapeHtml(memberSince)}</span>`
     : "";
 
-  const staffPill = profile.staffRank
-    ? `<span>Staff: ${profileEscapeHtml(profile.staffRank)}</span>`
-    : "";
-
   hero.innerHTML = `
     <div class="profile-identity-card">
       <img class="profile-avatar"
@@ -129,7 +116,6 @@ function renderProfileHero(profile) {
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
         <div class="profile-meta-row">
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
-          ${staffPill}
           ${memberSincePill}
         </div>
         <div class="profile-badge-row">

@@ -399,6 +399,13 @@ const displayRank =
   clanRank ||
   "Member";
 
+  const displayRankIconUrl = staffRank
+    ? (record.staffRankIconUrl || "")
+    : (record.rankIconUrl || "");
+  const displayRankUnicodeEmoji = staffRank
+    ? (record.staffRankUnicodeEmoji || "")
+    : (record.rankUnicodeEmoji || "");
+
   const memberSince = record.memberSince || session?.joined_at || session?.joinedAt || null;
 
   return {
@@ -409,6 +416,8 @@ const displayRank =
     rank: displayRank,
     staffRank,
     clanRank,
+    displayRankIconUrl,
+    displayRankUnicodeEmoji,
     rankIconUrl: record.rankIconUrl || "",
     rankUnicodeEmoji: record.rankUnicodeEmoji || "",
     staffRankIconUrl: record.staffRankIconUrl || "",

@@ -74,15 +74,46 @@ async function fetchGuildRoles(env) {
   return Array.isArray(roles) ? roles : [];
 }
 
-function roleVisual(roleIds, ranks, guildRoles) {
+function normalizeDiscordEmblemName(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+async function fetchGuildEmojis(env) {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return [];
+  const response = await fetch(`https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/emojis`, {
+    headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` }
+  });
+  if (!response.ok) return [];
+  const emojis = await response.json().catch(() => []);
+  return Array.isArray(emojis) ? emojis : [];
+}
+
+function matchingGuildEmoji(rankName, guildEmojis) {
+  const wanted = normalizeDiscordEmblemName(rankName);
+  if (!wanted) return null;
+  return (guildEmojis || []).find(emoji => normalizeDiscordEmblemName(emoji?.name) === wanted)
+    || (guildEmojis || []).find(emoji => {
+      const name = normalizeDiscordEmblemName(emoji?.name);
+      return name && (name.includes(wanted) || wanted.includes(name));
+    })
+    || null;
+}
+
+function discordEmojiIconUrl(emoji) {
+  if (!emoji?.id) return "";
+  return `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? "gif" : "png"}?size=64&quality=lossless`;
+}
+
+function roleVisual(roleIds, ranks, guildRoles, guildEmojis = []) {
   const roles = Array.isArray(roleIds) ? roleIds : [];
   for (let i = ranks.length - 1; i >= 0; i -= 1) {
     const rank = ranks[i];
     if (!roles.includes(rank.id)) continue;
     const discordRole = (guildRoles || []).find(role => String(role?.id || "") === rank.id) || null;
+    const guildEmoji = matchingGuildEmoji(rank.name, guildEmojis);
     return {
       name: rank.name,
-      iconUrl: discordRoleIconUrl(discordRole),
+      iconUrl: discordRoleIconUrl(discordRole) || discordEmojiIconUrl(guildEmoji),
       unicodeEmoji: discordRole?.unicode_emoji || ""
     };
   }
@@ -125,13 +156,13 @@ async function fetchGuildMembers(env) {
   return members;
 }
 
-function buildDirectoryEntry(member, now, guildRoles = []) {
+function buildDirectoryEntry(member, now, guildRoles = [], guildEmojis = []) {
   const user = member?.user || {};
   const discordId = String(user.id || "");
   const roles = Array.isArray(member?.roles) ? member.roles : [];
   const displayName = member?.nick || user.global_name || user.username || "Unknown member";
-  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles);
-  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles);
+  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles, guildEmojis);
+  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles, guildEmojis);
   return {
     discordId,
     displayName,
@@ -150,7 +181,7 @@ function buildDirectoryEntry(member, now, guildRoles = []) {
   };
 }
 
-async function writeProfileRecord(env, member, now, guildRoles = []) {
+async function writeProfileRecord(env, member, now, guildRoles = [], guildEmojis = []) {
   const user = member?.user;
   const discordId = String(user?.id || "");
   if (!discordId || user?.bot) return { skipped: true };
@@ -159,8 +190,8 @@ async function writeProfileRecord(env, member, now, guildRoles = []) {
   const roles = Array.isArray(member.roles) ? member.roles : [];
   const displayName = member.nick || user.global_name || user.username || existing.displayName || "Unknown member";
   const avatarUrl = discordAvatarUrl(user);
-  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles);
-  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles);
+  const clanRank = roleVisual(roles, CLAN_RANKS, guildRoles, guildEmojis);
+  const staffRank = roleVisual(roles, STAFF_RANKS, guildRoles, guildEmojis);
 
   const record = {
     ...existing,
@@ -206,11 +237,15 @@ export async function getDiscordProfileSyncMeta(env) {
 export async function syncDiscordProfiles(env) {
   const startedAt = Date.now();
   const previousIndex = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
-  const [members, guildRoles] = await Promise.all([fetchGuildMembers(env), fetchGuildRoles(env)]);
+  const [members, guildRoles, guildEmojis] = await Promise.all([
+    fetchGuildMembers(env),
+    fetchGuildRoles(env),
+    fetchGuildEmojis(env)
+  ]);
   const now = new Date().toISOString();
   const nonBotMembers = members.filter(member => member?.user?.id && !member?.user?.bot);
   const index = nonBotMembers
-    .map(member => buildDirectoryEntry(member, now, guildRoles))
+    .map(member => buildDirectoryEntry(member, now, guildRoles, guildEmojis))
     .filter(item => item.discordId)
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" }));
 
@@ -268,7 +303,7 @@ export async function syncDiscordProfiles(env) {
 
   // Hydrate the full profile records afterwards, in bounded parallel batches. A failure
   // here no longer prevents everyone from appearing in search.
-  const writeResult = await runInBatches(nonBotMembers, 20, member => writeProfileRecord(env, member, now, guildRoles));
+  const writeResult = await runInBatches(nonBotMembers, 20, member => writeProfileRecord(env, member, now, guildRoles, guildEmojis));
   const meta = {
     ...preliminaryMeta,
     profileRecordsWritten: writeResult.ok,
