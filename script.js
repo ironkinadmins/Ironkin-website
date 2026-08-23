@@ -2580,7 +2580,7 @@ async function loadClanNews() {
     if (!response.ok) throw new Error(data.error || "Could not load clan news.");
     const entries = Array.isArray(data.entries) ? data.entries : [];
     feed.innerHTML = entries.length
-      ? entries.slice(0, 4).map(renderClanNewsEntry).join("")
+      ? entries.slice(0, 6).map(renderClanNewsEntry).join("")
       : `<p class="admin-muted">No clan news has been posted yet.</p>`;
   } catch (error) {
     feed.innerHTML = `<p class="admin-muted">Could not load clan news: ${escapeHtml(error.message)}</p>`;

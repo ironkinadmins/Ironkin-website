@@ -11729,3 +11729,53 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
     opacity: .045;
   }
 }
+
+
+/* ===== Homepage balance pass: taller activity + six-news grid ===== */
+@media (min-width: 901px) {
+  .home-side-stack {
+    grid-template-rows: auto 1fr;
+    min-height: 680px;
+  }
+
+  .home-side-stack .home-achievement-panel {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home-side-stack .home-achievement-panel .home-panel-heading {
+    flex: 0 0 auto;
+  }
+
+  .home-side-stack .home-activity-list {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .home-side-stack .home-activity-list .activity-feed-row {
+    min-height: 58px;
+    padding-block: 14px;
+  }
+}
+
+.home-news-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.home-news-grid .clan-news-entry {
+  height: 100%;
+}
+
+@media (max-width: 1100px) {
+  .home-news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .home-news-grid { grid-template-columns: 1fr; }
+}
