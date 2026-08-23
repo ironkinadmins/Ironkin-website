@@ -1406,6 +1406,121 @@ function renderDiscordSyncMeta(meta, options = {}) {
   }
 }
 
+function escapeAdminHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderDiscordRankEmblems(diagnostics) {
+  const grid = document.getElementById("discordRankEmblemGrid");
+  if (!grid) return;
+
+  const ranks = Array.isArray(diagnostics?.ranks) ? diagnostics.ranks : [];
+  const emojis = Array.isArray(diagnostics?.emojis) ? diagnostics.emojis : [];
+  const mappings = diagnostics?.mappings && typeof diagnostics.mappings === "object" ? diagnostics.mappings : {};
+
+  if (!ranks.length) {
+    grid.innerHTML = '<span class="admin-muted">No tracked Discord ranks were found.</span>';
+    return;
+  }
+
+  const emojiOptions = emojis.map(emoji => {
+    const label = `${emoji.name} · ${emoji.id}`;
+    return `<option value="${escapeAdminHtml(emoji.id)}">${escapeAdminHtml(label)}</option>`;
+  }).join("");
+
+  grid.innerHTML = ranks.map(rank => {
+    const mappedId = String(mappings?.[rank.id] || rank.mappedEmojiId || "");
+    const selectedEmoji = emojis.find(emoji => String(emoji.id) === mappedId) || null;
+    const automaticUrl = rank.nativeIconUrl || "";
+    const previewUrl = selectedEmoji?.url || automaticUrl;
+    const preview = previewUrl
+      ? `<img class="discord-rank-emblem-preview" src="${escapeAdminHtml(previewUrl)}" alt="" />`
+      : `<span class="discord-rank-emblem-preview is-empty">◇</span>`;
+    const automaticLabel = rank.nativeIconUrl
+      ? "Discord role icon available"
+      : rank.unicodeEmoji
+        ? `Role emoji: ${escapeAdminHtml(rank.unicodeEmoji)}`
+        : "No native role icon";
+
+    return `
+      <div class="discord-rank-emblem-row" data-rank-id="${escapeAdminHtml(rank.id)}">
+        ${preview}
+        <div class="discord-rank-emblem-copy">
+          <strong>${escapeAdminHtml(rank.name)}</strong>
+          <small>${automaticLabel}</small>
+        </div>
+        <select class="discord-rank-emblem-select" data-rank-id="${escapeAdminHtml(rank.id)}">
+          <option value="">Use native/automatic</option>
+          ${emojiOptions}
+        </select>
+      </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".discord-rank-emblem-select").forEach(select => {
+    const roleId = select.dataset.rankId || "";
+    select.value = String(mappings?.[roleId] || "");
+    select.addEventListener("change", () => {
+      const row = select.closest(".discord-rank-emblem-row");
+      const preview = row?.querySelector(".discord-rank-emblem-preview");
+      const selected = emojis.find(emoji => String(emoji.id) === select.value);
+      const rank = ranks.find(item => String(item.id) === roleId);
+      const previewUrl = selected?.url || rank?.nativeIconUrl || "";
+      if (!preview) return;
+      if (previewUrl) {
+        if (preview.tagName === "IMG") {
+          preview.src = previewUrl;
+        } else {
+          const image = document.createElement("img");
+          image.className = "discord-rank-emblem-preview";
+          image.src = previewUrl;
+          image.alt = "";
+          preview.replaceWith(image);
+        }
+      } else if (preview.tagName === "IMG") {
+        const fallback = document.createElement("span");
+        fallback.className = "discord-rank-emblem-preview is-empty";
+        fallback.textContent = "◇";
+        preview.replaceWith(fallback);
+      }
+    });
+  });
+}
+
+async function saveDiscordRankEmblems() {
+  const button = document.getElementById("saveDiscordRankEmblemsBtn");
+  const status = document.getElementById("discordRankEmblemStatus");
+  const mappings = {};
+  document.querySelectorAll(".discord-rank-emblem-select").forEach(select => {
+    const roleId = String(select.dataset.rankId || "").trim();
+    const emojiId = String(select.value || "").trim();
+    if (roleId && emojiId) mappings[roleId] = emojiId;
+  });
+
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Saving mappings and re-syncing member profiles…";
+  try {
+    const response = await fetch("/api/admin/profiles/sync-discord", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mappings })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not save rank emblems.");
+    renderDiscordRankEmblems(data.diagnostics || {});
+    if (data.sync) renderDiscordSyncMeta(data.sync);
+    if (status) status.textContent = "Rank emblems saved. Member profiles were re-synced with the exact Discord emoji IDs.";
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function loadDiscordSyncStatus() {
   const health = document.getElementById("discordSyncHealth");
   if (!health) return;
@@ -1414,6 +1529,7 @@ async function loadDiscordSyncStatus() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not load sync status.");
     renderDiscordSyncMeta(data.meta || null);
+    renderDiscordRankEmblems(data.diagnostics || {});
   } catch (error) {
     health.className = "discord-sync-health is-error";
     health.textContent = "Unavailable";
@@ -1441,6 +1557,7 @@ async function syncDiscordMembersNow() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not sync Discord members.");
     renderDiscordSyncMeta(data, { showSummary: true });
+    if (data.diagnostics) renderDiscordRankEmblems(data.diagnostics);
     if (status) status.textContent = "Discord member profiles are up to date.";
   } catch (error) {
     if (health) {
@@ -1475,6 +1592,7 @@ async function loadAdmin() {
   const saveProfileOverrideBtn = document.getElementById("saveProfileOverrideBtn");
   const clearProfileOverrideBtn = document.getElementById("clearProfileOverrideBtn");
   const syncDiscordMembersBtn = document.getElementById("syncDiscordMembersBtn");
+  const saveDiscordRankEmblemsBtn = document.getElementById("saveDiscordRankEmblemsBtn");
   const backfillCsvInput = document.getElementById("backfillCsvInput");
   const backfillEventSelect = document.getElementById("backfillEventSelect");
   const unlinkedEventSelect = document.getElementById("unlinkedEventSelect");
@@ -1493,6 +1611,7 @@ async function loadAdmin() {
   if (saveProfileOverrideBtn) saveProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(false));
   if (clearProfileOverrideBtn) clearProfileOverrideBtn.addEventListener("click", () => saveProfileOverrides(true));
   if (syncDiscordMembersBtn) syncDiscordMembersBtn.addEventListener("click", syncDiscordMembersNow);
+  if (saveDiscordRankEmblemsBtn) saveDiscordRankEmblemsBtn.addEventListener("click", saveDiscordRankEmblems);
   loadDiscordSyncStatus();
   if (backfillCsvInput) backfillCsvInput.addEventListener("change", handleBackfillCsvChange);
   if (backfillEventSelect) backfillEventSelect.addEventListener("change", async () => { await loadBackfillTrackedItems(); renderBackfillPreview(); });

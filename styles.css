@@ -10886,3 +10886,67 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   .event-teaser-leader,
   .event-teaser-mini { grid-column: auto; }
 }
+
+
+/* Discord rank emblem mapping (Admin > User Management) */
+.discord-rank-emblem-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.discord-rank-emblem-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.discord-rank-emblem-head h4 { margin: 0 0 4px; }
+.discord-rank-emblem-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.discord-rank-emblem-row {
+  display: grid;
+  grid-template-columns: 36px minmax(110px, .7fr) minmax(180px, 1.3fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+}
+.discord-rank-emblem-preview {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  display: block;
+}
+.discord-rank-emblem-preview.is-empty {
+  display: grid;
+  place-items: center;
+  color: #ff9638;
+  font-size: 18px;
+}
+.discord-rank-emblem-copy { min-width: 0; }
+.discord-rank-emblem-copy strong,
+.discord-rank-emblem-copy small { display: block; }
+.discord-rank-emblem-copy small {
+  margin-top: 2px;
+  color: var(--muted, #aaa);
+  font-size: 11px;
+}
+.discord-rank-emblem-select {
+  width: 100%;
+  min-width: 0;
+}
+#discordRankEmblemStatus { margin: 10px 0 0; }
+@media (max-width: 900px) {
+  .discord-rank-emblem-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .discord-rank-emblem-head { flex-direction: column; }
+  .discord-rank-emblem-row { grid-template-columns: 32px 1fr; }
+  .discord-rank-emblem-select { grid-column: 1 / -1; }
+}

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ironkin Admin Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=20260820-handbook-cms-1" />
+  <link rel="stylesheet" href="/styles.css?v=20260823-rank-emblem-map-1" />
 </head>
 <body>
   <div id="siteNav"></div>
@@ -498,6 +498,20 @@
             <span class="admin-muted" id="discordSyncStatus">Automatic refresh interval: 6 hours.</span>
           </div>
           <div class="discord-sync-summary" id="discordSyncSummary" hidden></div>
+
+          <div class="discord-rank-emblem-panel">
+            <div class="discord-rank-emblem-head">
+              <div>
+                <h4>Rank Emblem Mapping</h4>
+                <p class="admin-muted">Choose the exact Discord server emoji used for each rank. Saved mappings are used on member profiles during every Discord sync.</p>
+              </div>
+              <button type="button" class="btn secondary" id="saveDiscordRankEmblemsBtn">Save Rank Emblems</button>
+            </div>
+            <div class="discord-rank-emblem-grid" id="discordRankEmblemGrid">
+              <span class="admin-muted">Loading Discord rank emblems…</span>
+            </div>
+            <p class="admin-muted" id="discordRankEmblemStatus"></p>
+          </div>
         </div>
 
         <div class="admin-divider"></div>
@@ -556,6 +570,6 @@
   <script src="/script.js?v=20260807-premium-v4"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260820-handbook-cms-1"></script>
+  <script src="admin.js?v=20260823-rank-emblem-map-1"></script>
 </body>
 </html>
