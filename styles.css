@@ -11280,3 +11280,183 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
     transform: none;
   }
 }
+
+/* Clan Goal separated multi-layer workspace — v5 */
+.clan-goal-modern-dashboard {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.clan-goal-modern-hero {
+  margin-bottom: 18px;
+  border: 1px solid rgba(255, 137, 48, 0.18);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(255, 122, 26, 0.13), transparent 28%),
+    linear-gradient(110deg, rgba(255, 122, 26, 0.09), rgba(19, 13, 10, 0.97) 42%, rgba(11, 9, 8, 0.98));
+  box-shadow: 0 22px 60px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.clan-goal-modern-body {
+  display: block;
+  padding: 0;
+}
+
+.clan-goal-modern-body > .event-starting-soon-panel {
+  margin-bottom: 18px;
+}
+
+.clan-goal-modern-kpis {
+  margin: 0 0 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.clan-goal-modern-kpis .clan-goal-kpi {
+  min-height: 112px;
+  border: 1px solid rgba(255,255,255,0.075);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255,122,26,0.055), transparent 42%),
+    linear-gradient(180deg, rgba(27,20,16,0.96), rgba(14,12,10,0.96));
+  box-shadow: 0 16px 38px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.clan-goal-modern-workspace {
+  grid-template-columns: minmax(0, 1.72fr) minmax(330px, 0.78fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.clan-goal-modern-main,
+.clan-goal-modern-sidebar {
+  gap: 18px;
+}
+
+.clan-goal-modern-primary-layer,
+.clan-goal-modern-sidebar > .event-panel,
+.clan-goal-modern-rewards-layer,
+.clan-goal-modern-activity-grid > .event-panel {
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(26,19,15,0.96), rgba(13,11,10,0.97));
+  box-shadow: 0 18px 44px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.clan-goal-modern-progress-card {
+  margin: 0;
+  min-height: 230px;
+  padding: 25px 26px 20px;
+  background:
+    radial-gradient(circle at 0% 100%, rgba(255,122,26,0.11), transparent 34%),
+    linear-gradient(180deg, rgba(30,20,14,0.98), rgba(13,11,10,0.98));
+}
+
+.clan-goal-modern-main .clan-goal-mvp-panel {
+  min-height: 470px;
+}
+
+.clan-goal-modern-sidebar {
+  position: sticky;
+  top: 88px;
+}
+
+.clan-goal-modern-sidebar > .event-panel {
+  margin: 0;
+}
+
+.clan-goal-modern-personal {
+  min-height: 250px;
+}
+
+.clan-goal-modern-activity-grid {
+  grid-template-columns: 1fr;
+}
+
+.clan-goal-modern-activity-grid > .event-panel {
+  width: 100%;
+}
+
+.clan-goal-modern-rewards-layer {
+  overflow: hidden;
+}
+
+.clan-goal-modern-participation-stats {
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.clan-goal-modern-participation-stats > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.055);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.clan-goal-modern-participation-stats > span:last-child {
+  border-bottom: 0;
+}
+
+.clan-goal-modern-participation-stats strong {
+  order: 2;
+  font-size: 0.92rem;
+}
+
+.clan-goal-modern-participation-stats small {
+  order: 1;
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (min-width: 1180px) {
+  .clan-goal-modern-main .clan-goal-podium {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .clan-goal-modern-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clan-goal-modern-workspace {
+    grid-template-columns: minmax(0, 1.45fr) minmax(290px, 0.75fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .clan-goal-modern-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .clan-goal-modern-sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clan-goal-modern-personal,
+  .clan-goal-modern-wom-link {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .clan-goal-modern-kpis,
+  .clan-goal-modern-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .clan-goal-modern-personal,
+  .clan-goal-modern-wom-link {
+    grid-column: auto;
+  }
+}

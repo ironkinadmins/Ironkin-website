@@ -1696,25 +1696,25 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
           <div class="clan-goal-kpi"><span>Daily Needed</span><strong>${remainingDays > 0 ? formatNumber(Math.ceil(requiredPace)) : "—"}</strong><small>${remainingDays > 0 ? `${unit} per day to finish` : "Goal period complete"}</small></div>
         </div>
 
-        ${goal ? `
-          <section class="clan-goal-progress-card clan-goal-modern-progress-card">
-            <div class="clan-goal-progress-heading">
-              <div><span>Clan Progress</span><strong>${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}</strong></div>
-              <strong>${percent.toFixed(1)}%</strong>
-            </div>
-            <div class="event-progress-bar milestone-bar clan-goal-main-progress">
-              <div style="width:${percent}%"></div>
-              ${milestones.map(milestone => `
-                <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
-                  <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
-                </span>`).join("")}
-            </div>
-            <div class="clan-goal-progress-foot"><span>${formatNumber(remaining)} ${unit} remaining</span><span>${milestones.filter(item => item.reached).length}/${milestones.length} milestones unlocked</span></div>
-          </section>` : ""}
-
-        <div class="clan-goal-modern-columns">
+        <div class="clan-goal-modern-columns clan-goal-modern-workspace">
           <main class="clan-goal-modern-main">
-            <section class="event-panel clan-goal-mvp-panel clan-goal-modern-panel">
+            ${goal ? `
+              <section class="clan-goal-progress-card clan-goal-modern-progress-card clan-goal-modern-primary-layer">
+                <div class="clan-goal-progress-heading">
+                  <div><span>ACTIVE CLAN GOAL</span><strong>${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}</strong></div>
+                  <strong>${percent.toFixed(1)}%</strong>
+                </div>
+                <div class="event-progress-bar milestone-bar clan-goal-main-progress">
+                  <div style="width:${percent}%"></div>
+                  ${milestones.map(milestone => `
+                    <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
+                      <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
+                    </span>`).join("")}
+                </div>
+                <div class="clan-goal-progress-foot"><span>${formatNumber(remaining)} ${unit} remaining</span><span>${milestones.filter(item => item.reached).length}/${milestones.length} milestones unlocked</span></div>
+              </section>` : ""}
+
+            <section class="event-panel clan-goal-mvp-panel clan-goal-modern-panel clan-goal-modern-primary-layer">
               <div class="clan-goal-section-heading">
                 <div><p class="eyebrow">MVP RACE</p><h2>Top Contributors</h2><p class="clan-goal-panel-subtitle">The members pushing this goal forward.</p></div>
                 <span class="clan-goal-live-pill">LIVE</span>
@@ -1732,14 +1732,6 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
 
             <div class="clan-goal-modern-activity-grid">
               ${event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
-              <section class="event-panel clan-goal-participation-panel clan-goal-modern-panel">
-                <p class="eyebrow">CLAN EFFORT</p><h2>Participation</h2>
-                <div class="clan-goal-participation-stats">
-                  <span><strong>${formatNumber(contributors)}</strong><small>Contributors</small></span>
-                  <span><strong>${rankedPlayers.length ? formatNumber(Math.round(totalGained / rankedPlayers.length)) : "0"}</strong><small>Avg. ${unit} / contributor</small></span>
-                  <span><strong>${rankedPlayers[0] ? formatNumber(rankedPlayers[0].gained) : "0"}</strong><small>Top contribution</small></span>
-                </div>
-              </section>
             </div>
 
             <section class="clan-goal-modern-rewards-layer">
@@ -1779,6 +1771,15 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
                 <span><small>Required</small><strong>${formatNumber(Math.ceil(requiredPace))} ${unit}/day</strong></span>
               </div>
               <p>${projectedFinish ? `Projected finish: <strong>${projectedFinish.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</strong>` : "A projection will appear once progress is recorded."}</p>
+            </section>
+
+            <section class="event-panel clan-goal-participation-panel clan-goal-modern-panel clan-goal-modern-side-card">
+              <p class="eyebrow">CLAN EFFORT</p><h2>Participation</h2>
+              <div class="clan-goal-participation-stats clan-goal-modern-participation-stats">
+                <span><strong>${formatNumber(contributors)}</strong><small>Contributors</small></span>
+                <span><strong>${rankedPlayers.length ? formatNumber(Math.round(totalGained / rankedPlayers.length)) : "0"}</strong><small>Avg. ${unit} / member</small></span>
+                <span><strong>${rankedPlayers[0] ? formatNumber(rankedPlayers[0].gained) : "0"}</strong><small>Top contribution</small></span>
+              </div>
             </section>
 
             ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `<a class="btn primary clan-goal-wom-link clan-goal-modern-wom-link" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">Open Full WOM Leaderboard ↗</a>` : ""}
