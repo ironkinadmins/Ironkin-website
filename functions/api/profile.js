@@ -42,7 +42,11 @@ function getDiscordAvatarUrl(user) {
 }
 
 function normalizeName(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function safeJsonParse(value, fallback) {
@@ -236,7 +240,7 @@ async function getWomStats(env, rsn) {
 
   try {
 const response = await fetch(
-  `https://api.wiseoldman.net/v2/players/${encodeURIComponent(rsn)}`,
+  `https://api.wiseoldman.net/v2/players/${encodeURIComponent(normalizeName(rsn))}`,
   { headers: { "User-Agent": "Ironkin Clan Website profile stats" } }
 );
     const data = await response.json().catch(() => ({}));

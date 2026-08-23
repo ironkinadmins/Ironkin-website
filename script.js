@@ -1660,6 +1660,14 @@ function getClanGoalMilestoneData(event, totalGained, goal) {
     .sort((a, b) => a.percent - b.percent);
 }
 
+function normalizePlayerNameForMatch(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 function getClanGoalBadges(player, rank, totalGained) {
   if (!player) return [];
   const badges = [];
@@ -1699,8 +1707,12 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
     .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
 
   const profile = await fetchOwnClanGoalProfile();
-  const rsn = String(profile?.rsn || "").trim().toLowerCase();
-  const myIndex = rsn ? rankedPlayers.findIndex(player => String(player.name || "").trim().toLowerCase() === rsn) : -1;
+  const playerNameCandidates = [profile?.rsn, profile?.displayName, profile?.username]
+    .map(normalizePlayerNameForMatch)
+    .filter(Boolean);
+  const myIndex = playerNameCandidates.length
+    ? rankedPlayers.findIndex(player => playerNameCandidates.includes(normalizePlayerNameForMatch(player.name)))
+    : -1;
   const myPlayer = myIndex >= 0 ? rankedPlayers[myIndex] : null;
   const myRank = myIndex >= 0 ? myIndex + 1 : null;
   const nextPlayer = myIndex > 0 ? rankedPlayers[myIndex - 1] : null;
