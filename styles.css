@@ -970,6 +970,25 @@ footer {
   color: #ffb45c;
   margin-top: 0.25rem;
 }
+
+/* Keep edge milestones fully visible inside the progress card. */
+.milestone-marker--end {
+  transform: translateX(-100%);
+  text-align: right;
+}
+
+.milestone-marker--end::before {
+  left: 100%;
+}
+
+.milestone-marker--start {
+  transform: translateX(0);
+  text-align: left;
+}
+
+.milestone-marker--start::before {
+  left: 0;
+}
 .drop-controls {
   display: flex;
   align-items: center;

@@ -1700,7 +1700,7 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
             <div class="event-progress-bar milestone-bar clan-goal-main-progress">
               <div style="width:${percent}%"></div>
               ${milestones.map(milestone => `
-                <span class="milestone-marker ${milestone.reached ? "is-reached" : ""}" style="left:${Math.min(Math.max(milestone.percent, 2), 97)}%">
+                <span class="milestone-marker ${milestone.reached ? "is-reached" : ""} ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
                   <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
                 </span>`).join("")}
             </div>
@@ -1980,7 +1980,7 @@ async function loadSingleEventDashboard() {
 
                   ${(event.milestones || [])
                     .map(milestone => `
-                      <span class="milestone-marker" style="left:${Math.min(milestone.percent, 97)}%">
+                      <span class="milestone-marker ${milestone.percent >= 95 ? "milestone-marker--end" : milestone.percent <= 5 ? "milestone-marker--start" : ""}" style="left:${Math.min(Math.max(milestone.percent, 0), 100)}%">
                         <strong>${milestone.percent}%</strong>
                         <small>${milestone.title}</small>
                       </span>
