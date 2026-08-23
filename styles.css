@@ -10428,6 +10428,31 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   margin-top: 18px;
 }
 
+/* Give Clan Goal milestone labels a fixed footprint so long rewards do not
+   collide near the end of the progress bar. */
+.clan-goal-main-progress .milestone-marker {
+  width: 132px;
+  white-space: normal;
+}
+
+.clan-goal-main-progress .milestone-marker small {
+  line-height: 1.25;
+  overflow-wrap: normal;
+}
+
+/* Pull the 80% milestone slightly left, leaving a clear visual gap before 100%. */
+.clan-goal-main-progress .milestone-marker:nth-last-child(2) {
+  transform: translateX(-62%);
+}
+
+/* Keep the final milestone aligned to the right edge while allowing its
+   reward text to wrap cleanly over two lines. */
+.clan-goal-main-progress .milestone-marker--end {
+  width: 150px;
+  transform: translateX(-100%);
+  text-align: right;
+}
+
 .clan-goal-main-progress .milestone-marker.is-reached strong,
 .clan-goal-main-progress .milestone-marker.is-reached small {
   color: #ffd7a4;
