@@ -1512,8 +1512,9 @@ async function saveDiscordRankEmblems() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not save rank emblems.");
     renderDiscordRankEmblems(data.diagnostics || {});
-    if (data.sync) renderDiscordSyncMeta(data.sync);
-    if (status) status.textContent = "Rank emblems saved. Member profiles were re-synced with the exact Discord emoji IDs.";
+    if (status) status.textContent = "Rank emblems saved. Re-syncing member profiles in safe batches…";
+    await syncDiscordMembersNow();
+    if (status) status.textContent = "Rank emblems saved and member profiles re-synced with the exact Discord emoji IDs.";
   } catch (error) {
     if (status) status.textContent = error.message;
   } finally {
@@ -1546,19 +1547,37 @@ async function syncDiscordMembersNow() {
 
   if (button) button.disabled = true;
   if (summary) summary.hidden = true;
-  if (status) status.textContent = "Pulling the latest Discord roster and updating profiles…";
+  if (status) status.textContent = "Starting Discord member sync…";
   if (health) {
     health.className = "discord-sync-health is-loading";
     health.textContent = "Syncing…";
   }
 
   try {
-    const response = await fetch("/api/admin/profiles/sync-discord", { method: "POST" });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not sync Discord members.");
-    renderDiscordSyncMeta(data, { showSummary: true });
-    if (data.diagnostics) renderDiscordRankEmblems(data.diagnostics);
-    if (status) status.textContent = "Discord member profiles are up to date.";
+    let offset = 0;
+    let finalData = null;
+    while (true) {
+      const response = await fetch("/api/admin/profiles/sync-discord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offset })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not sync Discord members.");
+      finalData = data;
+      const processed = Number(data.processed || 0);
+      const total = Number(data.total || data.memberCount || 0);
+      if (status) status.textContent = total
+        ? `Syncing Discord profiles… ${Math.min(processed, total)} / ${total}`
+        : "Syncing Discord profiles…";
+      if (data.done || data.nextOffset == null) break;
+      offset = Number(data.nextOffset);
+      if (!Number.isFinite(offset)) throw new Error("Discord sync returned an invalid batch cursor.");
+    }
+
+    renderDiscordSyncMeta(finalData, { showSummary: true });
+    if (finalData?.diagnostics) renderDiscordRankEmblems(finalData.diagnostics);
+    if (status) status.textContent = `Discord member profiles are up to date. ${finalData?.profileRecordsWritten || 0} profiles synced.`;
   } catch (error) {
     if (health) {
       health.className = "discord-sync-health is-error";

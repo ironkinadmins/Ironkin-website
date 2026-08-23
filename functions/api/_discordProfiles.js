@@ -382,6 +382,68 @@ export async function syncDiscordProfiles(env) {
   return meta;
 }
 
+
+export async function syncDiscordProfilesBatch(env, options = {}) {
+  const startedAt = Date.now();
+  const offset = Math.max(0, Number(options.offset || 0));
+  const requestedBatchSize = Number(options.batchSize || 15);
+  const batchSize = Math.max(1, Math.min(15, Number.isFinite(requestedBatchSize) ? requestedBatchSize : 15));
+
+  const [members, guildRoles, guildEmojis, emblemMap] = await Promise.all([
+    fetchGuildMembers(env),
+    fetchGuildRoles(env),
+    fetchGuildEmojis(env),
+    getDiscordRankEmblemMap(env)
+  ]);
+  const now = new Date().toISOString();
+  const nonBotMembers = members.filter(member => member?.user?.id && !member?.user?.bot);
+  const total = nonBotMembers.length;
+
+  // Only the first batch rebuilds/publishes the directory. Later requests hydrate profile
+  // records only, keeping every Worker invocation safely below Cloudflare subrequest limits.
+  if (offset === 0) {
+    const index = nonBotMembers
+      .map(member => buildDirectoryEntry(member, now, guildRoles, guildEmojis, emblemMap))
+      .filter(item => item.discordId)
+      .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" }));
+    await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
+  }
+
+  const batch = nonBotMembers.slice(offset, offset + batchSize);
+  const writeResult = await runInBatches(batch, 5, member =>
+    writeProfileRecord(env, member, now, guildRoles, guildEmojis, emblemMap)
+  );
+  const nextOffset = offset + batch.length;
+  const done = nextOffset >= total;
+  const previousMeta = await getDiscordProfileSyncMeta(env) || {};
+  const accumulatedWritten = offset === 0 ? writeResult.ok : Number(previousMeta.profileRecordsWritten || 0) + writeResult.ok;
+  const accumulatedFailures = offset === 0 ? writeResult.failed : Number(previousMeta.profileRecordFailures || 0) + writeResult.failed;
+  const meta = {
+    ...previousMeta,
+    syncedAt: done ? now : (previousMeta.syncedAt || now),
+    syncStartedAt: offset === 0 ? now : (previousMeta.syncStartedAt || now),
+    memberCount: total,
+    discordMemberCount: members.length,
+    botsSkipped: members.length - total,
+    profileRecordsWritten: accumulatedWritten,
+    profileRecordFailures: accumulatedFailures,
+    directoryReady: true,
+    syncInProgress: !done,
+    syncOffset: nextOffset,
+    durationMs: Date.now() - startedAt
+  };
+  await hybridKv(env, "drops").put(PROFILE_SYNC_META_KEY, JSON.stringify(meta));
+
+  return {
+    ...meta,
+    processed: nextOffset,
+    total,
+    nextOffset: done ? null : nextOffset,
+    done,
+    batchSize: batch.length
+  };
+}
+
 export async function ensureDiscordProfilesSynced(env, options = {}) {
   const force = options.force === true;
   const ttlMs = Number(options.ttlMs || DEFAULT_SYNC_TTL_MS);
