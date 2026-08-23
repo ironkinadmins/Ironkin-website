@@ -10950,3 +10950,150 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
   .discord-rank-emblem-row { grid-template-columns: 32px 1fr; }
   .discord-rank-emblem-select { grid-column: 1 / -1; }
 }
+
+/* Modern live bounty board */
+.bounty-board-page .event-detail-body.bounty-board-body { display:block; }
+.bounty-board-loading,
+.bounty-board-error {
+  min-height:220px;
+  display:grid;
+  place-items:center;
+  gap:.5rem;
+  text-align:center;
+  color:var(--muted);
+  border:1px solid rgba(255,180,92,.16);
+  border-radius:22px;
+  background:rgba(255,255,255,.025);
+}
+.bounty-board-error strong { color:var(--text); font-size:1.05rem; }
+.bounty-board-error span { color:var(--muted); }
+.bounty-board { display:grid; gap:1.25rem; }
+.bounty-summary-grid {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:.8rem;
+}
+.bounty-summary-card {
+  min-height:118px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:.28rem;
+  padding:1rem 1.05rem;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.bounty-summary-card.personal { border-color:rgba(255,177,90,.3); background:linear-gradient(145deg,rgba(255,122,26,.12),rgba(255,255,255,.018)); }
+.bounty-summary-card.ember { border-color:rgba(255,177,90,.24); }
+.bounty-summary-card span { color:var(--muted); font-size:.74rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+.bounty-summary-card strong { color:var(--text); font-size:1.55rem; line-height:1.1; }
+.bounty-summary-card small { color:var(--muted); font-size:.76rem; }
+.bounty-progress-panel,
+.bounty-catalog-section,
+.bounty-community-panel {
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:22px;
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.015));
+}
+.bounty-progress-panel { padding:1rem 1.15rem; }
+.bounty-progress-copy { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:.75rem; }
+.bounty-progress-copy > div { display:grid; gap:.2rem; }
+.bounty-progress-copy span { color:var(--muted); font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+.bounty-progress-copy strong { color:var(--text); }
+.bounty-progress-copy > span { color:#ffb15a; text-transform:none; letter-spacing:0; white-space:nowrap; }
+.bounty-progress-track { height:9px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.07); }
+.bounty-progress-track > div { height:100%; border-radius:inherit; background:linear-gradient(90deg,#ff7a1a,#ffb15a); transition:width .45s ease; }
+.bounty-catalog-section { padding:1.2rem; }
+.bounty-section-heading,
+.bounty-panel-title { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; }
+.bounty-section-heading { margin-bottom:1rem; }
+.bounty-section-heading h2,
+.bounty-panel-title h2 { margin:.15rem 0 0; }
+.bounty-section-heading .eyebrow,
+.bounty-panel-title .eyebrow { margin:0; }
+.bounty-filter-bar { display:flex; gap:.45rem; flex-wrap:wrap; justify-content:flex-end; }
+.bounty-filter-bar button {
+  border:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.035);
+  color:var(--muted);
+  padding:.48rem .72rem;
+  border-radius:999px;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.bounty-filter-bar button:hover,
+.bounty-filter-bar button.is-active { color:var(--text); border-color:rgba(255,177,90,.4); background:rgba(255,122,26,.14); }
+.bounty-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.85rem; }
+.bounty-card {
+  position:relative;
+  overflow:hidden;
+  min-height:190px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:1rem;
+  padding:1rem;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  background:radial-gradient(circle at 85% 0%,rgba(255,177,90,.08),transparent 38%),rgba(5,7,10,.38);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.bounty-card:hover { transform:translateY(-2px); border-color:rgba(255,177,90,.28); box-shadow:0 14px 34px rgba(0,0,0,.2); }
+.bounty-card.is-claimed { border-color:rgba(91,209,139,.34); background:radial-gradient(circle at 85% 0%,rgba(91,209,139,.12),transparent 38%),rgba(5,7,10,.38); }
+.bounty-tier-jackpot,.bounty-tier-legendary { border-color:rgba(255,177,90,.34); box-shadow:inset 0 0 36px rgba(255,122,26,.035); }
+.bounty-tier-legendary { background:radial-gradient(circle at 85% 0%,rgba(255,177,90,.16),transparent 42%),rgba(5,7,10,.42); }
+.bounty-card[hidden] { display:none; }
+.bounty-card-top { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+.bounty-reward-badge,.bounty-claimed-badge,.bounty-open-badge { display:inline-flex; align-items:center; min-height:27px; border-radius:999px; padding:.28rem .52rem; font-size:.7rem; font-weight:900; letter-spacing:.025em; }
+.bounty-reward-badge { color:#ffd19e; background:rgba(255,122,26,.12); border:1px solid rgba(255,177,90,.19); }
+.bounty-claimed-badge { color:#a7efc3; background:rgba(91,209,139,.1); border:1px solid rgba(91,209,139,.22); }
+.bounty-open-badge { color:var(--muted); background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
+.bounty-card-item { display:flex; align-items:center; gap:.9rem; }
+.bounty-card-image { width:68px; height:68px; flex:0 0 68px; display:grid; place-items:center; border-radius:15px; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.055); }
+.bounty-card-image img { max-width:58px; max-height:58px; object-fit:contain; image-rendering:auto; }
+.bounty-card-placeholder { font-size:1.7rem; opacity:.65; }
+.bounty-card-item h3 { margin:0 0 .25rem; color:var(--text); font-size:1rem; }
+.bounty-card-item p { margin:0; color:var(--muted); font-size:.78rem; }
+.bounty-card-footer { display:flex; justify-content:space-between; gap:.7rem; padding-top:.75rem; border-top:1px solid rgba(255,255,255,.055); font-size:.72rem; }
+.bounty-card-footer span { color:var(--muted); text-transform:capitalize; }
+.bounty-card-footer strong { color:var(--text); text-align:right; }
+.bounty-community-grid { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr); gap:1rem; }
+.bounty-community-panel { padding:1.15rem; min-width:0; }
+.bounty-panel-title { margin-bottom:.85rem; }
+.bounty-panel-title > span { color:#a7efc3; border:1px solid rgba(91,209,139,.22); background:rgba(91,209,139,.08); border-radius:999px; padding:.3rem .52rem; font-size:.68rem; font-weight:900; letter-spacing:.06em; }
+.bounty-activity-list,.bounty-hunter-list { display:grid; }
+.bounty-activity-row,.bounty-hunter-row { display:flex; align-items:center; gap:.7rem; min-width:0; padding:.72rem 0; border-top:1px solid rgba(255,255,255,.055); }
+.bounty-activity-row:first-child,.bounty-hunter-row:first-child { border-top:0; }
+.bounty-activity-item { width:38px; height:38px; flex:0 0 38px; display:grid; place-items:center; border-radius:10px; background:rgba(255,255,255,.035); }
+.bounty-activity-item img { max-width:31px; max-height:31px; object-fit:contain; }
+.bounty-activity-icon { opacity:.65; }
+.bounty-activity-copy { min-width:0; flex:1; display:grid; gap:.12rem; }
+.bounty-activity-copy strong,.bounty-hunter-row strong { color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bounty-activity-copy span,.bounty-hunter-row small,.bounty-activity-meta span { color:var(--muted); font-size:.74rem; }
+.bounty-activity-meta { display:grid; justify-items:end; gap:.1rem; white-space:nowrap; }
+.bounty-activity-meta strong { color:#ffb15a; font-size:.8rem; }
+.bounty-hunter-rank { width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; border-radius:9px; color:#ffb15a; background:rgba(255,122,26,.1); font-weight:900; font-size:.76rem; }
+.bounty-hunter-row > div { min-width:0; flex:1; display:grid; gap:.12rem; }
+.bounty-hunter-row > span:last-child { color:var(--muted); font-size:.74rem; white-space:nowrap; }
+.bounty-empty-copy { color:var(--muted); margin:.7rem 0; }
+@media (max-width:1100px) {
+  .bounty-summary-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .bounty-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .bounty-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bounty-section-heading,.bounty-panel-title,.bounty-progress-copy { align-items:flex-start; flex-direction:column; }
+  .bounty-filter-bar { justify-content:flex-start; }
+  .bounty-card-grid,.bounty-community-grid { grid-template-columns:1fr; }
+  .bounty-summary-card { min-height:102px; }
+}
+@media (max-width:460px) {
+  .bounty-summary-grid { grid-template-columns:1fr 1fr; gap:.6rem; }
+  .bounty-summary-card { padding:.85rem; }
+  .bounty-summary-card strong { font-size:1.3rem; }
+  .bounty-card-top { align-items:flex-start; flex-direction:column; }
+}

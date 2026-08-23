@@ -1878,11 +1878,20 @@ async function loadSingleEventDashboard() {
 
     if (event.type === "bounties") {
       dashboard.innerHTML = `
-        <section class="event-detail-card">
-          <div class="event-detail-hero"><div><p class="eyebrow">🎯 Bounties</p><h1>${escapeHtml(event.title || "Clan Bounties")}</h1><p>${escapeHtml(event.description || "Collect selected items and earn Embers for every bounty completed.")}</p></div><div class="event-percent-box"><strong>${event.active ? "ACTIVE" : "INACTIVE"}</strong><span>Bounty Board</span></div></div>
-          <div class="event-detail-body">${renderDropsPanel()}</div>
+        <section class="event-detail-card bounty-board-page">
+          <div class="event-detail-hero bounty-board-hero">
+            <div>
+              <p class="eyebrow">🎯 Bounty Board</p>
+              <h1>${escapeHtml(event.title || "Clan Bounties")}</h1>
+              <p>${escapeHtml(event.description || "Collect selected items and earn Embers for every approved bounty claim.")}</p>
+            </div>
+            <div class="event-percent-box"><strong>${event.active ? "ACTIVE" : "INACTIVE"}</strong><span>Live Claims</span></div>
+          </div>
+          <div class="event-detail-body bounty-board-body">
+            <div id="bountyBoard" class="bounty-board-loading">Loading live bounty progress...</div>
+          </div>
         </section>`;
-      loadDrops();
+      loadBountyBoard(event);
       return;
     }
 
@@ -2709,6 +2718,173 @@ async function loadHallOfFlamePage() {
 }
 
 
+
+
+function bountyRelativeTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function bountyRewardTier(reward) {
+  const amount = Number(reward || 0);
+  if (amount >= 100) return "legendary";
+  if (amount >= 50) return "jackpot";
+  if (amount >= 10) return "rare";
+  if (amount >= 7) return "uncommon";
+  return "standard";
+}
+
+function renderBountyBoard(data, event) {
+  const mount = document.getElementById("bountyBoard");
+  if (!mount) return;
+
+  const drops = Array.isArray(data?.drops) ? data.drops : [];
+  const stats = data?.stats || {};
+  const viewer = data?.viewer || { signedIn: false };
+  const recentClaims = Array.isArray(data?.recentClaims) ? data.recentClaims : [];
+  const topHunters = Array.isArray(data?.topHunters) ? data.topHunters : [];
+  const totalDefinitions = drops.length;
+  const viewerUnique = Number(viewer.uniqueClaimed || 0);
+  const progress = totalDefinitions ? Math.min(100, Math.round((viewerUnique / totalDefinitions) * 100)) : 0;
+
+  const cards = drops.map((drop, index) => {
+    const reward = Number(drop.rewardEmbers || 0);
+    const viewerCount = Number(drop.viewerCount || 0);
+    const claimed = viewerCount > 0;
+    const tier = bountyRewardTier(reward);
+    const claimLabel = Number(drop.count || 0) === 1 ? "1 clan claim" : `${formatNumber(drop.count || 0)} clan claims`;
+    const image = drop.image
+      ? `<img src="${escapeHtml(drop.image)}" alt="${escapeHtml(drop.name || "Bounty item")}" loading="lazy">`
+      : `<div class="bounty-card-placeholder">🎯</div>`;
+    return `
+      <article class="bounty-card bounty-tier-${tier}${claimed ? " is-claimed" : ""}" data-bounty-card data-status="${claimed ? "claimed" : "unclaimed"}" data-reward="${reward}" style="--bounty-order:${index}">
+        <div class="bounty-card-top">
+          <span class="bounty-reward-badge">🔥 ${formatNumber(reward)} Embers</span>
+          ${claimed ? `<span class="bounty-claimed-badge">✓ CLAIMED${viewerCount > 1 ? ` ×${formatNumber(viewerCount)}` : ""}</span>` : `<span class="bounty-open-badge">AVAILABLE</span>`}
+        </div>
+        <div class="bounty-card-item">
+          <div class="bounty-card-image">${image}</div>
+          <div>
+            <h3>${escapeHtml(drop.name || "Bounty")}</h3>
+            <p>${claimLabel}</p>
+          </div>
+        </div>
+        <div class="bounty-card-footer">
+          <span>${escapeHtml(String(drop.trackingRule || "repeatable").replaceAll("_", " "))}</span>
+          <strong>${claimed ? "In your collection" : "Not claimed yet"}</strong>
+        </div>
+      </article>`;
+  }).join("");
+
+  const recent = recentClaims.length
+    ? recentClaims.map(claim => `
+        <div class="bounty-activity-row">
+          <div class="bounty-activity-item">${claim.image ? `<img src="${escapeHtml(claim.image)}" alt="">` : `<span class="bounty-activity-icon">🎯</span>`}</div>
+          <div class="bounty-activity-copy">
+            <strong>${escapeHtml(claim.playerName || "Clan member")}</strong>
+            <span>${escapeHtml(claim.itemName || "Bounty")} ${Number(claim.quantity || 1) > 1 ? `×${formatNumber(claim.quantity)}` : ""}</span>
+          </div>
+          <div class="bounty-activity-meta">
+            <strong>+${formatNumber(claim.embers || 0)} 🔥</strong>
+            <span>${escapeHtml(bountyRelativeTime(claim.claimedAt))}</span>
+          </div>
+        </div>`).join("")
+    : `<p class="bounty-empty-copy">No approved bounty claims yet.</p>`;
+
+  const hunters = topHunters.length
+    ? topHunters.map((hunter, index) => `
+        <div class="bounty-hunter-row">
+          <span class="bounty-hunter-rank">${index + 1}</span>
+          <div><strong>${escapeHtml(hunter.playerName || "Clan member")}</strong><small>${formatNumber(hunter.uniqueBounties || 0)} unique bounties</small></div>
+          <span>${formatNumber(hunter.totalClaims || 0)} claims</span>
+        </div>`).join("")
+    : `<p class="bounty-empty-copy">The leaderboard will appear after the first approved claim.</p>`;
+
+  mount.className = "bounty-board";
+  mount.innerHTML = `
+    <section class="bounty-summary-grid">
+      <div class="bounty-summary-card personal"><span>Your Bounties</span><strong>${viewer.signedIn ? `${formatNumber(viewerUnique)} / ${formatNumber(totalDefinitions)}` : "—"}</strong><small>${viewer.signedIn ? `${formatNumber(viewer.totalClaims || 0)} total claims` : "Sign in to track yours"}</small></div>
+      <div class="bounty-summary-card"><span>CC Claims</span><strong>${formatNumber(stats.totalClaims || 0)}</strong><small>approved bounty drops</small></div>
+      <div class="bounty-summary-card"><span>Other CC Claims</span><strong>${formatNumber(stats.otherClanClaims ?? stats.totalClaims ?? 0)}</strong><small>excluding your claims</small></div>
+      <div class="bounty-summary-card"><span>Hunters</span><strong>${formatNumber(stats.uniqueHunters || 0)}</strong><small>members with a claim</small></div>
+      <div class="bounty-summary-card ember"><span>Embers Awarded</span><strong>${formatNumber(stats.totalEmbers || 0)}</strong><small>from approved bounties</small></div>
+    </section>
+
+    <section class="bounty-progress-panel">
+      <div class="bounty-progress-copy">
+        <div><span>Your Bounty Hunt</span><strong>${viewer.signedIn ? `${formatNumber(viewerUnique)} of ${formatNumber(totalDefinitions)} unique bounties` : "Sign in with Discord to see your claims"}</strong></div>
+        ${viewer.signedIn ? `<span>${formatNumber(viewer.embersEarned || 0)} 🔥 earned</span>` : ""}
+      </div>
+      <div class="bounty-progress-track"><div style="width:${viewer.signedIn ? progress : 0}%"></div></div>
+    </section>
+
+    <section class="bounty-catalog-section">
+      <div class="bounty-section-heading">
+        <div><p class="eyebrow">Live Collection</p><h2>Active Bounties</h2></div>
+        <div class="bounty-filter-bar" role="group" aria-label="Filter bounties">
+          <button class="is-active" type="button" data-bounty-filter="all">All</button>
+          <button type="button" data-bounty-filter="unclaimed">Unclaimed</button>
+          <button type="button" data-bounty-filter="claimed">Claimed</button>
+          <button type="button" data-bounty-filter="jackpot">50+ Embers</button>
+        </div>
+      </div>
+      <div class="bounty-card-grid" id="bountyCardGrid">${cards || `<p class="bounty-empty-copy">No bounty items are configured yet.</p>`}</div>
+      <p id="bountyFilterEmpty" class="bounty-empty-copy" hidden>No bounties match this filter.</p>
+    </section>
+
+    <section class="bounty-community-grid">
+      <div class="bounty-community-panel">
+        <div class="bounty-panel-title"><div><p class="eyebrow">Live Feed</p><h2>Recent Claims</h2></div><span>${event?.active ? "LIVE" : "ARCHIVED"}</span></div>
+        <div class="bounty-activity-list">${recent}</div>
+      </div>
+      <div class="bounty-community-panel">
+        <div class="bounty-panel-title"><div><p class="eyebrow">Clan Progress</p><h2>Top Bounty Hunters</h2></div></div>
+        <div class="bounty-hunter-list">${hunters}</div>
+      </div>
+    </section>`;
+
+  const filterButtons = [...mount.querySelectorAll("[data-bounty-filter]")];
+  const bountyCards = [...mount.querySelectorAll("[data-bounty-card]")];
+  const empty = mount.querySelector("#bountyFilterEmpty");
+  filterButtons.forEach(button => button.addEventListener("click", () => {
+    filterButtons.forEach(item => item.classList.toggle("is-active", item === button));
+    const filter = button.dataset.bountyFilter || "all";
+    let visible = 0;
+    bountyCards.forEach(card => {
+      const matches = filter === "all" ||
+        (filter === "claimed" && card.dataset.status === "claimed") ||
+        (filter === "unclaimed" && card.dataset.status === "unclaimed") ||
+        (filter === "jackpot" && Number(card.dataset.reward || 0) >= 50);
+      card.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    if (empty) empty.hidden = visible > 0;
+  }));
+}
+
+async function loadBountyBoard(event) {
+  const mount = document.getElementById("bountyBoard");
+  if (!mount) return;
+  try {
+    const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(event?.id || "bounties")}&detail=bounties&t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error || "Could not load bounty progress.");
+    renderBountyBoard(data, event);
+  } catch (error) {
+    mount.className = "bounty-board-error";
+    mount.innerHTML = `<strong>Could not load the bounty board.</strong><span>${escapeHtml(error?.message || "Please refresh and try again.")}</span>`;
+  }
+}
 
 async function loadDropsForEvent(eventId, listId = "dropsList") {
   const dropsList = document.getElementById(listId);
