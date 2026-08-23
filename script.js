@@ -1556,6 +1556,221 @@ async function renderBotwDashboard(dashboard, events) {
 
 }
 
+
+async function fetchOwnClanGoalProfile() {
+  try {
+    const response = await fetch(`/api/profile?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data?.signedIn ? (data.profile || null) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getEventTrackingDates(event, standings) {
+  const startRaw = standings?.startsAt || event?.startDate || event?.start || null;
+  const endRaw = standings?.endsAt || event?.endDate || event?.end || null;
+  const start = startRaw ? new Date(startRaw) : null;
+  const end = endRaw ? new Date(endRaw) : null;
+  return {
+    start: start && !Number.isNaN(start.getTime()) ? start : null,
+    end: end && !Number.isNaN(end.getTime()) ? end : null
+  };
+}
+
+function formatCompactDuration(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return "Ended";
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  if (days > 0) return `${days}d ${hours}h`;
+  const minutes = Math.max(1, Math.floor((ms % 3600000) / 60000));
+  return `${hours}h ${minutes}m`;
+}
+
+function getClanGoalMilestoneData(event, totalGained, goal) {
+  const milestones = Array.isArray(event?.milestones) ? event.milestones : [];
+  return milestones
+    .map(milestone => {
+      const percent = Number(milestone.percent || 0);
+      const target = goal ? Math.round(goal * (percent / 100)) : 0;
+      return {
+        ...milestone,
+        percent,
+        target,
+        reached: goal ? totalGained >= target : false
+      };
+    })
+    .sort((a, b) => a.percent - b.percent);
+}
+
+function getClanGoalBadges(player, rank, totalGained) {
+  if (!player) return [];
+  const badges = [];
+  if (rank === 1) badges.push("👑 MVP");
+  else if (rank <= 3) badges.push("🏆 Top 3");
+  else if (rank <= 10) badges.push("⚔️ Top 10");
+  if (player.gained >= 5000000) badges.push("💎 5M Club");
+  else if (player.gained >= 1000000) badges.push("🔥 1M Club");
+  if (totalGained > 0 && (player.gained / totalGained) >= 0.05) badges.push("🎯 5% Contributor");
+  return badges;
+}
+
+async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotStarted) {
+  const totalGained = eventHasNotStarted ? 0 : Number(standings?.totalGained || 0);
+  const contributors = Number(standings?.contributors || 0);
+  const goal = Number(event.target || event.goal || 0);
+  const percent = goal ? Math.min((totalGained / goal) * 100, 100) : 0;
+  const remaining = goal ? Math.max(goal - totalGained, 0) : 0;
+  const tracksXp = eventTracksXp(event, standings);
+  const unit = tracksXp ? "XP" : "KC";
+  const dates = getEventTrackingDates(event, standings);
+  const now = new Date();
+  const elapsedDays = dates.start ? Math.max((now - dates.start) / 86400000, 0) : 0;
+  const remainingDays = dates.end ? Math.max((dates.end - now) / 86400000, 0) : 0;
+  const dailyPace = elapsedDays > 0 ? totalGained / elapsedDays : 0;
+  const requiredPace = remainingDays > 0 ? remaining / remainingDays : 0;
+  const projectedFinish = dailyPace > 0 && remaining > 0
+    ? new Date(now.getTime() + (remaining / dailyPace) * 86400000)
+    : null;
+  const onPace = goal > 0 && remaining === 0 ? true : dailyPace > 0 && requiredPace > 0 && dailyPace >= requiredPace;
+  const eventDateText = dates.start && dates.end
+    ? `${dates.start.toLocaleDateString("en-US")} - ${dates.end.toLocaleDateString("en-US")}`
+    : "Dates will appear when tracking is available.";
+
+  const rankedPlayers = eventHasNotStarted ? [] : (standings?.standings || [])
+    .filter(player => Number(player.gained || 0) > 0)
+    .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
+
+  const profile = await fetchOwnClanGoalProfile();
+  const rsn = String(profile?.rsn || "").trim().toLowerCase();
+  const myIndex = rsn ? rankedPlayers.findIndex(player => String(player.name || "").trim().toLowerCase() === rsn) : -1;
+  const myPlayer = myIndex >= 0 ? rankedPlayers[myIndex] : null;
+  const myRank = myIndex >= 0 ? myIndex + 1 : null;
+  const nextPlayer = myIndex > 0 ? rankedPlayers[myIndex - 1] : null;
+  const toNextRank = myPlayer && nextPlayer ? Math.max(Number(nextPlayer.gained || 0) - Number(myPlayer.gained || 0) + 1, 0) : 0;
+  const myShare = myPlayer && totalGained > 0 ? (Number(myPlayer.gained || 0) / totalGained) * 100 : 0;
+  const myBadges = getClanGoalBadges(myPlayer, myRank, totalGained);
+
+  const milestones = getClanGoalMilestoneData(event, totalGained, goal);
+  const nextMilestone = milestones.find(item => !item.reached) || null;
+  const nextMilestoneRemaining = nextMilestone ? Math.max(nextMilestone.target - totalGained, 0) : 0;
+  const topThree = rankedPlayers.slice(0, 3);
+  const restTopTen = rankedPlayers.slice(3, 10);
+
+  const podiumClass = index => index === 0 ? "first" : index === 1 ? "second" : "third";
+  const medal = index => index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉";
+
+  dashboard.innerHTML = `
+    <section class="event-detail-card clan-goal-dashboard-card">
+      <div class="event-detail-hero clan-goal-hero">
+        <div>
+          <p class="eyebrow">🔥 ${escapeHtml(event.label || "Clan Goal")}</p>
+          <h1>${escapeHtml(displayEventTitle(standings?.title || event.title, event.type))}</h1>
+          <p>${escapeHtml(event.description || standings?.metric || "Push the clan forward together.")}</p>
+          <p class="clan-goal-date"><strong>Event Date:</strong> ${escapeHtml(eventDateText)}</p>
+        </div>
+        <div class="event-percent-box clan-goal-percent-box">
+          <strong>${goal ? `${percent.toFixed(1)}%` : "ACTIVE"}</strong>
+          <span>${goal ? "Goal Complete" : "Clan Goal"}</span>
+        </div>
+      </div>
+
+      <div class="event-detail-body clan-goal-body">
+        ${eventHasNotStarted ? `
+          <div class="event-starting-soon-panel">
+            <p class="eyebrow">Event Starting Soon</p>
+            <h2>Starts in ${getCountdownToStart(standings?.startsAt || event.startDate || event.start)}</h2>
+            <p>Progress tracking will begin when the Wise Old Man competition starts.</p>
+          </div>` : ""}
+
+        <div class="clan-goal-kpi-grid">
+          <div class="clan-goal-kpi"><span>Current ${unit}</span><strong>${formatNumber(totalGained)}</strong><small>${goal ? `${formatNumber(goal)} target` : "Live total"}</small></div>
+          <div class="clan-goal-kpi"><span>Contributors</span><strong>${formatNumber(contributors)}</strong><small>Clan members contributing</small></div>
+          <div class="clan-goal-kpi"><span>Current Pace</span><strong>${formatNumber(Math.round(dailyPace))}</strong><small>${unit} per day</small></div>
+          <div class="clan-goal-kpi"><span>Time Remaining</span><strong>${dates.end ? formatCompactDuration(dates.end - now) : "—"}</strong><small>${remainingDays > 0 ? `${formatNumber(Math.ceil(requiredPace))} ${unit}/day needed` : "Goal period complete"}</small></div>
+        </div>
+
+        ${goal ? `
+          <section class="clan-goal-progress-card">
+            <div class="clan-goal-progress-heading">
+              <div><span>Clan Progress</span><strong>${formatNumber(totalGained)} / ${formatNumber(goal)} ${unit}</strong></div>
+              <strong>${percent.toFixed(1)}%</strong>
+            </div>
+            <div class="event-progress-bar milestone-bar clan-goal-main-progress">
+              <div style="width:${percent}%"></div>
+              ${milestones.map(milestone => `
+                <span class="milestone-marker ${milestone.reached ? "is-reached" : ""}" style="left:${Math.min(Math.max(milestone.percent, 2), 97)}%">
+                  <strong>${milestone.percent}%</strong><small>${escapeHtml(milestone.title || "Milestone")}</small>
+                </span>`).join("")}
+            </div>
+            <div class="clan-goal-progress-foot"><span>${formatNumber(remaining)} ${unit} remaining</span><span>${milestones.filter(item => item.reached).length}/${milestones.length} milestones unlocked</span></div>
+          </section>` : ""}
+
+        <div class="clan-goal-insight-grid">
+          <section class="event-panel clan-goal-next-card">
+            <p class="eyebrow">🎯 Next Milestone</p>
+            ${nextMilestone ? `
+              <h2>${nextMilestone.percent}% — ${escapeHtml(nextMilestone.title || "Milestone")}</h2>
+              <strong class="clan-goal-big-number">${formatNumber(nextMilestoneRemaining)} ${unit}</strong>
+              <p>remaining to unlock this reward.</p>` : `
+              <h2>All Milestones Unlocked</h2><strong class="clan-goal-big-number">Goal rewards cleared</strong><p>The clan has reached every configured milestone.</p>`}
+          </section>
+
+          <section class="event-panel clan-goal-pace-card ${onPace ? "is-on-pace" : "is-behind-pace"}">
+            <p class="eyebrow">📈 Goal Pace</p>
+            <h2>${onPace ? "On Pace" : "Push Needed"}</h2>
+            <div class="clan-goal-pace-lines">
+              <span><small>Current</small><strong>${formatNumber(Math.round(dailyPace))} ${unit}/day</strong></span>
+              <span><small>Required</small><strong>${formatNumber(Math.ceil(requiredPace))} ${unit}/day</strong></span>
+            </div>
+            <p>${projectedFinish ? `Projected finish: <strong>${projectedFinish.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</strong>` : "A projection will appear once progress is recorded."}</p>
+          </section>
+        </div>
+
+        <section class="event-panel clan-goal-personal-card">
+          <div class="clan-goal-section-heading"><div><p class="eyebrow">👤 Your Clan Goal</p><h2>${profile ? escapeHtml(profile.rsn || profile.displayName || "Your contribution") : "Your contribution"}</h2></div>${profile ? `<a class="clan-goal-profile-link" href="profile.html">View Profile →</a>` : ""}</div>
+          ${profile ? (myPlayer ? `
+            <div class="clan-goal-personal-stats">
+              <div><span>Your ${unit}</span><strong>${formatNumber(myPlayer.gained)}</strong></div>
+              <div><span>Clan Rank</span><strong>#${myRank}</strong></div>
+              <div><span>Share of Progress</span><strong>${myShare.toFixed(1)}%</strong></div>
+              <div><span>${myRank === 1 ? "Position" : "To Next Rank"}</span><strong>${myRank === 1 ? "MVP" : `${formatNumber(toNextRank)} ${unit}`}</strong></div>
+            </div>
+            <div class="clan-goal-badges">${myBadges.length ? myBadges.map(badge => `<span>${badge}</span>`).join("") : `<span>⚒️ Contributor</span>`}</div>` : `
+            <div class="clan-goal-empty-personal"><strong>No tracked contribution yet.</strong><span>Your personalized stats will appear here as soon as your WOM name records ${unit} in this goal.</span></div>`)
+          : `<div class="clan-goal-empty-personal"><strong>Sign in to personalize this dashboard.</strong><span>Your contribution, clan rank, progress share and achievement badges will appear here automatically.</span><a class="btn primary" href="/api/auth/login">Sign in with Discord</a></div>`}
+        </section>
+
+        <section class="event-panel clan-goal-mvp-panel">
+          <div class="clan-goal-section-heading"><div><p class="eyebrow">🏆 MVP Race</p><h2>Top Contributors</h2></div><span class="clan-goal-live-pill">LIVE</span></div>
+          ${topThree.length ? `<div class="clan-goal-podium">${topThree.map((player, index) => `
+            <div class="clan-goal-podium-card ${podiumClass(index)} ${myRank === index + 1 ? "is-you" : ""}">
+              <span class="clan-goal-medal">${medal(index)}</span><small>#${index + 1}</small><strong>${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} ${unit}</span>${myRank === index + 1 ? `<em>YOU</em>` : ""}
+            </div>`).join("")}</div>` : `<p>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No contribution has been recorded yet."}</p>`}
+          ${restTopTen.length ? `<div class="clan-goal-ranking-list">${restTopTen.map((player, index) => {
+            const rank = index + 4;
+            return `<div class="clan-goal-ranking-row ${myRank === rank ? "is-you" : ""}"><strong><span>#${rank}</span>${escapeHtml(player.name)}${myRank === rank ? `<em>YOU</em>` : ""}</strong><span>${formatNumber(player.gained)} ${unit}</span></div>`;
+          }).join("")}</div>` : ""}
+          ${myRank && myRank > 10 ? `<div class="clan-goal-your-rank"><span>Your current position</span><strong>#${myRank} · ${escapeHtml(myPlayer.name)}</strong><span>${formatNumber(myPlayer.gained)} ${unit}</span></div>` : ""}
+        </section>
+
+        <div class="event-detail-grid clan-goal-lower-grid">
+          ${event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
+          <section class="event-panel clan-goal-participation-panel">
+            <p class="eyebrow">👥 Participation</p><h2>Clan Effort</h2>
+            <div class="clan-goal-participation-stats"><span><strong>${formatNumber(contributors)}</strong><small>Contributors</small></span><span><strong>${rankedPlayers.length ? formatNumber(Math.round(totalGained / rankedPlayers.length)) : "0"}</strong><small>Avg. ${unit} / contributor</small></span><span><strong>${rankedPlayers[0] ? formatNumber(rankedPlayers[0].gained) : "0"}</strong><small>Top contribution</small></span></div>
+          </section>
+        </div>
+
+        ${renderRewardsSection(event)}
+        ${event.womCompetitionId && event.womCompetitionId !== "PUT_YOUR_WOM_ID_HERE" ? `<a class="btn primary clan-goal-wom-link" href="https://wiseoldman.net/competitions/${event.womCompetitionId}" target="_blank" rel="noopener">View Full WOM Leaderboard</a>` : ""}
+      </div>
+    </section>`;
+
+  if (event.dropsEnabled) loadDrops();
+}
+
 async function loadSingleEventDashboard() {
   const dashboard = document.getElementById("singleEventDashboard");
 
@@ -1625,6 +1840,11 @@ async function loadSingleEventDashboard() {
       event.type === "clan-goal-boss" ||
       event.type === "clan-goal-skill" ||
       event.type === "clan_goal";
+
+    if (isClanGoal) {
+      await renderClanGoalDashboard(dashboard, event, standings, eventHasNotStarted);
+      return;
+    }
 
     const highestGain =
       standings?.standings?.[0]?.gained || 0;
