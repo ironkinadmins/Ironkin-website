@@ -1439,11 +1439,11 @@ async function buildEventHubTeaser(event, type, botwEvents = []) {
 
   if (type === "bounties") {
     try {
-      const response = await fetch(`/api/drops/list?eventId=bounties&t=${Date.now()}`, { cache: "no-store" });
+      const response = await fetch(`/api/drops/list?eventId=bounties&detail=bounties&t=${Date.now()}`, { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
-      const drops = response.ok && Array.isArray(data.drops) ? data.drops : [];
-      const members = new Set(drops.map(item => item.player || item.member || item.rsn || "").filter(Boolean));
-      return `<div class="event-teaser-stat"><span>Completed</span><strong>${formatNumber(drops.length)} bounties</strong></div><div class="event-teaser-stat"><span>Hunters</span><strong>${formatNumber(members.size)}</strong></div>`;
+      const totalClaims = response.ok ? Math.max(0, Number(data?.stats?.totalClaims || 0)) : 0;
+      const uniqueHunters = response.ok ? Math.max(0, Number(data?.stats?.uniqueHunters || 0)) : 0;
+      return `<div class="event-teaser-stat"><span>Completed</span><strong>${formatNumber(totalClaims)} bounties</strong></div><div class="event-teaser-stat"><span>Hunters</span><strong>${formatNumber(uniqueHunters)}</strong></div>`;
     } catch { return ""; }
   }
 
