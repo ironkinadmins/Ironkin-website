@@ -113,13 +113,16 @@ export async function onRequestGet({ request, env }) {
     if (isPvmEntry || !itemIds.length) {
       const dropResult = await readDropsWithClanGoalFallback(env, websiteEventId);
       const updatedDrops = [];
+      let dropsChanged = false;
       for (const drop of dropResult.drops || []) {
-        let itemId = Number(drop.itemId);
+        const originalItemId = Number(drop.itemId);
+        let itemId = originalItemId;
         if (!Number.isInteger(itemId) || itemId <= 0) {
           itemId = await resolveOsrsItemIdByName(drop.name).catch(() => null);
         }
         const nextDrop = itemId ? { ...drop, itemId } : drop;
         updatedDrops.push(nextDrop);
+        if (itemId && itemId !== originalItemId) dropsChanged = true;
         if (itemId) {
           itemIds.push(itemId);
           await upsertTrackedItem(env, {
@@ -131,10 +134,25 @@ export async function onRequestGet({ request, env }) {
             wikiUrl: drop.wikiUrl,
             rewardEmbers: drop.rewardEmbers,
             trackingRule: drop.trackingRule || "repeatable"
-          }).catch(() => null);
+          }).catch(error => {
+            console.warn("Tracked item sync failed; continuing with item-list response", websiteEventId, itemId, error);
+            return null;
+          });
         }
       }
-      if (updatedDrops.length) await hybridKv(env, "drops").put(dropResult.key || getDropListKey(websiteEventId), JSON.stringify(updatedDrops));
+
+      // This endpoint is polled frequently by RuneLite. Do not rewrite the
+      // canonical drop list on every GET. Only persist when this request
+      // actually enriched a legacy item with a newly-resolved OSRS item ID,
+      // and never let a best-effort normalization write turn a valid item-list
+      // read into HTTP 500.
+      if (dropsChanged && updatedDrops.length) {
+        await hybridKv(env, "drops")
+          ?.put(dropResult.key || getDropListKey(websiteEventId), JSON.stringify(updatedDrops))
+          .catch(error => {
+            console.warn("Drop-list normalization write failed; continuing with item-list response", websiteEventId, error);
+          });
+      }
     }
 
     itemIds = [...new Set(itemIds)];
