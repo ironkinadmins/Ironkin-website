@@ -35,6 +35,33 @@ function safeJsonParse(value, fallback) {
   }
 }
 
+function normalizeProfileName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function mergePreviousRsns(existing, nextRsn) {
+  const aliases = Array.isArray(existing?.previousRsns) ? [...existing.previousRsns] : [];
+  const priorRsn = String(existing?.rsn || existing?.displayName || "").trim();
+  const nextKey = normalizeProfileName(nextRsn);
+
+  if (priorRsn && normalizeProfileName(priorRsn) !== nextKey) aliases.push(priorRsn);
+
+  const seen = new Set();
+  return aliases
+    .map(value => String(value || "").trim())
+    .filter(value => {
+      const key = normalizeProfileName(value);
+      if (!key || key === nextKey || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-10);
+}
+
 function highestRank(roleIds, ranks) {
   const roles = Array.isArray(roleIds) ? roleIds : [];
   for (let i = ranks.length - 1; i >= 0; i -= 1) {
@@ -272,7 +299,10 @@ async function writeProfileRecord(env, member, now, guildRoles = [], guildEmojis
     staffRankRoleId: staffRank.roleId || "",
     staffRankIconUrl: staffRank.iconUrl || "",
     staffRankUnicodeEmoji: staffRank.unicodeEmoji || "",
-    rsn: existing.rsn || displayName,
+    // Discord nicknames are the clan's RSNs. Keep the saved RSN in sync when a
+    // member renames, while retaining old names as aliases for in-flight WOM events.
+    rsn: displayName,
+    previousRsns: mergePreviousRsns(existing, displayName),
     memberSince: member.joined_at || existing.memberSince || null,
     discordSyncedAt: now
   };

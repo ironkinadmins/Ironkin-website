@@ -49,6 +49,25 @@ function normalizeName(value) {
     .replace(/\s+/g, " ");
 }
 
+function mergePreviousRsns(record, nextRsn) {
+  const aliases = Array.isArray(record?.previousRsns) ? [...record.previousRsns] : [];
+  const priorRsn = String(record?.rsn || record?.displayName || "").trim();
+  const nextKey = normalizeName(nextRsn);
+
+  if (priorRsn && normalizeName(priorRsn) !== nextKey) aliases.push(priorRsn);
+
+  const seen = new Set();
+  return aliases
+    .map(value => String(value || "").trim())
+    .filter(value => {
+      const key = normalizeName(value);
+      if (!key || key === nextKey || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-10);
+}
+
 function safeJsonParse(value, fallback) {
   try {
     return value ? JSON.parse(value) : fallback;
@@ -417,6 +436,7 @@ const displayRank =
     username: record.username || session.username || "",
     displayName,
     rsn,
+    previousRsns: Array.isArray(record.previousRsns) ? record.previousRsns : [],
     rank: displayRank,
     staffRank,
     clanRank,
@@ -471,7 +491,8 @@ export async function onRequestGet({ request, env }) {
 
   if (isOwnProfile) {
     const displayName = getDisplayName(session);
-    const rsn = record.rsn || displayName;
+    const rsn = displayName;
+    const previousRsns = mergePreviousRsns(record, rsn);
     const discordAvatarUrl = getDiscordAvatarUrl(session);
     const roleIds = Array.isArray(session.roles) ? session.roles : [];
     const rank = getHighestRank(roleIds, CLAN_RANKS) || record.rank || "Member";
@@ -488,6 +509,7 @@ export async function onRequestGet({ request, env }) {
       rank,
       staffRank,
       rsn,
+      previousRsns,
       memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
       lastSeenAt: new Date().toISOString()
     };
@@ -570,6 +592,7 @@ export async function onRequestPost({ request, env }) {
   const existing = await getProfileRecord(env, session.id);
   const roleIds = Array.isArray(session.roles) ? session.roles : [];
   const discordAvatarUrl = getDiscordAvatarUrl(session);
+  const previousRsns = mergePreviousRsns(existing, displayName);
 
   const next = {
     ...existing,
@@ -582,6 +605,7 @@ export async function onRequestPost({ request, env }) {
     rank: getHighestRank(roleIds, CLAN_RANKS) || existing.rank || "Member",
     staffRank: getHighestRank(roleIds, STAFF_RANKS) || null,
     rsn: displayName,
+    previousRsns,
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
     blurb,

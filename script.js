@@ -1707,7 +1707,12 @@ async function renderClanGoalDashboard(dashboard, event, standings, eventHasNotS
     .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
 
   const profile = await fetchOwnClanGoalProfile();
-  const playerNameCandidates = [profile?.rsn, profile?.displayName, profile?.username]
+  const playerNameCandidates = [
+    profile?.rsn,
+    profile?.displayName,
+    profile?.username,
+    ...(Array.isArray(profile?.previousRsns) ? profile.previousRsns : [])
+  ]
     .map(normalizePlayerNameForMatch)
     .filter(Boolean);
   const myIndex = playerNameCandidates.length
