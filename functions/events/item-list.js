@@ -104,10 +104,13 @@ export async function onRequestGet({ request, env }) {
   for (const event of activeEvents) {
     const websiteEventId = String(event.id || "").trim();
     if (!websiteEventId) continue;
-    let itemIds = (dbByEvent.get(websiteEventId) || []).filter(id => Number.isInteger(id) && id > 0);
+    const isPvmEntry = websiteEventId === "pvm-entry" || event?.type === "pvm-entry";
+    let itemIds = isPvmEntry ? [] : (dbByEvent.get(websiteEventId) || []).filter(id => Number.isInteger(id) && id > 0);
 
-    // One-time compatibility path for legacy KV drop rows that predate item IDs/Supabase.
-    if (!itemIds.length) {
+    // PvM Entry uses the website drop list as the canonical order so staff can
+    // maintain boss/item order in Admin and RuneLite receives that exact sequence.
+    // Other events retain the Supabase-first compatibility behavior.
+    if (isPvmEntry || !itemIds.length) {
       const dropResult = await readDropsWithClanGoalFallback(env, websiteEventId);
       const updatedDrops = [];
       for (const drop of dropResult.drops || []) {

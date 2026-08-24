@@ -30,6 +30,7 @@ export async function onRequestPost({ request, env }) {
   const image = body.image?.trim() || "";
   const wikiUrl = body.wikiUrl?.trim() || "";
   const rewardEmbers = Math.max(0, Number(body.rewardEmbers || 0));
+  const boss = String(body.boss || "").trim();
   const allowedTrackingRules = new Set(["repeatable", "once_per_player", "once_per_event"]);
   const trackingRule = allowedTrackingRules.has(String(body.trackingRule || "")) ? String(body.trackingRule) : "repeatable";
   let itemId = Number(body.itemId);
@@ -57,8 +58,9 @@ export async function onRequestPost({ request, env }) {
     if (body.rewardEmbers !== undefined) existing.rewardEmbers = rewardEmbers;
     if (itemId) existing.itemId = itemId;
     existing.trackingRule = trackingRule;
+    if (body.boss !== undefined) existing.boss = boss;
   } else {
-    drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, itemId: itemId || null, count: 0 });
+    drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, boss, itemId: itemId || null, count: 0 });
   }
 
   await hybridKv(env, "drops").put(key, JSON.stringify(drops));

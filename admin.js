@@ -726,6 +726,7 @@ function updateEventFieldVisibility() {
   const rewardsHeader = document.getElementById("eventRewardsHeader");
   const rewardsGrid = document.getElementById("eventRewardsGrid");
   const archiveButton = document.getElementById("archiveEventBtn");
+  const dropBossField = document.getElementById("dropBossField");
   const rewardsPlacement = document.getElementById("placementRewardsEditor")?.closest(".admin-reward-panel");
   const rewardsParticipation = document.getElementById("participationRewardsEditor")?.closest(".admin-reward-panel");
 
@@ -742,6 +743,7 @@ function updateEventFieldVisibility() {
   if (rewardsPlacement) rewardsPlacement.style.display = showPvmEntry ? "none" : "block";
   if (rewardsParticipation) rewardsParticipation.style.display = showPvmEntry ? "none" : "block";
   if (archiveButton) archiveButton.style.display = showPvmEntry ? "none" : "inline-flex";
+  if (dropBossField) dropBossField.style.display = showPvmEntry ? "grid" : "none";
 }
 
 function renderMilestonesEditor() {
@@ -1856,13 +1858,46 @@ async function loadAdminDrops() {
     return;
   }
 
-  data.drops.forEach(drop => {
+  const pvmEntry = isPvmEntryEvent(getSelectedEvent());
+  const bossOrder = [];
+  if (pvmEntry) {
+    data.drops.forEach(drop => {
+      const boss = String(drop.boss || "").trim() || "Unassigned";
+      if (!bossOrder.includes(boss)) bossOrder.push(boss);
+    });
+  }
+  let previousBoss = null;
+  data.drops.forEach((drop, index) => {
+    const currentBoss = String(drop.boss || "").trim() || "Unassigned";
+    if (pvmEntry && currentBoss !== previousBoss) {
+      const bossIndex = bossOrder.indexOf(currentBoss);
+      const header = document.createElement("div");
+      header.className = "pvm-boss-header";
+      header.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 8px 6px;margin-top:8px;border-bottom:1px solid rgba(255,255,255,.12)";
+      header.innerHTML = `
+        <strong>${escapeHtml(currentBoss)}</strong>
+        <span style="display:flex;gap:6px">
+          <button type="button" data-boss-action="up" ${bossIndex <= 0 ? "disabled" : ""}>Move Boss ↑</button>
+          <button type="button" data-boss-action="down" ${bossIndex < 0 || bossIndex >= bossOrder.length - 1 ? "disabled" : ""}>Move Boss ↓</button>
+        </span>`;
+      header.querySelector('[data-boss-action="up"]')?.addEventListener("click", () => updatePvmBossOrder(currentBoss, "up"));
+      header.querySelector('[data-boss-action="down"]')?.addEventListener("click", () => updatePvmBossOrder(currentBoss, "down"));
+      list.appendChild(header);
+      previousBoss = currentBoss;
+    }
     const row = document.createElement("div");
     row.className = "drop-row";
+    const bossEditor = pvmEntry ? `
+      <div class="pvm-boss-order-controls" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
+        <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name" style="min-width:140px" />
+        <button type="button" data-drop-action="save-boss">Save Boss</button>
+        <button type="button" data-drop-action="up" ${index === 0 || (String(data.drops[index - 1]?.boss || "").trim() || "Unassigned") !== currentBoss ? "disabled" : ""}>↑</button>
+        <button type="button" data-drop-action="down" ${index === data.drops.length - 1 || (String(data.drops[index + 1]?.boss || "").trim() || "Unassigned") !== currentBoss ? "disabled" : ""}>↓</button>
+      </div>` : "";
     row.innerHTML = `
       <div class="bounty-drop-main">
         ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
-        <span><strong>${escapeHtml(drop.name)}</strong><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small><small>${Number(drop.rewardEmbers || 0)} Embers each</small><small>${formatDropTrackingRule(drop.trackingRule)}</small></span>
+        <span><strong>${escapeHtml(drop.name)}</strong><small>${pvmEntry ? `Boss: ${escapeHtml(drop.boss || "Unassigned")}` : ""}</small><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small><small>${Number(drop.rewardEmbers || 0)} Embers each</small><small>${formatDropTrackingRule(drop.trackingRule)}</small>${bossEditor}</span>
       </div>
       <div class="drop-controls">
         <strong>${drop.count}</strong>
@@ -1871,9 +1906,36 @@ async function loadAdminDrops() {
     `;
 
     row.querySelector('[data-drop-action="delete"]')?.addEventListener("click", () => deleteDrop(drop.name));
+    row.querySelector('[data-drop-action="save-boss"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { boss: row.querySelector('[data-drop-boss]')?.value || "" }));
+    row.querySelector('[data-drop-action="up"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "up" }));
+    row.querySelector('[data-drop-action="down"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "down" }));
 
     list.appendChild(row);
   });
+}
+
+async function updatePvmDropOrder(name, changes = {}) {
+  if (!selectedEventId || !name) return;
+  const response = await fetch("/api/drops/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, name, ...changes })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { alert(data.error || "Could not update PvM Entry order."); return; }
+  loadAdminDrops();
+}
+
+async function updatePvmBossOrder(boss, move) {
+  if (!selectedEventId || !boss || !move) return;
+  const response = await fetch("/api/drops/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, boss, moveBoss: move })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { alert(data.error || "Could not update boss order."); return; }
+  loadAdminDrops();
 }
 
 async function addDrop() {
@@ -1884,13 +1946,14 @@ async function addDrop() {
   const itemId = Number(itemIdInput?.value || 0);
   const trackingRule = String(document.getElementById("dropTrackingRuleInput")?.value || "repeatable");
   const rewardEmbers = Math.max(0, Math.floor(Number(document.getElementById("dropRewardInput")?.value || 0)));
+  const boss = isPvmEntryEvent(getSelectedEvent()) ? String(document.getElementById("dropBossInput")?.value || "").trim() : "";
   if (!name || !selectedEventId) return;
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
 
   const response = await fetch("/api/drops/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule })
+    body: JSON.stringify({ eventId: selectedEventId, name, itemId, image: imageInput?.value || "", wikiUrl: imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule, boss })
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add tracked item."); return; }
@@ -1901,6 +1964,8 @@ async function addDrop() {
   if (imageInput) { imageInput.value = ""; imageInput.dataset.wikiUrl = ""; }
   const reward = document.getElementById("dropRewardInput");
   if (reward) reward.value = "";
+  const bossInput = document.getElementById("dropBossInput");
+  if (bossInput) bossInput.value = "";
   const idLookup = document.getElementById("dropItemIdLookupInput");
   if (idLookup) idLookup.value = "";
   const idStatus = document.getElementById("dropItemIdLookupStatus");
