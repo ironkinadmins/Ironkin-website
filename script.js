@@ -740,7 +740,7 @@ async function loadSiteNav() {
   }
 
   try {
-    const response = await fetch("/nav.html?v=20260807-premium-v4", { cache: "no-store" });
+    const response = await fetch("/nav.html?v=20260825-v5", { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("Could not load navigation.");

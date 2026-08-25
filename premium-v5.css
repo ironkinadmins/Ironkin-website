@@ -1,0 +1,205 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* Ironkin V5 Design System — 2026-08-25
+   One shared layer for tokens, surfaces, typography, navigation, profiles,
+   trophies, motion, backgrounds and responsive polish. */
+:root {
+  --ik-canvas:#070706;
+  --ik-canvas-2:#0b0908;
+  --ik-section:#100d0b;
+  --ik-panel:#15110e;
+  --ik-panel-2:#1a1410;
+  --ik-raised:#211811;
+  --ik-text:#fff8f1;
+  --ik-text-2:#d9cfc6;
+  --ik-muted:#968a80;
+  --ik-faint:#6f665f;
+  --ik-ember:#ff7a1a;
+  --ik-ember-2:#ff9c43;
+  --ik-ember-soft:rgba(255,122,26,.12);
+  --ik-gold:#d8ad68;
+  --ik-success:#6fd19b;
+  --ik-border:rgba(255,255,255,.075);
+  --ik-border-strong:rgba(255,255,255,.12);
+  --ik-border-hot:rgba(255,139,50,.35);
+  --ik-shadow-sm:0 8px 24px rgba(0,0,0,.22);
+  --ik-shadow-md:0 18px 48px rgba(0,0,0,.3);
+  --ik-shadow-lg:0 30px 80px rgba(0,0,0,.42);
+  --ik-radius-sm:8px;
+  --ik-radius-md:12px;
+  --ik-radius-lg:18px;
+  --ik-radius-xl:24px;
+  --ik-space-1:4px;
+  --ik-space-2:8px;
+  --ik-space-3:12px;
+  --ik-space-4:16px;
+  --ik-space-5:20px;
+  --ik-space-6:24px;
+  --ik-space-8:32px;
+  --ik-space-10:40px;
+  --ik-space-12:48px;
+  --ik-display:'Cinzel', Georgia, serif;
+  --ik-ui:'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ik-ease:cubic-bezier(.2,.8,.2,1);
+  --ik-fast:160ms;
+  --ik-normal:220ms;
+}
+
+html { color-scheme:dark; scroll-behavior:smooth; background:var(--ik-canvas); }
+body {
+  font-family:var(--ik-ui) !important;
+  color:var(--ik-text);
+  background:
+    radial-gradient(900px 520px at 88% 4%, rgba(255,111,18,.08), transparent 64%),
+    radial-gradient(700px 520px at 7% 35%, rgba(216,173,104,.035), transparent 65%),
+    linear-gradient(rgba(7,7,6,.93),rgba(7,7,6,.97)),
+    url('/assets/ironkin-bg.png') center top/cover fixed,
+    var(--ik-canvas) !important;
+  min-height:100vh;
+}
+body::before {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
+  opacity:.22;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
+}
+::selection { background:rgba(255,122,26,.28); color:#fff; }
+
+h1,h2,h3,h4,.brand-wordmark strong,.premium-page-hero h1,.page-title h1 { letter-spacing:-.025em; }
+h1,.premium-page-hero h1,.page-title h1 { font-family:var(--ik-display); font-weight:800; }
+.eyebrow,.home-kicker { color:var(--ik-ember-2) !important; font-size:.7rem !important; font-weight:900 !important; letter-spacing:.18em !important; text-transform:uppercase; }
+p,li,td,th,input,button,select,textarea { font-family:var(--ik-ui); }
+
+/* Surface hierarchy: orange is reserved for active/featured states, not every box. */
+.card,.panel,.profile-panel,.rank-card,.shop-card,.record-card,.event-card,.archive-card,.handbook-card,
+.games-card,.bingo-card,.team-card,.bounty-progress-panel,.bounty-catalog-section,.bounty-community-panel {
+  border-color:var(--ik-border) !important;
+  background:linear-gradient(145deg,rgba(25,20,16,.94),rgba(13,11,9,.95)) !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.025),var(--ik-shadow-sm);
+}
+a,button,.btn,input,select,textarea,.card,.profile-panel,.event-card,.record-card,.hall-card,.shop-card {
+  transition:transform var(--ik-fast) var(--ik-ease),border-color var(--ik-fast) ease,background var(--ik-fast) ease,box-shadow var(--ik-fast) ease,color var(--ik-fast) ease,opacity var(--ik-fast) ease;
+}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline:2px solid var(--ik-ember-2); outline-offset:3px; }
+.btn:hover,button:not(:disabled):hover { transform:translateY(-1px); }
+.card:hover,.event-card:hover,.record-card:hover,.shop-card:hover,.hall-card:hover { border-color:var(--ik-border-strong) !important; box-shadow:var(--ik-shadow-md); }
+
+/* App-like navigation */
+.site-header.premium-header { position:sticky; top:0; z-index:1000; border-bottom:1px solid var(--ik-border); background:rgba(7,7,6,.82)!important; backdrop-filter:blur(18px) saturate(125%); box-shadow:0 10px 36px rgba(0,0,0,.22); }
+.premium-nav { width:min(1440px,calc(100% - 32px)); min-height:74px; margin:auto; gap:22px; }
+.premium-brand { min-width:max-content; text-decoration:none; }
+.brand-logo-shell { width:43px!important; height:43px!important; border:1px solid rgba(255,143,57,.28)!important; background:radial-gradient(circle at 50% 35%,rgba(255,132,40,.13),rgba(0,0,0,.16))!important; box-shadow:inset 0 0 20px rgba(255,109,18,.05),0 0 26px rgba(255,109,18,.05)!important; }
+.brand-logo { filter:drop-shadow(0 0 8px rgba(255,125,28,.18)); }
+.brand-wordmark strong { font-family:var(--ik-display); font-size:1rem; letter-spacing:.08em; text-transform:uppercase; }
+.brand-wordmark small { color:var(--ik-muted)!important; font-size:.58rem!important; letter-spacing:.06em; }
+.premium-nav-links { align-items:center; gap:4px!important; }
+.premium-nav-links > a,.nav-dropdown-toggle { min-height:38px; display:inline-flex; align-items:center; padding:0 11px!important; border:1px solid transparent!important; border-radius:9px!important; color:#b9aea5!important; background:transparent!important; font-size:.78rem!important; font-weight:750!important; white-space:nowrap; }
+.premium-nav-links > a:hover,.nav-dropdown-toggle:hover,.premium-nav-links > a.active { color:#fff8f1!important; background:rgba(255,255,255,.04)!important; border-color:var(--ik-border)!important; transform:none; }
+.premium-nav-links > a.active { box-shadow:inset 0 -2px var(--ik-ember); }
+.nav-dropdown-menu { border:1px solid var(--ik-border-strong)!important; border-radius:14px!important; background:rgba(14,11,9,.98)!important; backdrop-filter:blur(18px); box-shadow:var(--ik-shadow-lg)!important; padding:7px!important; }
+.nav-dropdown-menu a { border-radius:8px!important; padding:10px 12px!important; }
+.nav-dropdown-menu a:hover { background:rgba(255,255,255,.045)!important; }
+.nav-global-search-trigger { min-height:38px!important; border:1px solid var(--ik-border)!important; border-radius:9px!important; background:rgba(255,255,255,.025)!important; color:var(--ik-muted)!important; }
+.nav-global-search-trigger:hover { border-color:rgba(255,143,57,.24)!important; color:var(--ik-text)!important; background:rgba(255,122,26,.055)!important; }
+.nav-discord-btn { border-radius:9px!important; }
+
+/* Premium page framing */
+.page,.profile-page,.handbook-page,.games-shell,.team-shell,.bingo-page,.bingo-entry-page { position:relative; }
+.page::before,.profile-page::before,.handbook-page::before,.games-shell::before {
+  content:""; position:absolute; top:-20px; right:0; width:460px; height:300px; pointer-events:none; z-index:-1;
+  background:radial-gradient(circle,rgba(255,124,27,.065),transparent 68%); filter:blur(8px);
+}
+.page-title,.premium-page-hero { position:relative; overflow:hidden; border-bottom:1px solid var(--ik-border); }
+.page-title::after,.premium-page-hero::after { content:""; position:absolute; right:-40px; top:-70px; width:260px; height:260px; opacity:.075; background:url('/assets/ironkin-emblem.png') center/contain no-repeat; pointer-events:none; filter:grayscale(1); }
+
+/* Member profile = a first-class player card */
+.profile-page { width:min(1180px,calc(100% - 32px))!important; margin:auto!important; padding-top:38px!important; }
+.profile-hero { position:relative; overflow:hidden; border:1px solid var(--ik-border)!important; border-radius:22px!important; background:linear-gradient(120deg,rgba(31,23,17,.96),rgba(13,11,9,.96))!important; box-shadow:var(--ik-shadow-lg)!important; }
+.profile-hero::after { content:""; position:absolute; width:330px; height:330px; right:-80px; top:-120px; opacity:.055; background:url('/assets/ironkin-emblem.png') center/contain no-repeat; pointer-events:none; }
+.profile-identity-card { position:relative; z-index:1; padding:30px!important; gap:24px!important; }
+.profile-avatar { width:112px!important; height:112px!important; border:1px solid rgba(255,144,55,.26)!important; box-shadow:0 0 0 7px rgba(255,255,255,.025),0 18px 40px rgba(0,0,0,.35)!important; }
+.profile-identity-copy h1 { font-family:var(--ik-display)!important; font-size:clamp(2rem,4vw,3.15rem)!important; }
+.profile-meta-row { color:var(--ik-muted)!important; }
+.profile-badge-row { gap:8px!important; }
+.profile-badge { position:relative; min-height:30px; padding:5px 9px!important; border:1px solid var(--ik-border)!important; border-radius:8px!important; background:rgba(255,255,255,.025)!important; box-shadow:inset 0 1px rgba(255,255,255,.035); }
+.profile-badge:hover,.profile-badge:focus { border-color:var(--ik-border-hot)!important; background:rgba(255,122,26,.07)!important; transform:translateY(-1px); }
+.profile-stat-grid { gap:10px!important; }
+.profile-stat-card { min-height:116px; border:1px solid var(--ik-border)!important; border-radius:14px!important; background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012))!important; }
+.profile-stat-card strong { font-size:1.48rem!important; color:#fff!important; }
+.profile-grid { gap:16px!important; }
+.profile-embers-card { background:linear-gradient(145deg,rgba(255,122,26,.11),rgba(18,14,11,.96))!important; border-color:rgba(255,140,50,.2)!important; }
+.profile-ember-value { color:var(--ik-ember-2)!important; text-shadow:0 0 24px rgba(255,122,26,.15); }
+
+/* Achievement / trophy identity */
+.ik-achievement-note { display:block; margin-top:5px; color:var(--ik-faint); font-size:.69rem; line-height:1.35; }
+.ik-trophy-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
+.ik-trophy { position:relative; overflow:hidden; padding:14px; border:1px solid var(--ik-border); border-radius:13px; background:linear-gradient(145deg,rgba(216,173,104,.07),rgba(255,255,255,.015)); }
+.ik-trophy::after { content:""; position:absolute; inset:-100% -30%; background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.06) 50%,transparent 58%); transform:translateX(-45%); transition:transform .8s var(--ik-ease); }
+.ik-trophy:hover::after { transform:translateX(45%); }
+.ik-trophy strong { display:block; color:#f4d6a5; }
+.ik-trophy small { color:var(--ik-muted); }
+
+/* Hall of Flame — restrained trophy room */
+body.ik-hall-page .page { width:min(1180px,calc(100% - 32px)); }
+body.ik-hall-page .page-title { min-height:230px; display:flex; align-items:center; padding:42px!important; border:1px solid var(--ik-border); border-radius:22px; background:linear-gradient(125deg,rgba(31,22,15,.96),rgba(11,10,9,.96)); box-shadow:var(--ik-shadow-lg); }
+body.ik-hall-page .page-title::before { content:"LEGACY • ACHIEVEMENT • KIN"; position:absolute; left:42px; top:30px; color:var(--ik-gold); font-size:.63rem; font-weight:900; letter-spacing:.2em; }
+body.ik-hall-page .hall-grid { gap:14px!important; margin-top:18px; }
+body.ik-hall-page .hall-grid > * { border-color:rgba(216,173,104,.16)!important; background:radial-gradient(circle at 90% 0,rgba(216,173,104,.07),transparent 38%),linear-gradient(145deg,rgba(24,19,15,.96),rgba(12,10,9,.96))!important; box-shadow:var(--ik-shadow-sm)!important; }
+body.ik-hall-page .hall-grid > *:hover { border-color:rgba(216,173,104,.32)!important; transform:translateY(-2px); box-shadow:var(--ik-shadow-md)!important; }
+
+/* Data visualization helpers */
+.ik-data-viz { margin:22px 0; padding:20px; border:1px solid var(--ik-border); border-radius:16px; background:linear-gradient(145deg,rgba(255,255,255,.026),rgba(255,255,255,.01)); }
+.ik-data-viz-head { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; }
+.ik-data-viz-head h3 { margin:3px 0 0; font-size:1.05rem; }
+.ik-data-viz-head small { color:var(--ik-muted); }
+.ik-bars { display:grid; gap:10px; }
+.ik-bar-row { display:grid; grid-template-columns:minmax(90px,.7fr) minmax(140px,2.4fr) auto; gap:10px; align-items:center; }
+.ik-bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ik-text-2); font-size:.78rem; font-weight:700; }
+.ik-bar-track { height:7px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.055); }
+.ik-bar-fill { height:100%; width:0; border-radius:inherit; background:linear-gradient(90deg,var(--ik-ember),var(--ik-ember-2)); box-shadow:0 0 14px rgba(255,122,26,.18); transition:width .7s var(--ik-ease); }
+.ik-bar-value { color:var(--ik-muted); font-size:.72rem; font-variant-numeric:tabular-nums; }
+
+/* OSRS content imagery: intentional framing */
+img[src*="runescape" i],img[src*="osrs" i],.bounty-card-image img,.event-item-image,.item-icon,.skill-icon {
+  filter:drop-shadow(0 7px 10px rgba(0,0,0,.3));
+}
+.bounty-card-image,.event-item-image-wrap,.item-icon-wrap { border-color:var(--ik-border)!important; background:radial-gradient(circle at 50% 35%,rgba(255,145,55,.08),rgba(0,0,0,.2))!important; }
+
+/* Premium universal footer */
+.ik-footer { margin-top:64px; border-top:1px solid var(--ik-border); background:linear-gradient(180deg,rgba(13,10,8,.7),rgba(7,7,6,.98)); }
+.ik-footer-inner { width:min(1180px,calc(100% - 32px)); margin:auto; padding:38px 0 26px; display:grid; grid-template-columns:1.5fr repeat(3,1fr); gap:32px; }
+.ik-footer-brand { display:flex; gap:13px; align-items:flex-start; }
+.ik-footer-brand img { width:44px; height:44px; object-fit:contain; opacity:.9; filter:drop-shadow(0 0 10px rgba(255,122,26,.12)); }
+.ik-footer-brand strong { display:block; font-family:var(--ik-display); letter-spacing:.08em; text-transform:uppercase; }
+.ik-footer-brand p { margin:5px 0 0; color:var(--ik-muted); font-size:.78rem; }
+.ik-footer-col strong { display:block; margin-bottom:10px; color:#d5c8bd; font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; }
+.ik-footer-col a { display:block; width:max-content; margin:7px 0; color:var(--ik-muted); text-decoration:none; font-size:.76rem; }
+.ik-footer-col a:hover { color:var(--ik-text); transform:translateX(2px); }
+.ik-footer-bottom { width:min(1180px,calc(100% - 32px)); margin:auto; padding:16px 0 24px; border-top:1px solid rgba(255,255,255,.055); display:flex; justify-content:space-between; gap:20px; color:var(--ik-faint); font-size:.68rem; }
+
+/* Motion + reveal */
+.ik-reveal { opacity:0; transform:translateY(8px); }
+.ik-reveal.ik-visible { opacity:1; transform:none; transition:opacity .5s var(--ik-ease),transform .5s var(--ik-ease); }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } .ik-reveal{opacity:1;transform:none;} }
+
+/* Better skeleton/loading/error states */
+.profile-skeleton,.loading,.skeleton,[class*="loading-card"] { position:relative; overflow:hidden; }
+.profile-skeleton::after,.skeleton::after,[class*="loading-card"]::after { content:""; position:absolute; inset:0; transform:translateX(-110%); background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.045) 48%,transparent 66%); animation:ik-shimmer 1.35s infinite; }
+@keyframes ik-shimmer { to { transform:translateX(110%); } }
+
+@media (max-width:1180px) {
+  .premium-nav { width:min(100% - 20px,1440px); }
+  .premium-nav-links > a,.nav-dropdown-toggle { padding:0 8px!important; }
+  .brand-wordmark small { display:none; }
+}
+@media (max-width:900px) {
+  .premium-nav-links { border:1px solid var(--ik-border)!important; background:rgba(10,9,8,.98)!important; backdrop-filter:blur(20px); box-shadow:var(--ik-shadow-lg)!important; }
+  .premium-nav-links > a,.nav-dropdown-toggle,.nav-global-search-trigger { width:100%; justify-content:flex-start; min-height:44px!important; }
+  .ik-footer-inner { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:640px) {
+  .profile-page { width:min(100% - 20px,1180px)!important; }
+  .profile-identity-card { padding:22px!important; align-items:flex-start!important; }
+  .profile-avatar { width:82px!important; height:82px!important; }
+  .ik-bar-row { grid-template-columns:90px 1fr; }.ik-bar-value{grid-column:2;}
+  .ik-footer-inner { grid-template-columns:1fr; gap:22px; }.ik-footer-bottom{flex-direction:column;}
+}
