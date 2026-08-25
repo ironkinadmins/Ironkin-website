@@ -8,6 +8,54 @@ const playersRoot=document.getElementById("signupPlayers");
 const myStats=document.getElementById("mySignupStats");
 const signupCount=document.getElementById("signupCount");
 let signupState=null;
+let gamesState=null;
+let countdownTimer=null;
+
+function earliestGamesStart(){
+  const weeks=Array.isArray(gamesState?.weeks)?gamesState.weeks:[];
+  const dates=weeks.map(w=>new Date(w.startDate).getTime()).filter(Number.isFinite).sort((a,b)=>a-b);
+  return dates.length?dates[0]:null;
+}
+function setCountdown(rootId,target){
+  const root=document.getElementById(rootId);
+  if(!root)return;
+  const cells=root.querySelectorAll("div strong");
+  if(!target||!Number.isFinite(target)){cells.forEach(x=>x.textContent="--");return;}
+  let diff=Math.max(0,target-Date.now());
+  const days=Math.floor(diff/86400000);diff%=86400000;
+  const hrs=Math.floor(diff/3600000);diff%=3600000;
+  const mins=Math.floor(diff/60000);diff%=60000;
+  const secs=Math.floor(diff/1000);
+  [days,hrs,mins,secs].forEach((v,i)=>{if(cells[i])cells[i].textContent=String(v).padStart(2,"0");});
+}
+function updateCountdowns(){
+  const begins=earliestGamesStart();
+  const closes=begins?begins-(7*86400000):null;
+  setCountdown("gamesBeginCountdown",begins);
+  setCountdown("signupCloseCountdown",closes);
+  const closeCaption=document.getElementById("signupCloseCaption");
+  const beginCaption=document.getElementById("gamesBeginCaption");
+  if(closeCaption){
+    if(signupState?.rosterLocked||signupState?.signupOpen===false)closeCaption.textContent="Registration is closed.";
+    else if(closes&&Date.now()>=closes)closeCaption.textContent="Registration closing window reached.";
+    else closeCaption.textContent="Register before time runs out!";
+  }
+  if(beginCaption){
+    if(begins&&Date.now()>=begins)beginCaption.textContent="The Ironkin Games have begun!";
+    else beginCaption.textContent="Get ready. The Games are coming!";
+  }
+}
+function setSignupButtonLabel(label){
+  const span=signupButton?.querySelector("span");
+  if(span)span.textContent=label;
+  else if(signupButton)signupButton.textContent=label;
+}
+function setStatus(message,type=""){
+  signupStatus.textContent=message||"";
+  signupStatus.classList.remove("is-error","is-success");
+  if(type)signupStatus.classList.add(`is-${type}`);
+}
+
 function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
 function n(v,d=1){const x=Number(v)||0;return x.toLocaleString(undefined,{maximumFractionDigits:d});}
 function timezoneOptions(){
@@ -58,34 +106,45 @@ function render(){
   if(signupState.mySignup){
     rsnInput.value=signupState.mySignup.rsn||"";
     populateTimezones(signupState.mySignup.timezone||"");
-    signupButton.textContent="Update Signup";
+    setSignupButtonLabel("Update Signup");
     const s=signupState.mySignup;
     myStats.innerHTML=`<div class="games-signup-summary"><strong>${esc(s.rsn)}</strong><span>${esc(s.timezone||"Timezone not set")}</span><span>Registered</span></div>`;
   }else{
-    signupButton.textContent="Sign Up";
+    setSignupButtonLabel("Sign Up");
     if(!timezoneInput.options.length||timezoneInput.options.length===1)populateTimezones();
     myStats.innerHTML="";
   }
-  signupStatus.textContent=locked?"Registration is locked and signup changes are frozen.":(!signupState.signupOpen?"Registration is currently closed.":(!signupState.signedIn?"Sign in with Discord to register.":"Registration is open. Enter your Ironman RSN below."));
-  playersRoot.innerHTML=signups.length?signups.map((s,index)=>`<div class="games-signup-list-row"><span class="games-signup-list-number">${index+1}</span><div><strong>${esc(s.rsn||s.displayName||"Member")}</strong>${s.displayName&&s.rsn&&s.displayName!==s.rsn?`<small>${esc(s.displayName)}</small>`:""}</div></div>`).join(""):`<div class="games-empty-state">No one has signed up yet.</div>`;
+  setStatus(locked?"Registration is locked and signup changes are frozen.":(!signupState.signupOpen?"Registration is currently closed.":(!signupState.signedIn?"Sign in with Discord to register.":"Registration is open. Enter your Ironman RSN below.")));
+  updateCountdowns();
+  playersRoot.innerHTML=signups.length?signups.map((s,index)=>`<div class="games-signup-list-row"><span class="games-signup-list-number">${index+1}</span><div><strong>${esc(s.rsn||s.displayName||"Member")}</strong>${s.displayName&&s.rsn&&s.displayName!==s.rsn?`<small>${esc(s.displayName)}</small>`:""}</div></div>`).join(""):`<div class="games-empty-state"><div><strong>No one has signed up yet.</strong><br><span>Be the first to join Ironkin Games!</span></div></div>`;
 }
 async function load(){
-  try{const r=await fetch(`/api/ironkin-games/signup?t=${Date.now()}`,{cache:"no-store"});signupState=await r.json();if(!r.ok)throw new Error(signupState.error||"Could not load signup.");render();}
-  catch(err){signupStatus.textContent=err.message;}
+  try{
+    const [signupResponse,stateResponse]=await Promise.all([
+      fetch(`/api/ironkin-games/signup?t=${Date.now()}`,{cache:"no-store"}),
+      fetch(`/api/ironkin-games/state?t=${Date.now()}`,{cache:"no-store"})
+    ]);
+    signupState=await signupResponse.json();
+    gamesState=stateResponse.ok?await stateResponse.json():null;
+    if(!signupResponse.ok)throw new Error(signupState.error||"Could not load signup.");
+    render();
+    if(countdownTimer)clearInterval(countdownTimer);
+    countdownTimer=setInterval(updateCountdowns,1000);
+  }catch(err){setStatus(err.message,"error");}
 }
 signupForm.addEventListener("submit",async ev=>{
   ev.preventDefault();
-  if(!timezoneInput.value){signupStatus.textContent="Select your timezone before signing up.";return;}
-  signupButton.disabled=true;signupStatus.textContent="Verifying your RSN with Wise Old Man…";
+  if(!timezoneInput.value){setStatus("Select your timezone before signing up.","error");return;}
+  signupButton.disabled=true;setStatus("Verifying your RSN with Wise Old Man…");
   const r=await fetch("/api/ironkin-games/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rsn:rsnInput.value.trim(),timezone:timezoneInput.value})});
   const d=await r.json().catch(()=>({}));
-  if(!r.ok){signupStatus.textContent=d.error||"Signup failed.";signupButton.disabled=false;return;}
-  await load();signupStatus.textContent="You are signed up for Ironkin Games.";
+  if(!r.ok){setStatus(d.error||"Signup failed.","error");signupButton.disabled=false;return;}
+  await load();setStatus("You are signed up for Ironkin Games.","success");
 });
 withdrawButton.addEventListener("click",async()=>{
   if(!confirm("Withdraw from Ironkin Games signup?"))return;
   const r=await fetch("/api/ironkin-games/signup",{method:"DELETE"});const d=await r.json().catch(()=>({}));
-  if(!r.ok){signupStatus.textContent=d.error||"Could not withdraw.";return;}rsnInput.value="";populateTimezones();await load();signupStatus.textContent="You have been removed from signup.";
+  if(!r.ok){setStatus(d.error||"Could not withdraw.","error");return;}rsnInput.value="";populateTimezones();await load();setStatus("You have been removed from signup.","success");
 });
 populateTimezones();
 load();

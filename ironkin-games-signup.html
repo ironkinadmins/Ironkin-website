@@ -7,65 +7,110 @@
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
-  <link rel="stylesheet" href="/ironkin-games.css?v=20260825-signup-list-1" />
+  <link rel="stylesheet" href="/ironkin-games.css?v=20260825-signup-reference-1" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260825-v5">
 </head>
-<body class="premium-ui games-page">
+<body class="premium-ui games-page games-signup-page">
   <div id="siteNav"></div>
-  <main class="page games-shell">
-    <section class="games-hero games-signup-hero">
-      <div>
-        <p class="eyebrow">Registration</p>
-        <h1>Ironkin Games Signup</h1>
-        <p>Register your Ironman for Ironkin Games. Teams will be created after registration closes.</p>
+
+  <main class="page games-signup-shell">
+    <section class="games-signup-masthead" aria-labelledby="signupTitle">
+      <img class="games-signup-mark" src="/assets/ironkin-emblem.png" alt="Ironkin emblem" />
+      <p class="games-signup-kicker">Registration</p>
+      <h1 id="signupTitle" class="games-signup-title"><span>Ironkin Games</span><strong>Sign Up</strong></h1>
+      <div class="games-signup-divider" aria-hidden="true"><span></span><i>◇</i><span></span></div>
+      <p class="games-signup-intro">Register your Ironman for Ironkin Games.<br>Teams will be created after registration closes.</p>
+    </section>
+
+    <section class="games-signup-countdowns" aria-label="Ironkin Games countdowns">
+      <article class="games-countdown-card games-countdown-registration">
+        <div class="games-countdown-icon" aria-hidden="true">⌛</div>
+        <div class="games-countdown-content">
+          <p class="games-countdown-label">Registration Closes In</p>
+          <div id="signupCloseCountdown" class="games-countdown-clock" aria-live="polite">
+            <div><strong>--</strong><span>Days</span></div><b>:</b>
+            <div><strong>--</strong><span>Hrs</span></div><b>:</b>
+            <div><strong>--</strong><span>Mins</span></div><b>:</b>
+            <div><strong>--</strong><span>Secs</span></div>
+          </div>
+          <p id="signupCloseCaption" class="games-countdown-caption">Register before time runs out!</p>
+        </div>
+      </article>
+
+      <article class="games-countdown-card games-countdown-start">
+        <div class="games-countdown-icon" aria-hidden="true">⚔</div>
+        <div class="games-countdown-content">
+          <p class="games-countdown-label">Ironkin Games Begins In</p>
+          <div id="gamesBeginCountdown" class="games-countdown-clock" aria-live="polite">
+            <div><strong>--</strong><span>Days</span></div><b>:</b>
+            <div><strong>--</strong><span>Hrs</span></div><b>:</b>
+            <div><strong>--</strong><span>Mins</span></div><b>:</b>
+            <div><strong>--</strong><span>Secs</span></div>
+          </div>
+          <p id="gamesBeginCaption" class="games-countdown-caption">Get ready. The Games are coming!</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="games-signup-panel games-signup-entry-panel">
+      <div class="games-signup-panel-head">
+        <div class="games-signup-panel-title">
+          <span class="games-panel-icon" aria-hidden="true">♟</span>
+          <div>
+            <h2>Your Entry</h2>
+            <p>Register your Ironman to participate in Ironkin Games.<br>You must be signed into the site with Discord.</p>
+          </div>
+        </div>
+        <a class="games-signup-back" href="/ironkin-games.html"><span aria-hidden="true">←</span> Back to Games</a>
       </div>
-      <div class="games-hero-badge"><span>IK</span><strong>SIGNUP</strong></div>
+
+      <form id="gamesSignupForm" class="games-signup-reference-form">
+        <label class="games-signup-reference-field">
+          <span>OSRS Username (Ironman)</span>
+          <input id="gamesSignupRsn" maxlength="12" autocomplete="off" placeholder="Enter your Ironman RSN" required />
+        </label>
+        <label class="games-signup-reference-field">
+          <span>Timezone</span>
+          <select id="gamesSignupTimezone" required>
+            <option value="">Select your timezone</option>
+          </select>
+        </label>
+
+        <div class="games-signup-verification">
+          <span class="games-verification-shield" aria-hidden="true">◇</span>
+          <p>Your RSN will be verified against the Ironkin <strong>Wise Old Man (WOM)</strong> group.<br>Ensure your RSN is set as your login name.</p>
+        </div>
+
+        <div class="games-signup-action-stack">
+          <button id="gamesSignupButton" class="games-signup-primary" type="submit"><img src="/assets/ironkin-emblem.png" alt="" aria-hidden="true"><span>Sign Up</span></button>
+          <button id="gamesWithdrawButton" class="games-signup-withdraw" type="button" hidden>Withdraw from Ironkin Games</button>
+        </div>
+      </form>
+
+      <div id="gamesSignupStatus" class="games-signup-inline-status" role="status" aria-live="polite">Loading registration…</div>
+      <div id="mySignupStats"></div>
     </section>
 
-    <section id="gamesSignupStatus" class="games-notice">Loading registration…</section>
-    <section class="games-grid">
-      <article class="games-card full games-signup-card">
-        <div class="games-card-heading">
+    <section class="games-signup-panel games-signup-list-panel">
+      <div class="games-signup-panel-head compact">
+        <div class="games-signup-panel-title">
+          <span class="games-panel-icon group" aria-hidden="true">●●●</span>
           <div>
-            <p class="eyebrow">Your Entry</p>
-            <h2>Register for Ironkin Games</h2>
-            <p class="games-muted">You must be signed into the site with Discord. Your RSN is verified against the Ironkin Wise Old Man group. Choose the timezone you normally play in so scheduling can be planned after registration closes.</p>
+            <h2>Registration List</h2>
+            <p>This is the full registration list. Teams and balancing will be decided by staff after signup closes.</p>
           </div>
-          <a class="games-btn secondary" href="/ironkin-games.html">Back to Games</a>
         </div>
-        <form id="gamesSignupForm" class="games-signup-form">
-          <label class="games-field">
-            <span class="games-field-label">OSRS Username</span>
-            <input id="gamesSignupRsn" maxlength="12" autocomplete="off" placeholder="Your Ironman RSN" required />
-          </label>
-          <label class="games-field">
-            <span class="games-field-label">Timezone</span>
-            <select id="gamesSignupTimezone" required>
-              <option value="">Select your timezone</option>
-            </select>
-          </label>
-          <button id="gamesSignupButton" class="games-btn" type="submit">Sign Up</button>
-          <button id="gamesWithdrawButton" class="games-btn danger" type="button" hidden>Withdraw</button>
-        </form>
-        <div id="mySignupStats"></div>
-      </article>
-
-      <article class="games-card full">
-        <div class="games-card-heading">
-          <div>
-            <p class="eyebrow">Registration List</p>
-            <h2>Who's Signed Up</h2>
-            <p class="games-muted">This is the full registration list. Teams and balancing will be decided by staff after signup closes.</p>
-          </div>
-          <div id="signupCount" class="games-kpi-small">0 signed up</div>
-        </div>
-        <div id="signupPlayers" class="games-signup-list"></div>
-      </article>
+        <div id="signupCount" class="games-signup-count-pill">0 Signed Up</div>
+      </div>
+      <div id="signupPlayers" class="games-signup-list-reference"></div>
     </section>
+
+    <section class="games-signup-motto"><span aria-hidden="true">✣</span> Forged Alone. Bound as Kin. Tested Together.</section>
   </main>
-  <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
+
+  <footer class="games-signup-footer"><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
-  <script src="/ironkin-games-signup.js?v=20260825-signup-list-1"></script>
+  <script src="/ironkin-games-signup.js?v=20260825-signup-reference-1"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

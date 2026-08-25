@@ -177,3 +177,111 @@
 .games-signup-list-row>div{display:flex;flex-direction:column;min-width:0}
 .games-signup-list-row small{opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:650px){.games-signup-list-row{grid-template-columns:38px 1fr}}
+
+/* ========================================================================== 
+   Ironkin Games Signup — cinematic registration layout
+   ========================================================================== */
+.games-signup-page{background:#080808;color:#f3f0eb;min-height:100vh}
+.games-signup-page::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;background:radial-gradient(circle at 50% 7%,rgba(230,157,57,.07),transparent 28%),radial-gradient(circle at 15% 38%,rgba(230,157,57,.035),transparent 28%),linear-gradient(180deg,#070707 0%,#0a0a0a 45%,#080808 100%)}
+.games-signup-page::after{content:"IK";position:fixed;right:4vw;top:92px;pointer-events:none;z-index:-1;font-family:Georgia,"Times New Roman",serif;font-size:clamp(110px,14vw,220px);font-weight:800;line-height:1;color:rgba(230,157,57,.035);text-shadow:0 0 40px rgba(0,0,0,.65)}
+.games-signup-shell{width:min(1160px,calc(100% - 40px));margin:0 auto;padding:44px 0 58px}
+.games-signup-masthead{text-align:center;display:flex;flex-direction:column;align-items:center;padding:10px 0 26px}
+.games-signup-mark{width:82px;height:82px;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.55));margin-bottom:5px}
+.games-signup-kicker{margin:0 0 5px;color:#e8a23d;font-size:14px;font-weight:900;letter-spacing:.34em;text-transform:uppercase}
+.games-signup-title{margin:0;line-height:.88;text-transform:uppercase;text-align:center;font-family:Georgia,"Times New Roman",serif;letter-spacing:-.035em;text-shadow:0 4px 16px rgba(0,0,0,.65)}
+.games-signup-title span,.games-signup-title strong{display:block}
+.games-signup-title span{color:#f4f1ec;font-size:clamp(54px,7.1vw,92px);font-weight:700}
+.games-signup-title strong{color:#df992f;font-size:clamp(48px,6vw,78px);font-weight:700;letter-spacing:.015em;margin-top:4px}
+.games-signup-divider{display:flex;align-items:center;gap:9px;width:min(360px,70vw);margin:16px auto 15px;color:#e69d39}
+.games-signup-divider span{height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(230,157,57,.68))}
+.games-signup-divider span:last-child{background:linear-gradient(90deg,rgba(230,157,57,.68),transparent)}
+.games-signup-divider i{font-style:normal;font-size:17px}
+.games-signup-intro{margin:0;color:#d4d0ca;font-size:17px;line-height:1.42}
+.games-signup-countdowns{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:0 0 18px}
+.games-countdown-card{min-height:174px;padding:27px 30px;display:grid;grid-template-columns:84px 1fr;gap:25px;align-items:center;border:1px solid rgba(255,255,255,.1);background:linear-gradient(135deg,rgba(25,22,16,.96),rgba(13,13,13,.96));box-shadow:0 18px 40px rgba(0,0,0,.22)}
+.games-countdown-registration{border-radius:15px 0 0 15px;border-color:rgba(230,157,57,.22)}
+.games-countdown-start{border-radius:0 15px 15px 0;background:linear-gradient(135deg,rgba(8,19,29,.97),rgba(8,13,18,.97));border-color:rgba(64,132,188,.24)}
+.games-countdown-icon{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(230,157,57,.5);color:#e8a23d;font-size:34px;background:radial-gradient(circle,rgba(230,157,57,.08),rgba(0,0,0,.08));box-shadow:inset 0 0 28px rgba(230,157,57,.04)}
+.games-countdown-content{text-align:center;min-width:0}
+.games-countdown-label{margin:0 0 9px;color:#e8a23d;font-size:13px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+.games-countdown-clock{display:flex;justify-content:center;align-items:flex-start;gap:7px}
+.games-countdown-clock>div{min-width:50px}
+.games-countdown-clock strong{display:block;color:#f5f4f1;font-size:clamp(24px,2.9vw,34px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1}
+.games-countdown-clock span{display:block;margin-top:8px;color:#aaa49c;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.games-countdown-clock>b{margin-top:0;color:#8d8984;font-size:24px;line-height:1;font-weight:500}
+.games-countdown-caption{margin:13px 0 0;color:#c8c4be;font-size:13px}
+.games-signup-panel{border:1px solid rgba(255,255,255,.1);border-radius:15px;background:linear-gradient(145deg,rgba(19,19,19,.98),rgba(12,12,12,.98));box-shadow:0 18px 45px rgba(0,0,0,.22)}
+.games-signup-entry-panel{padding:28px 30px 30px;margin-top:18px}
+.games-signup-list-panel{padding:29px 30px 31px;margin-top:18px}
+.games-signup-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:26px}
+.games-signup-panel-head.compact{margin-bottom:20px}
+.games-signup-panel-title{display:flex;align-items:flex-start;gap:16px}
+.games-panel-icon{width:42px;color:#e8a23d;font-size:28px;line-height:1;text-align:center;padding-top:3px;text-shadow:0 0 16px rgba(230,157,57,.18)}
+.games-panel-icon.group{font-size:12px;letter-spacing:-4px;padding-top:11px}
+.games-signup-panel-title h2{margin:0 0 15px;text-transform:uppercase;font-size:21px;line-height:1;letter-spacing:.025em;color:#f2efea}
+.games-signup-panel-title p{margin:0;color:#bbb6af;font-size:15px;line-height:1.45}
+.games-signup-back{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:#efede9;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap;transition:.18s ease}
+.games-signup-back span{color:#e8a23d;font-size:20px;line-height:1}
+.games-signup-back:hover{transform:translateY(-1px);border-color:rgba(230,157,57,.28);background:rgba(230,157,57,.08)}
+.games-signup-reference-form{display:grid;grid-template-columns:1fr 1.08fr;gap:22px 28px;align-items:stretch}
+.games-signup-reference-field{display:flex;flex-direction:column;gap:9px;min-width:0}
+.games-signup-reference-field>span{font-size:13px;font-weight:800;color:#f1eeea}
+.games-signup-reference-field input,.games-signup-reference-field select{width:100%;height:49px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#090909;color:#f0ede8;padding:0 14px;font:inherit;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+.games-signup-reference-field input::placeholder{color:#68645f}
+.games-signup-reference-field input:focus,.games-signup-reference-field select:focus{border-color:rgba(230,157,57,.58);box-shadow:0 0 0 3px rgba(230,157,57,.08)}
+.games-signup-verification{min-height:91px;padding:17px 18px;display:flex;align-items:center;gap:17px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.18)}
+.games-verification-shield{width:36px;height:42px;display:grid;place-items:center;flex:0 0 auto;color:#e8a23d;border:3px solid #e8a23d;border-radius:7px 7px 13px 13px;font-size:16px;line-height:1;transform:scaleX(.82)}
+.games-signup-verification p{margin:0;color:#c1bdb7;font-size:14px;line-height:1.45}
+.games-signup-verification strong{color:#eeeae5}
+.games-signup-action-stack{display:flex;flex-direction:column;gap:10px}
+.games-signup-primary{min-height:91px;border:0;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:20px;padding:18px 24px;cursor:pointer;background:linear-gradient(135deg,#e7a23a,#f0b755);color:#090909;font-size:18px;font-weight:950;letter-spacing:.025em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 8px 24px rgba(230,157,57,.09);transition:.18s ease}
+.games-signup-primary img{position:absolute;opacity:.12;width:54px;height:54px;object-fit:contain;transform:translateX(-145px)}
+.games-signup-primary:hover:not(:disabled){filter:brightness(1.04);transform:translateY(-1px);box-shadow:0 10px 26px rgba(230,157,57,.14)}
+.games-signup-primary:disabled{opacity:.46;cursor:not-allowed;filter:grayscale(.2)}
+.games-signup-withdraw{height:42px;border-radius:9px;border:1px solid rgba(206,83,74,.34);background:rgba(125,38,32,.13);color:#e6a7a1;font-weight:800;cursor:pointer}
+.games-signup-inline-status{margin-top:14px;min-height:0;padding:0;color:#ada7a0;font-size:13px}
+.games-signup-inline-status.is-error{color:#e8a19a}
+.games-signup-inline-status.is-success{color:#d9b06b}
+.games-signup-page .games-signup-summary{margin-top:14px;background:rgba(230,157,57,.055);border-color:rgba(230,157,57,.16)}
+.games-signup-count-pill{align-self:center;padding:9px 19px;border-radius:999px;border:1px solid rgba(230,157,57,.18);background:rgba(230,157,57,.055);color:#eeeae4;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.025em;white-space:nowrap}
+.games-signup-list-reference{min-height:130px;border:1px dashed rgba(255,255,255,.17);border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.015),rgba(0,0,0,.08));overflow:hidden}
+.games-signup-list-reference .games-signup-list-row{grid-template-columns:48px 1fr;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.065);background:transparent}
+.games-signup-list-reference .games-signup-list-row:last-child{border-bottom:0}
+.games-signup-list-reference .games-signup-list-number{width:30px;height:30px;border-color:rgba(230,157,57,.22);background:rgba(230,157,57,.07);color:#e8a23d}
+.games-signup-list-reference .games-empty-state{min-height:136px;display:grid;place-items:center;text-align:center;padding:28px;color:#aaa49c;font-weight:700;line-height:1.6}
+.games-signup-list-reference .games-empty-state::before{content:"● ● ●";display:block;color:#55514d;font-size:23px;letter-spacing:-6px;margin-bottom:6px}
+.games-signup-motto{margin-top:18px;padding:18px 24px;border:1px solid rgba(255,255,255,.09);border-radius:13px;background:linear-gradient(145deg,rgba(19,19,19,.98),rgba(12,12,12,.98));color:#d4d0ca;font-size:13px}
+.games-signup-motto span{color:#e8a23d;font-size:20px;margin-right:12px}
+.games-signup-footer{opacity:.48}
+
+@media(max-width:900px){
+  .games-signup-shell{width:min(100% - 26px,1160px);padding-top:30px}
+  .games-signup-countdowns{grid-template-columns:1fr;gap:12px}
+  .games-countdown-registration,.games-countdown-start{border-radius:14px}
+  .games-signup-reference-form{grid-template-columns:1fr}
+  .games-signup-primary img{transform:translateX(-125px)}
+}
+@media(max-width:650px){
+  .games-signup-shell{width:min(100% - 18px,1160px);padding-top:22px}
+  .games-signup-mark{width:66px;height:66px}
+  .games-signup-title span{font-size:clamp(42px,13vw,60px)}
+  .games-signup-title strong{font-size:clamp(38px,12vw,54px)}
+  .games-signup-intro{font-size:15px}
+  .games-countdown-card{grid-template-columns:1fr;padding:22px 16px;gap:15px;text-align:center}
+  .games-countdown-icon{margin:0 auto;width:66px;height:66px}
+  .games-countdown-clock{gap:4px}
+  .games-countdown-clock>div{min-width:43px}
+  .games-countdown-clock strong{font-size:25px}
+  .games-signup-entry-panel,.games-signup-list-panel{padding:22px 17px}
+  .games-signup-panel-head{flex-direction:column;margin-bottom:22px}
+  .games-signup-back{align-self:flex-start}
+  .games-signup-panel-title{gap:10px}
+  .games-panel-icon{width:30px;font-size:23px}
+  .games-signup-panel-title h2{font-size:18px}
+  .games-signup-panel-title p{font-size:13px}
+  .games-signup-count-pill{align-self:flex-start;margin-left:40px}
+  .games-signup-primary img{transform:translateX(-105px);width:45px;height:45px}
+}
+
+.games-signup-page #siteNav{display:none!important}
+.games-signup-footer{display:none!important}
