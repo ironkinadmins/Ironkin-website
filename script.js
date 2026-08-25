@@ -733,40 +733,20 @@ async function loadDiscordUser() {
 
 async function updateDynamicEventNavLinks() {
   const bingoNavLink = document.getElementById("bingoNavLink");
-  const gamesNavLink = document.getElementById("ironkinGamesNavLink");
 
-  // Fail closed: special-event links remain hidden unless their public
-  // settings endpoint explicitly says that event is active/enabled.
+  // Fail closed: Bingo remains hidden unless its public settings endpoint
+  // explicitly says the event is active. Ironkin Games now lives in Event Hub.
   if (bingoNavLink) bingoNavLink.style.display = "none";
-  if (gamesNavLink) gamesNavLink.style.display = "none";
+  if (!bingoNavLink) return;
 
-  const [bingoResult, gamesResult] = await Promise.allSettled([
-    bingoNavLink
-      ? fetch(`/api/bingo/settings?t=${Date.now()}`, { cache: "no-store" })
-          .then(async response => {
-            if (!response.ok) throw new Error("Bingo settings unavailable");
-            return response.json();
-          })
-      : Promise.resolve(null),
-    gamesNavLink
-      ? fetch(`/api/ironkin-games/state?_=${Date.now()}`, {
-          cache: "no-store",
-          headers: { "Cache-Control": "no-cache" }
-        }).then(async response => {
-          if (!response.ok) throw new Error("Ironkin Games settings unavailable");
-          return response.json();
-        })
-      : Promise.resolve(null)
-  ]);
-
-  if (bingoNavLink && bingoResult.status === "fulfilled") {
-    const settings = bingoResult.value?.settings || {};
+  try {
+    const response = await fetch(`/api/bingo/settings?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Bingo settings unavailable");
+    const data = await response.json();
+    const settings = data?.settings || {};
     bingoNavLink.style.display = settings.active === true ? "block" : "none";
-  }
-
-  if (gamesNavLink && gamesResult.status === "fulfilled") {
-    const state = gamesResult.value || {};
-    gamesNavLink.style.display = state.enabled === true ? "block" : "none";
+  } catch {
+    bingoNavLink.style.display = "none";
   }
 }
 
@@ -1333,6 +1313,37 @@ async function fetchBingoSettings() {
   }
 }
 
+async function appendIronkinGamesHubCard(grid) {
+  try {
+    const response = await fetch(`/api/ironkin-games/state?_=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    });
+    if (!response.ok) return;
+
+    const state = await response.json();
+    if (state.enabled !== true || state.showOnEvents !== true) return;
+
+    const signupOpen = Boolean(state.signupOpen && !state.rosterLocked && !state.gamesCompleted);
+    const href = signupOpen ? "/ironkin-games-signup.html" : "/ironkin-games.html";
+
+    grid.appendChild(createEventHubCard({
+      type: "ironkin-games",
+      href,
+      icon: "🏆",
+      label: signupOpen ? "Registration Open" : "Season Competition",
+      title: state.title || "Ironkin Games",
+      description: signupOpen
+        ? "Sign up individually for Ironkin Games. Teams will be decided and balanced by staff after registration closes."
+        : "A multi-week team competition featuring Main Challenges, Side Challenges, private proof, and a points leaderboard.",
+      active: true,
+      ctaLabel: signupOpen ? "Sign Up →" : "View Ironkin Games →"
+    }));
+  } catch {
+    // Keep the Event Hub clean if Games settings are unavailable.
+  }
+}
+
 async function appendBattleshipBingoCard(grid) {
   const settings = await fetchBingoSettings();
   if (settings.showOnEventsPage !== true) return;
@@ -1527,6 +1538,7 @@ async function loadEventsHub() {
       }));
     }
 
+    await appendIronkinGamesHubCard(grid);
     await appendBattleshipBingoCard(grid);
     await appendGiveawaysHubCard(grid);
   } catch (error) {
