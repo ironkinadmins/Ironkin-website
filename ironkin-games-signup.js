@@ -29,7 +29,8 @@ function setCountdown(rootId,target){
   [days,hrs,mins,secs].forEach((v,i)=>{if(cells[i])cells[i].textContent=String(v).padStart(2,"0");});
 }
 function updateCountdowns(){
-  const begins=earliestGamesStart();
+  const configuredBegin=gamesState?.gamesStartsAt?new Date(gamesState.gamesStartsAt).getTime():null;
+  const begins=Number.isFinite(configuredBegin)?configuredBegin:earliestGamesStart();
   const configuredClose=signupState?.registrationClosesAt?new Date(signupState.registrationClosesAt).getTime():null;
   const closes=Number.isFinite(configuredClose)?configuredClose:null;
   setCountdown("gamesBeginCountdown",begins);

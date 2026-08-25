@@ -22,6 +22,7 @@ export function defaultGames() {
     signupOpen: false,
     registrationOpensAt: "",
     registrationClosesAt: "",
+    gamesStartsAt: "",
     rosterLocked: false,
     autoBalanceSignups: false,
     balanceWeights: { ehp: 40, ehb: 40, totalLevel: 20 },
