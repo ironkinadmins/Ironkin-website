@@ -28,6 +28,10 @@ function setCountdown(rootId,target){
   const secs=Math.floor(diff/1000);
   [days,hrs,mins,secs].forEach((v,i)=>{if(cells[i])cells[i].textContent=String(v).padStart(2,"0");});
 }
+function formatCountdownDate(target){
+  if(!target||!Number.isFinite(target))return "";
+  return new Intl.DateTimeFormat("en-US",{month:"long",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}).format(new Date(target));
+}
 function updateCountdowns(){
   const configuredBegin=gamesState?.gamesStartsAt?new Date(gamesState.gamesStartsAt).getTime():null;
   const begins=Number.isFinite(configuredBegin)?configuredBegin:earliestGamesStart();
@@ -35,6 +39,10 @@ function updateCountdowns(){
   const closes=Number.isFinite(configuredClose)?configuredClose:null;
   setCountdown("gamesBeginCountdown",begins);
   setCountdown("signupCloseCountdown",closes);
+  const closeDate=document.getElementById("signupCloseDate");
+  const beginDate=document.getElementById("gamesBeginDate");
+  if(closeDate)closeDate.textContent=formatCountdownDate(closes);
+  if(beginDate)beginDate.textContent=formatCountdownDate(begins);
   const closeCaption=document.getElementById("signupCloseCaption");
   const beginCaption=document.getElementById("gamesBeginCaption");
   if(closeCaption){
