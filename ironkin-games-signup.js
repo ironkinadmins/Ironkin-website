@@ -30,14 +30,18 @@ function setCountdown(rootId,target){
 }
 function updateCountdowns(){
   const begins=earliestGamesStart();
-  const closes=begins?begins-(7*86400000):null;
+  const configuredClose=signupState?.registrationClosesAt?new Date(signupState.registrationClosesAt).getTime():null;
+  const closes=Number.isFinite(configuredClose)?configuredClose:null;
   setCountdown("gamesBeginCountdown",begins);
   setCountdown("signupCloseCountdown",closes);
   const closeCaption=document.getElementById("signupCloseCaption");
   const beginCaption=document.getElementById("gamesBeginCaption");
   if(closeCaption){
-    if(signupState?.rosterLocked||signupState?.signupOpen===false)closeCaption.textContent="Registration is closed.";
-    else if(closes&&Date.now()>=closes)closeCaption.textContent="Registration closing window reached.";
+    const opens=signupState?.registrationOpensAt?new Date(signupState.registrationOpensAt).getTime():null;
+    if(signupState?.rosterLocked)closeCaption.textContent="Registration is locked.";
+    else if(Number.isFinite(opens)&&Date.now()<opens)closeCaption.textContent=`Registration opens ${new Date(opens).toLocaleString()}.`;
+    else if(closes&&Date.now()>=closes)closeCaption.textContent="Registration is closed.";
+    else if(signupState?.signupOpen===false)closeCaption.textContent="Registration is currently closed.";
     else closeCaption.textContent="Register before time runs out!";
   }
   if(beginCaption){

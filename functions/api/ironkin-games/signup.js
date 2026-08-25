@@ -10,6 +10,21 @@ function normalizeRsn(value) {
   return String(value || "").trim().toLowerCase().replace(/[ _-]+/g, " ");
 }
 
+
+function registrationWindow(state, now = Date.now()) {
+  const opens = state.registrationOpensAt ? new Date(state.registrationOpensAt).getTime() : null;
+  const closes = state.registrationClosesAt ? new Date(state.registrationClosesAt).getTime() : null;
+  const validOpen = Number.isFinite(opens) ? opens : null;
+  const validClose = Number.isFinite(closes) ? closes : null;
+  const withinWindow = (validOpen === null || now >= validOpen) && (validClose === null || now <= validClose);
+  return {
+    opensAt: state.registrationOpensAt || "",
+    closesAt: state.registrationClosesAt || "",
+    withinWindow,
+    effectiveOpen: Boolean(state.signupOpen) && !state.rosterLocked && withinWindow
+  };
+}
+
 function validTimezone(value) {
   const timezone = String(value || "").trim();
   if (!timezone || timezone.length > 64) return false;
@@ -59,8 +74,12 @@ export async function onRequestGet({ request, env }) {
   const state = await loadGames(env);
   const session = await getSession(request, env);
   const mine = session ? (state.signups || []).find(s => String(s.discordId) === String(session.id)) : null;
+  const registration = registrationWindow(state);
   return Response.json({
-    signupOpen: Boolean(state.signupOpen),
+    signupOpen: registration.effectiveOpen,
+    signupEnabled: Boolean(state.signupOpen),
+    registrationOpensAt: registration.opensAt,
+    registrationClosesAt: registration.closesAt,
     rosterLocked: Boolean(state.rosterLocked),
     signedIn: Boolean(session),
     mySignup: mine || null,
@@ -79,7 +98,14 @@ export async function onRequestPost({ request, env }) {
 
   const state = await loadGames(env);
   if (state.rosterLocked) return Response.json({ error:"Ironkin Games teams are locked. Staff must unlock the roster before signup changes can be made." }, { status:403 });
-  if (!state.signupOpen) return Response.json({ error:"Ironkin Games signup is currently closed." }, { status:403 });
+  const registration = registrationWindow(state);
+  if (!state.signupOpen) return Response.json({ error:"Ironkin Games signup is currently closed by staff." }, { status:403 });
+  if (!registration.withinWindow) {
+    const now = Date.now();
+    const opens = registration.opensAt ? new Date(registration.opensAt).getTime() : null;
+    if (Number.isFinite(opens) && now < opens) return Response.json({ error:"Ironkin Games registration has not opened yet." }, { status:403 });
+    return Response.json({ error:"Ironkin Games registration has closed." }, { status:403 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const rsn = String(body.rsn || "").trim();

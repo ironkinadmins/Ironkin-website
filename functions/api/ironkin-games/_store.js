@@ -20,6 +20,8 @@ export function defaultGames() {
     finalStandings: [],
     finalProgression: [],
     signupOpen: false,
+    registrationOpensAt: "",
+    registrationClosesAt: "",
     rosterLocked: false,
     autoBalanceSignups: false,
     balanceWeights: { ehp: 40, ehb: 40, totalLevel: 20 },
