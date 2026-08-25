@@ -1579,7 +1579,11 @@ async function syncDiscordMembersNow() {
 
     renderDiscordSyncMeta(finalData, { showSummary: true });
     if (finalData?.diagnostics) renderDiscordRankEmblems(finalData.diagnostics);
-    if (status) status.textContent = `Discord member profiles are up to date. ${finalData?.profileRecordsWritten || 0} profiles synced.`;
+    if (status) {
+      const updated = Number(finalData?.profileRecordsWritten || 0);
+      const unchanged = Number(finalData?.profileRecordsUnchanged || 0);
+      status.textContent = `Discord member profiles are up to date. ${updated} updated${unchanged ? `, ${unchanged} unchanged` : ""}.`;
+    }
   } catch (error) {
     if (health) {
       health.className = "discord-sync-health is-error";

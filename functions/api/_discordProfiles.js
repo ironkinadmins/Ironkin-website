@@ -271,10 +271,65 @@ function buildDirectoryEntry(member, now, guildRoles = [], guildEmojis = [], emb
   };
 }
 
+const DISCORD_MANAGED_PROFILE_FIELDS = [
+  "discordId",
+  "displayName",
+  "username",
+  "avatar",
+  "discordAvatarUrl",
+  "roles",
+  "rank",
+  "rankRoleId",
+  "rankIconUrl",
+  "rankUnicodeEmoji",
+  "staffRank",
+  "staffRankRoleId",
+  "staffRankIconUrl",
+  "staffRankUnicodeEmoji",
+  "rsn",
+  "previousRsns",
+  "memberSince"
+];
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map(key => [key, stableValue(value[key])])
+    );
+  }
+  return value ?? null;
+}
+
+function discordManagedProfileChanged(existing, nextRecord) {
+  for (const field of DISCORD_MANAGED_PROFILE_FIELDS) {
+    if (JSON.stringify(stableValue(existing?.[field])) !== JSON.stringify(stableValue(nextRecord?.[field]))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function directoryIndexChanged(previousIndex, nextIndex) {
+  if (!Array.isArray(previousIndex) || previousIndex.length !== nextIndex.length) return true;
+  for (let i = 0; i < nextIndex.length; i += 1) {
+    const oldItem = previousIndex[i] || {};
+    const newItem = nextIndex[i] || {};
+    const oldComparable = { ...oldItem };
+    const newComparable = { ...newItem };
+    delete oldComparable.updatedAt;
+    delete newComparable.updatedAt;
+    if (JSON.stringify(stableValue(oldComparable)) !== JSON.stringify(stableValue(newComparable))) return true;
+  }
+  return false;
+}
+
 async function writeProfileRecord(env, member, now, guildRoles = [], guildEmojis = [], emblemMap = {}) {
   const user = member?.user;
   const discordId = String(user?.id || "");
-  if (!discordId || user?.bot) return { skipped: true };
+  if (!discordId || user?.bot) return { skipped: true, written: false };
 
   const existing = safeJsonParse(await hybridKv(env, "drops").get(`member-profile:${discordId}`), {});
   const roles = Array.isArray(member.roles) ? member.roles : [];
@@ -307,22 +362,36 @@ async function writeProfileRecord(env, member, now, guildRoles = [], guildEmojis
     discordSyncedAt: now
   };
 
+  // KV writes are much more limited than KV reads on Cloudflare's free tier.
+  // Preserve every existing profile field and only write when Discord-managed data
+  // actually changed. The overall sync timestamp remains available in sync metadata.
+  if (!discordManagedProfileChanged(existing, record)) {
+    return { skipped: true, written: false };
+  }
+
   await hybridKv(env, "drops").put(`member-profile:${discordId}`, JSON.stringify(record));
-  return { skipped: false };
+  return { skipped: false, written: true };
 }
 
 async function runInBatches(items, batchSize, worker) {
   let ok = 0;
   let failed = 0;
+  let written = 0;
+  let skipped = 0;
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const results = await Promise.allSettled(batch.map(worker));
     for (const result of results) {
-      if (result.status === "fulfilled") ok += 1;
-      else failed += 1;
+      if (result.status === "fulfilled") {
+        ok += 1;
+        if (result.value?.written) written += 1;
+        else if (result.value?.skipped) skipped += 1;
+      } else {
+        failed += 1;
+      }
     }
   }
-  return { ok, failed };
+  return { ok, failed, written, skipped };
 }
 
 export async function getDiscordProfileSyncMeta(env) {
@@ -382,7 +451,9 @@ export async function syncDiscordProfiles(env) {
   // CRITICAL: publish the complete Discord directory FIRST. The old implementation only
   // wrote the index after hundreds of per-member KV reads/writes, so a timeout/failure
   // left search stuck on the old partial directory.
-  await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
+  if (directoryIndexChanged(previousIndex, index)) {
+    await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
+  }
 
   const preliminaryMeta = {
     syncedAt: now,
@@ -404,7 +475,9 @@ export async function syncDiscordProfiles(env) {
   const writeResult = await runInBatches(nonBotMembers, 20, member => writeProfileRecord(env, member, now, guildRoles, guildEmojis, emblemMap));
   const meta = {
     ...preliminaryMeta,
-    profileRecordsWritten: writeResult.ok,
+    profileRecordsWritten: writeResult.written,
+    profileRecordsUnchanged: writeResult.skipped,
+    profileRecordsProcessed: writeResult.ok,
     profileRecordFailures: writeResult.failed,
     durationMs: Date.now() - startedAt
   };
@@ -432,11 +505,14 @@ export async function syncDiscordProfilesBatch(env, options = {}) {
   // Only the first batch rebuilds/publishes the directory. Later requests hydrate profile
   // records only, keeping every Worker invocation safely below Cloudflare subrequest limits.
   if (offset === 0) {
+    const previousIndex = safeJsonParse(await hybridKv(env, "drops").get(PROFILE_INDEX_KEY), []);
     const index = nonBotMembers
       .map(member => buildDirectoryEntry(member, now, guildRoles, guildEmojis, emblemMap))
       .filter(item => item.discordId)
       .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), undefined, { sensitivity: "base" }));
-    await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
+    if (directoryIndexChanged(previousIndex, index)) {
+      await hybridKv(env, "drops").put(PROFILE_INDEX_KEY, JSON.stringify(index));
+    }
   }
 
   const batch = nonBotMembers.slice(offset, offset + batchSize);
@@ -446,7 +522,9 @@ export async function syncDiscordProfilesBatch(env, options = {}) {
   const nextOffset = offset + batch.length;
   const done = nextOffset >= total;
   const previousMeta = await getDiscordProfileSyncMeta(env) || {};
-  const accumulatedWritten = offset === 0 ? writeResult.ok : Number(previousMeta.profileRecordsWritten || 0) + writeResult.ok;
+  const accumulatedWritten = offset === 0 ? writeResult.written : Number(previousMeta.profileRecordsWritten || 0) + writeResult.written;
+  const accumulatedUnchanged = offset === 0 ? writeResult.skipped : Number(previousMeta.profileRecordsUnchanged || 0) + writeResult.skipped;
+  const accumulatedProcessed = offset === 0 ? writeResult.ok : Number(previousMeta.profileRecordsProcessed || 0) + writeResult.ok;
   const accumulatedFailures = offset === 0 ? writeResult.failed : Number(previousMeta.profileRecordFailures || 0) + writeResult.failed;
   const meta = {
     ...previousMeta,
@@ -456,6 +534,8 @@ export async function syncDiscordProfilesBatch(env, options = {}) {
     discordMemberCount: members.length,
     botsSkipped: members.length - total,
     profileRecordsWritten: accumulatedWritten,
+    profileRecordsUnchanged: accumulatedUnchanged,
+    profileRecordsProcessed: accumulatedProcessed,
     profileRecordFailures: accumulatedFailures,
     directoryReady: true,
     syncInProgress: !done,
