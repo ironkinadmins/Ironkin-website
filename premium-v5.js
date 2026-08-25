@@ -18,6 +18,8 @@
   }
 
   function upgradeFooter(){
+    // Idempotent: never create more than one premium footer.
+    if ($('.ik-footer')) return;
     const old=$('footer:not(.ik-footer)');
     if(!old && document.body.classList.contains('admin-page')) return;
     const f=document.createElement('footer'); f.className='ik-footer';
@@ -77,8 +79,8 @@
   }
 
   function init(){ markPage(); upgradeFooter(); setActiveNav(); revealObserve(); upgradeBadges(); buildDataViz();
-    const obs=new MutationObserver(()=>{setActiveNav();upgradeFooter();upgradeBadges();buildDataViz();});
-    obs.observe(document.body,{childList:true,subtree:true}); setTimeout(()=>obs.disconnect(),12000);
+    const obs=new MutationObserver(()=>{setActiveNav();upgradeBadges();buildDataViz();});
+    obs.observe(document.body,{childList:true,subtree:true}); setTimeout(()=>obs.disconnect(),5000);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
