@@ -1,6 +1,6 @@
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession } from "../_auth.js";
-import { loadGames, saveGames, balanceSignups } from "./_store.js";
+import { loadGames, saveGames } from "./_store.js";
 
 const WOM_GROUP_ID = "12095";
 const WOM_BASE = "https://api.wiseoldman.net/v2";
@@ -62,20 +62,13 @@ export async function onRequestGet({ request, env }) {
   return Response.json({
     signupOpen: Boolean(state.signupOpen),
     rosterLocked: Boolean(state.rosterLocked),
-    autoBalanceSignups: state.autoBalanceSignups !== false,
     signedIn: Boolean(session),
     mySignup: mine || null,
     signups: (state.signups || []).map(s => ({
       displayName: s.displayName,
       rsn: s.rsn,
-      ehp: s.ehp,
-      ehb: s.ehb,
-      totalLevel: s.totalLevel,
-      balanceScore: s.balanceScore,
-      timezone: s.timezone || "",
       signedUpAt: s.signedUpAt
-    })),
-    teams: (state.teams || []).map(t => ({ id:t.id, name:t.name, members:(t.members || []).map(m => ({ name:m.name, rsn:m.rsn, ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel, balanceScore:m.balanceScore })) }))
+    }))
   }, { headers:{"Cache-Control":"no-store"} });
 }
 
@@ -125,9 +118,8 @@ export async function onRequestPost({ request, env }) {
 
   const others = (state.signups || []).filter(s => String(s.discordId) !== String(session.id));
   state.signups = [...others, signup];
-  if (state.autoBalanceSignups !== false) balanceSignups(state);
   await saveGames(env, state);
-  return Response.json({ ok:true, signup, teams:state.teams }, { headers:{"Cache-Control":"no-store"} });
+  return Response.json({ ok:true, signup }, { headers:{"Cache-Control":"no-store"} });
 }
 
 export async function onRequestDelete({ request, env }) {
@@ -150,9 +142,6 @@ export async function onRequestDelete({ request, env }) {
     )
   }));
 
-  // Rebalance the remaining signups only when automatic balancing is enabled.
-  if (state.autoBalanceSignups !== false) balanceSignups(state);
-
   await saveGames(env, state);
-  return Response.json({ ok:true, teams:state.teams }, { headers:{"Cache-Control":"no-store"} });
+  return Response.json({ ok:true }, { headers:{"Cache-Control":"no-store"} });
 }

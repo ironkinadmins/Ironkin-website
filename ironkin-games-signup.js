@@ -4,7 +4,7 @@ const rsnInput=document.getElementById("gamesSignupRsn");
 const timezoneInput=document.getElementById("gamesSignupTimezone");
 const signupButton=document.getElementById("gamesSignupButton");
 const withdrawButton=document.getElementById("gamesWithdrawButton");
-const teamsRoot=document.getElementById("signupTeams");
+const playersRoot=document.getElementById("signupPlayers");
 const myStats=document.getElementById("mySignupStats");
 const signupCount=document.getElementById("signupCount");
 let signupState=null;
@@ -47,7 +47,8 @@ function populateTimezones(selected=""){
 }
 function render(){
   if(!signupState)return;
-  signupCount.textContent=`${signupState.signups?.length||0} signed up`;
+  const signups=signupState.signups||[];
+  signupCount.textContent=`${signups.length} signed up`;
   const locked=signupState.rosterLocked===true;
   signupButton.disabled=locked||!signupState.signupOpen||!signupState.signedIn;
   rsnInput.disabled=locked||!signupState.signupOpen||!signupState.signedIn;
@@ -59,17 +60,14 @@ function render(){
     populateTimezones(signupState.mySignup.timezone||"");
     signupButton.textContent="Update Signup";
     const s=signupState.mySignup;
-    myStats.innerHTML=`<div class="games-signup-summary"><strong>${esc(s.rsn)}</strong><span>${esc(s.timezone||"Timezone not set")}</span><span>EHP ${n(s.ehp)}</span><span>EHB ${n(s.ehb)}</span><span>Total ${n(s.totalLevel,0)}</span></div>`;
+    myStats.innerHTML=`<div class="games-signup-summary"><strong>${esc(s.rsn)}</strong><span>${esc(s.timezone||"Timezone not set")}</span><span>Registered</span></div>`;
   }else{
     signupButton.textContent="Sign Up";
     if(!timezoneInput.options.length||timezoneInput.options.length===1)populateTimezones();
     myStats.innerHTML="";
   }
-  signupStatus.textContent=locked?"Teams are locked and registration changes are frozen.":(!signupState.signupOpen?"Registration is currently closed.":(!signupState.signedIn?"Sign in with Discord to register.":"Registration is open. Enter your Ironman RSN below."));
-  teamsRoot.innerHTML=(signupState.teams||[]).map((team,index)=>{
-    const members=team.members||[];
-    return `<article class="games-signup-team"><div class="games-signup-team-head"><div><p class="eyebrow">Team ${index+1}</p><h3>${esc(team.name||`Team ${index+1}`)}</h3></div><strong>${members.length}</strong></div><div class="games-signup-roster">${members.length?members.map(m=>`<div class="games-signup-player"><div><strong>${esc(m.rsn||m.name||"Member")}</strong>${m.name&&m.rsn&&m.name!==m.rsn?`<small>${esc(m.name)}</small>`:""}</div><span>${n(m.ehp)} EHP</span><span>${n(m.ehb)} EHB</span><span>${n(m.totalLevel,0)} total</span></div>`).join(""):`<p class="games-muted">No players assigned yet.</p>`}</div></article>`;
-  }).join("");
+  signupStatus.textContent=locked?"Registration is locked and signup changes are frozen.":(!signupState.signupOpen?"Registration is currently closed.":(!signupState.signedIn?"Sign in with Discord to register.":"Registration is open. Enter your Ironman RSN below."));
+  playersRoot.innerHTML=signups.length?signups.map((s,index)=>`<div class="games-signup-list-row"><span class="games-signup-list-number">${index+1}</span><div><strong>${esc(s.rsn||s.displayName||"Member")}</strong>${s.displayName&&s.rsn&&s.displayName!==s.rsn?`<small>${esc(s.displayName)}</small>`:""}</div></div>`).join(""):`<div class="games-empty-state">No one has signed up yet.</div>`;
 }
 async function load(){
   try{const r=await fetch(`/api/ironkin-games/signup?t=${Date.now()}`,{cache:"no-store"});signupState=await r.json();if(!r.ok)throw new Error(signupState.error||"Could not load signup.");render();}
@@ -82,7 +80,7 @@ signupForm.addEventListener("submit",async ev=>{
   const r=await fetch("/api/ironkin-games/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rsn:rsnInput.value.trim(),timezone:timezoneInput.value})});
   const d=await r.json().catch(()=>({}));
   if(!r.ok){signupStatus.textContent=d.error||"Signup failed.";signupButton.disabled=false;return;}
-  await load();signupStatus.textContent="You are signed up. Your WOM stats have been added to the team balancer.";
+  await load();signupStatus.textContent="You are signed up for Ironkin Games.";
 });
 withdrawButton.addEventListener("click",async()=>{
   if(!confirm("Withdraw from Ironkin Games signup?"))return;

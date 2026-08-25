@@ -21,7 +21,7 @@ export function defaultGames() {
     finalProgression: [],
     signupOpen: false,
     rosterLocked: false,
-    autoBalanceSignups: true,
+    autoBalanceSignups: false,
     balanceWeights: { ehp: 40, ehb: 40, totalLevel: 20 },
     signups: [],
     rules: [

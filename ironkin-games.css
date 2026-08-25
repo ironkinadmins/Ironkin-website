@@ -168,3 +168,12 @@
 .games-end-games-card{border-color:rgba(230,157,57,.4);background:linear-gradient(135deg,rgba(230,157,57,.1),rgba(15,15,15,.76))}.games-end-games-btn{font-size:1rem;padding:12px 18px;box-shadow:0 8px 24px rgba(216,153,75,.12)}
 .games-results-final{border-color:rgba(230,157,57,.5);background:linear-gradient(135deg,rgba(230,157,57,.12),rgba(15,15,15,.78))}.games-results-week.is-published{border-left:3px solid rgba(230,157,57,.72)}.games-results-week.is-locked{border-left:3px solid rgba(255,255,255,.11)}
 @media(max-width:600px){.games-champion-mark{font-size:52px;right:12px;top:14px}.games-final-standing{grid-template-columns:36px 1fr auto}.games-complete-hero{padding-top:22px}}
+
+/* Ironkin Games signup: public registration list (teams are created later by staff) */
+.games-signup-list{border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.02);overflow:hidden}
+.games-signup-list-row{display:grid;grid-template-columns:42px minmax(180px,1fr);gap:14px;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.games-signup-list-row:last-child{border-bottom:0}
+.games-signup-list-number{display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:rgba(216,153,75,.1);border:1px solid rgba(216,153,75,.18);font-weight:800}
+.games-signup-list-row>div{display:flex;flex-direction:column;min-width:0}
+.games-signup-list-row small{opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:650px){.games-signup-list-row{grid-template-columns:38px 1fr}}
