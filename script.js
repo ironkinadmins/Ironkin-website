@@ -731,6 +731,45 @@ async function loadDiscordUser() {
   }
 }
 
+async function updateDynamicEventNavLinks() {
+  const bingoNavLink = document.getElementById("bingoNavLink");
+  const gamesNavLink = document.getElementById("ironkinGamesNavLink");
+
+  // Fail closed: special-event links remain hidden unless their public
+  // settings endpoint explicitly says that event is active/enabled.
+  if (bingoNavLink) bingoNavLink.style.display = "none";
+  if (gamesNavLink) gamesNavLink.style.display = "none";
+
+  const [bingoResult, gamesResult] = await Promise.allSettled([
+    bingoNavLink
+      ? fetch(`/api/bingo/settings?t=${Date.now()}`, { cache: "no-store" })
+          .then(async response => {
+            if (!response.ok) throw new Error("Bingo settings unavailable");
+            return response.json();
+          })
+      : Promise.resolve(null),
+    gamesNavLink
+      ? fetch(`/api/ironkin-games/state?_=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" }
+        }).then(async response => {
+          if (!response.ok) throw new Error("Ironkin Games settings unavailable");
+          return response.json();
+        })
+      : Promise.resolve(null)
+  ]);
+
+  if (bingoNavLink && bingoResult.status === "fulfilled") {
+    const settings = bingoResult.value?.settings || {};
+    bingoNavLink.style.display = settings.active === true ? "block" : "none";
+  }
+
+  if (gamesNavLink && gamesResult.status === "fulfilled") {
+    const state = gamesResult.value || {};
+    gamesNavLink.style.display = state.enabled === true ? "block" : "none";
+  }
+}
+
 async function loadSiteNav() {
   const navMount = document.getElementById("siteNav");
 
@@ -747,6 +786,7 @@ async function loadSiteNav() {
     }
 
     navMount.innerHTML = await response.text();
+    updateDynamicEventNavLinks();
     setupGlobalSearch();
     loadDiscordUser();
   } catch {
