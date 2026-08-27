@@ -2949,3 +2949,76 @@ function setupHandbookEditor() {
 }
 
 setupHandbookEditor();
+
+
+/* Integrated admin UX overhaul — 2026-08-26 */
+(() => {
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+  function eventLabel(){
+    const sel = $('#adminEventSelect');
+    const txt = sel?.selectedOptions?.[0]?.textContent?.trim() || 'Event';
+    const event = (window.allEvents || []).find?.(x => x.id === sel?.value);
+    return { name: txt, type: event?.type || sel?.value || 'event' };
+  }
+  function updateEventContext(){
+    const {name,type}=eventLabel();
+    const nameEl=$('#luxEventName'), typeEl=$('#luxEventType');
+    if(nameEl) nameEl.textContent=name;
+    if(typeEl) typeEl.textContent=String(type).replaceAll('-',' ').replace(/\b\w/g,m=>m.toUpperCase());
+    const active=$('#eventActiveInput')?.checked?'Active':'Inactive';
+    const featured=$('#eventFeaturedInput')?.checked?'Featured':'Standard';
+    const drops=$('#eventDropsInput')?.checked?'Tracking On':'Tracking Off';
+    const vals=[['luxState',active],['luxFeatured',featured],['luxTracking',drops]];
+    vals.forEach(([id,v])=>{const el=$('#'+id);if(el)el.textContent=v;});
+  }
+  function setStandardView(view){
+    const core=$('#standardEventEditor'), drops=$('#standardDropsEditor'), bounty=$('#bountiesEditor'), imp=$('#eventItemImportCard');
+    if(!core)return;
+    $$('.lux-segmented [data-lux-view]').forEach(b=>b.classList.toggle('is-active',b.dataset.luxView===view));
+    [drops,bounty,imp].forEach(el=>el?.classList.add('lux-section-hidden'));
+    const rewardNodes=['#eventRewardsDivider','#eventRewardsHeader','#eventRewardsGrid'];
+    const goalNodes=['#targetSection','#milestonesSection'];
+    const configFields=$$('#standardEventEditor > .admin-form-grid > .admin-field').filter(el=>!el.matches('#targetSection,#milestonesSection'));
+    rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.remove('lux-section-hidden'));
+    configFields.forEach(el=>el.classList.remove('lux-section-hidden'));
+    // Each workspace exposes only the controls relevant to that task. Global status/save controls remain available.
+    if(view==='setup'){
+      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
+    } else if(view==='rewards'){
+      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
+    } else if(view==='items'){
+      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
+      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
+      drops?.classList.remove('lux-section-hidden');
+      bounty?.classList.remove('lux-section-hidden');
+    } else if(view==='import'){
+      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
+      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
+      imp?.classList.remove('lux-section-hidden');
+    }
+    sessionStorage.setItem('ironkinAdminEventView',view);
+  }
+  function enhanceStandard(){
+    const panel=$('#eventSubtab-standard');
+    if(!panel || $('#luxEventToolbar')) return;
+    const toolbar=document.createElement('div');
+    toolbar.id='luxEventToolbar'; toolbar.className='lux-event-toolbar';
+    toolbar.innerHTML=`<div class="lux-event-context"><div class="lux-event-icon">IK</div><div><strong id="luxEventName">Event</strong><small id="luxEventType">Event</small></div></div><div class="lux-segmented" role="tablist" aria-label="Event editor sections"><button type="button" data-lux-view="setup">Setup</button><button type="button" data-lux-view="rewards">Rewards & Milestones</button><button type="button" data-lux-view="items">Tracked Items</button><button type="button" data-lux-view="import">Data Import</button></div>`;
+    panel.prepend(toolbar);
+    const summary=document.createElement('div'); summary.className='lux-standard-summary';
+    summary.innerHTML=`<div class="lux-summary-tile"><span>Status</span><strong id="luxState">—</strong></div><div class="lux-summary-tile"><span>Homepage</span><strong id="luxFeatured">—</strong></div><div class="lux-summary-tile"><span>Item tracking</span><strong id="luxTracking">—</strong></div><div class="lux-summary-tile"><span>WOM competition</span><strong id="luxWom">—</strong></div>`;
+    toolbar.after(summary);
+    toolbar.addEventListener('click',e=>{const b=e.target.closest('[data-lux-view]');if(b)setStandardView(b.dataset.luxView)});
+    $('#adminEventSelect')?.addEventListener('change',()=>setTimeout(()=>{updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';},0));
+    ['eventActiveInput','eventFeaturedInput','eventDropsInput','eventWomInput'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';}));
+    updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';
+    setStandardView(sessionStorage.getItem('ironkinAdminEventView')||'setup');
+  }
+  function polishShortPanels(){
+    ['#eventSubtab-bingo','#eventSubtab-guess-kc'].forEach(s=>{const p=$(s);if(p)p.classList.add('lux-event-shell')});
+  }
+  document.addEventListener('DOMContentLoaded',()=>{enhanceStandard();polishShortPanels();});
+  setTimeout(()=>{enhanceStandard();polishShortPanels();},500);
+})();
