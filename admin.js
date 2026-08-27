@@ -1863,58 +1863,176 @@ async function loadAdminDrops() {
   }
 
   const pvmEntry = isPvmEntryEvent(getSelectedEvent());
-  const bossOrder = [];
+  const drops = data.drops;
+
+  // Compact catalog controls. This is presentation-only: all existing drop
+  // actions and API calls remain unchanged.
+  const toolbar = document.createElement("div");
+  toolbar.className = "tracked-items-toolbar";
+
+  const bossNames = [];
   if (pvmEntry) {
-    data.drops.forEach(drop => {
+    drops.forEach(drop => {
       const boss = String(drop.boss || "").trim() || "Unassigned";
-      if (!bossOrder.includes(boss)) bossOrder.push(boss);
+      if (!bossNames.includes(boss)) bossNames.push(boss);
     });
   }
-  let previousBoss = null;
-  data.drops.forEach((drop, index) => {
-    const currentBoss = String(drop.boss || "").trim() || "Unassigned";
-    if (pvmEntry && currentBoss !== previousBoss) {
-      const bossIndex = bossOrder.indexOf(currentBoss);
-      const header = document.createElement("div");
-      header.className = "pvm-boss-header";
-      header.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 8px 6px;margin-top:8px;border-bottom:1px solid rgba(255,255,255,.12)";
-      header.innerHTML = `
-        <strong>${escapeHtml(currentBoss)}</strong>
-        <span style="display:flex;gap:6px">
-          <button type="button" data-boss-action="up" ${bossIndex <= 0 ? "disabled" : ""}>Move Boss ↑</button>
-          <button type="button" data-boss-action="down" ${bossIndex < 0 || bossIndex >= bossOrder.length - 1 ? "disabled" : ""}>Move Boss ↓</button>
-        </span>`;
-      header.querySelector('[data-boss-action="up"]')?.addEventListener("click", () => updatePvmBossOrder(currentBoss, "up"));
-      header.querySelector('[data-boss-action="down"]')?.addEventListener("click", () => updatePvmBossOrder(currentBoss, "down"));
-      list.appendChild(header);
-      previousBoss = currentBoss;
+
+  toolbar.innerHTML = `
+    <div class="tracked-items-summary">
+      <strong>${drops.length}</strong>
+      <span>tracked item${drops.length === 1 ? "" : "s"}</span>
+      ${pvmEntry ? `<span class="tracked-items-summary-divider"></span><strong>${bossNames.length}</strong><span>boss${bossNames.length === 1 ? "" : "es"}</span>` : ""}
+    </div>
+    <div class="tracked-items-tools">
+      <label class="tracked-items-search">
+        <span aria-hidden="true">⌕</span>
+        <input type="search" placeholder="Search items${pvmEntry ? ", bosses" : ""} or item IDs…" autocomplete="off" aria-label="Search tracked items">
+      </label>
+      ${pvmEntry ? `
+        <button type="button" class="tracked-items-tool-btn" data-tracked-action="expand">Expand all</button>
+        <button type="button" class="tracked-items-tool-btn" data-tracked-action="collapse">Collapse all</button>
+      ` : ""}
+    </div>`;
+  list.appendChild(toolbar);
+
+  const catalog = document.createElement("div");
+  catalog.className = `tracked-items-catalog${pvmEntry ? " tracked-items-catalog--grouped" : ""}`;
+  list.appendChild(catalog);
+
+  const createItemRow = (drop, index, currentBoss) => {
+    const item = document.createElement("details");
+    item.className = "tracked-item-record";
+    item.dataset.search = [drop.name, drop.itemId, drop.boss].filter(Boolean).join(" ").toLowerCase();
+
+    const previousBoss = String(drops[index - 1]?.boss || "").trim() || "Unassigned";
+    const nextBoss = String(drops[index + 1]?.boss || "").trim() || "Unassigned";
+    const canMoveUp = pvmEntry && index > 0 && previousBoss === currentBoss;
+    const canMoveDown = pvmEntry && index < drops.length - 1 && nextBoss === currentBoss;
+
+    item.innerHTML = `
+      <summary class="tracked-item-record-summary">
+        <span class="tracked-item-record-main">
+          <span class="tracked-item-thumb">${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : `<span class="tracked-item-thumb-placeholder">?</span>`}</span>
+          <span class="tracked-item-identity">
+            <strong>${escapeHtml(drop.name)}</strong>
+            <small>${drop.itemId ? `ID ${Number(drop.itemId)}` : "Legacy item"}${pvmEntry ? ` · ${escapeHtml(drop.boss || "Unassigned")}` : ""}</small>
+          </span>
+        </span>
+        <span class="tracked-item-record-metrics">
+          <span class="tracked-item-metric"><strong>${Number(drop.rewardEmbers || 0)}</strong><small>Embers</small></span>
+          <span class="tracked-item-metric"><strong>${Number(drop.count || 0)}</strong><small>Count</small></span>
+          <span class="tracked-item-chevron" aria-hidden="true"></span>
+        </span>
+      </summary>
+      <div class="tracked-item-record-body">
+        <div class="tracked-item-meta">
+          <span>${formatDropTrackingRule(drop.trackingRule)}</span>
+          ${drop.itemId ? `<span>RuneLite tracking enabled</span>` : `<span class="tracked-item-warning">Re-add from search to enable RuneLite tracking</span>`}
+        </div>
+        ${pvmEntry ? `
+          <div class="tracked-item-boss-editor">
+            <label>
+              <span>Boss / category</span>
+              <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name">
+            </label>
+            <button type="button" data-drop-action="save-boss">Save Boss</button>
+            <div class="tracked-item-order-actions" aria-label="Item order">
+              <button type="button" data-drop-action="up" ${canMoveUp ? "" : "disabled"} title="Move item up">↑</button>
+              <button type="button" data-drop-action="down" ${canMoveDown ? "" : "disabled"} title="Move item down">↓</button>
+            </div>
+          </div>` : ""}
+        <div class="tracked-item-danger-row">
+          <span>Remove this item from tracking</span>
+          <button type="button" class="tracked-item-delete" data-drop-action="delete">Delete item</button>
+        </div>
+      </div>`;
+
+    item.querySelector('[data-drop-action="delete"]')?.addEventListener("click", () => deleteDrop(drop.name));
+    item.querySelector('[data-drop-action="save-boss"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { boss: item.querySelector('[data-drop-boss]')?.value || "" }));
+    item.querySelector('[data-drop-action="up"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "up" }));
+    item.querySelector('[data-drop-action="down"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "down" }));
+    return item;
+  };
+
+  if (pvmEntry) {
+    const grouped = new Map();
+    drops.forEach((drop, index) => {
+      const boss = String(drop.boss || "").trim() || "Unassigned";
+      if (!grouped.has(boss)) grouped.set(boss, []);
+      grouped.get(boss).push({ drop, index });
+    });
+
+    bossNames.forEach((boss, bossIndex) => {
+      const entries = grouped.get(boss) || [];
+      const group = document.createElement("details");
+      group.className = "tracked-boss-group";
+      group.dataset.search = `${boss} ${entries.map(({ drop }) => `${drop.name || ""} ${drop.itemId || ""}`).join(" ")}`.toLowerCase();
+
+      const totalDrops = entries.reduce((sum, { drop }) => sum + Number(drop.count || 0), 0);
+      group.innerHTML = `
+        <summary class="tracked-boss-summary">
+          <span class="tracked-boss-title">
+            <span class="tracked-boss-chevron" aria-hidden="true"></span>
+            <span><strong>${escapeHtml(boss)}</strong><small>${entries.length} item${entries.length === 1 ? "" : "s"}</small></span>
+          </span>
+          <span class="tracked-boss-stats"><strong>${totalDrops}</strong><small>recorded</small></span>
+        </summary>
+        <div class="tracked-boss-body">
+          <div class="tracked-boss-actions">
+            <span>Boss order</span>
+            <button type="button" data-boss-action="up" ${bossIndex <= 0 ? "disabled" : ""}>↑ Move up</button>
+            <button type="button" data-boss-action="down" ${bossIndex >= bossNames.length - 1 ? "disabled" : ""}>↓ Move down</button>
+          </div>
+          <div class="tracked-boss-items"></div>
+        </div>`;
+
+      group.querySelector('[data-boss-action="up"]')?.addEventListener("click", () => updatePvmBossOrder(boss, "up"));
+      group.querySelector('[data-boss-action="down"]')?.addEventListener("click", () => updatePvmBossOrder(boss, "down"));
+      const itemsMount = group.querySelector(".tracked-boss-items");
+      entries.forEach(({ drop, index }) => itemsMount.appendChild(createItemRow(drop, index, boss)));
+      catalog.appendChild(group);
+    });
+  } else {
+    drops.forEach((drop, index) => {
+      catalog.appendChild(createItemRow(drop, index, String(drop.boss || "").trim() || "Unassigned"));
+    });
+  }
+
+  const searchInput = toolbar.querySelector('input[type="search"]');
+  const applySearch = () => {
+    const query = String(searchInput?.value || "").trim().toLowerCase();
+    if (pvmEntry) {
+      catalog.querySelectorAll(".tracked-boss-group").forEach(group => {
+        const items = [...group.querySelectorAll(".tracked-item-record")];
+        let visibleCount = 0;
+        items.forEach(item => {
+          const match = !query || item.dataset.search.includes(query) || String(group.dataset.search || "").split(" ")[0] === query;
+          item.hidden = !match;
+          if (match) visibleCount += 1;
+        });
+        const bossNameMatches = !query || String(group.querySelector(".tracked-boss-title strong")?.textContent || "").toLowerCase().includes(query);
+        if (bossNameMatches && query) {
+          items.forEach(item => { item.hidden = false; });
+          visibleCount = items.length;
+        }
+        group.hidden = visibleCount === 0;
+        if (query && visibleCount > 0) group.open = true;
+      });
+    } else {
+      catalog.querySelectorAll(".tracked-item-record").forEach(item => {
+        item.hidden = !!query && !item.dataset.search.includes(query);
+      });
     }
-    const row = document.createElement("div");
-    row.className = "drop-row";
-    const bossEditor = pvmEntry ? `
-      <div class="pvm-boss-order-controls" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">
-        <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name" style="min-width:140px" />
-        <button type="button" data-drop-action="save-boss">Save Boss</button>
-        <button type="button" data-drop-action="up" ${index === 0 || (String(data.drops[index - 1]?.boss || "").trim() || "Unassigned") !== currentBoss ? "disabled" : ""}>↑</button>
-        <button type="button" data-drop-action="down" ${index === data.drops.length - 1 || (String(data.drops[index + 1]?.boss || "").trim() || "Unassigned") !== currentBoss ? "disabled" : ""}>↓</button>
-      </div>` : "";
-    row.innerHTML = `
-      <div class="bounty-drop-main">
-        ${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : ""}
-        <span><strong>${escapeHtml(drop.name)}</strong><small>${pvmEntry ? `Boss: ${escapeHtml(drop.boss || "Unassigned")}` : ""}</small><small>${drop.itemId ? `Item ID ${Number(drop.itemId)}` : "Legacy item - re-add from search to enable RuneLite tracking"}</small><small>${Number(drop.rewardEmbers || 0)} Embers each</small><small>${formatDropTrackingRule(drop.trackingRule)}</small>${bossEditor}</span>
-      </div>
-      <div class="drop-controls">
-        <strong>${drop.count}</strong>
-        <button type="button" data-drop-action="delete">Delete</button>
-      </div>
-    `;
+  };
 
-    row.querySelector('[data-drop-action="delete"]')?.addEventListener("click", () => deleteDrop(drop.name));
-    row.querySelector('[data-drop-action="save-boss"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { boss: row.querySelector('[data-drop-boss]')?.value || "" }));
-    row.querySelector('[data-drop-action="up"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "up" }));
-    row.querySelector('[data-drop-action="down"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "down" }));
-
-    list.appendChild(row);
+  searchInput?.addEventListener("input", applySearch);
+  toolbar.querySelector('[data-tracked-action="expand"]')?.addEventListener("click", () => {
+    catalog.querySelectorAll(".tracked-boss-group:not([hidden])").forEach(group => { group.open = true; });
+  });
+  toolbar.querySelector('[data-tracked-action="collapse"]')?.addEventListener("click", () => {
+    catalog.querySelectorAll(".tracked-boss-group").forEach(group => { group.open = false; });
+    catalog.querySelectorAll(".tracked-item-record").forEach(item => { item.open = false; });
   });
 }
 
