@@ -11319,3 +11319,453 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
     min-height: 66px;
   }
 }
+
+/* =========================================================
+   Compact tracked-item catalog (Admin)
+   Keeps large PvM Entry / bounty item sets manageable.
+   ========================================================= */
+.admin-drops-list {
+  gap: 0;
+}
+
+.tracked-items-toolbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 180, 92, 0.2);
+  border-radius: 14px;
+  background: rgba(12, 12, 13, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.tracked-items-summary,
+.tracked-items-tools,
+.tracked-items-search,
+.tracked-item-record-main,
+.tracked-item-record-metrics,
+.tracked-boss-title,
+.tracked-boss-stats,
+.tracked-item-boss-editor,
+.tracked-item-order-actions {
+  display: flex;
+  align-items: center;
+}
+
+.tracked-items-summary {
+  gap: 0.4rem;
+  min-width: max-content;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+}
+
+.tracked-items-summary strong {
+  color: #ffb35b;
+  font-size: 0.95rem;
+}
+
+.tracked-items-summary-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 0.35rem;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tracked-items-tools {
+  justify-content: flex-end;
+  gap: 0.45rem;
+  width: min(100%, 650px);
+}
+
+.tracked-items-search {
+  flex: 1 1 280px;
+  gap: 0.55rem;
+  min-width: 220px;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.tracked-items-search:focus-within {
+  border-color: rgba(255, 179, 91, 0.55);
+  background: rgba(255, 179, 91, 0.055);
+}
+
+.tracked-items-search > span {
+  color: #ffb35b;
+  font-size: 1.1rem;
+}
+
+.tracked-items-search input {
+  width: 100%;
+  height: 38px;
+  padding: 0;
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff;
+}
+
+.tracked-items-tool-btn {
+  min-height: 38px;
+  padding: 0 0.75rem;
+  border: 1px solid rgba(255, 180, 92, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 180, 92, 0.065);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tracked-items-tool-btn:hover {
+  border-color: rgba(255, 180, 92, 0.45);
+  background: rgba(255, 180, 92, 0.12);
+  color: #fff;
+}
+
+.tracked-items-catalog {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tracked-items-catalog--grouped {
+  gap: 0.65rem;
+}
+
+.tracked-boss-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 180, 92, 0.18);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tracked-boss-group[open] {
+  border-color: rgba(255, 180, 92, 0.3);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.tracked-boss-summary,
+.tracked-item-record-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tracked-boss-summary::-webkit-details-marker,
+.tracked-item-record-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tracked-boss-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 58px;
+  padding: 0.65rem 0.85rem;
+  transition: background 0.16s ease;
+}
+
+.tracked-boss-summary:hover {
+  background: rgba(255, 180, 92, 0.045);
+}
+
+.tracked-boss-title {
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.tracked-boss-title > span:last-child,
+.tracked-boss-stats,
+.tracked-item-identity,
+.tracked-item-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.tracked-boss-title strong {
+  color: #ffb35b;
+  font-size: 0.94rem;
+}
+
+.tracked-boss-title small,
+.tracked-boss-stats small,
+.tracked-item-identity small,
+.tracked-item-metric small {
+  margin-top: 0.12rem;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.67rem;
+  font-weight: 600;
+}
+
+.tracked-boss-chevron,
+.tracked-item-chevron {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(255, 179, 91, 0.75);
+  border-bottom: 2px solid rgba(255, 179, 91, 0.75);
+  transform: rotate(-45deg);
+  transition: transform 0.18s ease;
+}
+
+.tracked-boss-group[open] > .tracked-boss-summary .tracked-boss-chevron,
+.tracked-item-record[open] > .tracked-item-record-summary .tracked-item-chevron {
+  transform: rotate(45deg) translateY(-2px);
+}
+
+.tracked-boss-stats {
+  flex: 0 0 auto;
+  min-width: 66px;
+  text-align: right;
+}
+
+.tracked-boss-stats strong {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9rem;
+}
+
+.tracked-boss-body {
+  padding: 0 0.7rem 0.7rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tracked-boss-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.1rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.68rem;
+}
+
+.tracked-boss-actions span {
+  margin-right: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.tracked-boss-actions button,
+.tracked-item-order-actions button {
+  min-height: 30px;
+  padding: 0 0.58rem;
+  border-radius: 7px;
+  font-size: 0.68rem;
+}
+
+.tracked-boss-items {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.tracked-item-record {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.tracked-item-record[open] {
+  border-color: rgba(255, 180, 92, 0.2);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.tracked-item-record-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 54px;
+  padding: 0.42rem 0.6rem;
+  transition: background 0.16s ease;
+}
+
+.tracked-item-record-summary:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.tracked-item-record-main {
+  gap: 0.62rem;
+  min-width: 0;
+}
+
+.tracked-item-thumb {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tracked-item-thumb img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.tracked-item-thumb-placeholder {
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: 800;
+}
+
+.tracked-item-identity {
+  min-width: 0;
+}
+
+.tracked-item-identity strong {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tracked-item-record-metrics {
+  justify-content: flex-end;
+  gap: 1rem;
+  flex: 0 0 auto;
+}
+
+.tracked-item-metric {
+  min-width: 48px;
+  text-align: right;
+}
+
+.tracked-item-metric strong {
+  color: #ffb35b;
+  font-size: 0.82rem;
+}
+
+.tracked-item-record-body {
+  padding: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tracked-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-bottom: 0.65rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.7rem;
+}
+
+.tracked-item-warning {
+  color: #ffc66c;
+}
+
+.tracked-item-boss-editor {
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tracked-item-boss-editor label {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tracked-item-boss-editor label > span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tracked-item-boss-editor input {
+  width: 100%;
+  min-height: 34px;
+}
+
+.tracked-item-order-actions {
+  gap: 0.3rem;
+}
+
+.tracked-item-danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.67rem;
+}
+
+.tracked-item-delete {
+  border-color: rgba(227, 91, 91, 0.25) !important;
+  background: rgba(227, 91, 91, 0.07) !important;
+  color: #f0a0a0 !important;
+}
+
+.tracked-item-delete:hover {
+  border-color: rgba(227, 91, 91, 0.5) !important;
+  background: rgba(227, 91, 91, 0.13) !important;
+  color: #ffc0c0 !important;
+}
+
+.tracked-boss-group[hidden],
+.tracked-item-record[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .tracked-items-toolbar {
+    position: static;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tracked-items-tools {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .tracked-items-search {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .tracked-item-record-summary {
+    align-items: flex-start;
+  }
+
+  .tracked-item-record-metrics {
+    gap: 0.55rem;
+  }
+
+  .tracked-item-metric {
+    min-width: 38px;
+  }
+
+  .tracked-boss-actions {
+    flex-wrap: wrap;
+  }
+
+  .tracked-item-danger-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
