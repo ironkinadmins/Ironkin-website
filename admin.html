@@ -6,7 +6,7 @@
   <title>Ironkin Admin Dashboard</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/styles.css?v=20260826-admin-ux-3" />
+  <link rel="stylesheet" href="/styles.css?v=20260827-admin-nav-visibility" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260825-v5">
 </head>
 <body>
@@ -20,22 +20,62 @@
     </section>
 
     <nav class="admin-command-nav" aria-label="Admin sections">
-      <section class="admin-nav-group" aria-labelledby="adminNavEventsLabel">
-        <div class="admin-nav-group-label" id="adminNavEventsLabel">Events &amp; Rewards</div>
-        <div class="admin-nav-actions" role="tablist" aria-label="Event and reward tools">
-          <button type="button" class="admin-nav-btn event-subtab-btn active" data-event-subtab="standard">Manage Events</button>
-          <a class="admin-nav-btn" href="/ironkin-games-admin.html">Ironkin Games</a>
-          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="bingo">Battleship Bingo</button>
-          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="guess-kc">Guess the KC</button>
+      <section class="admin-nav-group admin-nav-group-events" aria-labelledby="adminNavEventsLabel">
+        <div class="admin-nav-group-head">
+          <div>
+            <div class="admin-nav-group-label" id="adminNavEventsLabel">Events &amp; Rewards</div>
+            <p>Build, run, and manage every Ironkin competition.</p>
+          </div>
+          <span class="admin-nav-group-count">4 tools</span>
+        </div>
+        <div class="admin-nav-actions admin-nav-actions-events" role="tablist" aria-label="Event and reward tools">
+          <button type="button" class="admin-nav-btn event-subtab-btn active" data-event-subtab="standard">
+            <span class="admin-nav-icon" aria-hidden="true">EV</span>
+            <span class="admin-nav-copy"><strong>Manage Events</strong><small>SOTW, BOTW, goals &amp; bounties</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
+          <a class="admin-nav-btn admin-nav-btn-games" href="/ironkin-games-admin.html">
+            <span class="admin-nav-icon" aria-hidden="true">IG</span>
+            <span class="admin-nav-copy"><strong>Ironkin Games</strong><small>Teams, weeks, challenges &amp; scoring</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </a>
+          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="bingo">
+            <span class="admin-nav-icon" aria-hidden="true">BB</span>
+            <span class="admin-nav-copy"><strong>Battleship Bingo</strong><small>Board settings, teams &amp; proofs</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="admin-nav-btn event-subtab-btn" data-event-subtab="guess-kc">
+            <span class="admin-nav-icon" aria-hidden="true">KC</span>
+            <span class="admin-nav-copy"><strong>Guess the KC</strong><small>Visibility &amp; giveaway controls</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
         </div>
       </section>
 
-      <section class="admin-nav-group" aria-labelledby="adminNavClanLabel">
-        <div class="admin-nav-group-label" id="adminNavClanLabel">Clan Management</div>
-        <div class="admin-nav-actions" role="tablist" aria-label="Clan management tools">
-          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="clan-plugin">Clan Plugin</button>
-          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="handbook">Staff Handbook</button>
-          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="profiles">User Management</button>
+      <section class="admin-nav-group admin-nav-group-clan" aria-labelledby="adminNavClanLabel">
+        <div class="admin-nav-group-head">
+          <div>
+            <div class="admin-nav-group-label" id="adminNavClanLabel">Clan Management</div>
+            <p>Manage member-facing tools and staff resources.</p>
+          </div>
+          <span class="admin-nav-group-count">3 tools</span>
+        </div>
+        <div class="admin-nav-actions admin-nav-actions-clan" role="tablist" aria-label="Clan management tools">
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="clan-plugin">
+            <span class="admin-nav-icon" aria-hidden="true">CP</span>
+            <span class="admin-nav-copy"><strong>Clan Plugin</strong><small>Published events &amp; plugin settings</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="handbook">
+            <span class="admin-nav-icon" aria-hidden="true">SH</span>
+            <span class="admin-nav-copy"><strong>Staff Handbook</strong><small>Guidance, processes &amp; staff info</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="admin-nav-btn admin-tab-btn" data-admin-tab="profiles">
+            <span class="admin-nav-icon" aria-hidden="true">UM</span>
+            <span class="admin-nav-copy"><strong>User Management</strong><small>Members, roles &amp; account access</small></span>
+            <span class="admin-nav-chevron" aria-hidden="true">›</span>
+          </button>
         </div>
       </section>
     </nav>
