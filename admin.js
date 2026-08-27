@@ -2950,75 +2950,161 @@ function setupHandbookEditor() {
 
 setupHandbookEditor();
 
-
-/* Integrated admin UX overhaul — 2026-08-26 */
+/* Integrated event admin workspace — presentation only. */
 (() => {
-  const $ = (s, r=document) => r.querySelector(s);
-  const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const viewStateKey = "ironkinAdminEventWorkspace";
 
-  function eventLabel(){
-    const sel = $('#adminEventSelect');
-    const txt = sel?.selectedOptions?.[0]?.textContent?.trim() || 'Event';
-    const event = (window.allEvents || []).find?.(x => x.id === sel?.value);
-    return { name: txt, type: event?.type || sel?.value || 'event' };
-  }
-  function updateEventContext(){
-    const {name,type}=eventLabel();
-    const nameEl=$('#luxEventName'), typeEl=$('#luxEventType');
-    if(nameEl) nameEl.textContent=name;
-    if(typeEl) typeEl.textContent=String(type).replaceAll('-',' ').replace(/\b\w/g,m=>m.toUpperCase());
-    const active=$('#eventActiveInput')?.checked?'Active':'Inactive';
-    const featured=$('#eventFeaturedInput')?.checked?'Featured':'Standard';
-    const drops=$('#eventDropsInput')?.checked?'Tracking On':'Tracking Off';
-    const vals=[['luxState',active],['luxFeatured',featured],['luxTracking',drops]];
-    vals.forEach(([id,v])=>{const el=$('#'+id);if(el)el.textContent=v;});
-  }
-  function setStandardView(view){
-    const core=$('#standardEventEditor'), drops=$('#standardDropsEditor'), bounty=$('#bountiesEditor'), imp=$('#eventItemImportCard');
-    if(!core)return;
-    $$('.lux-segmented [data-lux-view]').forEach(b=>b.classList.toggle('is-active',b.dataset.luxView===view));
-    [drops,bounty,imp].forEach(el=>el?.classList.add('lux-section-hidden'));
-    const rewardNodes=['#eventRewardsDivider','#eventRewardsHeader','#eventRewardsGrid'];
-    const goalNodes=['#targetSection','#milestonesSection'];
-    const configFields=$$('#standardEventEditor > .admin-form-grid > .admin-field').filter(el=>!el.matches('#targetSection,#milestonesSection'));
-    rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.remove('lux-section-hidden'));
-    configFields.forEach(el=>el.classList.remove('lux-section-hidden'));
-    // Each workspace exposes only the controls relevant to that task. Global status/save controls remain available.
-    if(view==='setup'){
-      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
-    } else if(view==='rewards'){
-      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
-    } else if(view==='items'){
-      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
-      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
-      drops?.classList.remove('lux-section-hidden');
-      bounty?.classList.remove('lux-section-hidden');
-    } else if(view==='import'){
-      rewardNodes.concat(goalNodes).forEach(s=>$(s)?.classList.add('lux-section-hidden'));
-      configFields.forEach(el=>el.classList.add('lux-section-hidden'));
-      imp?.classList.remove('lux-section-hidden');
+  const typeMeta = event => {
+    if (!event) return { key: "event", label: "Event", icon: "EV" };
+    if (isClanGoalEvent(event)) return { key: "goal", label: "Clan Goal", icon: "CG" };
+    if (isBountiesEvent(event)) return { key: "bounties", label: "Clan Bounties", icon: "BO" };
+    if (isPvmEntryEvent(event)) return { key: "pvm", label: "PvM Entry", icon: "PV" };
+    if (event.type === "botw") return { key: "botw", label: `Boss of the Week${getBotwTierLabel(event) ? ` · ${getBotwTierLabel(event)}` : ""}`, icon: "BW" };
+    if (event.type === "sotw") return { key: "sotw", label: "Skill of the Week", icon: "SW" };
+    return { key: event.type || "event", label: event.label || event.type || "Event", icon: "EV" };
+  };
+
+  function selectedEvent() { return getSelectedEvent?.() || null; }
+
+  function availableViews(event) {
+    const views = [{ key: "overview", label: "Overview", hint: "Core event settings" }];
+    if (!isPvmEntryEvent(event)) views.push({ key: "rewards", label: isClanGoalEvent(event) ? "Milestones & Rewards" : "Rewards", hint: "Prizes and participation" });
+    if (event && (event.dropsEnabled || ["sotw", "botw", "bounties", "pvm-entry"].includes(event.type) || isClanGoalEvent(event))) {
+      views.push({ key: "tracking", label: isBountiesEvent(event) ? "Bounty Items" : "Tracked Items", hint: "Drops and item rules" });
+      views.push({ key: "import", label: "Import", hint: "Bulk item data" });
     }
-    sessionStorage.setItem('ironkinAdminEventView',view);
+    return views;
   }
-  function enhanceStandard(){
-    const panel=$('#eventSubtab-standard');
-    if(!panel || $('#luxEventToolbar')) return;
-    const toolbar=document.createElement('div');
-    toolbar.id='luxEventToolbar'; toolbar.className='lux-event-toolbar';
-    toolbar.innerHTML=`<div class="lux-event-context"><div class="lux-event-icon">IK</div><div><strong id="luxEventName">Event</strong><small id="luxEventType">Event</small></div></div><div class="lux-segmented" role="tablist" aria-label="Event editor sections"><button type="button" data-lux-view="setup">Setup</button><button type="button" data-lux-view="rewards">Rewards & Milestones</button><button type="button" data-lux-view="items">Tracked Items</button><button type="button" data-lux-view="import">Data Import</button></div>`;
-    panel.prepend(toolbar);
-    const summary=document.createElement('div'); summary.className='lux-standard-summary';
-    summary.innerHTML=`<div class="lux-summary-tile"><span>Status</span><strong id="luxState">—</strong></div><div class="lux-summary-tile"><span>Homepage</span><strong id="luxFeatured">—</strong></div><div class="lux-summary-tile"><span>Item tracking</span><strong id="luxTracking">—</strong></div><div class="lux-summary-tile"><span>WOM competition</span><strong id="luxWom">—</strong></div>`;
-    toolbar.after(summary);
-    toolbar.addEventListener('click',e=>{const b=e.target.closest('[data-lux-view]');if(b)setStandardView(b.dataset.luxView)});
-    $('#adminEventSelect')?.addEventListener('change',()=>setTimeout(()=>{updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';},0));
-    ['eventActiveInput','eventFeaturedInput','eventDropsInput','eventWomInput'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';}));
-    updateEventContext(); const w=$('#luxWom'); if(w)w.textContent=$('#eventWomInput')?.value||'Not linked';
-    setStandardView(sessionStorage.getItem('ironkinAdminEventView')||'setup');
+
+  function shell() { return $("#eventAdminWorkspace"); }
+
+  function buildShell() {
+    const panel = $("#eventSubtab-standard");
+    if (!panel || shell()) return;
+    const editorCard = $("#standardEventEditor")?.closest(".admin-card");
+    const dropsCard = $("#standardDropsEditor");
+    const bountyCard = $("#bountiesEditor");
+    const importCard = $("#eventItemImportCard");
+    if (!editorCard) return;
+
+    const workspace = document.createElement("div");
+    workspace.id = "eventAdminWorkspace";
+    workspace.className = "event-admin-workspace";
+    workspace.innerHTML = `
+      <aside class="event-admin-rail">
+        <div class="event-admin-current">
+          <div class="event-admin-mark" id="eventAdminMark">EV</div>
+          <div><span>Editing</span><strong id="eventAdminName">Event</strong><small id="eventAdminType">Event</small></div>
+        </div>
+        <nav class="event-admin-view-nav" id="eventAdminViewNav" aria-label="Event editor sections"></nav>
+        <div class="event-admin-rail-note">Only controls relevant to the selected event type are shown.</div>
+      </aside>
+      <div class="event-admin-stage">
+        <header class="event-admin-stage-head">
+          <div><p class="eyebrow" id="eventAdminEyebrow">Event workspace</p><h2 id="eventAdminViewTitle">Overview</h2><p id="eventAdminViewHint">Core event settings</p></div>
+          <div class="event-admin-status-strip">
+            <span><i></i><b id="eventAdminState">Inactive</b></span>
+            <span><em>Homepage</em><b id="eventAdminFeatured">Off</b></span>
+            <span><em>WOM</em><b id="eventAdminWom">—</b></span>
+          </div>
+        </header>
+        <div class="event-admin-panel" data-event-view="overview"></div>
+        <div class="event-admin-panel" data-event-view="rewards" hidden></div>
+        <div class="event-admin-panel" data-event-view="tracking" hidden></div>
+        <div class="event-admin-panel" data-event-view="import" hidden></div>
+      </div>`;
+    panel.prepend(workspace);
+
+    workspace.querySelector('[data-event-view="overview"]').append(editorCard);
+    if (dropsCard) workspace.querySelector('[data-event-view="tracking"]').append(dropsCard);
+    if (bountyCard) workspace.querySelector('[data-event-view="tracking"]').append(bountyCard);
+    if (importCard) workspace.querySelector('[data-event-view="import"]').append(importCard);
+
+    // Move reward-specific nodes into a compact dedicated surface while keeping all original IDs/handlers.
+    const rewardPanel = workspace.querySelector('[data-event-view="rewards"]');
+    const rewardSurface = document.createElement("section");
+    rewardSurface.className = "admin-card event-admin-reward-surface";
+    rewardSurface.innerHTML = `<div class="admin-section-header"><div><p class="eyebrow">Recognition</p><h2>Rewards & Milestones</h2><p>Configure only the reward structure for this event.</p></div></div>`;
+    rewardPanel.append(rewardSurface);
+    ["targetSection", "milestonesSection", "eventRewardsDivider", "eventRewardsHeader", "eventRewardsGrid"].forEach(id => {
+      const node = $("#" + id);
+      if (node) rewardSurface.append(node);
+    });
+
+    $("#eventAdminViewNav")?.addEventListener("click", e => {
+      const button = e.target.closest("[data-event-admin-view]");
+      if (button) setView(button.dataset.eventAdminView);
+    });
   }
-  function polishShortPanels(){
-    ['#eventSubtab-bingo','#eventSubtab-guess-kc'].forEach(s=>{const p=$(s);if(p)p.classList.add('lux-event-shell')});
+
+  function refreshNav() {
+    const event = selectedEvent();
+    const meta = typeMeta(event);
+    const views = availableViews(event);
+    const nav = $("#eventAdminViewNav");
+    if (!nav) return;
+    nav.innerHTML = views.map(v => `<button type="button" data-event-admin-view="${v.key}"><span>${v.label}</span><small>${v.hint}</small></button>`).join("");
+    $("#eventAdminMark").textContent = meta.icon;
+    $("#eventAdminName").textContent = $("#adminEventSelect")?.selectedOptions?.[0]?.textContent?.trim() || meta.label;
+    $("#eventAdminType").textContent = meta.label;
+
+    let saved = sessionStorage.getItem(viewStateKey) || "overview";
+    if (!views.some(v => v.key === saved)) saved = "overview";
+    setView(saved, false);
   }
-  document.addEventListener('DOMContentLoaded',()=>{enhanceStandard();polishShortPanels();});
-  setTimeout(()=>{enhanceStandard();polishShortPanels();},500);
+
+  function setView(view, persist = true) {
+    const event = selectedEvent();
+    const views = availableViews(event);
+    const chosen = views.find(v => v.key === view) || views[0];
+    if (!chosen) return;
+    $$(".event-admin-panel", shell()).forEach(panel => panel.hidden = panel.dataset.eventView !== chosen.key);
+    $$("[data-event-admin-view]", shell()).forEach(button => button.classList.toggle("is-active", button.dataset.eventAdminView === chosen.key));
+    const title = $("#eventAdminViewTitle"), hint = $("#eventAdminViewHint"), eyebrow = $("#eventAdminEyebrow");
+    if (title) title.textContent = chosen.label;
+    if (hint) hint.textContent = chosen.hint;
+    if (eyebrow) eyebrow.textContent = typeMeta(event).label;
+    if (persist) sessionStorage.setItem(viewStateKey, chosen.key);
+    refreshSummary();
+  }
+
+  function refreshSummary() {
+    const event = selectedEvent();
+    const active = $("#eventActiveInput")?.checked;
+    const featured = $("#eventFeaturedInput")?.checked;
+    const wom = $("#eventWomInput")?.value?.trim();
+    const state = $("#eventAdminState"), home = $("#eventAdminFeatured"), womEl = $("#eventAdminWom");
+    if (state) { state.textContent = active ? "Active" : "Inactive"; state.closest("span")?.classList.toggle("is-on", !!active); }
+    if (home) home.textContent = featured ? "Featured" : "Off";
+    if (womEl) womEl.textContent = (isBountiesEvent(event) || isPvmEntryEvent(event)) ? "Not used" : (wom || "Not linked");
+  }
+
+  function adaptCoreCard() {
+    const core = $("#standardEventEditor");
+    if (!core || core.dataset.workspaceReady) return;
+    core.dataset.workspaceReady = "1";
+    const grid = core.querySelector(":scope > .admin-form-grid");
+    if (grid) grid.classList.add("event-admin-core-grid");
+    const saveRow = core.querySelector(":scope > .admin-action-row");
+    if (saveRow) saveRow.classList.add("event-admin-savebar");
+  }
+
+  function refresh() {
+    buildShell();
+    adaptCoreCard();
+    refreshNav();
+    refreshSummary();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    refresh();
+    $("#adminEventSelect")?.addEventListener("change", () => setTimeout(refresh, 0));
+    ["eventActiveInput", "eventFeaturedInput", "eventDropsInput", "eventWomInput"].forEach(id => {
+      $("#" + id)?.addEventListener("input", refreshSummary);
+      $("#" + id)?.addEventListener("change", refreshSummary);
+    });
+  });
+  setTimeout(refresh, 500);
 })();
