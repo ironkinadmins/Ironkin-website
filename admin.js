@@ -1,5 +1,7 @@
 let selectedEventId = null;
 let allEvents = [];
+let generatedResultsDraft = "";
+let generatedResultsFingerprint = "";
 
 async function fetchEvents() {
   const response = await fetch("/api/admin/events/list", { cache: "no-store" });
@@ -730,9 +732,62 @@ function setResultsPublishingStatus(message, state = "ready") {
   if (status) status.textContent = message;
   if (badge) {
     badge.dataset.state = state;
-    const labels = { ready: "Ready", loading: "Building", posted: "Published", error: "Needs attention", off: "Manual" };
+    const labels = { ready: "Ready", loading: "Building", posted: "Published", error: "Needs attention", off: "Manual", edited: "Edited" };
     badge.innerHTML = `<i></i> ${labels[state] || "Ready"}`;
   }
+}
+
+function resultsDraftFingerprint(event = getSelectedEvent()) {
+  if (!event) return "";
+  return JSON.stringify({
+    id: event.id,
+    womCompetitionId: document.getElementById("eventWomInput")?.value.trim() || "",
+    target: document.getElementById("eventTargetInput")?.value || "",
+    description: document.getElementById("eventDescriptionInput")?.value || "",
+    rewards: event.rewards || null,
+    milestones: event.milestones || null
+  });
+}
+
+function updateResultsDraftUi({ markEdited = true } = {}) {
+  const input = document.getElementById("resultsDraftInput");
+  const preview = document.getElementById("resultsPreviewContent");
+  const empty = document.getElementById("resultsPreviewEmpty");
+  const count = document.getElementById("resultsCharacterCount");
+  const state = document.getElementById("resultsDraftState");
+  const reset = document.getElementById("resetResultsDraftBtn");
+  const copy = document.getElementById("copyResultsDraftBtn");
+  if (!input) return;
+  const value = input.value || "";
+  if (count) {
+    count.textContent = `${value.length} / 1950`;
+    count.dataset.state = value.length > 1900 ? "warning" : "ok";
+  }
+  if (preview) {
+    preview.textContent = value;
+    preview.hidden = !value;
+  }
+  if (empty) empty.hidden = Boolean(value);
+  if (reset) reset.disabled = !generatedResultsDraft;
+  if (copy) copy.disabled = !value;
+  if (state) {
+    const isEdited = Boolean(generatedResultsDraft && value !== generatedResultsDraft);
+    state.dataset.state = !value ? "empty" : isEdited ? "edited" : "generated";
+    state.textContent = !value ? "Not generated" : isEdited ? "Edited" : "Generated";
+    if (markEdited && isEdited) setResultsPublishingStatus("Draft edited. The exact text shown in the Discord Preview will be published.", "edited");
+  }
+}
+
+function clearResultsComposer() {
+  generatedResultsDraft = "";
+  generatedResultsFingerprint = "";
+  const input = document.getElementById("resultsDraftInput");
+  const title = document.getElementById("resultsPreviewTitle");
+  const hint = document.getElementById("resultsDraftHint");
+  if (input) input.value = "";
+  if (title) title.textContent = "Generate a polished draft from live event data";
+  if (hint) hint.textContent = "Generated stats remain editable before the event is finalized.";
+  updateResultsDraftUi({ markEdited: false });
 }
 
 function syncResultsPublishingFields(event) {
@@ -742,18 +797,20 @@ function syncResultsPublishingFields(event) {
   const channel = document.getElementById("resultsChannelIdInput");
   if (enabled) enabled.checked = event.resultsAnnouncement.enabled !== false;
   if (channel) channel.value = event.resultsAnnouncement.channelId || "";
-  setResultsPublishingStatus(enabled?.checked === false ? "Automatic publishing is off. The event will archive without posting." : "Ready to publish from the final archived snapshot.", enabled?.checked === false ? "off" : "ready");
-  const preview = document.getElementById("resultsPreviewContent");
-  const empty = document.getElementById("resultsPreviewEmpty");
+  setResultsPublishingStatus(enabled?.checked === false ? "Publishing is off. You can still generate and edit the post before archiving." : "Generate the results post, polish it, then publish the exact approved copy.", enabled?.checked === false ? "off" : "ready");
   const retry = document.getElementById("retryResultsBtn");
   if (retry) { retry.hidden = true; retry.dataset.archiveId = ""; }
-  if (preview) { preview.hidden = true; preview.textContent = ""; }
-  if (empty) empty.hidden = false;
+  clearResultsComposer();
 }
 
 async function previewResultsPost() {
   const event = getSelectedEvent();
   if (!event || isPvmEntryEvent(event)) return;
+  const existingDraft = document.getElementById("resultsDraftInput")?.value || "";
+  if (generatedResultsDraft && existingDraft && existingDraft !== generatedResultsDraft) {
+    const replaceEdits = confirm("Regenerate the results post?\n\nThis will replace the custom edits currently in the composer with a fresh draft from live event data.");
+    if (!replaceEdits) return;
+  }
   collectResultsAnnouncementSettings(event);
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
@@ -763,11 +820,11 @@ async function previewResultsPost() {
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
 
   const button = document.getElementById("previewResultsBtn");
-  const preview = document.getElementById("resultsPreviewContent");
-  const empty = document.getElementById("resultsPreviewEmpty");
+  const input = document.getElementById("resultsDraftInput");
   const title = document.getElementById("resultsPreviewTitle");
-  if (button) { button.disabled = true; button.textContent = "Building Preview…"; }
-  setResultsPublishingStatus("Building a live preview from the current event data…", "loading");
+  const hint = document.getElementById("resultsDraftHint");
+  if (button) { button.disabled = true; button.textContent = "Generating…"; }
+  setResultsPublishingStatus("Building a fresh draft from the current live event data…", "loading");
   try {
     const response = await fetch("/api/admin/events/results/preview", {
       method: "POST",
@@ -775,18 +832,38 @@ async function previewResultsPost() {
       body: JSON.stringify({ event })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.details || data.error || "Could not preview results.");
-    if (preview) { preview.textContent = data.content || "No preview available."; preview.hidden = false; }
-    if (empty) empty.hidden = true;
-    if (title) title.textContent = data.channelId ? `Ready for Discord channel ${data.channelId}` : "Ready — using the server default channel";
-    setResultsPublishingStatus("Preview is current. Ending the event will rebuild once more from the final snapshot before posting.", "ready");
+    if (!response.ok) throw new Error(data.details || data.error || "Could not generate results post.");
+    generatedResultsDraft = data.content || "";
+    generatedResultsFingerprint = resultsDraftFingerprint(event);
+    if (input) input.value = generatedResultsDraft;
+    if (title) title.textContent = data.channelId ? `Draft ready · Discord channel ${data.channelId}` : "Draft ready · server default Discord channel";
+    if (hint) hint.textContent = "Generated from current live data. Edit anything you want before publishing.";
+    updateResultsDraftUi({ markEdited: false });
+    setResultsPublishingStatus("Draft generated. Review or edit it, then end the event when you're happy with the final copy.", "ready");
   } catch (error) {
-    if (preview) { preview.textContent = error.message || "Could not build preview."; preview.hidden = false; }
-    if (empty) empty.hidden = true;
-    if (title) title.textContent = "Preview unavailable";
-    setResultsPublishingStatus(error.message || "Could not build preview.", "error");
+    if (title) title.textContent = "Draft unavailable";
+    setResultsPublishingStatus(error.message || "Could not generate results post.", "error");
   } finally {
-    if (button) { button.disabled = false; button.textContent = "Preview Results Post"; }
+    if (button) { button.disabled = false; button.textContent = "Generate Post"; }
+  }
+}
+
+function resetResultsDraft() {
+  const input = document.getElementById("resultsDraftInput");
+  if (!input || !generatedResultsDraft) return;
+  input.value = generatedResultsDraft;
+  updateResultsDraftUi({ markEdited: false });
+  setResultsPublishingStatus("Custom edits were reset to the latest generated draft.", "ready");
+}
+
+async function copyResultsDraft() {
+  const value = document.getElementById("resultsDraftInput")?.value || "";
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    setResultsPublishingStatus("Results post copied to your clipboard.", "ready");
+  } catch {
+    setResultsPublishingStatus("Could not copy automatically. Select the draft text and copy it manually.", "error");
   }
 }
 
@@ -1724,6 +1801,9 @@ async function loadAdmin() {
   const previewResultsBtn = document.getElementById("previewResultsBtn");
   const resultsAutoPostInput = document.getElementById("resultsAutoPostInput");
   const retryResultsBtn = document.getElementById("retryResultsBtn");
+  const resultsDraftInput = document.getElementById("resultsDraftInput");
+  const resetResultsDraftBtn = document.getElementById("resetResultsDraftBtn");
+  const copyResultsDraftBtn = document.getElementById("copyResultsDraftBtn");
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
   const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
   const startBingoEventBtn = document.getElementById("startBingoEventBtn");
@@ -1803,10 +1883,13 @@ async function loadAdmin() {
     if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
     if (previewResultsBtn) previewResultsBtn.addEventListener("click", previewResultsPost);
     if (retryResultsBtn) retryResultsBtn.addEventListener("click", retryResultsPost);
+    if (resultsDraftInput) resultsDraftInput.addEventListener("input", () => updateResultsDraftUi());
+    if (resetResultsDraftBtn) resetResultsDraftBtn.addEventListener("click", resetResultsDraft);
+    if (copyResultsDraftBtn) copyResultsDraftBtn.addEventListener("click", copyResultsDraft);
     if (resultsAutoPostInput) resultsAutoPostInput.addEventListener("change", () => {
       const selected = getSelectedEvent();
       if (selected) collectResultsAnnouncementSettings(selected);
-      setResultsPublishingStatus(resultsAutoPostInput.checked ? "Ready to publish from the final archived snapshot." : "Automatic publishing is off. The event will archive without posting.", resultsAutoPostInput.checked ? "ready" : "off");
+      setResultsPublishingStatus(resultsAutoPostInput.checked ? "Publishing enabled. Generate and review the post before ending the event." : "Publishing is off. You can still generate and edit a draft without posting it.", resultsAutoPostInput.checked ? "ready" : "off");
     });
     if (saveBingoSettingsBtn) saveBingoSettingsBtn.addEventListener("click", saveBingoSettings);
     if (openBingoRegistrationBtn) {
@@ -1911,9 +1994,24 @@ async function archiveSelectedEvent() {
   collectResultsAnnouncementSettings(event);
 
   const willPost = event.resultsAnnouncement?.enabled !== false;
+  const resultsContent = document.getElementById("resultsDraftInput")?.value.trim() || "";
+  if (willPost && !resultsContent) {
+    setResultsPublishingStatus("Generate and review the results post before publishing the event.", "error");
+    alert("Generate the results post first, then review or edit it before ending the event.");
+    document.getElementById("previewResultsBtn")?.focus();
+    return;
+  }
+  if (resultsContent.length > 1950) {
+    setResultsPublishingStatus("The results post is over Discord's safe character limit.", "error");
+    alert("Shorten the results post to 1,950 characters or fewer before publishing.");
+    return;
+  }
   const destination = event.resultsAnnouncement?.channelId ? `Discord channel ${event.resultsAnnouncement.channelId}` : "the configured results channel";
+  const isEdited = Boolean(generatedResultsDraft && resultsContent !== generatedResultsDraft);
+  const eventSettingsChanged = Boolean(willPost && generatedResultsFingerprint && generatedResultsFingerprint !== resultsDraftFingerprint(event));
+  const freshnessWarning = eventSettingsChanged ? "\n\n⚠ Event settings changed since this draft was generated. The edited post will still be published exactly as shown." : "";
   const confirmed = confirm(
-    `End “${event.title}” and lock the final snapshot?\n\n${willPost ? `Results will be published automatically to ${destination}.` : "Automatic Discord publishing is OFF. The event will only be archived."}\n\nThis action ends the live event.`
+    `End “${event.title}” and lock the final snapshot?\n\n${willPost ? `The ${isEdited ? "edited" : "generated"} post currently shown in Discord Preview will be published exactly as written to ${destination}.` : "Discord publishing is OFF. The event will only be archived."}${freshnessWarning}\n\nThis action ends the live event.`
   );
   if (!confirmed) return;
 
@@ -1928,14 +2026,14 @@ async function archiveSelectedEvent() {
 
   const button = document.getElementById("archiveEventBtn");
   if (button) { button.disabled = true; button.textContent = willPost ? "Finalizing + Publishing…" : "Finalizing Event…"; }
-  setResultsPublishingStatus(willPost ? "Locking the final snapshot and publishing results…" : "Locking the final snapshot…", "loading");
+  setResultsPublishingStatus(willPost ? "Locking the final snapshot and publishing your approved results post…" : "Locking the final snapshot…", "loading");
   const archiveRequestId = (crypto?.randomUUID?.() || `archive-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   try {
     const response = await fetch("/api/admin/events/archive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: eventToArchive, events: eventsToArchive, postResults: willPost, archiveRequestId })
+      body: JSON.stringify({ event: eventToArchive, events: eventsToArchive, postResults: willPost, resultsContent: willPost ? resultsContent : null, archiveRequestId })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -1960,14 +2058,14 @@ async function archiveSelectedEvent() {
       setResultsPublishingStatus(`Event archived, but Discord publishing failed: ${announcement.error || "Unknown Discord error."}`, "error");
       alert(`Event archived successfully, but the Discord results post failed.\n\n${announcement.error || "Check the configured channel and bot permissions."}`);
     } else {
-      setResultsPublishingStatus("Event archived successfully. Automatic results publishing was skipped.", "off");
+      setResultsPublishingStatus("Event archived successfully. Discord publishing was skipped.", "off");
       alert("Event archived successfully. Results were not posted to Discord.");
     }
   } catch (error) {
     setResultsPublishingStatus(error.message || "Could not finalize the event.", "error");
     alert(error.message || "Could not finalize the event.");
   } finally {
-    if (button) { button.disabled = false; button.textContent = "End Event + Publish Results"; }
+    if (button) { button.disabled = false; button.textContent = "End Event + Publish Approved Post"; }
   }
 }
 

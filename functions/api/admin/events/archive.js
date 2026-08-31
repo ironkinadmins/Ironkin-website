@@ -24,9 +24,16 @@ export async function onRequestPost({ request, env }) {
   const event = body.event;
   const events = Array.isArray(body.events) ? body.events : null;
   const archiveRequestId = String(body.archiveRequestId || "").trim() || crypto.randomUUID();
+  const approvedResultsContent = String(body.resultsContent || "").trim();
 
   if (!event || !event.id) {
     return Response.json({ error: "Missing event to archive." }, { status: 400 });
+  }
+  if (wantsAutomaticResults(event, body) && !approvedResultsContent) {
+    return Response.json({ error: "Generate and approve the results post before publishing." }, { status: 400 });
+  }
+  if (approvedResultsContent.length > 1950) {
+    return Response.json({ error: "The approved results post is too long.", details: `${approvedResultsContent.length}/1950 characters.` }, { status: 400 });
   }
 
   const archiveValue = await hybridKv(env, "drops").get("events:archive");
@@ -86,6 +93,8 @@ export async function onRequestPost({ request, env }) {
       status: wantsAutomaticResults(event, body) ? "pending" : "skipped",
       messageId: null,
       postedAt: null,
+      content: approvedResultsContent || null,
+      source: approvedResultsContent ? "approved-editor" : null,
       error: null
     }
   };
@@ -95,7 +104,7 @@ export async function onRequestPost({ request, env }) {
 
   if (wantsAutomaticResults(event, body)) {
     try {
-      const posted = await postEventResultsToDiscord(env, archiveEntry);
+      const posted = await postEventResultsToDiscord(env, archiveEntry, approvedResultsContent);
       archiveEntry.resultsAnnouncement = {
         ...archiveEntry.resultsAnnouncement,
         status: "posted",

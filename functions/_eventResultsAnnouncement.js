@@ -205,11 +205,14 @@ export function getResultsChannelId(env, event) {
   return text(event?.resultsAnnouncement?.channelId || env.EVENT_RESULTS_CHANNEL_ID || env.RESULTS_CHANNEL_ID);
 }
 
-export async function postEventResultsToDiscord(env, entry) {
+export async function postEventResultsToDiscord(env, entry, contentOverride = null) {
   const channelId = getResultsChannelId(env, entry);
   if (!env.DISCORD_BOT_TOKEN) throw new Error("DISCORD_BOT_TOKEN is not configured.");
   if (!channelId) throw new Error("No results channel is configured. Add a channel ID in Results Publishing or set EVENT_RESULTS_CHANNEL_ID.");
-  const content = buildEventResultsContent(entry);
+  const savedContent = text(entry?.resultsAnnouncement?.content);
+  const content = text(contentOverride) || savedContent || buildEventResultsContent(entry);
+  if (!content) throw new Error("The results post is empty.");
+  if (content.length > MAX_CONTENT) throw new Error(`The results post is too long (${content.length}/${MAX_CONTENT} characters).`);
   const response = await fetch(`${DISCORD_API}/channels/${encodeURIComponent(channelId)}/messages`, {
     method: "POST",
     headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },

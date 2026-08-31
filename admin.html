@@ -6,7 +6,7 @@
   <title>Ironkin Admin Dashboard</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/styles.css?v=20260831-results-publishing" />
+  <link rel="stylesheet" href="/styles.css?v=20260831-results-composer" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260825-v5">
 </head>
 <body>
@@ -179,7 +179,7 @@
         <button class="btn primary" id="saveEventBtn">Save Event</button>
 
         <button class="btn secondary danger" id="archiveEventBtn" type="button">
-          End Event + Publish Results
+          End Event + Publish Approved Post
         </button>
       </div>
 
@@ -194,7 +194,7 @@
         <div>
           <p class="eyebrow">Discord Automation</p>
           <h2>Results Publishing</h2>
-          <p>Publish a polished, final results post from the exact snapshot saved to the archive.</p>
+          <p>Generate from live event data, refine the wording, and publish the exact copy your staff approves.</p>
         </div>
         <span class="results-publish-badge" id="resultsPublishBadge"><i></i> Ready</span>
       </div>
@@ -202,8 +202,8 @@
       <div class="results-publishing-grid">
         <label class="results-toggle-card" for="resultsAutoPostInput">
           <span class="results-toggle-copy">
-            <strong>Automatic publishing</strong>
-            <small>Post to Discord immediately after the event is archived successfully.</small>
+            <strong>Publish when event ends</strong>
+            <small>Send the exact reviewed composer copy to Discord after the archive snapshot is locked.</small>
           </span>
           <span class="premium-switch"><input id="resultsAutoPostInput" type="checkbox" checked /><i></i></span>
         </label>
@@ -217,19 +217,50 @@
         </div>
       </div>
 
-      <div class="results-preview-shell">
-        <div class="results-preview-meta">
+      <div class="results-composer-shell">
+        <div class="results-composer-toolbar">
           <div>
-            <span>Live final snapshot</span>
-            <strong id="resultsPreviewTitle">Preview before publishing</strong>
+            <span>Results Composer</span>
+            <strong id="resultsPreviewTitle">Generate a polished draft from live event data</strong>
           </div>
-          <button type="button" class="btn secondary" id="previewResultsBtn">Preview Results Post</button>
+          <div class="results-composer-actions">
+            <button type="button" class="btn secondary" id="previewResultsBtn">Generate Post</button>
+            <button type="button" class="btn secondary compact" id="resetResultsDraftBtn" disabled>Reset Generated</button>
+            <button type="button" class="btn secondary compact" id="copyResultsDraftBtn" disabled>Copy</button>
+          </div>
         </div>
-        <div class="results-preview-empty" id="resultsPreviewEmpty">
-          <span class="results-preview-icon">↗</span>
-          <div><strong>See exactly what Discord will receive.</strong><small>The preview uses current WOM standings or approved bounty submissions without ending the event.</small></div>
+
+        <div class="results-composer-workspace">
+          <div class="results-editor-pane">
+            <div class="results-pane-head">
+              <div>
+                <span>Editable message</span>
+                <strong>Discord post copy</strong>
+              </div>
+              <span class="results-draft-state" id="resultsDraftState" data-state="empty">Not generated</span>
+            </div>
+            <textarea id="resultsDraftInput" class="results-draft-input" maxlength="1950" spellcheck="true" placeholder="Generate the post from live event data, then edit any wording, emojis, rewards, mentions, or closing text before publishing."></textarea>
+            <div class="results-editor-foot">
+              <span id="resultsDraftHint">Generated stats remain editable before the event is finalized.</span>
+              <strong id="resultsCharacterCount">0 / 1950</strong>
+            </div>
+          </div>
+
+          <div class="results-preview-pane">
+            <div class="results-pane-head">
+              <div>
+                <span>Discord Preview</span>
+                <strong>Exactly what will be sent</strong>
+              </div>
+              <span class="results-live-chip"><i></i> Live</span>
+            </div>
+            <div class="results-preview-empty" id="resultsPreviewEmpty">
+              <span class="results-preview-icon">↗</span>
+              <div><strong>Your finished announcement will appear here.</strong><small>Generate a draft, then edit it on the left. This preview updates as you type.</small></div>
+            </div>
+            <pre class="results-preview-content" id="resultsPreviewContent" hidden></pre>
+          </div>
         </div>
-        <pre class="results-preview-content" id="resultsPreviewContent" hidden></pre>
       </div>
 
       <div class="results-publishing-foot">
@@ -670,7 +701,7 @@
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260831-results-publishing"></script>
+  <script src="admin.js?v=20260831-results-composer"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
