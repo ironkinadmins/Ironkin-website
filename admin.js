@@ -709,6 +709,115 @@ function normalizeRewards(event) {
   }
 }
 
+function normalizeResultsAnnouncement(event) {
+  if (!event.resultsAnnouncement || typeof event.resultsAnnouncement !== "object") {
+    event.resultsAnnouncement = { enabled: true, channelId: "" };
+  }
+  if (typeof event.resultsAnnouncement.enabled !== "boolean") event.resultsAnnouncement.enabled = true;
+  event.resultsAnnouncement.channelId = String(event.resultsAnnouncement.channelId || "").trim();
+}
+
+function collectResultsAnnouncementSettings(event = getSelectedEvent()) {
+  if (!event || isPvmEntryEvent(event)) return;
+  normalizeResultsAnnouncement(event);
+  event.resultsAnnouncement.enabled = Boolean(document.getElementById("resultsAutoPostInput")?.checked);
+  event.resultsAnnouncement.channelId = document.getElementById("resultsChannelIdInput")?.value.trim() || "";
+}
+
+function setResultsPublishingStatus(message, state = "ready") {
+  const status = document.getElementById("resultsPublishingStatus");
+  const badge = document.getElementById("resultsPublishBadge");
+  if (status) status.textContent = message;
+  if (badge) {
+    badge.dataset.state = state;
+    const labels = { ready: "Ready", loading: "Building", posted: "Published", error: "Needs attention", off: "Manual" };
+    badge.innerHTML = `<i></i> ${labels[state] || "Ready"}`;
+  }
+}
+
+function syncResultsPublishingFields(event) {
+  if (!event) return;
+  normalizeResultsAnnouncement(event);
+  const enabled = document.getElementById("resultsAutoPostInput");
+  const channel = document.getElementById("resultsChannelIdInput");
+  if (enabled) enabled.checked = event.resultsAnnouncement.enabled !== false;
+  if (channel) channel.value = event.resultsAnnouncement.channelId || "";
+  setResultsPublishingStatus(enabled?.checked === false ? "Automatic publishing is off. The event will archive without posting." : "Ready to publish from the final archived snapshot.", enabled?.checked === false ? "off" : "ready");
+  const preview = document.getElementById("resultsPreviewContent");
+  const empty = document.getElementById("resultsPreviewEmpty");
+  const retry = document.getElementById("retryResultsBtn");
+  if (retry) { retry.hidden = true; retry.dataset.archiveId = ""; }
+  if (preview) { preview.hidden = true; preview.textContent = ""; }
+  if (empty) empty.hidden = false;
+}
+
+async function previewResultsPost() {
+  const event = getSelectedEvent();
+  if (!event || isPvmEntryEvent(event)) return;
+  collectResultsAnnouncementSettings(event);
+  collectMilestonesFromEditor();
+  collectRewardsFromEditor();
+  event.description = document.getElementById("eventDescriptionInput")?.value.trim() || "";
+  event.womCompetitionId = isBountiesEvent(event) ? null : (document.getElementById("eventWomInput")?.value.trim() || null);
+  const targetValue = document.getElementById("eventTargetInput")?.value;
+  event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
+
+  const button = document.getElementById("previewResultsBtn");
+  const preview = document.getElementById("resultsPreviewContent");
+  const empty = document.getElementById("resultsPreviewEmpty");
+  const title = document.getElementById("resultsPreviewTitle");
+  if (button) { button.disabled = true; button.textContent = "Building Preview…"; }
+  setResultsPublishingStatus("Building a live preview from the current event data…", "loading");
+  try {
+    const response = await fetch("/api/admin/events/results/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.details || data.error || "Could not preview results.");
+    if (preview) { preview.textContent = data.content || "No preview available."; preview.hidden = false; }
+    if (empty) empty.hidden = true;
+    if (title) title.textContent = data.channelId ? `Ready for Discord channel ${data.channelId}` : "Ready — using the server default channel";
+    setResultsPublishingStatus("Preview is current. Ending the event will rebuild once more from the final snapshot before posting.", "ready");
+  } catch (error) {
+    if (preview) { preview.textContent = error.message || "Could not build preview."; preview.hidden = false; }
+    if (empty) empty.hidden = true;
+    if (title) title.textContent = "Preview unavailable";
+    setResultsPublishingStatus(error.message || "Could not build preview.", "error");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Preview Results Post"; }
+  }
+}
+
+async function retryResultsPost() {
+  const button = document.getElementById("retryResultsBtn");
+  const archiveId = button?.dataset.archiveId || "";
+  if (!button || !archiveId) return;
+  button.disabled = true;
+  button.textContent = "Retrying…";
+  setResultsPublishingStatus("Retrying the Discord post from the locked archive snapshot…", "loading");
+  try {
+    const response = await fetch("/api/admin/events/results/retry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archiveId })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.details || data.error || "Could not retry the Discord post.");
+    button.hidden = true;
+    button.dataset.archiveId = "";
+    setResultsPublishingStatus(`Published successfully to Discord channel ${data.announcement?.channelId || "configured"}.`, "posted");
+    alert("Results published successfully from the archived snapshot.");
+  } catch (error) {
+    setResultsPublishingStatus(error.message || "Discord publishing failed again.", "error");
+    alert(error.message || "Discord publishing failed again.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Retry Discord Post";
+  }
+}
+
 function updateEventFieldVisibility() {
   const event = getSelectedEvent();
   const targetSection = document.getElementById("targetSection");
@@ -726,6 +835,7 @@ function updateEventFieldVisibility() {
   const rewardsHeader = document.getElementById("eventRewardsHeader");
   const rewardsGrid = document.getElementById("eventRewardsGrid");
   const archiveButton = document.getElementById("archiveEventBtn");
+  const resultsPublishingCard = document.getElementById("resultsPublishingCard");
   const dropBossField = document.getElementById("dropBossField");
   const rewardsPlacement = document.getElementById("placementRewardsEditor")?.closest(".admin-reward-panel");
   const rewardsParticipation = document.getElementById("participationRewardsEditor")?.closest(".admin-reward-panel");
@@ -743,6 +853,7 @@ function updateEventFieldVisibility() {
   if (rewardsPlacement) rewardsPlacement.style.display = showPvmEntry ? "none" : "block";
   if (rewardsParticipation) rewardsParticipation.style.display = showPvmEntry ? "none" : "block";
   if (archiveButton) archiveButton.style.display = showPvmEntry ? "none" : "inline-flex";
+  if (resultsPublishingCard) resultsPublishingCard.style.display = showPvmEntry ? "none" : "block";
   if (dropBossField) dropBossField.style.display = showPvmEntry ? "grid" : "none";
 }
 
@@ -959,6 +1070,7 @@ function addPlacementReward() {
   normalizeRewards(event);
   event.rewards.placement.push({ label: "", reward: "" });
   renderRewardsEditor();
+  syncResultsPublishingFields(event);
 }
 
 function removePlacementReward(index) {
@@ -993,6 +1105,7 @@ function populateEventFields() {
   if (!event) return;
 
   normalizeRewards(event);
+  normalizeResultsAnnouncement(event);
 
   const botwTierNotice = document.getElementById("botwTierNotice");
   if (botwTierNotice) {
@@ -1608,6 +1721,9 @@ async function loadAdmin() {
   const addParticipationRewardBtn = document.getElementById("addParticipationRewardBtn");
   const archiveEventBtn = document.getElementById("archiveEventBtn");
   const previewWomBtn = document.getElementById("previewWomBtn");
+  const previewResultsBtn = document.getElementById("previewResultsBtn");
+  const resultsAutoPostInput = document.getElementById("resultsAutoPostInput");
+  const retryResultsBtn = document.getElementById("retryResultsBtn");
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
   const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
   const startBingoEventBtn = document.getElementById("startBingoEventBtn");
@@ -1685,6 +1801,13 @@ async function loadAdmin() {
     if (addParticipationRewardBtn) addParticipationRewardBtn.addEventListener("click", addParticipationReward);
     if (archiveEventBtn) archiveEventBtn.addEventListener("click", archiveSelectedEvent);
     if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
+    if (previewResultsBtn) previewResultsBtn.addEventListener("click", previewResultsPost);
+    if (retryResultsBtn) retryResultsBtn.addEventListener("click", retryResultsPost);
+    if (resultsAutoPostInput) resultsAutoPostInput.addEventListener("change", () => {
+      const selected = getSelectedEvent();
+      if (selected) collectResultsAnnouncementSettings(selected);
+      setResultsPublishingStatus(resultsAutoPostInput.checked ? "Ready to publish from the final archived snapshot." : "Automatic publishing is off. The event will archive without posting.", resultsAutoPostInput.checked ? "ready" : "off");
+    });
     if (saveBingoSettingsBtn) saveBingoSettingsBtn.addEventListener("click", saveBingoSettings);
     if (openBingoRegistrationBtn) {
       openBingoRegistrationBtn.addEventListener("click", () => applyBingoMode("registration"));
@@ -1724,6 +1847,7 @@ async function saveSelectedEvent() {
 
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
+  collectResultsAnnouncementSettings(event);
 
   // Ensure legacy bounty placement/participation rewards are not persisted.
   const eventsToSave = allEvents.map(item => {
@@ -1770,33 +1894,31 @@ async function saveSelectedEvent() {
 
 async function archiveSelectedEvent() {
   const event = getSelectedEvent();
-
   if (!event) return;
 
-  const confirmed = confirm(
-    `End and archive "${event.title}"?\n\nThis will save the current standings snapshot and mark the event inactive.`
-  );
-
-  if (!confirmed) return;
-
-  // Capture any unsaved edits before archiving.
+  // Capture every visible editor value before the final snapshot is requested.
   event.description = document.getElementById("eventDescriptionInput").value.trim();
-  event.womCompetitionId = document.getElementById("eventWomInput").value.trim() || null;
+  event.womCompetitionId = isBountiesEvent(event) ? null : (document.getElementById("eventWomInput").value.trim() || null);
   const eventPasswordInput = document.getElementById("eventPasswordInput");
   event.eventPassword = eventPasswordInput?.value.trim() || null;
-
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
   event.active = document.getElementById("eventActiveInput").checked;
   event.featured = document.getElementById("eventFeaturedInput").checked;
   event.dropsEnabled = document.getElementById("eventDropsInput").checked;
-
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
+  collectResultsAnnouncementSettings(event);
+
+  const willPost = event.resultsAnnouncement?.enabled !== false;
+  const destination = event.resultsAnnouncement?.channelId ? `Discord channel ${event.resultsAnnouncement.channelId}` : "the configured results channel";
+  const confirmed = confirm(
+    `End “${event.title}” and lock the final snapshot?\n\n${willPost ? `Results will be published automatically to ${destination}.` : "Automatic Discord publishing is OFF. The event will only be archived."}\n\nThis action ends the live event.`
+  );
+  if (!confirmed) return;
 
   const eventToArchive = { ...event };
   if (isBountiesEvent(eventToArchive)) delete eventToArchive.rewards;
-
   const eventsToArchive = allEvents.map(item => {
     if (!isBountiesEvent(item) && !isPvmEntryEvent(item)) return item;
     const cleanItem = { ...item };
@@ -1804,34 +1926,49 @@ async function archiveSelectedEvent() {
     return cleanItem;
   });
 
-  const response = await fetch("/api/admin/events/archive", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      event: eventToArchive,
-      events: eventsToArchive
-    })
-  });
+  const button = document.getElementById("archiveEventBtn");
+  if (button) { button.disabled = true; button.textContent = willPost ? "Finalizing + Publishing…" : "Finalizing Event…"; }
+  setResultsPublishingStatus(willPost ? "Locking the final snapshot and publishing results…" : "Locking the final snapshot…", "loading");
+  const archiveRequestId = (crypto?.randomUUID?.() || `archive-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  const data = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch("/api/admin/events/archive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: eventToArchive, events: eventsToArchive, postResults: willPost, archiveRequestId })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data.details ? `\n\n${data.details}` : "";
+      throw new Error(`${data.error || "Could not archive event."}${detail}`);
+    }
 
-  if (!response.ok) {
-    const detail = data.details ? `\n\n${data.details}` : "";
-    alert(`${data.error || "Could not archive event."}${detail}`);
-    return;
+    resetEventAfterArchive(event);
+    const eventSelect = document.getElementById("adminEventSelect");
+    const selectedOption = eventSelect?.querySelector(`option[value="${CSS.escape(event.id)}"]`);
+    if (selectedOption) selectedOption.textContent = getAdminEventOptionText(event);
+    populateEventFields();
+
+    const announcement = data.announcement || {};
+    const retryButton = document.getElementById("retryResultsBtn");
+    if (announcement.status === "posted") {
+      if (retryButton) { retryButton.hidden = true; retryButton.dataset.archiveId = ""; }
+      setResultsPublishingStatus(`Published successfully to Discord channel ${announcement.channelId}. The archived snapshot is locked.`, "posted");
+      alert("Event archived and results published successfully.");
+    } else if (announcement.status === "failed") {
+      if (retryButton) { retryButton.hidden = false; retryButton.dataset.archiveId = data.archiveEntry?.id || ""; }
+      setResultsPublishingStatus(`Event archived, but Discord publishing failed: ${announcement.error || "Unknown Discord error."}`, "error");
+      alert(`Event archived successfully, but the Discord results post failed.\n\n${announcement.error || "Check the configured channel and bot permissions."}`);
+    } else {
+      setResultsPublishingStatus("Event archived successfully. Automatic results publishing was skipped.", "off");
+      alert("Event archived successfully. Results were not posted to Discord.");
+    }
+  } catch (error) {
+    setResultsPublishingStatus(error.message || "Could not finalize the event.", "error");
+    alert(error.message || "Could not finalize the event.");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "End Event + Publish Results"; }
   }
-
-  resetEventAfterArchive(event);
-
-  const eventSelect = document.getElementById("adminEventSelect");
-  const selectedOption = eventSelect?.querySelector(`option[value="${CSS.escape(event.id)}"]`);
-  if (selectedOption) {
-    selectedOption.textContent = getAdminEventOptionText(event);
-  }
-
-  populateEventFields();
-
-  alert("Event archived and marked inactive.");
 }
 
 function formatDropTrackingRule(value) {
@@ -3088,7 +3225,10 @@ setupHandbookEditor();
 
   function availableViews(event) {
     const views = [{ key: "overview", label: "Overview", hint: "Core event settings" }];
-    if (!isPvmEntryEvent(event)) views.push({ key: "rewards", label: isClanGoalEvent(event) ? "Milestones & Rewards" : "Rewards", hint: "Prizes and participation" });
+    if (!isPvmEntryEvent(event)) {
+      views.push({ key: "rewards", label: isClanGoalEvent(event) ? "Milestones & Rewards" : "Rewards", hint: "Prizes and participation" });
+      views.push({ key: "publishing", label: "Results Publishing", hint: "Preview & Discord automation" });
+    }
     if (event && (event.dropsEnabled || ["sotw", "botw", "bounties", "pvm-entry"].includes(event.type) || isClanGoalEvent(event))) {
       views.push({ key: "tracking", label: isBountiesEvent(event) ? "Bounty Items" : "Tracked Items", hint: "Drops and item rules" });
       views.push({ key: "import", label: "Import", hint: "Bulk item data" });
@@ -3105,6 +3245,7 @@ setupHandbookEditor();
     const dropsCard = $("#standardDropsEditor");
     const bountyCard = $("#bountiesEditor");
     const importCard = $("#eventItemImportCard");
+    const publishingCard = $("#resultsPublishingCard");
     if (!editorCard) return;
 
     const workspace = document.createElement("div");
@@ -3130,12 +3271,14 @@ setupHandbookEditor();
         </header>
         <div class="event-admin-panel" data-event-view="overview"></div>
         <div class="event-admin-panel" data-event-view="rewards" hidden></div>
+        <div class="event-admin-panel" data-event-view="publishing" hidden></div>
         <div class="event-admin-panel" data-event-view="tracking" hidden></div>
         <div class="event-admin-panel" data-event-view="import" hidden></div>
       </div>`;
     panel.prepend(workspace);
 
     workspace.querySelector('[data-event-view="overview"]').append(editorCard);
+    if (publishingCard) workspace.querySelector('[data-event-view="publishing"]').append(publishingCard);
     if (dropsCard) workspace.querySelector('[data-event-view="tracking"]').append(dropsCard);
     if (bountyCard) workspace.querySelector('[data-event-view="tracking"]').append(bountyCard);
     if (importCard) workspace.querySelector('[data-event-view="import"]').append(importCard);

@@ -6,7 +6,7 @@
   <title>Ironkin Admin Dashboard</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/styles.css?v=20260827-admin-nav-visibility" />
+  <link rel="stylesheet" href="/styles.css?v=20260831-results-publishing" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260825-v5">
 </head>
 <body>
@@ -179,13 +179,65 @@
         <button class="btn primary" id="saveEventBtn">Save Event</button>
 
         <button class="btn secondary danger" id="archiveEventBtn" type="button">
-          End Event + Send to Archive
+          End Event + Publish Results
         </button>
       </div>
 
       <p class="admin-muted admin-action-note">
         Event title, metric, start date, and end date are pulled automatically from the WOM competition ID.
       </p>
+      </div>
+    </section>
+
+    <section class="admin-card results-publishing-card" id="resultsPublishingCard">
+      <div class="results-publishing-head">
+        <div>
+          <p class="eyebrow">Discord Automation</p>
+          <h2>Results Publishing</h2>
+          <p>Publish a polished, final results post from the exact snapshot saved to the archive.</p>
+        </div>
+        <span class="results-publish-badge" id="resultsPublishBadge"><i></i> Ready</span>
+      </div>
+
+      <div class="results-publishing-grid">
+        <label class="results-toggle-card" for="resultsAutoPostInput">
+          <span class="results-toggle-copy">
+            <strong>Automatic publishing</strong>
+            <small>Post to Discord immediately after the event is archived successfully.</small>
+          </span>
+          <span class="premium-switch"><input id="resultsAutoPostInput" type="checkbox" checked /><i></i></span>
+        </label>
+
+        <div class="results-channel-card">
+          <div class="admin-field">
+            <label for="resultsChannelIdInput">Discord Results Channel ID</label>
+            <input id="resultsChannelIdInput" type="text" inputmode="numeric" placeholder="Uses EVENT_RESULTS_CHANNEL_ID when blank" autocomplete="off" />
+            <small>Optional per-event override. Leave blank to use the server default results channel.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-preview-shell">
+        <div class="results-preview-meta">
+          <div>
+            <span>Live final snapshot</span>
+            <strong id="resultsPreviewTitle">Preview before publishing</strong>
+          </div>
+          <button type="button" class="btn secondary" id="previewResultsBtn">Preview Results Post</button>
+        </div>
+        <div class="results-preview-empty" id="resultsPreviewEmpty">
+          <span class="results-preview-icon">↗</span>
+          <div><strong>See exactly what Discord will receive.</strong><small>The preview uses current WOM standings or approved bounty submissions without ending the event.</small></div>
+        </div>
+        <pre class="results-preview-content" id="resultsPreviewContent" hidden></pre>
+      </div>
+
+      <div class="results-publishing-foot">
+        <span id="resultsPublishingStatus">No results have been published from this event yet.</span>
+        <div class="results-publishing-foot-actions">
+          <button type="button" class="btn secondary compact" id="retryResultsBtn" hidden>Retry Discord Post</button>
+          <span class="results-safety-note">Duplicate-safe archive request · Discord mentions disabled</span>
+        </div>
       </div>
     </section>
 
@@ -618,7 +670,7 @@
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260826-admin-ux-3"></script>
+  <script src="admin.js?v=20260831-results-publishing"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
