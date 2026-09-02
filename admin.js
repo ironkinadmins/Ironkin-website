@@ -750,8 +750,19 @@ function resultsDraftFingerprint(event = getSelectedEvent()) {
 }
 
 
-let resultsServerEmojis = [];
+const RESULTS_STANDARD_EMOJIS = [
+  ["grinning","😀","Smileys"],["smiley","😃","Smileys"],["smile","😄","Smileys"],["grin","😁","Smileys"],["laughing","😆","Smileys"],["sweat_smile","😅","Smileys"],["joy","😂","Smileys"],["rofl","🤣","Smileys"],["blush","😊","Smileys"],["slight_smile","🙂","Smileys"],["upside_down","🙃","Smileys"],["wink","😉","Smileys"],["heart_eyes","😍","Smileys"],["star_struck","🤩","Smileys"],["kissing_heart","😘","Smileys"],["yum","😋","Smileys"],["sunglasses","😎","Smileys"],["thinking","🤔","Smileys"],["salute","🫡","Smileys"],["neutral","😐","Smileys"],["unamused","😒","Smileys"],["sweat","😓","Smileys"],["cry","😢","Smileys"],["sob","😭","Smileys"],["angry","😠","Smileys"],["rage","😡","Smileys"],["mind_blown","🤯","Smileys"],["party_face","🥳","Smileys"],["cold_face","🥶","Smileys"],["skull","💀","Smileys"],["clown","🤡","Smileys"],["poop","💩","Smileys"],
+  ["wave","👋","People"],["raised_hand","✋","People"],["ok_hand","👌","People"],["pinched_fingers","🤌","People"],["v","✌️","People"],["crossed_fingers","🤞","People"],["love_you","🤟","People"],["metal","🤘","People"],["call_me","🤙","People"],["point_left","👈","People"],["point_right","👉","People"],["point_up","👆","People"],["point_down","👇","People"],["thumbsup","👍","People"],["thumbsdown","👎","People"],["fist","✊","People"],["punch","👊","People"],["clap","👏","People"],["raised_hands","🙌","People"],["heart_hands","🫶","People"],["pray","🙏","People"],["muscle","💪","People"],["eyes","👀","People"],["brain","🧠","People"],["speaking_head","🗣️","People"],["busts","👥","People"],
+  ["heart","❤️","Symbols"],["orange_heart","🧡","Symbols"],["yellow_heart","💛","Symbols"],["green_heart","💚","Symbols"],["blue_heart","💙","Symbols"],["purple_heart","💜","Symbols"],["black_heart","🖤","Symbols"],["white_heart","🤍","Symbols"],["broken_heart","💔","Symbols"],["sparkling_heart","💖","Symbols"],["fire","🔥","Symbols"],["sparkles","✨","Symbols"],["star","⭐","Symbols"],["boom","💥","Symbols"],["100","💯","Symbols"],["check","✅","Symbols"],["x","❌","Symbols"],["warning","⚠️","Symbols"],["question","❓","Symbols"],["exclamation","❗","Symbols"],["plus","➕","Symbols"],["minus","➖","Symbols"],["infinity","♾️","Symbols"],["recycle","♻️","Symbols"],["peace","☮️","Symbols"],
+  ["trophy","🏆","Activities"],["medal","🏅","Activities"],["first_place","🥇","Activities"],["second_place","🥈","Activities"],["third_place","🥉","Activities"],["dart","🎯","Activities"],["game_die","🎲","Activities"],["video_game","🎮","Activities"],["joystick","🕹️","Activities"],["slot_machine","🎰","Activities"],["puzzle","🧩","Activities"],["artist_palette","🎨","Activities"],["musical_note","🎵","Activities"],["party_popper","🎉","Activities"],["confetti_ball","🎊","Activities"],["gift","🎁","Activities"],
+  ["crossed_swords","⚔️","OSRS-ish"],["shield","🛡️","OSRS-ish"],["bow_arrow","🏹","OSRS-ish"],["axe","🪓","OSRS-ish"],["pick","⛏️","OSRS-ish"],["hammer","🔨","OSRS-ish"],["dagger","🗡️","OSRS-ish"],["magic_wand","🪄","OSRS-ish"],["crystal_ball","🔮","OSRS-ish"],["gem","💎","OSRS-ish"],["coin","🪙","OSRS-ish"],["moneybag","💰","OSRS-ish"],["scroll","📜","OSRS-ish"],["map","🗺️","OSRS-ish"],["compass","🧭","OSRS-ish"],["key","🔑","OSRS-ish"],["lock","🔒","OSRS-ish"],["unlock","🔓","OSRS-ish"],["dragon","🐉","OSRS-ish"],["snake","🐍","OSRS-ish"],["spider","🕷️","OSRS-ish"],["scorpion","🦂","OSRS-ish"],["rat","🐀","OSRS-ish"],["ghost","👻","OSRS-ish"],["zap","⚡","OSRS-ish"],["droplet","💧","OSRS-ish"],["herb","🌿","OSRS-ish"],["seedling","🌱","OSRS-ish"],["wood","🪵","OSRS-ish"],["fishing_pole","🎣","OSRS-ish"],["fish","🐟","OSRS-ish"],["cooking","🍳","OSRS-ish"],["bread","🍞","OSRS-ish"],["meat","🍖","OSRS-ish"],["bone","🦴","OSRS-ish"],
+  ["calendar","📅","Objects"],["chart_up","📈","Objects"],["chart_down","📉","Objects"],["bar_chart","📊","Objects"],["clipboard","📋","Objects"],["memo","📝","Objects"],["book","📖","Objects"],["bulb","💡","Objects"],["bell","🔔","Objects"],["megaphone","📣","Objects"],["hourglass","⏳","Objects"],["stopwatch","⏱️","Objects"],["clock","🕒","Objects"],["link","🔗","Objects"],["pushpin","📌","Objects"],["package","📦","Objects"],["bank","🏦","Objects"]
+].map(([name, code, category]) => ({ name, code, category, standard: true }));
+
+let resultsIronkinEmojis = [];
+let resultsOtherEmojiGuilds = [];
 let resultsEmojisLoaded = false;
+let resultsEmojiSource = "standard";
 
 function renderResultsDiscordPreview(value) {
   const preview = document.getElementById("resultsPreviewContent");
@@ -776,49 +787,107 @@ function renderResultsDiscordPreview(value) {
   if (cursor < text.length) preview.append(document.createTextNode(text.slice(cursor)));
 }
 
-function renderResultsEmojiGrid(query = "") {
-  const grid = document.getElementById("resultsEmojiGrid");
-  if (!grid) return;
-  const needle = String(query || "").trim().toLowerCase();
-  const emojis = resultsServerEmojis.filter(emoji => !needle || emoji.name.toLowerCase().includes(needle));
-  grid.replaceChildren();
-  if (!emojis.length) {
-    const empty = document.createElement("span");
-    empty.className = "results-emoji-empty";
-    empty.textContent = resultsEmojisLoaded ? "No matching server emojis." : "Loading server emojis…";
-    grid.append(empty);
-    return;
-  }
-  emojis.forEach(emoji => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "results-emoji-button";
-    button.title = `:${emoji.name}:`;
-    button.setAttribute("aria-label", `Insert ${emoji.name} emoji`);
+function createResultsEmojiButton(emoji) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `results-emoji-button${emoji.standard ? " standard" : ""}`;
+  button.title = emoji.standard ? `${emoji.code} :${emoji.name}:` : `:${emoji.name}:`;
+  button.setAttribute("aria-label", `Insert ${emoji.name} emoji`);
+  if (emoji.standard) {
+    const span = document.createElement("span");
+    span.className = "results-standard-emoji";
+    span.textContent = emoji.code;
+    button.append(span);
+  } else {
     const img = document.createElement("img");
     img.src = emoji.url;
     img.alt = `:${emoji.name}:`;
     img.loading = "lazy";
     button.append(img);
-    button.addEventListener("click", () => insertResultsEmoji(emoji.code));
-    grid.append(button);
+  }
+  button.addEventListener("click", () => insertResultsEmoji(emoji.code));
+  return button;
+}
+
+function appendEmojiSection(grid, title, emojis) {
+  if (!emojis.length) return;
+  const heading = document.createElement("div");
+  heading.className = "results-emoji-section-title";
+  heading.textContent = title;
+  grid.append(heading);
+  emojis.forEach(emoji => grid.append(createResultsEmojiButton(emoji)));
+}
+
+function renderResultsEmojiGrid(query = "") {
+  const grid = document.getElementById("resultsEmojiGrid");
+  const note = document.getElementById("resultsEmojiSourceNote");
+  if (!grid) return;
+  const needle = String(query || "").trim().toLowerCase();
+  grid.replaceChildren();
+
+  if (resultsEmojiSource === "standard") {
+    const emojis = RESULTS_STANDARD_EMOJIS.filter(emoji => !needle || `${emoji.name} ${emoji.category} ${emoji.code}`.toLowerCase().includes(needle));
+    const categories = [...new Set(emojis.map(emoji => emoji.category))];
+    categories.forEach(category => appendEmojiSection(grid, category, emojis.filter(emoji => emoji.category === category)));
+    if (note) note.textContent = "Standard Unicode emojis work everywhere in Discord.";
+    if (!emojis.length) grid.innerHTML = '<span class="results-emoji-empty">No matching standard emojis.</span>';
+    return;
+  }
+
+  if (!resultsEmojisLoaded) {
+    grid.innerHTML = '<span class="results-emoji-loading">Loading Discord custom emojis…</span>';
+    return;
+  }
+
+  if (resultsEmojiSource === "ironkin") {
+    const emojis = resultsIronkinEmojis.filter(emoji => !needle || emoji.name.toLowerCase().includes(needle));
+    appendEmojiSection(grid, "Ironkin", emojis);
+    if (note) note.textContent = "Loaded directly from the Ironkin Discord server.";
+    if (!emojis.length) grid.innerHTML = '<span class="results-emoji-empty">No matching Ironkin emojis.</span>';
+    return;
+  }
+
+  let total = 0;
+  resultsOtherEmojiGuilds.forEach(guild => {
+    const emojis = (guild.emojis || []).filter(emoji => !needle || `${emoji.name} ${guild.name}`.toLowerCase().includes(needle));
+    total += emojis.length;
+    appendEmojiSection(grid, guild.name, emojis);
   });
+  if (note) note.textContent = "External emojis are shown from Discord servers your bot can access.";
+  if (!total) grid.innerHTML = `<span class="results-emoji-empty">${resultsOtherEmojiGuilds.length ? "No matching external emojis." : "No other server emojis are available to this bot."}</span>`;
 }
 
 async function loadResultsServerEmojis() {
   if (resultsEmojisLoaded) return;
-  const grid = document.getElementById("resultsEmojiGrid");
-  if (grid) grid.innerHTML = '<span class="results-emoji-loading">Loading Discord server emojis…</span>';
   try {
     const response = await fetch("/api/admin/discord/emojis", { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Could not load server emojis.");
-    resultsServerEmojis = Array.isArray(data.emojis) ? data.emojis : [];
+    if (!response.ok) throw new Error(data.error || "Could not load Discord emojis.");
+    resultsIronkinEmojis = Array.isArray(data.primaryGuild?.emojis) ? data.primaryGuild.emojis : Array.isArray(data.emojis) ? data.emojis : [];
+    resultsOtherEmojiGuilds = Array.isArray(data.otherGuilds) ? data.otherGuilds : [];
     resultsEmojisLoaded = true;
     renderResultsEmojiGrid(document.getElementById("resultsEmojiSearch")?.value || "");
   } catch (error) {
-    if (grid) grid.innerHTML = `<span class="results-emoji-empty">${String(error.message || "Could not load Discord emojis.").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</span>`;
+    resultsEmojisLoaded = true;
+    resultsIronkinEmojis = [];
+    resultsOtherEmojiGuilds = [];
+    if (resultsEmojiSource !== "standard") {
+      const grid = document.getElementById("resultsEmojiGrid");
+      if (grid) grid.innerHTML = `<span class="results-emoji-empty">${String(error.message || "Could not load Discord emojis.").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</span>`;
+    }
   }
+}
+
+function setResultsEmojiSource(source) {
+  if (!["standard", "ironkin", "other"].includes(source)) return;
+  resultsEmojiSource = source;
+  document.querySelectorAll("[data-emoji-source]").forEach(tab => {
+    const active = tab.dataset.emojiSource === source;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+  renderResultsEmojiGrid(document.getElementById("resultsEmojiSearch")?.value || "");
+  if (source !== "standard" && !resultsEmojisLoaded) loadResultsServerEmojis();
 }
 
 async function toggleResultsEmojiPicker() {
@@ -829,7 +898,8 @@ async function toggleResultsEmojiPicker() {
   picker.hidden = !opening;
   button.setAttribute("aria-expanded", String(opening));
   if (opening) {
-    await loadResultsServerEmojis();
+    renderResultsEmojiGrid(document.getElementById("resultsEmojiSearch")?.value || "");
+    loadResultsServerEmojis();
     document.getElementById("resultsEmojiSearch")?.focus();
   }
 }
@@ -1985,6 +2055,7 @@ async function loadAdmin() {
     if (copyResultsDraftBtn) copyResultsDraftBtn.addEventListener("click", copyResultsDraft);
     if (resultsEmojiBtn) resultsEmojiBtn.addEventListener("click", toggleResultsEmojiPicker);
     if (resultsEmojiSearch) resultsEmojiSearch.addEventListener("input", () => renderResultsEmojiGrid(resultsEmojiSearch.value));
+    document.querySelectorAll("[data-emoji-source]").forEach(tab => tab.addEventListener("click", () => setResultsEmojiSource(tab.dataset.emojiSource)));
     if (resultsAutoPostInput) resultsAutoPostInput.addEventListener("change", () => {
       const selected = getSelectedEvent();
       if (selected) collectResultsAnnouncementSettings(selected);
