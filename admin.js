@@ -760,7 +760,6 @@ const RESULTS_STANDARD_EMOJIS = [
 ].map(([name, code, category]) => ({ name, code, category, standard: true }));
 
 let resultsIronkinEmojis = [];
-let resultsOtherEmojiGuilds = [];
 let resultsEmojisLoaded = false;
 let resultsEmojiSource = "standard";
 
@@ -847,14 +846,8 @@ function renderResultsEmojiGrid(query = "") {
     return;
   }
 
-  let total = 0;
-  resultsOtherEmojiGuilds.forEach(guild => {
-    const emojis = (guild.emojis || []).filter(emoji => !needle || `${emoji.name} ${guild.name}`.toLowerCase().includes(needle));
-    total += emojis.length;
-    appendEmojiSection(grid, guild.name, emojis);
-  });
-  if (note) note.textContent = "External emojis are shown from Discord servers your bot can access.";
-  if (!total) grid.innerHTML = `<span class="results-emoji-empty">${resultsOtherEmojiGuilds.length ? "No matching external emojis." : "No other server emojis are available to this bot."}</span>`;
+  if (note) note.textContent = "Loaded directly from the Ironkin Discord server.";
+
 }
 
 async function loadResultsServerEmojis() {
@@ -864,13 +857,11 @@ async function loadResultsServerEmojis() {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Could not load Discord emojis.");
     resultsIronkinEmojis = Array.isArray(data.primaryGuild?.emojis) ? data.primaryGuild.emojis : Array.isArray(data.emojis) ? data.emojis : [];
-    resultsOtherEmojiGuilds = Array.isArray(data.otherGuilds) ? data.otherGuilds : [];
     resultsEmojisLoaded = true;
     renderResultsEmojiGrid(document.getElementById("resultsEmojiSearch")?.value || "");
   } catch (error) {
     resultsEmojisLoaded = true;
     resultsIronkinEmojis = [];
-    resultsOtherEmojiGuilds = [];
     if (resultsEmojiSource !== "standard") {
       const grid = document.getElementById("resultsEmojiGrid");
       if (grid) grid.innerHTML = `<span class="results-emoji-empty">${String(error.message || "Could not load Discord emojis.").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</span>`;
@@ -879,7 +870,7 @@ async function loadResultsServerEmojis() {
 }
 
 function setResultsEmojiSource(source) {
-  if (!["standard", "ironkin", "other"].includes(source)) return;
+  if (!["standard", "ironkin"].includes(source)) return;
   resultsEmojiSource = source;
   document.querySelectorAll("[data-emoji-source]").forEach(tab => {
     const active = tab.dataset.emojiSource === source;
