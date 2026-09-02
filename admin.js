@@ -749,6 +749,101 @@ function resultsDraftFingerprint(event = getSelectedEvent()) {
   });
 }
 
+
+let resultsServerEmojis = [];
+let resultsEmojisLoaded = false;
+
+function renderResultsDiscordPreview(value) {
+  const preview = document.getElementById("resultsPreviewContent");
+  if (!preview) return;
+  preview.replaceChildren();
+  const text = String(value || "");
+  const emojiPattern = /<(a?):([A-Za-z0-9_~]+):(\d{10,})>/g;
+  let cursor = 0;
+  let match;
+  while ((match = emojiPattern.exec(text))) {
+    if (match.index > cursor) preview.append(document.createTextNode(text.slice(cursor, match.index)));
+    const img = document.createElement("img");
+    const animated = match[1] === "a";
+    img.className = "discord-custom-emoji";
+    img.src = `https://cdn.discordapp.com/emojis/${match[3]}.${animated ? "gif" : "webp"}?size=48&quality=lossless`;
+    img.alt = `:${match[2]}:`;
+    img.title = `:${match[2]}:`;
+    img.loading = "lazy";
+    preview.append(img);
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) preview.append(document.createTextNode(text.slice(cursor)));
+}
+
+function renderResultsEmojiGrid(query = "") {
+  const grid = document.getElementById("resultsEmojiGrid");
+  if (!grid) return;
+  const needle = String(query || "").trim().toLowerCase();
+  const emojis = resultsServerEmojis.filter(emoji => !needle || emoji.name.toLowerCase().includes(needle));
+  grid.replaceChildren();
+  if (!emojis.length) {
+    const empty = document.createElement("span");
+    empty.className = "results-emoji-empty";
+    empty.textContent = resultsEmojisLoaded ? "No matching server emojis." : "Loading server emojis…";
+    grid.append(empty);
+    return;
+  }
+  emojis.forEach(emoji => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "results-emoji-button";
+    button.title = `:${emoji.name}:`;
+    button.setAttribute("aria-label", `Insert ${emoji.name} emoji`);
+    const img = document.createElement("img");
+    img.src = emoji.url;
+    img.alt = `:${emoji.name}:`;
+    img.loading = "lazy";
+    button.append(img);
+    button.addEventListener("click", () => insertResultsEmoji(emoji.code));
+    grid.append(button);
+  });
+}
+
+async function loadResultsServerEmojis() {
+  if (resultsEmojisLoaded) return;
+  const grid = document.getElementById("resultsEmojiGrid");
+  if (grid) grid.innerHTML = '<span class="results-emoji-loading">Loading Discord server emojis…</span>';
+  try {
+    const response = await fetch("/api/admin/discord/emojis", { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Could not load server emojis.");
+    resultsServerEmojis = Array.isArray(data.emojis) ? data.emojis : [];
+    resultsEmojisLoaded = true;
+    renderResultsEmojiGrid(document.getElementById("resultsEmojiSearch")?.value || "");
+  } catch (error) {
+    if (grid) grid.innerHTML = `<span class="results-emoji-empty">${String(error.message || "Could not load Discord emojis.").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</span>`;
+  }
+}
+
+async function toggleResultsEmojiPicker() {
+  const picker = document.getElementById("resultsEmojiPicker");
+  const button = document.getElementById("resultsEmojiBtn");
+  if (!picker || !button) return;
+  const opening = picker.hidden;
+  picker.hidden = !opening;
+  button.setAttribute("aria-expanded", String(opening));
+  if (opening) {
+    await loadResultsServerEmojis();
+    document.getElementById("resultsEmojiSearch")?.focus();
+  }
+}
+
+function insertResultsEmoji(code) {
+  const input = document.getElementById("resultsDraftInput");
+  if (!input || !code) return;
+  const start = Number.isFinite(input.selectionStart) ? input.selectionStart : input.value.length;
+  const end = Number.isFinite(input.selectionEnd) ? input.selectionEnd : start;
+  input.setRangeText(code, start, end, "end");
+  input.focus();
+  updateResultsDraftUi();
+}
+
 function updateResultsDraftUi({ markEdited = true } = {}) {
   const input = document.getElementById("resultsDraftInput");
   const preview = document.getElementById("resultsPreviewContent");
@@ -764,7 +859,7 @@ function updateResultsDraftUi({ markEdited = true } = {}) {
     count.dataset.state = value.length > 1900 ? "warning" : "ok";
   }
   if (preview) {
-    preview.textContent = value;
+    renderResultsDiscordPreview(value);
     preview.hidden = !value;
   }
   if (empty) empty.hidden = Boolean(value);
@@ -1804,6 +1899,8 @@ async function loadAdmin() {
   const resultsDraftInput = document.getElementById("resultsDraftInput");
   const resetResultsDraftBtn = document.getElementById("resetResultsDraftBtn");
   const copyResultsDraftBtn = document.getElementById("copyResultsDraftBtn");
+  const resultsEmojiBtn = document.getElementById("resultsEmojiBtn");
+  const resultsEmojiSearch = document.getElementById("resultsEmojiSearch");
   const saveBingoSettingsBtn = document.getElementById("saveBingoSettingsBtn");
   const openBingoRegistrationBtn = document.getElementById("openBingoRegistrationBtn");
   const startBingoEventBtn = document.getElementById("startBingoEventBtn");
@@ -1886,6 +1983,8 @@ async function loadAdmin() {
     if (resultsDraftInput) resultsDraftInput.addEventListener("input", () => updateResultsDraftUi());
     if (resetResultsDraftBtn) resetResultsDraftBtn.addEventListener("click", resetResultsDraft);
     if (copyResultsDraftBtn) copyResultsDraftBtn.addEventListener("click", copyResultsDraft);
+    if (resultsEmojiBtn) resultsEmojiBtn.addEventListener("click", toggleResultsEmojiPicker);
+    if (resultsEmojiSearch) resultsEmojiSearch.addEventListener("input", () => renderResultsEmojiGrid(resultsEmojiSearch.value));
     if (resultsAutoPostInput) resultsAutoPostInput.addEventListener("change", () => {
       const selected = getSelectedEvent();
       if (selected) collectResultsAnnouncementSettings(selected);

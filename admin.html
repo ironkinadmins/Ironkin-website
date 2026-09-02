@@ -6,7 +6,7 @@
   <title>Ironkin Admin Dashboard</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/styles.css?v=20260831-results-composer-alignfix" />
+  <link rel="stylesheet" href="/styles.css?v=20260901-results-emoji-picker" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260825-v5">
 </head>
 <body>
@@ -225,9 +225,19 @@
           </div>
           <div class="results-composer-actions">
             <button type="button" class="btn secondary" id="previewResultsBtn">Generate Post</button>
+            <button type="button" class="btn secondary compact results-emoji-trigger" id="resultsEmojiBtn" aria-expanded="false" aria-controls="resultsEmojiPicker">😀 Emoji</button>
             <button type="button" class="btn secondary compact" id="resetResultsDraftBtn" disabled>Reset Generated</button>
             <button type="button" class="btn secondary compact" id="copyResultsDraftBtn" disabled>Copy</button>
           </div>
+        </div>
+
+        <div class="results-emoji-picker" id="resultsEmojiPicker" hidden>
+          <div class="results-emoji-picker-head">
+            <div><span>Server Emoji</span><strong>Insert a custom Discord emoji</strong></div>
+            <input id="resultsEmojiSearch" type="search" placeholder="Search server emojis…" autocomplete="off" />
+          </div>
+          <div class="results-emoji-grid" id="resultsEmojiGrid"><span class="results-emoji-loading">Open the picker to load your Discord server emojis.</span></div>
+          <div class="results-emoji-picker-foot"><span>Click an emoji to insert it at your cursor.</span><span>Loaded directly from your Discord server.</span></div>
         </div>
 
         <div class="results-composer-workspace">
@@ -701,7 +711,7 @@
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260831-results-composer-alignfix"></script>
+  <script src="admin.js?v=20260901-results-emoji-picker"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
