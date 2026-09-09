@@ -149,9 +149,20 @@ signupForm.addEventListener("submit",async ev=>{
   ev.preventDefault();
   if(!timezoneInput.value){setStatus("Select your timezone before signing up.","error");return;}
   signupButton.disabled=true;setStatus("Verifying your RSN with Wise Old Man…");
-  const r=await fetch("/api/ironkin-games/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rsn:rsnInput.value.trim(),timezone:timezoneInput.value})});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok){setStatus(d.error||"Signup failed.","error");signupButton.disabled=false;return;}
+  let r;
+  try{
+    r=await fetch("/api/ironkin-games/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rsn:rsnInput.value.trim(),timezone:timezoneInput.value})});
+  }catch(err){
+    setStatus(`Signup request failed before the server responded: ${err?.message||"Network error"}`,"error");
+    signupButton.disabled=false;return;
+  }
+  const raw=await r.text();
+  let d={};
+  try{d=raw?JSON.parse(raw):{};}catch{}
+  if(!r.ok){
+    const fallback=raw&&!raw.trim().startsWith("<")?raw.trim():`Signup failed (HTTP ${r.status}). The server did not return a readable error.`;
+    setStatus(d.error||fallback,"error");signupButton.disabled=false;return;
+  }
   await load();setStatus("You are signed up for Ironkin Games.","success");
 });
 withdrawButton.addEventListener("click",async()=>{

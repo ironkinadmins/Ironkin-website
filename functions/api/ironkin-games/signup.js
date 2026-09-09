@@ -92,60 +92,89 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const session = await getSession(request, env);
-  if (!session) return Response.json({ error:"Sign in with Discord before registering." }, { status:401 });
-  if (!session.inGuild) return Response.json({ error:"You must be in the Ironkin Discord to register." }, { status:403 });
+  // Keep track of the exact stage so unexpected Cloudflare/runtime errors are
+  // returned as JSON instead of falling through to the frontend's generic
+  // "Signup failed." message.
+  let stage = "starting signup";
+  try {
+    stage = "checking Discord session";
+    const session = await getSession(request, env);
+    if (!session) return Response.json({ error:"Sign in with Discord before registering." }, { status:401 });
+    if (!session.inGuild) return Response.json({ error:"You must be in the Ironkin Discord to register." }, { status:403 });
 
-  const state = await loadGames(env);
-  if (state.rosterLocked) return Response.json({ error:"Ironkin Games teams are locked. Staff must unlock the roster before signup changes can be made." }, { status:403 });
-  const registration = registrationWindow(state);
-  if (!state.signupOpen) return Response.json({ error:"Ironkin Games signup is currently closed by staff." }, { status:403 });
-  if (!registration.withinWindow) {
-    const now = Date.now();
-    const opens = registration.opensAt ? new Date(registration.opensAt).getTime() : null;
-    if (Number.isFinite(opens) && now < opens) return Response.json({ error:"Ironkin Games registration has not opened yet." }, { status:403 });
-    return Response.json({ error:"Ironkin Games registration has closed." }, { status:403 });
+    stage = "loading Ironkin Games data";
+    const state = await loadGames(env);
+    if (state.rosterLocked) return Response.json({ error:"Ironkin Games teams are locked. Staff must unlock the roster before signup changes can be made." }, { status:403 });
+    const registration = registrationWindow(state);
+    if (!state.signupOpen) return Response.json({ error:"Ironkin Games signup is currently closed by staff." }, { status:403 });
+    if (!registration.withinWindow) {
+      const now = Date.now();
+      const opens = registration.opensAt ? new Date(registration.opensAt).getTime() : null;
+      if (Number.isFinite(opens) && now < opens) return Response.json({ error:"Ironkin Games registration has not opened yet." }, { status:403 });
+      return Response.json({ error:"Ironkin Games registration has closed." }, { status:403 });
+    }
+
+    stage = "reading signup form";
+    const body = await request.json().catch(() => ({}));
+    const rsn = String(body.rsn || "").trim();
+    if (!rsn || rsn.length > 12) return Response.json({ error:"Enter a valid OSRS username." }, { status:400 });
+
+    const existingSignup = (state.signups || []).find(s => String(s.discordId) === String(session.id));
+    const requestedTimezone = String(body.timezone || existingSignup?.timezone || "").trim();
+    if (!validTimezone(requestedTimezone)) {
+      return Response.json({ error:"Select a valid timezone before signing up." }, { status:400 });
+    }
+
+    stage = "verifying WOM group membership";
+    let members;
+    try { members = await groupMembers(env); }
+    catch (error) { return Response.json({ error:`Could not verify the Ironkin WOM group: ${error.message}` }, { status:502 }); }
+    if (!members.has(normalizeRsn(rsn))) {
+      return Response.json({ error:"That RSN was not found in the Ironkin Wise Old Man group. Check the spelling or have staff sync the WOM group first." }, { status:400 });
+    }
+
+    stage = `loading WOM stats for ${rsn}`;
+    let player;
+    try { player = await womFetch(env, `/players/${encodeURIComponent(rsn)}`); }
+    catch (error) { return Response.json({ error:`Could not load WOM stats for ${rsn}: ${error.message}` }, { status:502 }); }
+
+    stage = "building signup record";
+    const stats = statsFromPlayer(player);
+    const now = new Date().toISOString();
+    const displayName = session.nick || session.global_name || session.username || rsn;
+    const signup = {
+      discordId: String(session.id),
+      discordName: String(session.username || ""),
+      displayName: String(displayName),
+      rsn: String(player?.displayName || player?.username || rsn),
+      timezone: requestedTimezone,
+      ...stats,
+      signedUpAt: existingSignup?.signedUpAt || now,
+      updatedAt: now
+    };
+
+    const others = (state.signups || []).filter(s => String(s.discordId) !== String(session.id));
+    state.signups = [...others, signup];
+
+    stage = "saving signup";
+    try {
+      await saveGames(env, state);
+    } catch (error) {
+      console.error("Ironkin Games signup save failed", error);
+      return Response.json({
+        error:`Signup passed Discord and WOM verification, but saving the signup failed: ${error?.message || "Unknown storage error"}`,
+        stage:"saving signup"
+      }, { status:500, headers:{"Cache-Control":"no-store"} });
+    }
+
+    return Response.json({ ok:true, signup }, { headers:{"Cache-Control":"no-store"} });
+  } catch (error) {
+    console.error(`Ironkin Games signup failed during ${stage}`, error);
+    return Response.json({
+      error:`Signup failed during ${stage}: ${error?.message || "Unknown server error"}`,
+      stage
+    }, { status:500, headers:{"Cache-Control":"no-store"} });
   }
-
-  const body = await request.json().catch(() => ({}));
-  const rsn = String(body.rsn || "").trim();
-  if (!rsn || rsn.length > 12) return Response.json({ error:"Enter a valid OSRS username." }, { status:400 });
-
-  const existingSignup = (state.signups || []).find(s => String(s.discordId) === String(session.id));
-  const requestedTimezone = String(body.timezone || existingSignup?.timezone || "").trim();
-  if (!validTimezone(requestedTimezone)) {
-    return Response.json({ error:"Select a valid timezone before signing up." }, { status:400 });
-  }
-
-  let members;
-  try { members = await groupMembers(env); }
-  catch (error) { return Response.json({ error:`Could not verify the Ironkin WOM group: ${error.message}` }, { status:502 }); }
-  if (!members.has(normalizeRsn(rsn))) {
-    return Response.json({ error:"That RSN was not found in the Ironkin Wise Old Man group. Check the spelling or have staff sync the WOM group first." }, { status:400 });
-  }
-
-  let player;
-  try { player = await womFetch(env, `/players/${encodeURIComponent(rsn)}`); }
-  catch (error) { return Response.json({ error:`Could not load WOM stats for ${rsn}: ${error.message}` }, { status:502 }); }
-
-  const stats = statsFromPlayer(player);
-  const now = new Date().toISOString();
-  const displayName = session.nick || session.global_name || session.username || rsn;
-  const signup = {
-    discordId: String(session.id),
-    discordName: String(session.username || ""),
-    displayName: String(displayName),
-    rsn: String(player?.displayName || player?.username || rsn),
-    timezone: requestedTimezone,
-    ...stats,
-    signedUpAt: (state.signups || []).find(s => String(s.discordId) === String(session.id))?.signedUpAt || now,
-    updatedAt: now
-  };
-
-  const others = (state.signups || []).filter(s => String(s.discordId) !== String(session.id));
-  state.signups = [...others, signup];
-  await saveGames(env, state);
-  return Response.json({ ok:true, signup }, { headers:{"Cache-Control":"no-store"} });
 }
 
 export async function onRequestDelete({ request, env }) {
