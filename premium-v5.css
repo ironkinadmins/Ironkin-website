@@ -1054,3 +1054,15 @@ body.home-ledger-v3 .home-total-panel{
   body.home-ledger-v3 .home-ledger-grid,
   body.home-ledger-v3 .home-ledger-side{gap:12px!important;}
 }
+
+/* 2026-09-13 section transition spacing fix */
+body.home-ledger-v3 .home-command-grid{
+  margin-bottom:0!important;
+}
+body.home-ledger-v3 .home-brand-compact{
+  margin:var(--home-gap) 0 0!important;
+  padding:0!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story{
+  margin:0!important;
+}
