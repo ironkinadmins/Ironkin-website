@@ -326,7 +326,7 @@
       body.home-ledger-v3 .home-news-header { align-items: flex-start; }
     }
   </style>
-  <link rel="stylesheet" href="/premium-v5.css?v=20260913-home-calm-v5">
+  <link rel="stylesheet" href="/premium-v5.css?v=20260913-home-polish-v6">
 </head>
 <body class="home-premium-page premium-ui home-ledger-v3">
   <div id="siteNav"></div>
@@ -447,7 +447,12 @@
         </div>
         <a class="btn secondary" href="https://discord.com/channels/1364728339469832313/1364729142796619846" target="_blank" rel="noopener">Open Discord Channel</a>
       </div>
-      <div id="clanNewsFeed" class="clan-news-feed home-news-grid">Loading clan news...</div>
+      <div class="home-news-carousel" aria-label="Clan announcement carousel">
+        <button id="homeNewsPrev" class="home-news-arrow home-news-prev" type="button" aria-label="Previous announcements">‹</button>
+        <div id="clanNewsFeed" class="clan-news-feed home-news-grid" tabindex="0">Loading clan news...</div>
+        <button id="homeNewsNext" class="home-news-arrow home-news-next" type="button" aria-label="Next announcements">›</button>
+      </div>
+      <div id="homeNewsDots" class="home-news-dots" aria-label="Announcement pages"></div>
     </section>
       </aside>
     </div>
@@ -471,7 +476,7 @@
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
-  <script src="/script.js?v=20260913-home-spacing-v4-hub-ux-v1"></script>
+  <script src="/script.js?v=20260913-home-news-carousel-v6"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

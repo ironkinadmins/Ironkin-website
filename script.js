@@ -2704,6 +2704,84 @@ function renderClanNewsEntry(entry) {
     </article>`;
 }
 
+function setupHomeNewsCarousel(feed) {
+  if (!feed) return;
+
+  const prev = document.getElementById("homeNewsPrev");
+  const next = document.getElementById("homeNewsNext");
+  const dots = document.getElementById("homeNewsDots");
+  if (!prev || !next || !dots) return;
+
+  const cards = Array.from(feed.children).filter(el => !el.classList.contains("admin-muted"));
+  if (!cards.length) {
+    prev.hidden = true;
+    next.hidden = true;
+    dots.innerHTML = "";
+    return;
+  }
+
+  prev.hidden = false;
+  next.hidden = false;
+
+  const visibleCount = () => {
+    if (window.matchMedia("(max-width: 760px)").matches) return 1;
+    if (window.matchMedia("(max-width: 1050px)").matches) return 2;
+    return 3;
+  };
+
+  const pageCount = () => Math.max(1, Math.ceil(cards.length / visibleCount()));
+
+  const cardStep = () => {
+    const first = cards[0];
+    if (!first) return feed.clientWidth;
+    const styles = getComputedStyle(feed);
+    const gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
+    return first.getBoundingClientRect().width + gap;
+  };
+
+  const currentPage = () => {
+    const step = cardStep() * visibleCount();
+    if (!step) return 0;
+    return Math.max(0, Math.min(pageCount() - 1, Math.round(feed.scrollLeft / step)));
+  };
+
+  const goToPage = page => {
+    const target = Math.max(0, Math.min(pageCount() - 1, page));
+    feed.scrollTo({ left: target * cardStep() * visibleCount(), behavior: "smooth" });
+  };
+
+  const update = () => {
+    const pages = pageCount();
+    const active = currentPage();
+    prev.disabled = active <= 0;
+    next.disabled = active >= pages - 1;
+
+    dots.innerHTML = "";
+    for (let i = 0; i < pages; i += 1) {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = `home-news-dot${i === active ? " is-active" : ""}`;
+      dot.setAttribute("aria-label", `Show announcement page ${i + 1}`);
+      dot.setAttribute("aria-current", i === active ? "true" : "false");
+      dot.addEventListener("click", () => goToPage(i));
+      dots.appendChild(dot);
+    }
+  };
+
+  if (!feed.dataset.carouselBound) {
+    prev.addEventListener("click", () => goToPage(currentPage() - 1));
+    next.addEventListener("click", () => goToPage(currentPage() + 1));
+    feed.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+    window.addEventListener("resize", () => {
+      feed.scrollLeft = 0;
+      update();
+    });
+    feed.dataset.carouselBound = "true";
+  }
+
+  update();
+}
+
 async function loadClanNews() {
   const feed = document.getElementById("clanNewsFeed");
   if (!feed) return;
@@ -2713,14 +2791,12 @@ async function loadClanNews() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not load clan news.");
     const entries = Array.isArray(data.entries) ? data.entries : [];
-    const firstLoad = feed.dataset.newsLoaded !== "true";
     feed.innerHTML = entries.length
-      ? entries.slice(0, 4).map(renderClanNewsEntry).join("")
+      ? entries.slice(0, 12).map(renderClanNewsEntry).join("")
       : `<p class="admin-muted">No clan news has been posted yet.</p>`;
-    if (firstLoad) {
-      feed.scrollTop = 0;
-      feed.dataset.newsLoaded = "true";
-    }
+    feed.scrollLeft = 0;
+    feed.dataset.newsLoaded = "true";
+    setupHomeNewsCarousel(feed);
   } catch (error) {
     feed.innerHTML = `<p class="admin-muted">Could not load clan news: ${escapeHtml(error.message)}</p>`;
   }

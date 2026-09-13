@@ -1336,3 +1336,300 @@ body.home-ledger-v3 .home-brand-compact .premium-brand-story p:last-of-type{
   body.home-ledger-v3 .home-news-header{align-items:start!important;}
   body.home-ledger-v3 .home-brand-compact .premium-brand-story{grid-template-columns:1fr!important;}
 }
+
+
+/* =========================================================
+   2026-09-13 homepage polish v6
+   Compact first screen + corrected brand emblem + news carousel
+   ========================================================= */
+
+/* Compact the two utility cards so they support the page instead of dominating it. */
+body.home-ledger-v3 .home-top-grid{
+  gap:14px!important;
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-top-grid > section{
+  min-height:92px!important;
+  padding:14px 18px!important;
+}
+body.home-ledger-v3 .home-top-grid .eyebrow{
+  margin-bottom:4px!important;
+  font-size:.58rem!important;
+}
+body.home-ledger-v3 .home-top-grid .games-card h2,
+body.home-ledger-v3 .home-personalized-welcome h2{
+  margin:0 0 4px!important;
+  font-size:1.04rem!important;
+  line-height:1.1!important;
+}
+body.home-ledger-v3 .home-top-grid p:not(.eyebrow){
+  margin:0!important;
+  font-size:.70rem!important;
+  line-height:1.35!important;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome .btn{
+  min-height:32px!important;
+  margin-top:10px!important;
+  padding:7px 12px!important;
+  font-size:.68rem!important;
+}
+body.home-ledger-v3 .home-personalized-welcome{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:16px!important;
+}
+body.home-ledger-v3 .home-personal-links{
+  gap:6px!important;
+}
+body.home-ledger-v3 .home-personal-links a{
+  min-height:28px!important;
+  padding:6px 9px!important;
+  font-size:.62rem!important;
+}
+
+/* Reduce the hero footprint by roughly a quarter while retaining its hierarchy. */
+body.home-ledger-v3 .home-hero-dashboard-integrated{
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-ledger-hero{
+  min-height:238px!important;
+  padding:24px 28px 84px!important;
+}
+body.home-ledger-v3 .home-kicker{
+  margin-bottom:12px!important;
+  font-size:.60rem!important;
+}
+body.home-ledger-v3 .home-ledger-hero h1{
+  max-width:650px!important;
+  font-size:clamp(2.75rem,4.2vw,4.45rem)!important;
+  line-height:.9!important;
+}
+body.home-ledger-v3 .home-hero-lead{
+  max-width:610px!important;
+  margin-top:12px!important;
+  font-size:.78rem!important;
+  line-height:1.5!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail{
+  left:14px!important;
+  right:14px!important;
+  bottom:14px!important;
+  gap:8px!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail article{
+  min-height:54px!important;
+  padding:9px 12px!important;
+  border-radius:11px!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail strong{
+  font-size:1.08rem!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail small{
+  font-size:.52rem!important;
+}
+
+/* Ironkin Standard: keep the emblem properly centered inside a true circle. */
+body.home-ledger-v3 .home-brand-compact .premium-brand-story{
+  min-height:88px!important;
+  padding:15px 20px!important;
+  grid-template-columns:56px minmax(0,1fr) auto!important;
+  gap:18px!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-mark{
+  display:grid!important;
+  place-items:center!important;
+  width:54px!important;
+  height:54px!important;
+  min-width:54px!important;
+  min-height:54px!important;
+  padding:0!important;
+  border:1px solid rgba(255,145,55,.30)!important;
+  border-radius:50%!important;
+  overflow:hidden!important;
+  background:radial-gradient(circle,rgba(255,126,31,.13),rgba(255,126,31,.025) 65%,transparent 66%)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 0 24px rgba(255,111,16,.055)!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-mark img{
+  display:block!important;
+  width:34px!important;
+  height:34px!important;
+  max-width:34px!important;
+  max-height:34px!important;
+  object-fit:contain!important;
+  margin:0!important;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.28))!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story h2{
+  font-size:1.12rem!important;
+  line-height:1.08!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story .btn{
+  min-height:36px!important;
+  padding:8px 14px!important;
+  font-size:.72rem!important;
+}
+
+/* Latest News: horizontal carousel with complete, readable cards and no clipping. */
+body.home-ledger-v3 .home-command-news{
+  margin-top:14px!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-section{
+  padding:18px 20px 16px!important;
+  overflow:hidden!important;
+}
+body.home-ledger-v3 .home-news-header{
+  align-items:center!important;
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-news-header h2{
+  font-size:1.25rem!important;
+}
+body.home-ledger-v3 .home-news-header .btn{
+  min-height:34px!important;
+  padding:8px 13px!important;
+}
+body.home-ledger-v3 .home-news-carousel{
+  position:relative;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) 34px;
+  gap:10px;
+  align-items:center;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed{
+  display:flex!important;
+  grid-template-columns:none!important;
+  gap:12px!important;
+  width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scroll-snap-type:x mandatory;
+  scroll-behavior:smooth;
+  scrollbar-width:none;
+  padding:1px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed::-webkit-scrollbar{
+  display:none;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+  flex:0 0 calc((100% - 24px)/3)!important;
+  width:auto!important;
+  height:210px!important;
+  min-height:210px!important;
+  padding:14px!important;
+  overflow:hidden!important;
+  scroll-snap-align:start;
+  box-sizing:border-box;
+  display:flex!important;
+  flex-direction:column!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed > *:nth-child(n+4){
+  display:flex!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy{
+  min-height:0!important;
+  flex:1 1 auto!important;
+  overflow:hidden!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy h3{
+  margin:0 0 6px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy p{
+  display:-webkit-box!important;
+  -webkit-line-clamp:4!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  margin:0!important;
+  line-height:1.45!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-message-link{
+  margin-top:auto!important;
+  padding-top:10px!important;
+  white-space:normal!important;
+  line-height:1.25!important;
+}
+body.home-ledger-v3 .home-news-arrow{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  padding:0;
+  border:1px solid rgba(255,151,65,.24);
+  border-radius:50%;
+  background:rgba(255,255,255,.025);
+  color:#ff8a2a;
+  font:700 1.45rem/1 sans-serif;
+  cursor:pointer;
+  transition:border-color .18s ease,background .18s ease,transform .18s ease,opacity .18s ease;
+}
+body.home-ledger-v3 .home-news-arrow:hover:not(:disabled){
+  border-color:rgba(255,151,65,.55);
+  background:rgba(255,126,31,.09);
+  transform:translateY(-1px);
+}
+body.home-ledger-v3 .home-news-arrow:disabled{
+  opacity:.28;
+  cursor:default;
+}
+body.home-ledger-v3 .home-news-dots{
+  display:flex;
+  justify-content:center;
+  gap:7px;
+  min-height:8px;
+  margin-top:12px;
+}
+body.home-ledger-v3 .home-news-dot{
+  width:7px;
+  height:7px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.18);
+  cursor:pointer;
+}
+body.home-ledger-v3 .home-news-dot.is-active{
+  background:#ff8a2a;
+  box-shadow:0 0 10px rgba(255,126,31,.32);
+}
+
+@media(max-width:1050px){
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+    flex-basis:calc((100% - 12px)/2)!important;
+  }
+}
+@media(max-width:760px){
+  body.home-ledger-v3 .home-top-grid > section{
+    min-height:0!important;
+  }
+  body.home-ledger-v3 .home-personalized-welcome{
+    grid-template-columns:1fr!important;
+  }
+  body.home-ledger-v3 .home-hero-dashboard-integrated .home-ledger-hero{
+    min-height:0!important;
+    padding:22px 20px 164px!important;
+  }
+  body.home-ledger-v3 .home-ledger-hero h1{
+    font-size:clamp(2.65rem,15vw,3.8rem)!important;
+  }
+  body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+    flex-basis:100%!important;
+    height:auto!important;
+    min-height:205px!important;
+  }
+  body.home-ledger-v3 .home-news-carousel{
+    grid-template-columns:30px minmax(0,1fr) 30px;
+    gap:7px;
+  }
+  body.home-ledger-v3 .home-news-arrow{
+    width:30px;
+    height:30px;
+  }
+  body.home-ledger-v3 .home-brand-compact .premium-brand-story{
+    grid-template-columns:54px minmax(0,1fr)!important;
+  }
+  body.home-ledger-v3 .home-brand-compact .premium-brand-story .btn{
+    grid-column:1 / -1;
+    width:100%;
+  }
+}
