@@ -1066,3 +1066,273 @@ body.home-ledger-v3 .home-brand-compact{
 body.home-ledger-v3 .home-brand-compact .premium-brand-story{
   margin:0!important;
 }
+
+
+/* =========================================================
+   2026-09-13 Calm homepage / progressive disclosure
+   Homepage = summary. Dedicated pages = detail.
+   ========================================================= */
+body.home-ledger-v3 .home-premium{
+  width:min(1480px,calc(100% - 56px))!important;
+  padding-top:22px!important;
+}
+body.home-ledger-v3 .home-top-grid{
+  grid-template-columns:1fr 1fr!important;
+  gap:16px!important;
+  margin:0 0 16px!important;
+}
+body.home-ledger-v3 .home-top-grid > section{
+  min-height:116px!important;
+  padding:18px 20px!important;
+}
+body.home-ledger-v3 .home-top-grid .games-card h2,
+body.home-ledger-v3 .home-personalized-welcome h2{
+  font-size:1.22rem!important;
+  margin:.2rem 0 .35rem!important;
+}
+body.home-ledger-v3 .home-top-grid p:not(.eyebrow){
+  font-size:.78rem!important;
+  line-height:1.45!important;
+}
+body.home-ledger-v3 .home-personalized-welcome{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+}
+body.home-ledger-v3 .home-personal-links{
+  display:flex!important;
+  gap:8px!important;
+  min-width:0!important;
+}
+body.home-ledger-v3 .home-personal-links a{
+  min-height:32px!important;
+  padding:7px 10px!important;
+  font-size:.68rem!important;
+}
+
+/* Hero is the single dominant element. */
+body.home-ledger-v3 .home-command-grid{display:block!important;}
+body.home-ledger-v3 .home-command-main{width:100%!important;}
+body.home-ledger-v3 .home-hero-dashboard-integrated{
+  margin:0 0 18px!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-ledger-hero{
+  min-height:300px!important;
+  padding:34px 34px 112px!important;
+}
+body.home-ledger-v3 .home-ledger-hero h1{
+  font-size:clamp(3.4rem,5vw,5.6rem)!important;
+  max-width:720px!important;
+}
+body.home-ledger-v3 .home-hero-lead{
+  max-width:660px!important;
+  font-size:.88rem!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail{
+  left:18px!important;right:18px!important;bottom:18px!important;
+  gap:10px!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail article{
+  min-height:68px!important;
+  padding:12px 14px!important;
+}
+
+/* Section heading establishes hierarchy without adding a new card. */
+body.home-ledger-v3 .home-section-heading{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:20px;
+  margin:0 2px 10px;
+}
+body.home-ledger-v3 .home-section-heading .eyebrow{margin:0 0 2px!important;}
+body.home-ledger-v3 .home-section-heading h2{
+  margin:0!important;
+  font-size:1.25rem!important;
+  line-height:1.1!important;
+}
+body.home-ledger-v3 .home-section-heading > a{
+  color:var(--accent,#ff861f);
+  font-size:.72rem;
+  font-weight:800;
+  text-decoration:none;
+}
+
+/* Three concise live modules, rather than one large data dashboard. */
+body.home-ledger-v3 .home-ledger-grid{
+  display:grid!important;
+  grid-template-columns:1.18fr .91fr .91fr!important;
+  gap:16px!important;
+  align-items:stretch!important;
+  margin:0!important;
+}
+body.home-ledger-v3 .home-ledger-side{display:contents!important;}
+body.home-ledger-v3 .home-feature-panel,
+body.home-ledger-v3 .home-ledger-side .home-panel{
+  min-height:300px!important;
+  height:300px!important;
+  padding:18px!important;
+  overflow:hidden!important;
+}
+body.home-ledger-v3 .home-feature-topline{align-items:start!important;}
+body.home-ledger-v3 .home-feature-topline h2{
+  font-size:1.45rem!important;
+  line-height:1.08!important;
+  max-width:390px;
+}
+body.home-ledger-v3 .home-event-meta{
+  margin:6px 0 12px!important;
+  font-size:.75rem!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+body.home-ledger-v3 .home-event-progress{margin:8px 0 14px!important;}
+body.home-ledger-v3 .home-feature-panel .featured-stats{
+  margin:0!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+body.home-ledger-v3 .home-feature-panel .featured-stat{
+  min-height:62px!important;
+  padding:10px!important;
+}
+/* Detailed standings and totals belong on the event page. */
+body.home-ledger-v3 .home-total-panel,
+body.home-ledger-v3 .home-rank-heading,
+body.home-ledger-v3 .home-feature-panel .featured-rotation-controls{
+  display:none!important;
+}
+body.home-ledger-v3 .home-top-three{
+  margin:12px 0 0!important;
+}
+body.home-ledger-v3 .home-top-three > *{display:none!important;}
+body.home-ledger-v3 .home-top-three > *:first-child{
+  display:flex!important;
+  min-height:42px!important;
+  padding:10px 12px!important;
+}
+body.home-ledger-v3 .home-top-three::before{
+  content:'Current leader';
+  display:block;
+  margin-bottom:6px;
+  font-size:.58rem;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  font-weight:900;
+  color:var(--muted,#8f8882);
+}
+body.home-ledger-v3 .home-feature-button{
+  margin-top:12px!important;
+  width:auto!important;
+  display:inline-flex!important;
+  min-height:36px!important;
+  padding:8px 14px!important;
+}
+
+/* Activity and upcoming are previews only, with no nested scrolling. */
+body.home-ledger-v3 .home-panel-heading{margin-bottom:12px!important;}
+body.home-ledger-v3 .home-panel-heading h2{font-size:1.15rem!important;}
+body.home-ledger-v3 .home-activity-list,
+body.home-ledger-v3 .home-upcoming-list{
+  max-height:none!important;
+  overflow:visible!important;
+  padding-right:0!important;
+}
+body.home-ledger-v3 .home-activity-list > *:nth-child(n+4),
+body.home-ledger-v3 .home-upcoming-list > *:nth-child(n+3){display:none!important;}
+body.home-ledger-v3 .activity-feed-row,
+body.home-ledger-v3 .upcoming-event-row{
+  min-height:52px!important;
+  padding:9px 0!important;
+}
+body.home-ledger-v3 .home-calendar-panel .home-empty-state{
+  min-height:150px!important;
+  padding:20px!important;
+}
+
+/* News is a short horizontal digest, never a nested scroll column. */
+body.home-ledger-v3 .home-command-news{
+  position:static!important;
+  margin-top:18px!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-section{
+  height:auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  padding:20px!important;
+  display:block!important;
+}
+body.home-ledger-v3 .home-news-header{
+  display:flex!important;
+  align-items:end!important;
+  justify-content:space-between!important;
+  gap:20px!important;
+  margin-bottom:12px!important;
+}
+body.home-ledger-v3 .home-news-header h2{font-size:1.35rem!important;}
+body.home-ledger-v3 .home-news-header p:last-child{
+  margin-top:4px!important;
+  font-size:.74rem!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  overflow:visible!important;
+  max-height:none!important;
+  padding:0!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+  min-height:170px!important;
+  height:170px!important;
+  overflow:hidden!important;
+  padding:14px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed > *:nth-child(n+4){display:none!important;}
+body.home-ledger-v3 .home-command-news .clan-news-feed p{
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed a{
+  white-space:nowrap;
+}
+
+/* Brand story is a quiet footer note, not another hero. */
+body.home-ledger-v3 .home-brand-compact{margin-top:18px!important;}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story{
+  min-height:96px!important;
+  padding:18px 22px!important;
+  grid-template-columns:auto 1fr auto!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-mark{
+  width:50px!important;height:50px!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story h2{
+  font-size:1.2rem!important;
+}
+body.home-ledger-v3 .home-brand-compact .premium-brand-story p:last-of-type{
+  font-size:.72rem!important;
+}
+
+@media(max-width:1050px){
+  body.home-ledger-v3 .home-ledger-grid{grid-template-columns:1fr 1fr!important;}
+  body.home-ledger-v3 .home-feature-panel{grid-column:1 / -1!important;height:auto!important;min-height:0!important;}
+  body.home-ledger-v3 .home-ledger-side .home-panel{height:auto!important;min-height:250px!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed{grid-template-columns:1fr 1fr!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *:nth-child(3){display:none!important;}
+}
+@media(max-width:760px){
+  body.home-ledger-v3 .home-premium{width:min(100% - 20px,1480px)!important;}
+  body.home-ledger-v3 .home-top-grid{grid-template-columns:1fr!important;}
+  body.home-ledger-v3 .home-personalized-welcome{grid-template-columns:1fr!important;}
+  body.home-ledger-v3 .home-personal-links{display:grid!important;grid-template-columns:repeat(3,1fr)!important;}
+  body.home-ledger-v3 .home-ledger-grid{grid-template-columns:1fr!important;}
+  body.home-ledger-v3 .home-ledger-side .home-panel{min-height:0!important;height:auto!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed{grid-template-columns:1fr!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *:nth-child(3){display:block!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *{height:auto!important;min-height:0!important;}
+  body.home-ledger-v3 .home-news-header{align-items:start!important;}
+  body.home-ledger-v3 .home-brand-compact .premium-brand-story{grid-template-columns:1fr!important;}
+}
