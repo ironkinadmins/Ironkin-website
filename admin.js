@@ -605,6 +605,100 @@ function updateDetectedWomBox(event, details = null) {
   }
 }
 
+function getEventWomIdsForAdmin(event) {
+  const primary = String(event?.womCompetitionId || "").trim();
+  const ids = [];
+  const push = value => {
+    const id = String(value || "").trim();
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+  push(primary);
+  (Array.isArray(event?.womCompetitionIds) ? event.womCompetitionIds : []).forEach(push);
+  (Array.isArray(event?.womCompetitions) ? event.womCompetitions : []).forEach(item => push(item?.competitionId || item?.womCompetitionId));
+  return ids;
+}
+
+function getSecondaryWomCompetitionId(event) {
+  const primary = String(event?.womCompetitionId || "").trim();
+  return getEventWomIdsForAdmin(event).find(id => id !== primary) || "";
+}
+
+function syncWomCompetitionFieldsFromAdmin(event) {
+  if (!event || isBountiesEvent(event) || isPvmEntryEvent(event)) {
+    if (event) event.womCompetitionId = null;
+    return;
+  }
+
+  const primary = document.getElementById("eventWomInput")?.value.trim() || "";
+  event.womCompetitionId = primary || null;
+
+  if (event.type !== "botw") return;
+
+  const secondary = document.getElementById("eventSecondaryWomInput")?.value.trim() || "";
+  const ids = [...new Set([primary, secondary].filter(Boolean))];
+  const existing = Array.isArray(event.womCompetitions) ? event.womCompetitions : [];
+
+  event.womCompetitionIds = ids;
+  event.womCompetitions = ids.map((competitionId, index) => {
+    const prior = existing.find(item => String(item?.competitionId || item?.womCompetitionId || "").trim() === competitionId) || {};
+    return {
+      ...prior,
+      competitionId,
+      role: index === 0 ? "primary" : "secondary"
+    };
+  });
+}
+
+function updateSecondaryDetectedWomBox(event, details = null) {
+  const titleEl = document.getElementById("secondaryDetectedEventTitle");
+  const metaEl = document.getElementById("secondaryDetectedEventMeta");
+  if (!titleEl || !metaEl) return;
+
+  const secondaryId = document.getElementById("eventSecondaryWomInput")?.value.trim() || getSecondaryWomCompetitionId(event);
+  if (!secondaryId && !details) {
+    titleEl.textContent = "No second WOM competition linked.";
+    metaEl.textContent = "Optional - add an existing WOM competition ID above.";
+    return;
+  }
+
+  const source = details || {};
+  titleEl.textContent = source.title || `WOM Competition ${secondaryId}`;
+  const metric = source.metric || "Saved secondary competition";
+  const startsAt = source.startsAt || source.startDate || null;
+  const endsAt = source.endsAt || source.endDate || null;
+  metaEl.textContent = startsAt || endsAt || source.metric
+    ? `${metric} • ${formatAdminDate(startsAt)} - ${formatAdminDate(endsAt)}`
+    : "Linked as the 2nd boss. Its KC will be combined with the primary competition.";
+}
+
+async function previewSecondaryWomDetails() {
+  const input = document.getElementById("eventSecondaryWomInput");
+  const event = getSelectedEvent();
+  const competitionId = input?.value.trim();
+
+  if (!competitionId) {
+    updateSecondaryDetectedWomBox(event, null);
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/event-standings?competitionId=${encodeURIComponent(competitionId)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not preview WOM competition.");
+    updateSecondaryDetectedWomBox(event, {
+      title: data.title,
+      metric: data.metric,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt
+    });
+  } catch (error) {
+    const titleEl = document.getElementById("secondaryDetectedEventTitle");
+    const metaEl = document.getElementById("secondaryDetectedEventMeta");
+    if (titleEl) titleEl.textContent = "Could not load second WOM competition.";
+    if (metaEl) metaEl.textContent = error.message;
+  }
+}
+
 async function previewWomDetails() {
   const input = document.getElementById("eventWomInput");
   const event = getSelectedEvent();
@@ -742,6 +836,7 @@ function resultsDraftFingerprint(event = getSelectedEvent()) {
   return JSON.stringify({
     id: event.id,
     womCompetitionId: document.getElementById("eventWomInput")?.value.trim() || "",
+    secondaryWomCompetitionId: document.getElementById("eventSecondaryWomInput")?.value.trim() || "",
     target: document.getElementById("eventTargetInput")?.value || "",
     description: document.getElementById("eventDescriptionInput")?.value || "",
     rewards: event.rewards || null,
@@ -971,7 +1066,7 @@ async function previewResultsPost() {
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
   event.description = document.getElementById("eventDescriptionInput")?.value.trim() || "";
-  event.womCompetitionId = isBountiesEvent(event) ? null : (document.getElementById("eventWomInput")?.value.trim() || null);
+  syncWomCompetitionFieldsFromAdmin(event);
   const targetValue = document.getElementById("eventTargetInput")?.value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
 
@@ -1345,12 +1440,20 @@ function populateEventFields() {
     const tier = getBotwTierLabel(event);
     botwTierNotice.style.display = event.type === "botw" ? "block" : "none";
     botwTierNotice.innerHTML = tier
-      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> WOM ID, rewards, active status, and archive are saved separately for this tier.`
+      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> Add an optional 2nd boss WOM ID below and both competitions will be combined into one leaderboard, result, and reward set.`
       : `<strong>Editing BOTW.</strong> This event is separated from other BOTW tiers.`;
   }
 
   document.getElementById("eventDescriptionInput").value = event.description || "";
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";
+  const secondaryWomSection = document.getElementById("secondaryWomSection");
+  const secondaryWomDetectedSection = document.getElementById("secondaryWomDetectedSection");
+  const secondaryWomInput = document.getElementById("eventSecondaryWomInput");
+  const isBotw = event.type === "botw";
+  if (secondaryWomSection) secondaryWomSection.style.display = isBotw ? "block" : "none";
+  if (secondaryWomDetectedSection) secondaryWomDetectedSection.style.display = isBotw ? "block" : "none";
+  if (secondaryWomInput) secondaryWomInput.value = isBotw ? getSecondaryWomCompetitionId(event) : "";
+  if (isBotw) updateSecondaryDetectedWomBox(event);
   const eventPasswordInput = document.getElementById("eventPasswordInput");
   if (eventPasswordInput) eventPasswordInput.value = event.eventPassword || "";
   document.getElementById("eventTargetInput").value = event.target || "";
@@ -2039,6 +2142,8 @@ async function loadAdmin() {
     if (addParticipationRewardBtn) addParticipationRewardBtn.addEventListener("click", addParticipationReward);
     if (archiveEventBtn) archiveEventBtn.addEventListener("click", archiveSelectedEvent);
     if (previewWomBtn) previewWomBtn.addEventListener("click", previewWomDetails);
+    const previewSecondaryWomBtn = document.getElementById("previewSecondaryWomBtn");
+    if (previewSecondaryWomBtn) previewSecondaryWomBtn.addEventListener("click", previewSecondaryWomDetails);
     if (previewResultsBtn) previewResultsBtn.addEventListener("click", previewResultsPost);
     if (retryResultsBtn) retryResultsBtn.addEventListener("click", retryResultsPost);
     if (resultsDraftInput) resultsDraftInput.addEventListener("input", () => updateResultsDraftUi());
@@ -2075,7 +2180,7 @@ async function saveSelectedEvent() {
   if (!event) return;
 
   event.description = document.getElementById("eventDescriptionInput").value.trim();
-  event.womCompetitionId = isPvmEntryEvent(event) ? null : (document.getElementById("eventWomInput").value.trim() || null);
+  syncWomCompetitionFieldsFromAdmin(event);
   const eventPasswordInput = document.getElementById("eventPasswordInput");
   event.eventPassword = eventPasswordInput?.value.trim() || null;
 
@@ -2142,7 +2247,7 @@ async function archiveSelectedEvent() {
 
   // Capture every visible editor value before the final snapshot is requested.
   event.description = document.getElementById("eventDescriptionInput").value.trim();
-  event.womCompetitionId = isBountiesEvent(event) ? null : (document.getElementById("eventWomInput").value.trim() || null);
+  syncWomCompetitionFieldsFromAdmin(event);
   const eventPasswordInput = document.getElementById("eventPasswordInput");
   event.eventPassword = eventPasswordInput?.value.trim() || null;
   const targetValue = document.getElementById("eventTargetInput").value;
@@ -3595,10 +3700,11 @@ setupHandbookEditor();
     const active = $("#eventActiveInput")?.checked;
     const featured = $("#eventFeaturedInput")?.checked;
     const wom = $("#eventWomInput")?.value?.trim();
+    const secondWom = $("#eventSecondaryWomInput")?.value?.trim();
     const state = $("#eventAdminState"), home = $("#eventAdminFeatured"), womEl = $("#eventAdminWom");
     if (state) { state.textContent = active ? "Active" : "Inactive"; state.closest("span")?.classList.toggle("is-on", !!active); }
     if (home) home.textContent = featured ? "Featured" : "Off";
-    if (womEl) womEl.textContent = (isBountiesEvent(event) || isPvmEntryEvent(event)) ? "Not used" : (wom || "Not linked");
+    if (womEl) womEl.textContent = (isBountiesEvent(event) || isPvmEntryEvent(event)) ? "Not used" : (secondWom ? `${wom || "Not linked"} + ${secondWom}` : (wom || "Not linked"));
   }
 
   function adaptCoreCard() {
@@ -3621,7 +3727,7 @@ setupHandbookEditor();
   document.addEventListener("DOMContentLoaded", () => {
     refresh();
     $("#adminEventSelect")?.addEventListener("change", () => setTimeout(refresh, 0));
-    ["eventActiveInput", "eventFeaturedInput", "eventDropsInput", "eventWomInput"].forEach(id => {
+    ["eventActiveInput", "eventFeaturedInput", "eventDropsInput", "eventWomInput", "eventSecondaryWomInput"].forEach(id => {
       $("#" + id)?.addEventListener("input", refreshSummary);
       $("#" + id)?.addEventListener("change", refreshSummary);
     });

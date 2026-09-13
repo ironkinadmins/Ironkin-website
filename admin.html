@@ -92,11 +92,20 @@
         </div>
 
         <div class="admin-field">
-          <label for="eventWomInput">WOM Competition ID</label>
+          <label for="eventWomInput">Primary WOM Competition ID</label>
           <div class="admin-inline-row">
             <input id="eventWomInput" type="text" placeholder="Example: 138731" />
             <button type="button" class="btn secondary" id="previewWomBtn">Preview</button>
           </div>
+        </div>
+
+        <div class="admin-field" id="secondaryWomSection" style="display:none">
+          <label for="eventSecondaryWomInput">2nd Boss WOM Competition ID <span class="admin-muted">(Optional)</span></label>
+          <div class="admin-inline-row">
+            <input id="eventSecondaryWomInput" type="text" placeholder="Existing WOM competition ID" />
+            <button type="button" class="btn secondary" id="previewSecondaryWomBtn">Preview</button>
+          </div>
+          <small class="admin-muted">For combined BOTW events, this KC is automatically added to the primary boss leaderboard.</small>
         </div>
 
         <div class="admin-field">
@@ -110,10 +119,18 @@
         </div>
 
         <div class="admin-field admin-field-wide">
-          <label>Detected WOM Event</label>
+          <label>Detected Primary WOM Event</label>
           <div class="admin-detected-event" id="womDetectedBox">
             <strong id="detectedEventTitle">No WOM competition loaded yet.</strong>
             <span id="detectedEventMeta">Enter a WOM competition ID and click Preview, or save and reload.</span>
+          </div>
+        </div>
+
+        <div class="admin-field admin-field-wide" id="secondaryWomDetectedSection" style="display:none">
+          <label>Detected 2nd Boss WOM Event</label>
+          <div class="admin-detected-event" id="secondaryWomDetectedBox">
+            <strong id="secondaryDetectedEventTitle">No second WOM competition linked.</strong>
+            <span id="secondaryDetectedEventMeta">Optional - add an existing WOM competition ID above.</span>
           </div>
         </div>
 
@@ -715,7 +732,7 @@
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260902-emoji-picker-clean"></script>
+  <script src="admin.js?v=20260913-secondary-botw-wom"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
