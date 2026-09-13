@@ -1,4 +1,5 @@
 import { requirePluginUser } from "../_pluginAuth.js";
+import { supabaseRest } from "../_supabase.js";
 
 function noStoreJson(body, init = {}) {
   const headers = new Headers(init.headers || {});
@@ -11,42 +12,22 @@ export async function onRequestGet({ request, env }) {
   const auth = await requirePluginUser(request, env);
   if (!auth.ok) return auth.response;
 
-  const supabaseUrl = String(env.SUPABASE_URL || "").replace(/\/$/, "");
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
-    return noStoreJson({ error: "Missing Supabase credentials." }, { status: 500 });
-  }
-
   const discordId = String(auth.pluginUser.discordId);
-  const url =
-    `${supabaseUrl}/rest/v1/balances` +
-    `?select=balance,display_name,user_id` +
+  const path =
+    `balances?select=balance,display_name,user_id` +
     `&user_id=eq.${encodeURIComponent(discordId)}` +
     `&limit=1`;
 
-  let response;
+  let data;
   try {
-    response = await fetch(url, {
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        Accept: "application/json"
-      }
+    const response = await supabaseRest(env, path, {
+      headers: { Accept: "application/json" }
     });
-  } catch {
-    return noStoreJson({ error: "Could not load Ember balance." }, { status: 502 });
-  }
-
-  let data = null;
-  try {
     data = await response.json();
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
+  } catch (error) {
+    console.error("Failed to load plugin Ember balance from Supabase:", error);
     return noStoreJson(
-      { error: "Could not load Ember balance.", status: response.status },
+      { error: "Could not load Ember balance." },
       { status: 502 }
     );
   }
