@@ -410,19 +410,19 @@ h2,h3,h4 { letter-spacing:-.028em!important; }
 }
 
 /* Homepage hero — same visual language, much less oversized */
-body.home-ledger-v3 .home-premium { padding-top:42px!important; }
-body.home-ledger-v3 .home-ledger-hero { padding:28px 0 38px!important; }
+body.home-ledger-v3 .home-premium { padding-top:28px!important; }
+body.home-ledger-v3 .home-ledger-hero { padding:28px 30px!important; }
 body.home-ledger-v3 .home-ledger-hero h1 {
   max-width:760px!important;
   font-family:var(--ik-display)!important;
-  font-size:clamp(3.05rem,6vw,5.35rem)!important;
+  font-size:clamp(2.85rem,4.4vw,4.9rem)!important;
   font-weight:700!important;
   line-height:.94!important;
   letter-spacing:-.058em!important;
 }
 body.home-ledger-v3 .home-ledger-hero h1 em { color:#ff7d21!important; }
 body.home-ledger-v3 .home-hero-lead {
-  margin-top:22px!important;
+  margin-top:18px!important;
   max-width:610px!important;
   color:rgba(255,255,255,.55)!important;
   font-size:.95rem!important;

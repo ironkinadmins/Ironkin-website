@@ -12,14 +12,14 @@
   <style>
     /* Homepage-only dashboard refresh. Scoped here intentionally so no other page or bounty styling changes. */
     body.home-ledger-v3 .home-premium {
-      width: min(1120px, calc(100% - 36px));
+      width: min(1480px, calc(100% - 56px));
       margin: 0 auto;
-      padding: 58px 0 70px;
+      padding: 34px 0 58px;
     }
 
     body.home-ledger-v3 .home-ledger-hero {
       position: relative;
-      padding: 18px 0 34px;
+      padding: 28px 30px;
       overflow: hidden;
     }
 
@@ -58,7 +58,7 @@
       max-width: 760px;
       margin: 0;
       color: #fff7f0;
-      font-size: clamp(3.4rem, 7vw, 6.2rem);
+      font-size: clamp(3rem, 5vw, 5.35rem);
       line-height: .88;
       letter-spacing: -.07em;
       text-wrap: balance;
@@ -72,7 +72,7 @@
 
     body.home-ledger-v3 .home-hero-lead {
       max-width: 620px;
-      margin: 28px 0 0;
+      margin: 20px 0 0;
       color: rgba(255,248,242,.58);
       font-size: 1rem;
       line-height: 1.65;
@@ -82,7 +82,7 @@
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
-      margin: 0 0 28px;
+      margin: 0;
       padding: 0;
       background: none;
       border: 0;
@@ -116,7 +116,7 @@
 
     body.home-ledger-v3 .home-ledger-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.62fr) minmax(300px, .88fr);
+      grid-template-columns: minmax(0, 1.45fr) minmax(360px, .72fr);
       gap: 16px;
       align-items: start;
     }
@@ -244,14 +244,76 @@
     }
     body.home-ledger-v3 .home-news-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 
+    /* Wide desktop dashboard layout */
+    body.home-ledger-v3 .home-top-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));
+      gap:16px;
+      align-items:stretch;
+      margin-bottom:16px;
+    }
+    body.home-ledger-v3 .home-top-grid > section { margin:0!important; height:100%; }
+    body.home-ledger-v3 .home-personalized-welcome { min-height:100%; margin:0!important; }
+
+    body.home-ledger-v3 .home-hero-dashboard {
+      display:grid;
+      grid-template-columns:minmax(0,1.35fr) minmax(430px,.65fr);
+      gap:16px;
+      align-items:stretch;
+      margin-bottom:18px;
+    }
+    body.home-ledger-v3 .home-ledger-hero {
+      min-height:280px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      border:1px solid rgba(255,255,255,.065);
+      border-radius:18px;
+      background:linear-gradient(130deg,rgba(20,15,12,.82),rgba(12,10,9,.72));
+    }
+    body.home-ledger-v3 .home-status-rail {
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      height:100%;
+    }
+    body.home-ledger-v3 .home-status-rail article { min-height:134px; display:flex; align-items:flex-end; }
+    body.home-ledger-v3 .home-status-rail article > div { width:100%; }
+
+    body.home-ledger-v3 .home-ledger-grid { margin-top:0; }
+    body.home-ledger-v3 .home-feature-panel { padding:24px; }
+    body.home-ledger-v3 .home-ledger-side { grid-template-rows:1fr 1fr; }
+    body.home-ledger-v3 .home-ledger-side > .home-panel { height:100%; }
+
+    body.home-ledger-v3 .home-bottom-grid {
+      display:grid;
+      grid-template-columns:minmax(360px,.72fr) minmax(0,1.28fr);
+      gap:16px;
+      margin-top:16px;
+      align-items:stretch;
+    }
+    body.home-ledger-v3 .home-bottom-grid .premium-brand-story,
+    body.home-ledger-v3 .home-bottom-grid .home-news-section { margin-top:0!important; height:100%; }
+    body.home-ledger-v3 .home-bottom-grid .home-news-section { padding:24px; }
+    body.home-ledger-v3 .home-bottom-grid .home-news-grid { grid-template-columns:1fr; }
+
+    @media (max-width: 1180px) {
+      body.home-ledger-v3 .home-premium { width:min(100% - 36px,1180px); }
+      body.home-ledger-v3 .home-hero-dashboard { grid-template-columns:1fr; }
+      body.home-ledger-v3 .home-status-rail { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      body.home-ledger-v3 .home-status-rail article { min-height:96px; }
+      body.home-ledger-v3 .home-bottom-grid { grid-template-columns:1fr; }
+      body.home-ledger-v3 .home-bottom-grid .home-news-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+
     @media (max-width: 900px) {
       body.home-ledger-v3 .home-status-rail { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      body.home-ledger-v3 .home-ledger-hero { min-height:0; padding:26px 24px; }
       body.home-ledger-v3 .home-ledger-grid { grid-template-columns: 1fr; }
       body.home-ledger-v3 .home-ledger-side { grid-template-columns: repeat(2, minmax(0,1fr)); }
     }
 
     @media (max-width: 640px) {
-      body.home-ledger-v3 .home-premium { width: min(100% - 22px, 1120px); padding-top: 34px; }
+      body.home-ledger-v3 .home-premium { width: min(100% - 22px, 1480px); padding-top: 34px; }
       body.home-ledger-v3 .home-ledger-hero { padding-bottom: 26px; }
       body.home-ledger-v3 .home-ledger-hero h1 { font-size: clamp(3.1rem, 18vw, 5rem); }
       body.home-ledger-v3 .home-hero-lead { margin-top: 22px; font-size: .92rem; }
@@ -264,13 +326,14 @@
       body.home-ledger-v3 .home-news-header { align-items: flex-start; }
     }
   </style>
-  <link rel="stylesheet" href="/premium-v5.css?v=20260913-hub-ux-v1">
+  <link rel="stylesheet" href="/premium-v5.css?v=20260913-home-wide-v1">
 </head>
 <body class="home-premium-page premium-ui home-ledger-v3">
   <div id="siteNav"></div>
 
   <main class="member-home home-premium">
-    <section id="ironkinGamesPromoHome" data-ironkin-games-promo hidden class="games-card full" style="margin:0 0 18px;display:none">
+    <div class="home-top-grid" aria-label="Ironkin updates and your profile">
+    <section id="ironkinGamesPromoHome" data-ironkin-games-promo hidden class="games-card full" style="margin:0;display:none">
       <p class="eyebrow" data-games-promo-eyebrow>Season Competition</p>
       <h2>Ironkin Games</h2>
       <p data-games-promo-copy>A multi-week team competition with timed challenge reveals, flexible team slots, private proof, and a points leaderboard.</p>
@@ -290,7 +353,9 @@
       <div><p class="eyebrow">Your Ironkin</p><h2 id="homeWelcomeName">Welcome back</h2><p id="homeWelcomeMeta"></p></div>
       <div class="home-personal-links"><a href="/profile.html">View Profile</a><a href="/profile.html#event-history">My Event Results</a><a href="/ember-leaderboard.html">Embers</a></div>
     </section>
+    </div>
 
+    <div class="home-hero-dashboard">
     <section class="home-ledger-hero" aria-labelledby="homeHeroTitle">
       <div class="home-kicker"><span></span> Old School RuneScape · Ironman Clan</div>
       <h1 id="homeHeroTitle">Forged alone.<em>Bound as kin.</em></h1>
@@ -303,6 +368,7 @@
       <article><span class="home-status-icon">⚔</span><div><strong id="homeActiveEvents">—</strong><small>Events Live</small></div></article>
       <article><span class="home-status-icon">✦</span><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
     </section>
+    </div>
 
     <section class="home-ledger-grid" aria-label="Ironkin activity overview">
       <article class="home-feature-panel member-featured-event">
@@ -363,6 +429,7 @@
       </div>
     </section>
 
+    <div class="home-bottom-grid">
     <section class="premium-brand-story reveal-on-scroll" aria-labelledby="premiumBrandTitle">
       <div class="premium-brand-mark"><img src="assets/ironkin-emblem.png" alt="" /></div>
       <div>
@@ -384,6 +451,7 @@
       </div>
       <div id="clanNewsFeed" class="clan-news-feed home-news-grid">Loading clan news...</div>
     </section>
+    </div>
   </main>
 
   <footer>
