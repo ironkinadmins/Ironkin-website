@@ -2704,82 +2704,90 @@ function renderClanNewsEntry(entry) {
     </article>`;
 }
 
-function setupHomeNewsCarousel(feed) {
+function getHomeNewsPageSize() {
+  if (window.matchMedia("(max-width: 760px)").matches) return 1;
+  if (window.matchMedia("(max-width: 1050px)").matches) return 2;
+  return 3;
+}
+
+function renderHomeNewsPage(feed) {
   if (!feed) return;
 
   const prev = document.getElementById("homeNewsPrev");
   const next = document.getElementById("homeNewsNext");
   const dots = document.getElementById("homeNewsDots");
-  if (!prev || !next || !dots) return;
+  const entries = Array.isArray(feed._ironkinNewsEntries) ? feed._ironkinNewsEntries : [];
+  const pageSize = getHomeNewsPageSize();
+  const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
+  const page = Math.max(0, Math.min(Number(feed.dataset.newsPage || 0), pageCount - 1));
+  feed.dataset.newsPage = String(page);
 
-  const cards = Array.from(feed.children).filter(el => !el.classList.contains("admin-muted"));
-  if (!cards.length) {
-    prev.hidden = true;
-    next.hidden = true;
-    dots.innerHTML = "";
+  if (!entries.length) {
+    feed.innerHTML = `<p class="admin-muted">No clan news has been posted yet.</p>`;
+    if (prev) prev.hidden = true;
+    if (next) next.hidden = true;
+    if (dots) dots.innerHTML = "";
     return;
   }
 
-  prev.hidden = false;
-  next.hidden = false;
+  const start = page * pageSize;
+  feed.innerHTML = entries.slice(start, start + pageSize).map(renderClanNewsEntry).join("");
 
-  const visibleCount = () => {
-    if (window.matchMedia("(max-width: 760px)").matches) return 1;
-    if (window.matchMedia("(max-width: 1050px)").matches) return 2;
-    return 3;
-  };
+  if (prev) {
+    prev.hidden = pageCount <= 1;
+    prev.disabled = page <= 0;
+  }
+  if (next) {
+    next.hidden = pageCount <= 1;
+    next.disabled = page >= pageCount - 1;
+  }
 
-  const pageCount = () => Math.max(1, Math.ceil(cards.length / visibleCount()));
-
-  const cardStep = () => {
-    const first = cards[0];
-    if (!first) return feed.clientWidth;
-    const styles = getComputedStyle(feed);
-    const gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
-    return first.getBoundingClientRect().width + gap;
-  };
-
-  const currentPage = () => {
-    const step = cardStep() * visibleCount();
-    if (!step) return 0;
-    return Math.max(0, Math.min(pageCount() - 1, Math.round(feed.scrollLeft / step)));
-  };
-
-  const goToPage = page => {
-    const target = Math.max(0, Math.min(pageCount() - 1, page));
-    feed.scrollTo({ left: target * cardStep() * visibleCount(), behavior: "smooth" });
-  };
-
-  const update = () => {
-    const pages = pageCount();
-    const active = currentPage();
-    prev.disabled = active <= 0;
-    next.disabled = active >= pages - 1;
-
+  if (dots) {
     dots.innerHTML = "";
-    for (let i = 0; i < pages; i += 1) {
+    for (let i = 0; i < pageCount; i += 1) {
       const dot = document.createElement("button");
       dot.type = "button";
-      dot.className = `home-news-dot${i === active ? " is-active" : ""}`;
+      dot.className = `home-news-dot${i === page ? " is-active" : ""}`;
       dot.setAttribute("aria-label", `Show announcement page ${i + 1}`);
-      dot.setAttribute("aria-current", i === active ? "true" : "false");
-      dot.addEventListener("click", () => goToPage(i));
+      dot.setAttribute("aria-current", i === page ? "true" : "false");
+      dot.addEventListener("click", () => {
+        feed.dataset.newsPage = String(i);
+        renderHomeNewsPage(feed);
+      });
       dots.appendChild(dot);
     }
-  };
+  }
+}
+
+function setupHomeNewsCarousel(feed) {
+  if (!feed) return;
+  const prev = document.getElementById("homeNewsPrev");
+  const next = document.getElementById("homeNewsNext");
+  if (!prev || !next) return;
 
   if (!feed.dataset.carouselBound) {
-    prev.addEventListener("click", () => goToPage(currentPage() - 1));
-    next.addEventListener("click", () => goToPage(currentPage() + 1));
-    feed.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+    prev.addEventListener("click", () => {
+      feed.dataset.newsPage = String(Math.max(0, Number(feed.dataset.newsPage || 0) - 1));
+      renderHomeNewsPage(feed);
+    });
+    next.addEventListener("click", () => {
+      feed.dataset.newsPage = String(Number(feed.dataset.newsPage || 0) + 1);
+      renderHomeNewsPage(feed);
+    });
+
+    let lastPageSize = getHomeNewsPageSize();
     window.addEventListener("resize", () => {
-      feed.scrollLeft = 0;
-      update();
+      const nextSize = getHomeNewsPageSize();
+      if (nextSize !== lastPageSize) {
+        lastPageSize = nextSize;
+        feed.dataset.newsPage = "0";
+        renderHomeNewsPage(feed);
+      }
     });
     feed.dataset.carouselBound = "true";
   }
 
-  update();
+  renderHomeNewsPage(feed);
 }
 
 async function loadClanNews() {
@@ -2790,11 +2798,8 @@ async function loadClanNews() {
     const response = await fetch("/api/clan-news", { cache: "no-cache" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not load clan news.");
-    const entries = Array.isArray(data.entries) ? data.entries : [];
-    feed.innerHTML = entries.length
-      ? entries.slice(0, 12).map(renderClanNewsEntry).join("")
-      : `<p class="admin-muted">No clan news has been posted yet.</p>`;
-    feed.scrollLeft = 0;
+    feed._ironkinNewsEntries = Array.isArray(data.entries) ? data.entries.slice(0, 12) : [];
+    feed.dataset.newsPage = "0";
     feed.dataset.newsLoaded = "true";
     setupHomeNewsCarousel(feed);
   } catch (error) {

@@ -1633,3 +1633,44 @@ body.home-ledger-v3 .home-news-dot.is-active{
     width:100%;
   }
 }
+
+
+/* 2026-09-13 news pagination hardening v7 */
+body.home-ledger-v3 .home-news-carousel{
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) 34px!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  width:100%!important;
+  overflow:visible!important;
+  padding:1px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+  display:flex!important;
+  flex-direction:column!important;
+  width:auto!important;
+  min-width:0!important;
+  height:210px!important;
+  min-height:210px!important;
+  padding:14px!important;
+  overflow:hidden!important;
+}
+@media(max-width:1050px){
+  body.home-ledger-v3 .home-command-news .clan-news-feed{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:760px){
+  body.home-ledger-v3 .home-command-news .clan-news-feed{
+    grid-template-columns:1fr!important;
+  }
+  body.home-ledger-v3 .home-command-news .clan-news-feed > *{
+    height:auto!important;
+    min-height:205px!important;
+  }
+}
