@@ -194,8 +194,88 @@ export async function getWomCompetitionSnapshot(env, competitionId, options = {}
   }
 }
 
+
+function normalizeRsnKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+export function getEventWomCompetitionIds(event) {
+  const ids = [];
+  const push = value => {
+    const id = String(value || "").trim();
+    if (id && id !== "PUT_YOUR_WOM_ID_HERE" && !ids.includes(id)) ids.push(id);
+  };
+  push(event?.womCompetitionId);
+  for (const item of Array.isArray(event?.womCompetitions) ? event.womCompetitions : []) {
+    push(item?.competitionId || item?.womCompetitionId || item?.id);
+  }
+  for (const id of Array.isArray(event?.womCompetitionIds) ? event.womCompetitionIds : []) push(id);
+  return ids;
+}
+
+export function combineWomCompetitionSnapshots(snapshots, meta = {}) {
+  const valid = (Array.isArray(snapshots) ? snapshots : []).filter(Boolean);
+  if (!valid.length) return null;
+  if (valid.length === 1) return valid[0];
+
+  const players = new Map();
+  for (const snapshot of valid) {
+    for (const row of normalizeWomStandingsRows(snapshot?.standings || [])) {
+      const key = normalizeRsnKey(row.name);
+      if (!key) continue;
+      const current = players.get(key) || { name: row.name, gained: 0, start: 0, end: 0, updatedAt: null };
+      current.gained += Number(row.gained || 0);
+      current.start += Number(row.start || 0);
+      current.end += Number(row.end || 0);
+      current.updatedAt = row.updatedAt || current.updatedAt;
+      players.set(key, current);
+    }
+  }
+
+  const standings = [...players.values()].sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0) || a.name.localeCompare(b.name));
+  const starts = valid.map(item => item?.startsAt).filter(Boolean).map(value => new Date(value).getTime()).filter(Number.isFinite);
+  const ends = valid.map(item => item?.endsAt).filter(Boolean).map(value => new Date(value).getTime()).filter(Number.isFinite);
+  const metrics = [...new Set(valid.map(item => String(item?.metric || "").trim()).filter(Boolean))];
+
+  return {
+    active: true,
+    combined: true,
+    id: meta.id || valid.map(item => item?.id).filter(Boolean).join("+"),
+    competitionIds: valid.map(item => String(item?.id || "")).filter(Boolean),
+    title: meta.title || valid[0]?.title || "Combined BOTW",
+    metric: meta.metric || metrics.join(" + "),
+    metrics,
+    startsAt: starts.length ? new Date(Math.min(...starts)).toISOString() : valid[0]?.startsAt || null,
+    endsAt: ends.length ? new Date(Math.max(...ends)).toISOString() : valid[0]?.endsAt || null,
+    participantCount: standings.length,
+    totalGained: standings.reduce((sum, player) => sum + Number(player.gained || 0), 0),
+    contributors: standings.filter(player => Number(player.gained || 0) > 0).length,
+    standings,
+    cache: {
+      status: valid.some(item => item?.cache?.status === "stale") ? "stale" : "combined",
+      fetchedAt: new Date().toISOString()
+    }
+  };
+}
+
+export async function getEventWomSnapshot(env, event, options = {}) {
+  const ids = getEventWomCompetitionIds(event);
+  if (!ids.length) return null;
+  const snapshots = await Promise.all(ids.map(id => getWomCompetitionSnapshot(env, id, options)));
+  return combineWomCompetitionSnapshots(snapshots, {
+    id: event?.id,
+    title: event?.title || undefined,
+    metric: event?.combinedMetric || undefined
+  });
+}
+
 export async function repairArchiveEntryFromWom(env, entry) {
-  const competitionId = String(entry?.womCompetitionId || "").trim();
+  const competitionIds = getEventWomCompetitionIds(entry);
+  const competitionId = competitionIds[0] || "";
   const existingRows = normalizeWomStandingsRows(
     Array.isArray(entry?.leaderboard) && entry.leaderboard.length
       ? entry.leaderboard
@@ -213,7 +293,7 @@ export async function repairArchiveEntryFromWom(env, entry) {
   }
 
   try {
-    const snapshot = await getWomCompetitionSnapshot(env, competitionId);
+    const snapshot = await getEventWomSnapshot(env, entry);
     const rows = normalizeWomStandingsRows(snapshot?.standings || []);
     if (!rows.length) return { entry, repaired: false };
 

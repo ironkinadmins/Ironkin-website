@@ -469,12 +469,15 @@ async function fetchCurrentEvents() {
 }
 
 async function fetchEventStandings(event) {
-  if (!event.womCompetitionId || event.womCompetitionId === "PUT_YOUR_WOM_ID_HERE") {
-    return null;
-  }
+  const competitionIds = [...new Set([
+    event?.womCompetitionId,
+    ...(Array.isArray(event?.womCompetitionIds) ? event.womCompetitionIds : []),
+    ...(Array.isArray(event?.womCompetitions) ? event.womCompetitions.map(item => item?.competitionId || item?.womCompetitionId) : [])
+  ].map(value => String(value || "").trim()).filter(value => value && value !== "PUT_YOUR_WOM_ID_HERE"))];
+  if (!competitionIds.length) return null;
 
   const response = await fetch(
-    `/api/event-standings?competitionId=${event.womCompetitionId}`
+    `/api/event-standings?competitionIds=${encodeURIComponent(competitionIds.join(","))}`
   );
 
   const data = await response.json();
@@ -4218,12 +4221,15 @@ function getCalendarDateTimeValue(dateId, timeId, meridiemId) {
 }
 
 function isCalendarBotwEventType(eventType) {
-  return eventType === "botw" || eventType === "botw-elite" || eventType === "botw-standard";
+  return eventType === "botw" || eventType === "botw-elite" || eventType === "botw-standard" || eventType === "botw-elite-secondary" || eventType === "botw-standard-secondary";
 }
 
 function getCalendarEventTypeInputValue(event) {
   const type = event?.eventType || event?.category || "normal";
   if (type === "botw") {
+    if (event?.botwRole === "secondary") {
+      return event?.botwTier === "standard" ? "botw-standard-secondary" : "botw-elite-secondary";
+    }
     return event?.botwTier === "standard" ? "botw-standard" : "botw-elite";
   }
   return type;
@@ -4303,6 +4309,8 @@ function getCalendarWomMetricForForm() {
 const DEFAULT_CALENDAR_EVENT_TEMPLATES = {
   "botw-elite": { label: "BOTW Elite", title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
   "botw-standard": { label: "BOTW Standard", title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
+  "botw-elite-secondary": { label: "BOTW Elite - 2nd Boss", title: "Boss of the Week - Elite (2nd Boss)", type: "botw-elite-secondary", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "Automatically combines with the active Elite BOTW leaderboard." },
+  "botw-standard-secondary": { label: "BOTW Standard - 2nd Boss", title: "Boss of the Week - Standard (2nd Boss)", type: "botw-standard-secondary", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "Automatically combines with the active Standard BOTW leaderboard." },
   sotw: { label: "SOTW", title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: true, description: "" },
   "clan-goal": { label: "Clan Goal", title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: true, description: "" },
   mass: { label: "Clan Mass", title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true, description: "" },
@@ -4369,7 +4377,7 @@ async function loadCalendarEventTemplates() {
     if (!response.ok) throw new Error("Could not load templates.");
     const data = await response.json();
     CALENDAR_EVENT_TEMPLATES = data.templates && typeof data.templates === "object"
-      ? data.templates
+      ? { ...DEFAULT_CALENDAR_EVENT_TEMPLATES, ...data.templates }
       : { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
   } catch {
     CALENDAR_EVENT_TEMPLATES = { ...DEFAULT_CALENDAR_EVENT_TEMPLATES };
@@ -4628,7 +4636,7 @@ async function saveCalendarEventForm(event) {
     end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput", "calendarEventEndMeridiemInput"),
     eventType,
     category: isCalendarBotwEventType(eventType) ? "botw" : eventType,
-    botwTier: eventType === "botw-standard" ? "standard" : (eventType === "botw-elite" ? "elite" : undefined),
+    botwTier: (eventType === "botw-standard" || eventType === "botw-standard-secondary") ? "standard" : ((eventType === "botw-elite" || eventType === "botw-elite-secondary") ? "elite" : undefined),
     createWom,
     womMetric: (createWom || alreadyHasWom) ? getCalendarWomMetricForForm() : "",
     womCompetitionId: alreadyHasWom ? calendarEditingEvent.womCompetitionId : "",

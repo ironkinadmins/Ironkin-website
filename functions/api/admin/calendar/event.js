@@ -90,16 +90,24 @@ function normalizeCalendarEventType(rawType, rawTier = "") {
   const tierValue = cleanText(rawTier).toLowerCase();
 
   if (value === "botw-elite") {
-    return { eventType: "botw", category: "botw", botwTier: "elite", activeEventId: "botw-elite" };
+    return { eventType: "botw", category: "botw", botwTier: "elite", botwRole: "primary", activeEventId: "botw-elite" };
   }
 
   if (value === "botw-standard") {
-    return { eventType: "botw", category: "botw", botwTier: "standard", activeEventId: "botw-standard" };
+    return { eventType: "botw", category: "botw", botwTier: "standard", botwRole: "primary", activeEventId: "botw-standard" };
+  }
+
+  if (value === "botw-elite-secondary" || value === "botw-elite-2nd-boss") {
+    return { eventType: "botw", category: "botw", botwTier: "elite", botwRole: "secondary", activeEventId: "botw-elite" };
+  }
+
+  if (value === "botw-standard-secondary" || value === "botw-standard-2nd-boss") {
+    return { eventType: "botw", category: "botw", botwTier: "standard", botwRole: "secondary", activeEventId: "botw-standard" };
   }
 
   if (value === "botw") {
     const botwTier = tierValue === "standard" ? "standard" : "elite";
-    return { eventType: "botw", category: "botw", botwTier, activeEventId: botwTier === "standard" ? "botw-standard" : "botw-elite" };
+    return { eventType: "botw", category: "botw", botwTier, botwRole: "primary", activeEventId: botwTier === "standard" ? "botw-standard" : "botw-elite" };
   }
 
   if (value === "clan-goal-skill" || value === "clan-goal-boss") {
@@ -575,6 +583,26 @@ async function deleteActiveEvent(env, eventId) {
   const events = await getJson(hybridKv(env, "drops"), ACTIVE_EVENTS_KEY, []);
   const source = typeof eventId === "object" ? eventId : null;
   const activeId = source ? getActiveEventIdForCalendarEvent(source) : eventId;
+
+  if (source?.eventType === "botw" && source?.botwRole === "secondary") {
+    const index = events.findIndex(item => item.id === activeId || (item.type === "botw" && item.botwTier === source.botwTier));
+    if (index >= 0) {
+      const current = events[index];
+      const competitions = (Array.isArray(current.womCompetitions) ? current.womCompetitions : []).filter(item =>
+        String(item?.calendarEventId || "") !== String(source.id || "") &&
+        String(item?.competitionId || "") !== String(source.womCompetitionId || "")
+      );
+      current.womCompetitions = competitions;
+      current.womCompetitionIds = competitions.map(item => String(item.competitionId));
+      current.combinedMetric = competitions.map(item => item.metric).filter(Boolean).join(" + ") || null;
+      const primary = competitions.find(item => item.role === "primary") || competitions[0];
+      current.womCompetitionId = primary?.competitionId || null;
+      events[index] = current;
+      await hybridKv(env, "drops").put(ACTIVE_EVENTS_KEY, JSON.stringify(events));
+    }
+    return;
+  }
+
   const remaining = events.filter(item => {
     if (item.id === activeId) return false;
     if (source?.id && item.calendarEventId === source.id) return false;
@@ -594,11 +622,74 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
   }
 
   const events = await getJson(hybridKv(env, "drops"), ACTIVE_EVENTS_KEY, []);
+  const isBotw = calendarEvent.eventType === "botw";
+  const botwRole = calendarEvent.botwRole === "secondary" ? "secondary" : "primary";
+
+  if (isBotw) {
+    const canonicalId = getActiveEventIdForCalendarEvent(calendarEvent);
+    const existingIndex = events.findIndex(item => item.id === canonicalId || (item.type === "botw" && item.botwTier === calendarEvent.botwTier));
+    const existing = existingIndex >= 0 ? events[existingIndex] : null;
+    const existingCompetitions = Array.isArray(existing?.womCompetitions)
+      ? existing.womCompetitions
+      : (existing?.womCompetitionId ? [{
+          competitionId: String(existing.womCompetitionId),
+          metric: existing.metric || null,
+          calendarEventId: existing.calendarEventId || null,
+          role: "primary"
+        }] : []);
+
+    const nextCompetition = {
+      competitionId: String(calendarEvent.womCompetitionId),
+      metric: calendarEvent.womMetric || null,
+      calendarEventId: calendarEvent.id,
+      role: botwRole
+    };
+    const competitions = existingCompetitions.filter(item =>
+      String(item?.competitionId || "") !== nextCompetition.competitionId &&
+      String(item?.calendarEventId || "") !== String(calendarEvent.id || "") &&
+      !(botwRole === "primary" && item?.role === "primary")
+    );
+    if (botwRole === "primary") competitions.unshift(nextCompetition);
+    else competitions.push(nextCompetition);
+
+    const primaryCompetition = competitions.find(item => item.role === "primary") || competitions[0];
+    const primaryIsCurrent = botwRole === "primary" || !existing;
+    const activeEvent = {
+      ...(existing || {}),
+      id: canonicalId,
+      calendarEventId: primaryIsCurrent ? calendarEvent.id : (existing?.calendarEventId || calendarEvent.id),
+      type: "botw",
+      botwTier: calendarEvent.botwTier || existing?.botwTier || "elite",
+      botwRole: "primary",
+      label: getLabelForType("botw", calendarEvent.botwTier || existing?.botwTier),
+      title: primaryIsCurrent ? calendarEvent.title : (existing?.title || calendarEvent.title),
+      description: primaryIsCurrent ? (calendarEvent.description || "") : (existing?.description || ""),
+      womCompetitionId: String(primaryCompetition?.competitionId || calendarEvent.womCompetitionId),
+      womCompetitionIds: competitions.map(item => String(item.competitionId)),
+      womCompetitions: competitions,
+      combinedMetric: competitions.map(item => item.metric).filter(Boolean).join(" + ") || null,
+      featured: primaryIsCurrent ? calendarEvent.featured === true : existing?.featured === true,
+      active: true,
+      dropsEnabled: primaryIsCurrent ? calendarEvent.dropsEnabled !== false : existing?.dropsEnabled !== false,
+      target: primaryIsCurrent ? (calendarEvent.target || null) : (existing?.target || null),
+      startDate: primaryIsCurrent ? calendarEvent.start : (existing?.startDate || calendarEvent.start),
+      endDate: primaryIsCurrent ? calendarEvent.end : (existing?.endDate || calendarEvent.end),
+      metric: primaryCompetition?.metric || existing?.metric || calendarEvent.womMetric || null,
+      goalKind: null,
+      milestones: []
+    };
+
+    if (activeEvent.featured === true) events.forEach(item => { item.featured = false; });
+    const cleaned = events.filter((item, index) => index !== existingIndex && item.id !== canonicalId);
+    cleaned.push(activeEvent);
+    await hybridKv(env, "drops").put(ACTIVE_EVENTS_KEY, JSON.stringify(cleaned));
+    return;
+  }
+
   const activeEvent = {
     id: getActiveEventIdForCalendarEvent(calendarEvent),
     calendarEventId: calendarEvent.id,
     type: calendarEvent.eventType,
-    botwTier: calendarEvent.botwTier || undefined,
     label: getLabelForType(calendarEvent.eventType, calendarEvent.botwTier),
     title: calendarEvent.title,
     description: calendarEvent.description || "",
@@ -620,26 +711,17 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
       : []
   };
 
-  if (activeEvent.featured === true) {
-    events.forEach(item => {
-      item.featured = false;
-    });
-  }
-
+  if (activeEvent.featured === true) events.forEach(item => { item.featured = false; });
   const cleanedEvents = events.filter(item => {
     if (item.id === activeEvent.id) return false;
     if (item.calendarEventId && item.calendarEventId === activeEvent.calendarEventId) return false;
     if (String(item.womCompetitionId || "") === String(activeEvent.womCompetitionId || "")) return false;
-
     const currentType = String(item.type || "");
     const nextType = String(activeEvent.type || "");
     if (nextType.startsWith("clan-goal") && currentType.startsWith("clan-goal")) return false;
     if (nextType === "sotw" && currentType === "sotw") return false;
-    if (nextType === "botw" && currentType === "botw" && item.botwTier === activeEvent.botwTier) return false;
-
     return true;
   });
-
   cleanedEvents.push(activeEvent);
   await hybridKv(env, "drops").put(ACTIVE_EVENTS_KEY, JSON.stringify(cleanedEvents));
 }
@@ -754,6 +836,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       eventType: normalizedType.eventType,
       category: normalizedType.category,
       botwTier: normalizedType.botwTier || undefined,
+      botwRole: normalizedType.botwRole || existing?.botwRole || undefined,
       activeEventId: normalizedType.activeEventId || undefined,
       featured: body.featured === true,
       // Default to true for older events so existing announcement behavior is preserved.

@@ -5,6 +5,8 @@ const EVENT_TEMPLATES_KEY = "calendar:event-templates";
 const DEFAULT_TEMPLATES = {
   "botw-elite": { key: "botw-elite", label: "BOTW Elite", title: "Boss of the Week - Elite", type: "botw-elite", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
   "botw-standard": { key: "botw-standard", label: "BOTW Standard", title: "Boss of the Week", type: "botw-standard", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
+  "botw-elite-secondary": { key: "botw-elite-secondary", label: "BOTW Elite - 2nd Boss", title: "Boss of the Week - Elite (2nd Boss)", type: "botw-elite-secondary", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "Automatically combines with the active Elite BOTW leaderboard." },
+  "botw-standard-secondary": { key: "botw-standard-secondary", label: "BOTW Standard - 2nd Boss", title: "Boss of the Week - Standard (2nd Boss)", type: "botw-standard-secondary", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "Automatically combines with the active Standard BOTW leaderboard." },
   sotw: { key: "sotw", label: "SOTW", title: "Skill of the Week", type: "sotw", start: "7:00", end: "7:00", durationDays: 7, wom: true, discord: false, description: "" },
   "clan-goal": { key: "clan-goal", label: "Clan Goal", title: "Clan Goal - ", type: "clan-goal", start: "3:00", end: "3:00", durationDays: 30, wom: true, discord: false, description: "" },
   mass: { key: "mass", label: "Clan Mass", title: "Clan Mass", type: "mass", start: "3:00", end: "4:00", durationDays: 0, wom: false, discord: true, description: "" },
@@ -66,7 +68,8 @@ async function getTemplates(env) {
   if (!saved) return DEFAULT_TEMPLATES;
 
   try {
-    return normalizeTemplates(JSON.parse(saved));
+    const savedTemplates = normalizeTemplates(JSON.parse(saved));
+    return { ...DEFAULT_TEMPLATES, ...savedTemplates };
   } catch {
     return DEFAULT_TEMPLATES;
   }

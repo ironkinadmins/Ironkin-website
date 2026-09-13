@@ -141,7 +141,7 @@ function isCurrentEventActive(event, now = Date.now()) {
 
   // Legacy/manual safety: keep other undated events only if they are explicitly active and linked to WOM.
   // This prevents old default placeholders from becoming the current event.
-  return Boolean(event.womCompetitionId);
+  return Boolean(event.womCompetitionId || (Array.isArray(event.womCompetitionIds) && event.womCompetitionIds.length) || (Array.isArray(event.womCompetitions) && event.womCompetitions.length));
 }
 
 export async function onRequestGet({ env }) {

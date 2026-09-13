@@ -1,5 +1,6 @@
 import {
   getWomCacheTtlSeconds,
+  combineWomCompetitionSnapshots,
   getWomCompetitionSnapshot,
   readWomStoredCache
 } from "../_womCompetition.js";
@@ -17,11 +18,29 @@ function jsonResponse(payload, init = {}) {
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const competitionId = String(url.searchParams.get("competitionId") || "").trim();
+  const competitionIds = String(url.searchParams.get("competitionIds") || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (competitionId && !competitionIds.includes(competitionId)) competitionIds.unshift(competitionId);
+  const uniqueCompetitionIds = [...new Set(competitionIds)];
   const forceRefresh = url.searchParams.get("refresh") === "1";
 
-  if (!competitionId) {
+  if (!uniqueCompetitionIds.length) {
     return Response.json({ error: "Missing competitionId" }, { status: 400 });
   }
+
+  if (uniqueCompetitionIds.length > 1) {
+    try {
+      const snapshots = await Promise.all(uniqueCompetitionIds.map(id => getWomCompetitionSnapshot(context.env, id)));
+      const payload = combineWomCompetitionSnapshots(snapshots);
+      return jsonResponse(payload || { error: "Competition not found" });
+    } catch (error) {
+      return Response.json({ error: "Failed to load combined competition details", details: { message: error?.message } }, { status: 502 });
+    }
+  }
+
+  const singleCompetitionId = uniqueCompetitionIds[0];
 
   const cacheUrl = new URL(context.request.url);
   cacheUrl.searchParams.delete("refresh");
@@ -33,7 +52,7 @@ export async function onRequestGet(context) {
     if (edgeCached) return edgeCached;
   }
 
-  const storedCache = await readWomStoredCache(context.env, competitionId);
+  const storedCache = await readWomStoredCache(context.env, singleCompetitionId);
   const now = Date.now();
   const storedFetchedAt = storedCache?.cache?.fetchedAt
     ? new Date(storedCache.cache.fetchedAt).getTime()
@@ -55,7 +74,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const payload = await getWomCompetitionSnapshot(context.env, competitionId);
+    const payload = await getWomCompetitionSnapshot(context.env, singleCompetitionId);
 
     if (!payload) {
       return Response.json({ error: "Competition not found" }, { status: 404 });

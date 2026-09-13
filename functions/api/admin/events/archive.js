@@ -6,8 +6,12 @@ import {
 } from "../../../_eventResultsAnnouncement.js";
 
 function hasWomCompetition(event) {
-  const id = String(event?.womCompetitionId || "").trim();
-  return Boolean(id && id !== "PUT_YOUR_WOM_ID_HERE");
+  const ids = [
+    event?.womCompetitionId,
+    ...(Array.isArray(event?.womCompetitionIds) ? event.womCompetitionIds : []),
+    ...(Array.isArray(event?.womCompetitions) ? event.womCompetitions.map(item => item?.competitionId || item?.womCompetitionId) : [])
+  ].map(value => String(value || "").trim()).filter(value => value && value !== "PUT_YOUR_WOM_ID_HERE");
+  return ids.length > 0;
 }
 
 function wantsAutomaticResults(event, body) {
@@ -72,6 +76,10 @@ export async function onRequestPost({ request, env }) {
     title: snapshot.title,
     description: event.description || "",
     womCompetitionId: event.womCompetitionId || null,
+    womCompetitionIds: Array.isArray(event.womCompetitionIds) ? event.womCompetitionIds : [],
+    womCompetitions: Array.isArray(event.womCompetitions) ? event.womCompetitions : [],
+    combinedMetric: event.combinedMetric || null,
+    botwTier: event.botwTier || null,
     target: event.target || null,
     milestones: Array.isArray(event.milestones) ? event.milestones : [],
     startDate: snapshot.startDate,
@@ -137,6 +145,9 @@ export async function onRequestPost({ request, env }) {
       title: getResetEventTitle(item),
       description: "",
       womCompetitionId: null,
+      womCompetitionIds: [],
+      womCompetitions: [],
+      combinedMetric: null,
       eventPassword: null,
       target: null,
       startDate: null,

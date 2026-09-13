@@ -1,4 +1,4 @@
-import { getWomCompetitionSnapshot, normalizeWomStandingsRows } from "./_womCompetition.js";
+import { getEventWomCompetitionIds, getEventWomSnapshot, normalizeWomStandingsRows } from "./_womCompetition.js";
 import { readDropsWithClanGoalFallback } from "./api/drops/_dropKeys.js";
 import { hasSupabase, supabaseRest } from "./api/_supabase.js";
 
@@ -11,8 +11,7 @@ function formatNumber(value) { return Math.max(0, number(value)).toLocaleString(
 function isBounties(event) { return event?.type === "bounties" || event?.id === "bounties"; }
 function isClanGoal(event) { return String(event?.type || "").includes("clan-goal"); }
 function hasWom(event) {
-  const id = text(event?.womCompetitionId);
-  return Boolean(id && id !== "PUT_YOUR_WOM_ID_HERE");
+  return getEventWomCompetitionIds(event).length > 0;
 }
 
 function metricLabel(entry) {
@@ -177,7 +176,7 @@ async function loadBountyStats(env, eventId, drops) {
 
 export async function buildEventResultsSnapshot(env, event) {
   let standings = null;
-  if (hasWom(event)) standings = await getWomCompetitionSnapshot(env, event.womCompetitionId);
+  if (hasWom(event)) standings = await getEventWomSnapshot(env, event);
   const dropsResult = await readDropsWithClanGoalFallback(env, event, { isClanGoal: isClanGoal(event) });
   const drops = dropsResult.drops || [];
   const sourceRows = standings?.standings?.length ? standings.standings : (Array.isArray(event?.leaderboard) ? event.leaderboard : []);
