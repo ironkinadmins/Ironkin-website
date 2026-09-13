@@ -3588,13 +3588,13 @@ setupHandbookEditor();
   function selectedEvent() { return getSelectedEvent?.() || null; }
 
   function availableViews(event) {
-    const views = [{ key: "overview", label: "Overview", hint: "Core event settings" }];
+    const views = [{ key: "overview", label: "Event Setup", hint: "Essential event settings" }];
     if (!isPvmEntryEvent(event)) {
       views.push({ key: "rewards", label: isClanGoalEvent(event) ? "Milestones & Rewards" : "Rewards", hint: "Prizes and participation" });
-      views.push({ key: "publishing", label: "Results Publishing", hint: "Preview & Discord automation" });
+      views.push({ key: "publishing", label: "Results", hint: "Preview and publish" });
     }
     if (event && (event.dropsEnabled || ["sotw", "botw", "bounties", "pvm-entry"].includes(event.type) || isClanGoalEvent(event))) {
-      views.push({ key: "tracking", label: isBountiesEvent(event) ? "Bounty Items" : "Tracked Items", hint: "Drops and item rules" });
+      views.push({ key: "tracking", label: isBountiesEvent(event) ? "Bounty Items" : "Drops", hint: "Tracked drops and rules" });
       views.push({ key: "import", label: "Import", hint: "Bulk item data" });
     }
     return views;
@@ -3626,7 +3626,7 @@ setupHandbookEditor();
       </aside>
       <div class="event-admin-stage">
         <header class="event-admin-stage-head">
-          <div><p class="eyebrow" id="eventAdminEyebrow">Event workspace</p><h2 id="eventAdminViewTitle">Overview</h2><p id="eventAdminViewHint">Core event settings</p></div>
+          <div><p class="eyebrow" id="eventAdminEyebrow">Event workspace</p><h2 id="eventAdminViewTitle">Event Setup</h2><p id="eventAdminViewHint">Essential event settings</p></div>
           <div class="event-admin-status-strip">
             <span><i></i><b id="eventAdminState">Inactive</b></span>
             <span><em>Homepage</em><b id="eventAdminFeatured">Off</b></span>
@@ -3733,4 +3733,25 @@ setupHandbookEditor();
     });
   });
   setTimeout(refresh, 500);
+})();
+
+
+/* Simplified event setup: mirror WOM preview details into compact confirmation lines. */
+(() => {
+  const syncCompactWomStatus = () => {
+    const title = document.getElementById("detectedEventTitle")?.textContent?.trim();
+    const meta = document.getElementById("detectedEventMeta")?.textContent?.trim();
+    const primary = document.getElementById("primaryWomCompactStatus");
+    if (primary) primary.textContent = title && !title.startsWith("No WOM") ? `✓ ${title}${meta ? ` · ${meta}` : ""}` : "Enter a WOM competition ID.";
+    const title2 = document.getElementById("secondaryDetectedEventTitle")?.textContent?.trim();
+    const meta2 = document.getElementById("secondaryDetectedEventMeta")?.textContent?.trim();
+    const secondary = document.getElementById("secondaryWomCompactStatus");
+    if (secondary) secondary.textContent = title2 && !title2.startsWith("No second") ? `✓ ${title2}${meta2 ? ` · ${meta2}` : ""}` : "Leave blank for a single-boss BOTW.";
+  };
+  document.addEventListener("DOMContentLoaded", () => {
+    ["womDetectedBox","secondaryWomDetectedBox"].forEach(id => {
+      const node=document.getElementById(id); if(node) new MutationObserver(syncCompactWomStatus).observe(node,{subtree:true,childList:true,characterData:true});
+    });
+    syncCompactWomStatus();
+  });
 })();

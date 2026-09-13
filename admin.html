@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/styles.css?v=20260902-emoji-picker-clean" />
-  <link rel="stylesheet" href="/premium-v5.css?v=20260913-modern-nav-headings">
+  <link rel="stylesheet" href="/premium-v5.css?v=20260913-hub-ux-v1">
 </head>
 <body>
   <div id="siteNav"></div>
@@ -85,72 +85,70 @@
       <div class="event-subtab-panel active" id="eventSubtab-standard">
     <section class="admin-card">
       <div id="standardEventEditor">
-      <div class="admin-form-grid">
-        <div class="admin-field">
-          <label for="adminEventSelect">Select Event</label>
+      <div class="admin-form-grid admin-event-setup-simple">
+        <div class="admin-field admin-field-wide">
+          <label for="adminEventSelect">Event</label>
           <select id="adminEventSelect"></select>
         </div>
 
         <div class="admin-field">
-          <label for="eventWomInput">Primary WOM Competition ID</label>
+          <label for="eventWomInput">Primary boss</label>
           <div class="admin-inline-row">
-            <input id="eventWomInput" type="text" placeholder="Example: 138731" />
+            <input id="eventWomInput" type="text" placeholder="WOM competition ID" />
             <button type="button" class="btn secondary" id="previewWomBtn">Preview</button>
           </div>
+          <small class="admin-wom-confirm" id="primaryWomCompactStatus">Enter a WOM competition ID.</small>
         </div>
 
         <div class="admin-field" id="secondaryWomSection" style="display:none">
-          <label for="eventSecondaryWomInput">2nd Boss WOM Competition ID <span class="admin-muted">(Optional)</span></label>
+          <label for="eventSecondaryWomInput">Add another boss <span class="admin-muted">(optional)</span></label>
           <div class="admin-inline-row">
-            <input id="eventSecondaryWomInput" type="text" placeholder="Existing WOM competition ID" />
+            <input id="eventSecondaryWomInput" type="text" placeholder="2nd WOM competition ID" />
             <button type="button" class="btn secondary" id="previewSecondaryWomBtn">Preview</button>
           </div>
-          <small class="admin-muted">For combined BOTW events, this KC is automatically added to the primary boss leaderboard.</small>
-        </div>
-
-        <div class="admin-field">
-          <label for="eventPasswordInput">Event Password (Clan Plugin)</label>
-          <input id="eventPasswordInput" type="text" maxlength="128" placeholder="Optional - sent only to authenticated clan plugins" autocomplete="off" />
-          <small class="admin-muted">Leave blank if this event does not use a password.</small>
+          <small class="admin-wom-confirm" id="secondaryWomCompactStatus">Leave blank for a single-boss BOTW.</small>
         </div>
 
         <div class="admin-field admin-field-wide">
-          <div id="botwTierNotice" class="admin-info-box" style="display:none"></div>
+          <div id="botwTierNotice" class="admin-info-box admin-info-compact" style="display:none"></div>
         </div>
 
-        <div class="admin-field admin-field-wide">
-          <label>Detected Primary WOM Event</label>
-          <div class="admin-detected-event" id="womDetectedBox">
-            <strong id="detectedEventTitle">No WOM competition loaded yet.</strong>
-            <span id="detectedEventMeta">Enter a WOM competition ID and click Preview, or save and reload.</span>
+        <div class="admin-field admin-field-wide admin-hidden-detected" aria-hidden="true">
+          <div class="admin-detected-event" id="womDetectedBox"><strong id="detectedEventTitle">No WOM competition loaded yet.</strong><span id="detectedEventMeta"></span></div>
+        </div>
+        <div class="admin-field admin-field-wide admin-hidden-detected" id="secondaryWomDetectedSection" style="display:none" aria-hidden="true">
+          <div class="admin-detected-event" id="secondaryWomDetectedBox"><strong id="secondaryDetectedEventTitle">No second WOM competition linked.</strong><span id="secondaryDetectedEventMeta"></span></div>
+        </div>
+
+        <details class="admin-advanced-settings admin-field-wide">
+          <summary>Advanced Settings</summary>
+          <div class="admin-advanced-settings-body">
+            <div class="admin-field">
+              <label for="eventPasswordInput">Event password</label>
+              <input id="eventPasswordInput" type="text" maxlength="128" placeholder="Optional clan plugin password" autocomplete="off" />
+            </div>
+            <div class="admin-field admin-field-wide">
+              <label for="eventDescriptionInput">Description</label>
+              <textarea id="eventDescriptionInput" rows="3" placeholder="Optional text shown on the event dashboard"></textarea>
+            </div>
+            <div class="admin-toggle-row admin-field-wide">
+              <label><input id="eventActiveInput" type="checkbox" /> Active</label>
+              <label><input id="eventFeaturedInput" type="checkbox" /> Featured</label>
+              <label><input id="eventDropsInput" type="checkbox" /> Drops enabled</label>
+            </div>
           </div>
-        </div>
-
-        <div class="admin-field admin-field-wide" id="secondaryWomDetectedSection" style="display:none">
-          <label>Detected 2nd Boss WOM Event</label>
-          <div class="admin-detected-event" id="secondaryWomDetectedBox">
-            <strong id="secondaryDetectedEventTitle">No second WOM competition linked.</strong>
-            <span id="secondaryDetectedEventMeta">Optional - add an existing WOM competition ID above.</span>
-          </div>
-        </div>
-
-        <div class="admin-field admin-field-wide">
-          <label for="eventDescriptionInput">Ironkin Description</label>
-          <textarea id="eventDescriptionInput" rows="4" placeholder="Optional custom text shown on the dashboard"></textarea>
-        </div>
+        </details>
 
         <div class="admin-field" id="targetSection">
           <label for="eventTargetInput">Clan Goal Target KC / XP</label>
           <input id="eventTargetInput" type="number" placeholder="Example: 2000" />
         </div>
-
         <div class="admin-field admin-field-wide" id="milestonesSection">
           <label>Clan Goal Milestones</label>
           <div id="milestonesEditor" class="milestones-editor"></div>
           <button type="button" class="btn secondary" id="addMilestoneBtn">+ Add Milestone</button>
         </div>
       </div>
-
       <div class="admin-divider" id="eventRewardsDivider"></div>
 
       <div class="admin-section-header" id="eventRewardsHeader">
@@ -186,14 +184,8 @@
         </div>
       </div>
 
-      <div class="admin-toggle-row">
-        <label><input id="eventActiveInput" type="checkbox" /> Active</label>
-        <label><input id="eventFeaturedInput" type="checkbox" /> Featured on Homepage</label>
-        <label><input id="eventDropsInput" type="checkbox" /> Drops Enabled</label>
-      </div>
-
       <div class="admin-action-row">
-        <button class="btn primary" id="saveEventBtn">Save Event</button>
+        <button class="btn primary" id="saveEventBtn">Save Changes</button>
 
         <button class="btn secondary danger" id="archiveEventBtn" type="button">
           End Event + Publish Approved Post
@@ -729,10 +721,10 @@
 
   </main>
 
-  <script src="/script.js?v=20260825-nav-active-fix1"></script>
+  <script src="/script.js?v=20260913-hub-ux-v1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-  <script src="admin.js?v=20260913-secondary-botw-wom"></script>
+  <script src="admin.js?v=20260913-hub-ux-v1-20260913-secondary-botw-wom"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

@@ -118,10 +118,15 @@ function renderProfileHero(profile) {
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
           ${memberSincePill}
         </div>
+        <div class="profile-hero-facts">
+          <div><strong>${profileFormatNumber(profile.embers?.balance || 0)}</strong><span>Embers</span></div>
+          <div><strong>${profileFormatNumber(profile.placements?.topThreeFinishes || 0)}</strong><span>Top 3 Finishes</span></div>
+          <div><strong>${profileFormatNumber((profile.placements?.wins?.botw || 0) + (profile.placements?.wins?.sotw || 0) + (profile.placements?.wins?.bingo || 0))}</strong><span>Event Wins</span></div>
+        </div>
         <div class="profile-badge-row">
           ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0">${badge.iconHtml || `<i>${badge.icon}</i>`}${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
-        <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "No profile blurb yet."}</p>
+        <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "Add a short profile bio to make this page yours."}</p>
       </div>
     </div>
   `;
@@ -162,7 +167,7 @@ function renderWomStats(profile) {
       <strong>${wom.overallRank ? profileFormatNumber(wom.overallRank) : "-"}</strong>
     </div>
     <div class="profile-top-skills">
-      <h3>Top Skills by XP</h3>
+      <h3>Top Skills</h3>
       ${topSkills.length ? topSkills.map(skill => `
         <div class="profile-skill-row">
           <span>${profileEscapeHtml(skill.name)}</span>
@@ -195,7 +200,7 @@ function renderEventRecord(profile) {
       <div><strong>${profileFormatNumber(placements.topThreeFinishes || 0)}</strong><span>Top 3 Finishes</span></div>
     </div>
     <div class="profile-recent-placements">
-      <h3>Recent Placements</h3>
+      <h3>Recent Event History</h3>
       ${recent.length ? recent.map(item => `
         <div class="profile-placement-row">
           <strong>${getPlacementIcon(item.placement)} ${profileEscapeHtml(item.type)}</strong>

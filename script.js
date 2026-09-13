@@ -28,6 +28,23 @@ async function getCurrentAuthUser() {
   }
 }
 
+async function renderHomePersonalization() {
+  const card = document.getElementById("homePersonalizedWelcome");
+  if (!card) return;
+  try {
+    const response = await fetch(`/api/profile?t=${Date.now()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.profile) return;
+    const p = data.profile;
+    const name = p.displayName || p.username || "Ironkin member";
+    document.getElementById("homeWelcomeName").textContent = `Welcome back, ${name}`;
+    const since = p.memberSince ? new Date(p.memberSince).toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "";
+    const bits = [p.rank, `${Number(p.embers?.balance || 0).toLocaleString()} Embers`, since ? `Member since ${since}` : ""].filter(Boolean);
+    document.getElementById("homeWelcomeMeta").textContent = bits.join(" · ");
+    card.hidden = false;
+  } catch {}
+}
+
 function isEventActive(event) {
   return event?.active === true;
 }
@@ -3352,6 +3369,40 @@ function showCalendarDayEvents(dateKey, dayEvents) {
   });
 }
 
+
+function isSecondaryBotwCalendarEvent(event) {
+  const t = String(event?.eventType || event?.type || "").toLowerCase();
+  return event?.botwRole === "secondary" || t.endsWith("-secondary");
+}
+function botwCalendarTier(event) {
+  const t=String(event?.botwTier || event?.eventType || event?.type || "").toLowerCase();
+  return t.includes("standard") ? "standard" : "elite";
+}
+function calendarBossLabel(event) {
+  const metric=String(event?.metric || event?.bossMetric || "").replace(/_/g," ");
+  if(metric) return metric.replace(/\b\w/g,c=>c.toUpperCase()).replace("Phosanis Nightmare","Phosani's Nightmare");
+  return String(event?.title || "Boss").replace(/^Boss of the Week\s*[-–:]?\s*/i,"").replace(/\(2nd Boss\)/i,"").trim();
+}
+function getDisplayCalendarEvents(events) {
+  const list=(Array.isArray(events)?events:[]).filter(e=>!isCalendarEventCancelled(e));
+  const secondaries=list.filter(isSecondaryBotwCalendarEvent);
+  return list.filter(e=>!isSecondaryBotwCalendarEvent(e)).map(e=>{
+    const t=String(e?.eventType || e?.type || "").toLowerCase();
+    if(!t.includes("botw")) return e;
+    const tier=botwCalendarTier(e);
+    const start=getDateOnlyKey(getCalendarEventStart(e)); const end=getDateOnlyKey(getCalendarEventEnd(e));
+    const second=secondaries.find(x=>botwCalendarTier(x)===tier && getDateOnlyKey(getCalendarEventStart(x))===start && getDateOnlyKey(getCalendarEventEnd(x))===end);
+    if(!second) return e;
+    return {...e, _secondaryCalendarEvent:second, title:`BOTW ${tier==='standard'?'Standard':'Elite'} · ${calendarBossLabel(e)} + ${calendarBossLabel(second)}`};
+  });
+}
+function renderCalendarHappeningNow(events) {
+  const mount=document.getElementById("calendarHappeningNow"); if(!mount) return;
+  const now=Date.now();
+  const live=getDisplayCalendarEvents(events).filter(e=>{const st=new Date(getCalendarEventStart(e)).getTime(), en=new Date(getCalendarEventEnd(e)).getTime(); return st<=now && en>=now;}).slice(0,5);
+  mount.innerHTML=`<div class="calendar-now-head"><div><p class="eyebrow">Happening Now</p><h2>Live in Ironkin</h2></div><span>${live.length} live</span></div><div class="calendar-now-grid">${live.length?live.map(e=>`<button type="button" class="calendar-now-card" data-event-id="${escapeHtml(e.id)}"><strong>${escapeHtml(e.title||'Event')}</strong><span>Ends ${escapeHtml(new Date(getCalendarEventEnd(e)).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span></button>`).join(''):'<p class="admin-muted">No live events right now.</p>'}</div>`;
+  mount.querySelectorAll('[data-event-id]').forEach(btn=>btn.addEventListener('click',()=>{const e=calendarEventsCache.find(x=>x.id===btn.dataset.eventId); if(e) showCalendarEventDetails(e);}));
+}
 function renderCalendarAgenda(events) {
   const grid = document.getElementById("calendarGrid");
   if (!grid) return;
@@ -3385,6 +3436,20 @@ function getEventTypeLabelForCalendar(event) {
   return labels[type] || "Event";
 }
 
+function getCalendarSpanForSegment(event, dateKey) {
+  const startKey=getDateOnlyKey(getCalendarEventStart(event));
+  const endKey=getDateOnlyKey(getCalendarEventEnd(event)) || startKey;
+  const here=new Date(`${dateKey}T12:00:00`);
+  const start=new Date(`${startKey}T12:00:00`);
+  const end=new Date(`${endKey}T12:00:00`);
+  const day=here.getDay();
+  const segmentStart = dateKey===startKey || day===0;
+  if(!segmentStart) return 0;
+  const daysToWeekEnd=6-day;
+  const diffToEnd=Math.floor((end-here)/86400000);
+  return Math.max(1, Math.min(daysToWeekEnd, diffToEnd)+1);
+}
+
 function renderCalendarMonth(events = calendarEventsCache) {
   const grid = document.getElementById("calendarGrid");
   const title = document.getElementById("calendarMonthTitle");
@@ -3401,7 +3466,8 @@ function renderCalendarMonth(events = calendarEventsCache) {
     year: "numeric"
   });
 
-  const safeEvents = Array.isArray(events) ? events : [];
+  renderCalendarHappeningNow(events);
+  const safeEvents = getDisplayCalendarEvents(Array.isArray(events) ? events : []);
   const filteredEvents =
     calendarFilter === "all"
       ? safeEvents
@@ -3409,7 +3475,7 @@ function renderCalendarMonth(events = calendarEventsCache) {
 
   setCalendarMonthCount(filteredEvents);
 
-  if (calendarView === "agenda") {
+  if (calendarView === "agenda" || window.matchMedia("(max-width: 760px)").matches) {
     renderCalendarAgenda(filteredEvents);
     return;
   }
@@ -3466,14 +3532,21 @@ function renderCalendarMonth(events = calendarEventsCache) {
 
     const eventBox = cell.querySelector(".calendar-events");
 
-    const visibleEvents = dayEvents.slice(0, 3);
+    const segmentEvents = dayEvents.filter(event => getCalendarSpanForSegment(event, dateKey) > 0);
+    const visibleEvents = segmentEvents.slice(0, 3);
     visibleEvents.forEach(event => {
       const eventEl = document.createElement("div");
       const sourceClass = event.source === "ironkin-admin" ? " calendar-event-source-ironkin-admin" : "";
       const cancelledClass = isCalendarEventCancelled(event) ? " calendar-event-cancelled" : "";
-      eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}${cancelledClass}`;
-      const timeText = String(getDateOnlyKey(getCalendarEventStart(event)) || "") === dateKey ? formatCalendarTime(getCalendarEventStart(event)) : "↔";
-      const label = `${timeText ? `${timeText} · ` : ""}${getCalendarEventIcon(event)} ${getMultiDayCalendarTitle(event, dateKey)}`;
+      const spanDays = getCalendarSpanForSegment(event, dateKey);
+      const isMultiDay = getDateOnlyKey(getCalendarEventStart(event)) !== getDateOnlyKey(getCalendarEventEnd(event));
+      eventEl.className = `calendar-event calendar-event-${getCalendarEventType(event)}${sourceClass}${cancelledClass}${isMultiDay ? " calendar-event-range" : ""}`;
+      if (isMultiDay && spanDays > 1) {
+        eventEl.style.width = `calc(${spanDays * 100}% + ${(spanDays - 1) * 20}px)`;
+        eventEl.style.zIndex = "6";
+      }
+      const timeText = !isMultiDay && String(getDateOnlyKey(getCalendarEventStart(event)) || "") === dateKey ? formatCalendarTime(getCalendarEventStart(event)) : "";
+      const label = `${timeText ? `${timeText} · ` : ""}${event.title || getMultiDayCalendarTitle(event, dateKey)}`;
       eventEl.textContent = label;
       eventEl.title = label;
       eventEl.addEventListener("click", clickEvent => {
@@ -3483,11 +3556,11 @@ function renderCalendarMonth(events = calendarEventsCache) {
       eventBox.appendChild(eventEl);
     });
 
-    if (dayEvents.length > visibleEvents.length) {
+    if (segmentEvents.length > visibleEvents.length) {
       const moreBtn = document.createElement("button");
       moreBtn.type = "button";
       moreBtn.className = "calendar-more-events";
-      moreBtn.textContent = `+${dayEvents.length - visibleEvents.length} more`;
+      moreBtn.textContent = `+${segmentEvents.length - visibleEvents.length} more`;
       moreBtn.addEventListener("click", clickEvent => {
         clickEvent.stopPropagation();
         showCalendarDayEvents(dateKey, dayEvents);
@@ -4940,16 +5013,15 @@ async function renderCalendarHealthCheck() {
   } catch {}
 
   card.innerHTML = `
-    <div>
-      <p class="eyebrow">Current Event Health Check</p>
-      <h2>Event Sync Status</h2>
-    </div>
-    <div class="calendar-health-grid">
+    <details class="calendar-health-details">
+      <summary>Event Sync Status <span>Admin</span></summary>
+      <div class="calendar-health-grid">
       <div><span>Website current events</span><strong>${apiEvents.length || "None"}</strong></div>
       <div><span>Calendar active now</span><strong>${calendarActive.length || "None"}</strong></div>
       <div><span>Manual featured</span><strong>${featured ? escapeHtml(featured.title || "Untitled") : "None"}</strong></div>
       <div><span>Next calendar event</span><strong>${escapeHtml((calendarEventsCache.find(event => new Date(getCalendarEventStart(event)).getTime() > now && !isCalendarEventCancelled(event)) || {}).title || "None")}</strong></div>
-    </div>
+      </div>
+    </details>
   `;
 }
 
@@ -5571,3 +5643,5 @@ else initPremiumUi();
     // Leave both promos hidden if settings cannot be loaded.
   }
 })();
+
+document.addEventListener("DOMContentLoaded", renderHomePersonalization);
