@@ -748,3 +748,192 @@ body.home-ledger-v3 .home-brand-compact .premium-brand-story .btn{
   body.home-ledger-v3 .home-brand-compact .premium-brand-story{grid-template-columns:1fr!important;}
   body.home-ledger-v3 .home-brand-compact .premium-brand-story .btn{width:100%;}
 }
+
+/* =========================================================
+   2026-09-13 Homepage spacing + clan news readability fix
+   ========================================================= */
+body.home-ledger-v3 .home-top-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-top-grid > section{
+  grid-column:auto!important;
+  min-width:0;
+  min-height:132px!important;
+  height:100%!important;
+  padding:20px 22px!important;
+  border-radius:15px!important;
+}
+body.home-ledger-v3 .home-top-grid > .games-card.full{
+  grid-column:auto!important;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome,
+body.home-ledger-v3 #homePersonalizedWelcome{
+  margin:0!important;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome h2{
+  margin:4px 0 8px!important;
+  font-size:1.5rem!important;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome p:not(.eyebrow){
+  margin:0 0 14px!important;
+  max-width:680px;
+  line-height:1.5;
+}
+body.home-ledger-v3 #ironkinGamesPromoHome .btn{
+  align-self:flex-start;
+  min-height:38px;
+  padding:9px 14px!important;
+}
+body.home-ledger-v3 .home-personalized-welcome{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:18px!important;
+}
+body.home-ledger-v3 .home-personalized-welcome h2{
+  font-size:1.35rem!important;
+  margin:3px 0 5px!important;
+}
+body.home-ledger-v3 .home-personalized-welcome p:last-child{
+  line-height:1.45;
+}
+body.home-ledger-v3 .home-personal-links{
+  gap:7px!important;
+  min-width:152px!important;
+}
+body.home-ledger-v3 .home-personal-links a{
+  min-height:34px!important;
+  padding:8px 11px!important;
+}
+
+body.home-ledger-v3 .home-command-grid,
+body.home-ledger-v3 .home-ledger-grid,
+body.home-ledger-v3 .home-ledger-side{
+  gap:14px!important;
+}
+body.home-ledger-v3 .home-panel,
+body.home-ledger-v3 .home-feature-panel,
+body.home-ledger-v3 .home-command-news .home-news-section{
+  border-radius:15px!important;
+}
+body.home-ledger-v3 .home-panel,
+body.home-ledger-v3 .home-feature-panel{
+  padding:20px!important;
+}
+
+/* News column: let each announcement size to its content. */
+body.home-ledger-v3 .home-command-news .home-news-section{
+  padding:20px!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-header{
+  align-items:flex-start!important;
+  gap:14px!important;
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-header > div{
+  min-width:0;
+  flex:1 1 auto;
+}
+body.home-ledger-v3 .home-command-news .home-news-header h2{
+  margin-top:2px!important;
+  font-size:1.55rem!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-header > div > p:last-child{
+  margin:7px 0 0!important;
+  line-height:1.5!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-header .btn{
+  flex:0 0 auto;
+  min-width:0!important;
+  max-width:145px!important;
+  line-height:1.2;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  min-height:0;
+  padding-right:7px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-entry,
+body.home-ledger-v3 .home-command-news .clan-news-preview-entry,
+body.home-ledger-v3 .home-command-news .news-card{
+  display:flex!important;
+  flex-direction:column!important;
+  flex:0 0 auto!important;
+  width:100%;
+  min-width:0;
+  min-height:0!important;
+  height:auto!important;
+  overflow:visible!important;
+  box-sizing:border-box;
+  padding:15px!important;
+  gap:10px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-meta{
+  flex:0 0 auto;
+  width:100%;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy{
+  display:block!important;
+  min-width:0;
+  overflow:visible!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy h3{
+  margin:0 0 5px!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-preview-copy p{
+  display:block!important;
+  -webkit-line-clamp:unset!important;
+  -webkit-box-orient:initial!important;
+  overflow:visible!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+  margin:0!important;
+  line-height:1.5!important;
+}
+body.home-ledger-v3 .home-command-news .clan-news-message-link{
+  position:static!important;
+  display:inline-block!important;
+  align-self:flex-start!important;
+  margin:0!important;
+  padding:2px 0 0!important;
+  white-space:normal!important;
+  line-height:1.35;
+}
+
+@media(max-width:900px){
+  body.home-ledger-v3 .home-top-grid{
+    grid-template-columns:1fr!important;
+  }
+  body.home-ledger-v3 .home-personalized-welcome{
+    grid-template-columns:1fr!important;
+  }
+  body.home-ledger-v3 .home-personal-links{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    min-width:0!important;
+  }
+}
+@media(max-width:560px){
+  body.home-ledger-v3 .home-top-grid > section{
+    padding:17px!important;
+  }
+  body.home-ledger-v3 .home-personal-links{
+    grid-template-columns:1fr!important;
+  }
+  body.home-ledger-v3 .home-command-news .home-news-header{
+    flex-direction:column!important;
+  }
+  body.home-ledger-v3 .home-command-news .home-news-header .btn{
+    width:100%;
+    max-width:none!important;
+  }
+}
