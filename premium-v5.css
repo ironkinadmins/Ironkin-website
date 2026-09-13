@@ -937,3 +937,120 @@ body.home-ledger-v3 .home-command-news .clan-news-message-link{
     max-width:none!important;
   }
 }
+
+/* =========================================================
+   2026-09-13 homepage spacing/alignment polish v4
+   ========================================================= */
+body.home-ledger-v3 .home-premium{
+  --home-gap:16px;
+}
+
+/* Top cards: two equal columns when both are visible, full width when alone. */
+body.home-ledger-v3 .home-top-grid{
+  gap:var(--home-gap)!important;
+  margin-bottom:var(--home-gap)!important;
+  align-items:stretch!important;
+}
+body.home-ledger-v3 .home-top-grid > section{
+  height:100%;
+  margin:0!important;
+}
+body.home-ledger-v3 .home-top-grid:has(#homePersonalizedWelcome:not([hidden])) #ironkinGamesPromoHome{
+  grid-column:auto!important;
+}
+body.home-ledger-v3 .home-top-grid:not(:has(#homePersonalizedWelcome:not([hidden]))) #ironkinGamesPromoHome{
+  grid-column:1 / -1!important;
+}
+body.home-ledger-v3 .home-top-grid #homePersonalizedWelcome:not([hidden]):only-child{
+  grid-column:1 / -1!important;
+}
+
+/* Main command centre: one spacing token everywhere. */
+body.home-ledger-v3 .home-command-grid{
+  gap:var(--home-gap)!important;
+  align-items:stretch!important;
+}
+body.home-ledger-v3 .home-command-main{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:var(--home-gap)!important;
+}
+body.home-ledger-v3 .home-hero-dashboard-integrated,
+body.home-ledger-v3 .home-ledger-grid{
+  margin:0!important;
+}
+body.home-ledger-v3 .home-ledger-grid,
+body.home-ledger-v3 .home-ledger-side{
+  gap:var(--home-gap)!important;
+}
+
+/* Keep the two lower columns aligned and eliminate uneven card gutters. */
+body.home-ledger-v3 .home-ledger-grid{
+  align-items:stretch!important;
+}
+body.home-ledger-v3 .home-feature-panel{
+  height:100%!important;
+  box-sizing:border-box;
+}
+body.home-ledger-v3 .home-ledger-side{
+  height:100%!important;
+  grid-template-rows:repeat(2,minmax(0,1fr))!important;
+}
+body.home-ledger-v3 .home-ledger-side > .home-panel{
+  height:100%!important;
+  box-sizing:border-box;
+}
+
+/* News column lines up with the full left dashboard instead of viewport math. */
+body.home-ledger-v3 .home-command-news{
+  position:static!important;
+  align-self:stretch!important;
+  height:auto!important;
+}
+body.home-ledger-v3 .home-command-news .home-news-section{
+  height:100%!important;
+  max-height:none!important;
+  min-height:0!important;
+  box-sizing:border-box;
+}
+body.home-ledger-v3 .home-command-news .clan-news-feed{
+  flex:1 1 auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+
+/* Consistent internal rhythm across all dashboard cards. */
+body.home-ledger-v3 .home-feature-panel,
+body.home-ledger-v3 .home-panel,
+body.home-ledger-v3 .home-command-news .home-news-section{
+  padding:20px!important;
+}
+body.home-ledger-v3 .home-feature-topline,
+body.home-ledger-v3 .home-panel-heading,
+body.home-ledger-v3 .home-command-news .home-news-header{
+  margin-bottom:14px!important;
+}
+body.home-ledger-v3 .home-event-progress{
+  margin:16px 0!important;
+}
+body.home-ledger-v3 .home-feature-panel .featured-stats{
+  margin:16px 0 12px!important;
+}
+body.home-ledger-v3 .home-total-panel{
+  margin:12px 0 14px!important;
+}
+
+@media(max-width:1250px){
+  body.home-ledger-v3 .home-command-main{gap:14px!important;}
+  body.home-ledger-v3 .home-command-news .home-news-section{height:auto!important;}
+  body.home-ledger-v3 .home-command-news .clan-news-feed{max-height:520px!important;}
+}
+@media(max-width:900px){
+  body.home-ledger-v3 .home-top-grid{gap:12px!important;}
+  body.home-ledger-v3 .home-command-grid,
+  body.home-ledger-v3 .home-command-main,
+  body.home-ledger-v3 .home-ledger-grid,
+  body.home-ledger-v3 .home-ledger-side{gap:12px!important;}
+}
