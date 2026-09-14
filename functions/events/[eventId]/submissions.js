@@ -1,9 +1,16 @@
 import { hybridKv } from "../../_hybridKv.js";
 import { requirePluginUser } from "../../api/_pluginAuth.js";
-import { listTrackedItems, insertEventSubmission, findActiveDuplicateSubmission } from "../../api/_supabase.js";
+import {
+  getTrackedItem,
+  insertEventSubmission,
+  findActiveDuplicateSubmission,
+  updateEventSubmission,
+  isUniqueViolation
+} from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+
 function safeJson(value, fallback) { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } }
 function asPositiveInt(value) { const n = Number.parseInt(value, 10); return Number.isInteger(n) && n > 0 ? n : null; }
 function cleanBase64Image(value) {
@@ -35,7 +42,42 @@ async function sha256Hex(value) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function onRequestPost(context) {
+function duplicateResponse({ duplicate, requestedEventId, itemId, participants }) {
+  return Response.json({
+    success: true,
+    duplicate: true,
+    duplicateReason: duplicate?.reason || "unique_constraint",
+    submissionId: duplicate?.id || null,
+    eventId: requestedEventId,
+    itemid: itemId,
+    participants,
+    status: duplicate?.status || "pending"
+  }, { status: 200 });
+}
+
+function scheduleBackground(context, task) {
+  const promise = Promise.resolve()
+    .then(task)
+    .catch(error => {
+      console.warn("Plugin drop background work failed:", error?.message || error);
+    });
+  if (typeof context.waitUntil === "function") {
+    context.waitUntil(promise);
+    return null;
+  }
+  return promise;
+}
+
+async function attachProofImage(env, origin, submissionId, imageData) {
+  const proofId = crypto.randomUUID();
+  await hybridKv(env, "drops").put(`event-submission-image:${proofId}`, imageData, {
+    metadata: { contentType: "image/png", createdAt: new Date().toISOString() }
+  });
+  const proofUrl = `${origin}/api/event-submission-image?id=${encodeURIComponent(proofId)}`;
+  await updateEventSubmission(env, submissionId, { proof_url: proofUrl });
+}
+
+async function handlePluginSubmission(context) {
   const { request, env, params } = context;
   const auth = await requirePluginUser(request, env);
   if (!auth.ok) return auth.response;
@@ -51,6 +93,11 @@ export async function onRequestPost(context) {
   const timestamp = Number(body.timestamp || Date.now());
   if (!username) return Response.json({ error: "Missing username." }, { status: 400 });
   if (!itemId) return Response.json({ error: "Missing or invalid itemid." }, { status: 400 });
+
+  const imageData = cleanBase64Image(body.imageData);
+  if (imageData && base64ByteLength(imageData) > MAX_IMAGE_BYTES) {
+    return Response.json({ error: "imageData is too large." }, { status: 413 });
+  }
 
   const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
@@ -72,8 +119,7 @@ export async function onRequestPost(context) {
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
   const websiteEventId = String(event.id || "");
-  const rows = await listTrackedItems(env);
-  const tracked = rows.find(row => String(row.website_event_id) === websiteEventId && Number(row.item_id) === itemId);
+  const tracked = await getTrackedItem(env, websiteEventId, itemId);
   if (!tracked) return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
 
   const trackingRule = ["repeatable", "once_per_player", "once_per_event"].includes(String(tracked.tracking_rule || "")) ? String(tracked.tracking_rule) : "repeatable";
@@ -82,49 +128,77 @@ export async function onRequestPost(context) {
   const clientTimestamp = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString();
   // Protect against HTTP retries/double firing even for repeatable items.
   const clientSubmissionKey = await sha256Hex(`${requestedEventId}|${playerKey}|${itemId}|${quantity}|${clientTimestamp}`);
-  const duplicate = await findActiveDuplicateSubmission(env, { pluginEventId: requestedEventId, itemId, trackingRule, playerKey, clientSubmissionKey });
-  if (duplicate) {
-    return Response.json({
-      success: true,
-      duplicate: true,
-      duplicateReason: duplicate.reason,
-      submissionId: duplicate.id,
-      eventId: requestedEventId,
-      itemid: itemId,
-      status: duplicate.status
-    }, { status: 200 });
-  }
-
-  let proofUrl = "";
-  const imageData = cleanBase64Image(body.imageData);
-  if (imageData) {
-    if (base64ByteLength(imageData) > MAX_IMAGE_BYTES) return Response.json({ error: "imageData is too large." }, { status: 413 });
-    const proofId = crypto.randomUUID();
-    await hybridKv(env, "drops").put(`event-submission-image:${proofId}`, imageData, { metadata: { contentType: "image/png", createdAt: new Date().toISOString() } });
-    proofUrl = `${new URL(request.url).origin}/api/event-submission-image?id=${encodeURIComponent(proofId)}`;
-  }
+  const duplicateLookup = { pluginEventId: requestedEventId, itemId, trackingRule, playerKey, clientSubmissionKey };
+  const duplicate = await findActiveDuplicateSubmission(env, duplicateLookup);
+  if (duplicate) return duplicateResponse({ duplicate, requestedEventId, itemId, participants });
 
   const submissionId = crypto.randomUUID();
-  const record = await insertEventSubmission(env, {
-    id: submissionId,
-    plugin_event_id: requestedEventId,
-    website_event_id: websiteEventId,
-    event_type: String(event.type || ""),
-    event_name: String(event.title || event.label || requestedEventId),
-    player_name: username,
-    discord_id: discordId,
-    player_key: playerKey,
-    item_id: itemId,
-    item_name: String(tracked.item_name || body.itemName || `Item ${itemId}`),
-    quantity,
-    participants,
-    tracking_rule: trackingRule,
-    client_submission_key: clientSubmissionKey,
-    source: "runelite",
-    status: "pending",
-    proof_url: proofUrl,
-    client_timestamp: clientTimestamp
-  });
+  let record;
+  try {
+    record = await insertEventSubmission(env, {
+      id: submissionId,
+      plugin_event_id: requestedEventId,
+      website_event_id: websiteEventId,
+      event_type: String(event.type || ""),
+      event_name: String(event.title || event.label || requestedEventId),
+      player_name: username,
+      discord_id: discordId,
+      player_key: playerKey,
+      item_id: itemId,
+      item_name: String(tracked.item_name || body.itemName || `Item ${itemId}`),
+      quantity,
+      participants,
+      tracking_rule: trackingRule,
+      client_submission_key: clientSubmissionKey,
+      source: "runelite",
+      status: "pending",
+      proof_url: "",
+      client_timestamp: clientTimestamp
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    const existing = await findActiveDuplicateSubmission(env, duplicateLookup).catch(() => null);
+    return duplicateResponse({
+      duplicate: existing || { reason: "unique_constraint", status: "pending" },
+      requestedEventId,
+      itemId,
+      participants
+    });
+  }
 
-  return Response.json({ success: true, submissionId: record?.id || submissionId, eventId: requestedEventId, itemid: itemId, participants, status: "pending" }, { status: 201 });
+  const savedId = record?.id || submissionId;
+  if (imageData) {
+    const origin = new URL(request.url).origin;
+    const background = scheduleBackground(context, () => attachProofImage(env, origin, savedId, imageData));
+    if (background) await background;
+  }
+
+  return Response.json({
+    success: true,
+    submissionId: savedId,
+    eventId: requestedEventId,
+    itemid: itemId,
+    participants,
+    status: "pending"
+  }, { status: 201 });
+}
+
+export async function onRequestPost(context) {
+  try {
+    return await handlePluginSubmission(context);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return Response.json({
+        success: true,
+        duplicate: true,
+        duplicateReason: "unique_constraint",
+        retryable: false
+      }, { status: 200 });
+    }
+    console.error("Plugin drop ingest failed:", error);
+    return Response.json({
+      error: "Drop ingest failed. Retry with the same timestamp.",
+      retryable: true
+    }, { status: 503 });
+  }
 }

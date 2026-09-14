@@ -10,6 +10,35 @@ export function getSupabaseKey(env) {
   return String(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 }
 
+const TRACKED_ITEM_SELECT = "website_event_id,plugin_event_id,item_id,item_name,image_url,wiki_url,reward_embers,tracking_rule";
+
+function parseJson(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+export class SupabaseRequestError extends Error {
+  constructor(status, bodyText) {
+    const parsed = parseJson(bodyText);
+    const detail = parsed?.message || bodyText || `HTTP ${status}`;
+    super(`Supabase request failed (${status}): ${detail}`);
+    this.name = "SupabaseRequestError";
+    this.status = status;
+    this.bodyText = bodyText || "";
+    this.code = String(parsed?.code || "");
+  }
+}
+
+export function isUniqueViolation(error) {
+  if (!error) return false;
+  if (String(error.code || "") === "23505" || Number(error.status) === 409) return true;
+  const text = `${error.bodyText || ""} ${error.message || ""}`;
+  return text.includes("23505") || /duplicate key|unique constraint/i.test(text);
+}
+
 export async function supabaseRest(env, path, options = {}) {
   const base = cleanBaseUrl(env.SUPABASE_URL);
   const key = getSupabaseKey(env);
@@ -31,15 +60,27 @@ export async function supabaseRest(env, path, options = {}) {
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`Supabase request failed (${response.status}): ${text || response.statusText}`);
+    throw new SupabaseRequestError(response.status, text || response.statusText);
   }
   return response;
 }
 
 export async function listTrackedItems(env) {
   if (!hasSupabase(env)) return [];
-  const response = await supabaseRest(env, "ironkin_event_items?select=website_event_id,plugin_event_id,item_id,item_name,image_url,wiki_url,reward_embers,tracking_rule&order=website_event_id.asc,item_name.asc");
+  const response = await supabaseRest(env, `ironkin_event_items?select=${TRACKED_ITEM_SELECT}&order=website_event_id.asc,item_name.asc`);
   return response.json();
+}
+
+export async function getTrackedItem(env, websiteEventId, itemId) {
+  const eventId = String(websiteEventId || "").trim();
+  const id = Number(itemId);
+  if (!hasSupabase(env) || !eventId || !Number.isInteger(id) || id <= 0) return null;
+  const response = await supabaseRest(
+    env,
+    `ironkin_event_items?select=${TRACKED_ITEM_SELECT}&website_event_id=eq.${encodeURIComponent(eventId)}&item_id=eq.${encodeURIComponent(id)}&limit=1`
+  );
+  const rows = await response.json();
+  return rows?.[0] || null;
 }
 
 export async function upsertTrackedItem(env, item) {
@@ -100,4 +141,17 @@ export async function insertEventSubmission(env, submission) {
   });
   const rows = await response.json();
   return rows?.[0] || null;
+}
+
+export async function updateEventSubmission(env, id, fields) {
+  const submissionId = String(id || "").trim();
+  if (!hasSupabase(env) || !submissionId || !fields || typeof fields !== "object") return;
+  await supabaseRest(env, `ironkin_event_submissions?id=eq.${encodeURIComponent(submissionId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      ...fields,
+      updated_at: new Date().toISOString()
+    })
+  });
 }
