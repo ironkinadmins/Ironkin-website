@@ -3,7 +3,7 @@ import { requirePluginUser } from "../../api/_pluginAuth.js";
 import { listTrackedItems, insertEventSubmission, findActiveDuplicateSubmission } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
 
-const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 function safeJson(value, fallback) { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } }
 function asPositiveInt(value) { const n = Number.parseInt(value, 10); return Number.isInteger(n) && n > 0 ? n : null; }
 function cleanBase64Image(value) {
