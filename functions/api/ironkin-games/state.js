@@ -16,7 +16,7 @@ function submissionReviewStatus(related) {
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: challenge.name, kind: challenge.kind || "main", status: challenge.status || "upcoming",
-    durationMinutes: Number(challenge.durationMinutes || 0), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
+    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
     participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };

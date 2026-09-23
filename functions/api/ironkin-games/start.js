@@ -37,11 +37,13 @@ export async function onRequestPost({ request, env }) {
     if (now < scheduled - 15 * 60000) return Response.json({error:"Your challenge reveal unlocks 15 minutes before the booked start time."},{status:409});
     if (now > scheduled + 30 * 60000) return Response.json({error:"The booked start window has passed. Ask staff to reset or reschedule it."},{status:409});
   }
-  const duration = Math.max(1, Number(challenge.durationMinutes || 60));
+  const allWeek = challenge.durationMode === "week";
+  const duration = allWeek ? 0 : Math.max(1, Number(challenge.durationMinutes || 60));
   const startedAt = new Date().toISOString();
-  const endsAt = new Date(Date.now() + duration * 60000).toISOString();
+  const weekEnd = challenge.closesAt || week.endDate || "";
+  const endsAt = allWeek && weekEnd ? new Date(weekEnd).toISOString() : new Date(Date.now() + duration * 60000).toISOString();
   const created = { ...(existing || {}), id:existing?.id || crypto.randomUUID(), weekId:week.id, challengeId:challenge.id, teamId, scheduledAt:existing?.scheduledAt || "", startedAt, endsAt, startedBy:String(session.id), status:"running" };
   state.sessions = [...(state.sessions || []).filter(s => !(s.weekId===week.id && s.challengeId===challenge.id && s.teamId===teamId)), created];
   await saveGames(env,state);
-  return Response.json({ok:true, session:created, challenge:{ id:challenge.id,name:challenge.name,objective:challenge.objective||"",instructions:challenge.instructions||"",rules:challenge.rules||[],durationMinutes:duration }},{headers:{"Cache-Control":"no-store"}});
+  return Response.json({ok:true, session:created, challenge:{ id:challenge.id,name:challenge.name,objective:challenge.objective||"",instructions:challenge.instructions||"",rules:challenge.rules||[],durationMode:allWeek?"week":"timed",durationMinutes:duration }},{headers:{"Cache-Control":"no-store"}});
 }
