@@ -67,12 +67,16 @@ export async function onRequestGet({ request, env }) {
   const weeks = (state.weeks || []).map(week => ({
     id: week.id, name: week.name, startDate:week.startDate || "", endDate:week.endDate || "",
     challenges: (week.challenges || []).map(challenge => {
-      const publicReveal = challenge.kind === "side" || challenge.status === "complete" || publishedWeeks.has(String(week.id));
-      const teamReveal = team && started.has(`${week.id}:${challenge.id}`);
+      // Side challenges reveal automatically when their availability window opens.
+      // Main challenges remain hidden until that team's booked attempt starts.
+      const opensAtMs = challenge.opensAt ? new Date(challenge.opensAt).getTime() : new Date(week.startDate || 0).getTime();
+      const sideIsOpen = challenge.kind === "side" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
+      const publicReveal = sideIsOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
+      const teamReveal = challenge.kind !== "side" && team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
       item.revealed = Boolean(reveal);
-      if (!reveal && challenge.kind === "main") item.name = challenge.publicName || "Mystery Main Challenge";
+      if (!reveal) item.name = challenge.publicName || (challenge.kind === "side" ? "Mystery Side Challenge" : "Mystery Main Challenge");
       const own = sessions.find(s => s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
       if (own) item.session = own;
       if (challenge.opensAt) item.isOpen = now >= new Date(challenge.opensAt).getTime() && (!challenge.closesAt || now <= new Date(challenge.closesAt).getTime());
