@@ -28,6 +28,7 @@ export async function onRequestGet({ request, env }) {
   const state = await loadGames(env);
   const session = await getSession(request, env);
   const staff = isStaffSession(session);
+  const signedUp = Boolean(session && (state.signups || []).some(s => String(s.discordId || "") === String(session.id || "")));
   const team = memberTeam(state, session);
   const allSessions = state.sessions || [];
   // Staff may review all sessions, but the public challenge reveal must still
@@ -84,16 +85,23 @@ export async function onRequestGet({ request, env }) {
     })
   }));
 
+  // Access model:
+  // - While Games are hidden, the public Games pages stay sealed; the separate Draft page remains public.
+  // - Once Games are enabled, non-participants get Overview only. Signed-up players and staff get the full event.
+  const fullGamesAccess = Boolean(staff || (state.enabled && signedUp));
+  const overviewAccess = Boolean(staff || state.enabled);
+
   return Response.json({
     enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), draftStatus:String(state.draft?.status || "setup"), signupOpen:effectiveSignupOpen, signupEnabled:Boolean(state.signupOpen), registrationOpensAt:state.registrationOpensAt || "", registrationClosesAt:state.registrationClosesAt || "", gamesStartsAt:publicGamesStartsAt, rosterLocked:Boolean(state.rosterLocked), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
-    rules:state.rules || [], scoring:state.scoring, teams:(state.teams || []).map(t => ({
+    access:{ overview:overviewAccess, full:fullGamesAccess, draft:true }, isSignedUp:signedUp,
+    rules:fullGamesAccess ? (state.rules || []) : [], scoring:state.scoring, teams:(state.teams || []).map(t => ({
       id:t.id, name:t.name, points:publicPoints.get(String(t.id)) || 0,
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
-    })), weeks,
+    })), weeks:fullGamesAccess ? weeks : [],
     myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
     // Public master schedule: expose only safe scheduling metadata for all teams.
     // Never expose challenge names, objectives, rules, scores, proof, or other reveal-sensitive data here.
-    scheduleSessions: allSessions.filter(s => s.scheduledAt).map(s => {
+    scheduleSessions: fullGamesAccess ? allSessions.filter(s => s.scheduledAt).map(s => {
       const related = (state.submissions || []).filter(x => x.weekId === s.weekId && x.challengeId === s.challengeId && x.teamId === s.teamId);
       const submissionStatus = String(s.reviewStatus || submissionReviewStatus(related) || "").toLowerCase();
       return {
@@ -101,7 +109,7 @@ export async function onRequestGet({ request, env }) {
         startedAt:s.startedAt || "", endsAt:s.endsAt || "", status:s.status || "scheduled",
         submissionStatus
       };
-    }),
+    }) : [],
     signedIn:Boolean(session), isStaff:staff,
     publishedResultWeeks:[...publishedWeeks],
     hasPublishedResults:publishedWeeks.size > 0,
@@ -114,6 +122,6 @@ export async function onRequestGet({ request, env }) {
     finalProgression:Array.isArray(state.finalProgression) ? state.finalProgression : [],
     canEndGames:staff && !state.gamesCompleted && (state.weeks || []).length > 0 && (state.weeks || []).every(w => publishedWeeks.has(String(w.id))) && !(state.submissions || []).some(s => !["approved","rejected"].includes(String(s.status || "").toLowerCase())),
     resultsUnlocked:false, // legacy field; public UI now publishes results per week
-    submissions: (state.submissions || []).filter(s => staff || publishedWeeks.has(String(s.weekId)) || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""}))
+    submissions: fullGamesAccess ? (state.submissions || []).filter(s => staff || publishedWeeks.has(String(s.weekId)) || (team && s.teamId === team.id)).map(s => ({...s, proofUrl: staff || (team && s.teamId === team.id) ? s.proofUrl : ""})) : []
   }, { headers:{"Cache-Control":"no-store"} });
 }
