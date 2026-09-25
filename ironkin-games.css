@@ -300,3 +300,5 @@
 .games-signup-admin-row{grid-template-columns:minmax(180px,1.35fr) repeat(3,minmax(82px,.55fr)) minmax(150px,1fr) auto}
 .games-signup-admin-row .games-btn.compact{justify-self:end;white-space:nowrap}
 @media(max-width:900px){.games-signup-admin-row .games-btn.compact{justify-self:stretch}}
+
+.games-draft-results-link{grid-column:1/-1;display:flex;justify-content:flex-start;margin:-2px 0 2px}.games-draft-results-link .games-btn{width:auto}

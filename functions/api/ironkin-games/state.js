@@ -85,7 +85,7 @@ export async function onRequestGet({ request, env }) {
   }));
 
   return Response.json({
-    enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), signupOpen:effectiveSignupOpen, signupEnabled:Boolean(state.signupOpen), registrationOpensAt:state.registrationOpensAt || "", registrationClosesAt:state.registrationClosesAt || "", gamesStartsAt:publicGamesStartsAt, rosterLocked:Boolean(state.rosterLocked), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
+    enabled:state.enabled, showOnHome:Boolean(state.showOnHome), showOnEvents:Boolean(state.showOnEvents), draftStatus:String(state.draft?.status || "setup"), signupOpen:effectiveSignupOpen, signupEnabled:Boolean(state.signupOpen), registrationOpensAt:state.registrationOpensAt || "", registrationClosesAt:state.registrationClosesAt || "", gamesStartsAt:publicGamesStartsAt, rosterLocked:Boolean(state.rosterLocked), title:state.title, subtitle:state.subtitle, season:state.season, timezone:state.timezone,
     rules:state.rules || [], scoring:state.scoring, teams:(state.teams || []).map(t => ({
       id:t.id, name:t.name, points:publicPoints.get(String(t.id)) || 0,
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))

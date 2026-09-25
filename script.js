@@ -5713,17 +5713,23 @@ else initPremiumUi();
       const eyebrow = el.querySelector("[data-games-promo-eyebrow]");
       const copy = el.querySelector("[data-games-promo-copy]");
       const cta = el.querySelector("[data-games-promo-cta]");
+      const draftActive = state.draftStatus === "setup" || state.draftStatus === "live";
       if (signupActive) {
         if (eyebrow) eyebrow.textContent = "Registration Open";
         if (copy) copy.textContent = "Signups are now open! Join the competition and get ready to represent your team across five weeks of challenges.";
         if (cta) { cta.textContent = "Sign Up Now"; cta.href = "/ironkin-games-signup.html"; }
+      } else if (draftActive) {
+        if (eyebrow) eyebrow.textContent = state.draftStatus === "live" ? "Live Now" : "Ironkin Games";
+        if (copy) copy.textContent = "Watch the Ironkin Games teams take shape live as captains select their rosters in a 7-round snake draft.";
+        if (cta) { cta.textContent = state.draftStatus === "live" ? "Watch Draft Live" : "Watch the Draft"; cta.href = "/ironkin-games-draft.html"; }
       } else {
         if (eyebrow) eyebrow.textContent = "Season Competition";
         if (copy) copy.textContent = "A multi-week team competition with timed challenge reveals, flexible team slots, private proof, and a points leaderboard.";
         if (cta) { cta.textContent = "Open Ironkin Games"; cta.href = "/ironkin-games.html"; }
       }
     });
-    setPromoVisible(home, Boolean(state.enabled && state.showOnHome));
+    const draftActive = state.draftStatus === "setup" || state.draftStatus === "live";
+    setPromoVisible(home, Boolean(state.enabled && state.showOnHome && (signupActive || draftActive)));
     setPromoVisible(events, Boolean(state.enabled && state.showOnEvents));
   } catch (_) {
     // Leave both promos hidden if settings cannot be loaded.
