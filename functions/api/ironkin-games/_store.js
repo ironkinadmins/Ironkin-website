@@ -25,6 +25,7 @@ export function defaultGames() {
     gamesStartsAt: "",
     rosterLocked: false,
     autoBalanceSignups: false,
+    draft: { status: "setup", order: [], picks: [], startedAt: "", completedAt: "" },
     balanceWeights: { ehp: 40, ehb: 40, totalLevel: 20 },
     signups: [],
     rules: [
