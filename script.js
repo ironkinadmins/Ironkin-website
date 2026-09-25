@@ -1345,19 +1345,26 @@ async function appendIronkinGamesHubCard(grid) {
     if (state.enabled !== true || state.showOnEvents !== true) return;
 
     const signupOpen = Boolean(state.signupOpen && !state.rosterLocked && !state.gamesCompleted);
-    const href = signupOpen ? "/ironkin-games-signup.html" : "/ironkin-games.html";
+    const draftActive = state.draftStatus === "setup" || state.draftStatus === "live";
+    const href = draftActive
+      ? "/ironkin-games-draft.html"
+      : signupOpen
+        ? "/ironkin-games-signup.html"
+        : "/ironkin-games.html";
 
     grid.appendChild(createEventHubCard({
       type: "ironkin-games",
       href,
       icon: "🏆",
-      label: signupOpen ? "Registration Open" : "Season Competition",
+      label: draftActive ? "Live Draft" : signupOpen ? "Registration Open" : "Season Competition",
       title: state.title || "Ironkin Games",
-      description: signupOpen
-        ? "Sign up individually for Ironkin Games. Teams will be decided and balanced by staff after registration closes."
-        : "A multi-week team competition featuring Main Challenges, Side Challenges, private proof, and a points leaderboard.",
+      description: draftActive
+        ? "Watch the Ironkin Games teams take shape live as captains select their rosters in a 7-round snake draft."
+        : signupOpen
+          ? "Sign up individually for Ironkin Games. Teams will be decided and balanced by staff after registration closes."
+          : "A multi-week team competition featuring Main Challenges, Side Challenges, private proof, and a points leaderboard.",
       active: true,
-      ctaLabel: signupOpen ? "Sign Up →" : "View Ironkin Games →"
+      ctaLabel: draftActive ? "Watch Live Draft →" : signupOpen ? "Sign Up →" : "View Ironkin Games →"
     }));
   } catch {
     // Keep the Event Hub clean if Games settings are unavailable.
@@ -5714,14 +5721,14 @@ else initPremiumUi();
       const copy = el.querySelector("[data-games-promo-copy]");
       const cta = el.querySelector("[data-games-promo-cta]");
       const draftActive = state.draftStatus === "setup" || state.draftStatus === "live";
-      if (signupActive) {
-        if (eyebrow) eyebrow.textContent = "Registration Open";
-        if (copy) copy.textContent = "Signups are now open! Join the competition and get ready to represent your team across five weeks of challenges.";
-        if (cta) { cta.textContent = "Sign Up Now"; cta.href = "/ironkin-games-signup.html"; }
-      } else if (draftActive) {
+      if (draftActive) {
         if (eyebrow) eyebrow.textContent = state.draftStatus === "live" ? "Live Now" : "Ironkin Games";
         if (copy) copy.textContent = "Watch the Ironkin Games teams take shape live as captains select their rosters in a 7-round snake draft.";
         if (cta) { cta.textContent = state.draftStatus === "live" ? "Watch Draft Live" : "Watch the Draft"; cta.href = "/ironkin-games-draft.html"; }
+      } else if (signupActive) {
+        if (eyebrow) eyebrow.textContent = "Registration Open";
+        if (copy) copy.textContent = "Signups are now open! Join the competition and get ready to represent your team across five weeks of challenges.";
+        if (cta) { cta.textContent = "Sign Up Now"; cta.href = "/ironkin-games-signup.html"; }
       } else {
         if (eyebrow) eyebrow.textContent = "Season Competition";
         if (copy) copy.textContent = "A multi-week team competition with timed challenge reveals, flexible team slots, private proof, and a points leaderboard.";
@@ -5729,7 +5736,10 @@ else initPremiumUi();
       }
     });
     const draftActive = state.draftStatus === "setup" || state.draftStatus === "live";
-    setPromoVisible(home, Boolean(state.enabled && state.showOnHome && (signupActive || draftActive)));
+    // Keep the Ironkin Games homepage card available after the draft as the normal
+    // entry point to the event. While the draft is setup/live it routes to Draft;
+    // once complete it routes back to the Games overview.
+    setPromoVisible(home, Boolean(state.enabled && state.showOnHome));
     setPromoVisible(events, Boolean(state.enabled && state.showOnEvents));
   } catch (_) {
     // Leave both promos hidden if settings cannot be loaded.
