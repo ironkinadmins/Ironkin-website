@@ -29,7 +29,7 @@ export function defaultGames() {
     balanceWeights: { ehp: 40, ehb: 40, totalLevel: 20 },
     signups: [],
     rules: [
-      "Main Challenges require one continuous recording or private stream from reveal through completion.",
+      "Main Challenges require the proof method shown on the challenge. WOM-tracked challenges do not require a VOD unless staff explicitly state otherwise.",
       "Challenge information may not be shared with teams that have not completed their attempt.",
       "No outside assistance unless the challenge rules explicitly allow it.",
       "Staff may apply penalties or disqualify a run when proof is incomplete or rules are broken."
@@ -54,11 +54,20 @@ export async function loadGames(env) {
   try {
     const state = { ...defaultGames(), ...JSON.parse(raw) };
     state.publishedResultWeeks = Array.isArray(state.publishedResultWeeks) ? state.publishedResultWeeks.map(String) : [];
+    let changed = false;
+
+    // Migrate the original blanket VOD rule now that some main challenges use
+    // server-verified WOM tracking instead of manual video proof.
+    const legacyVodRule = "Main Challenges require one continuous recording or private stream from reveal through completion.";
+    const trackedProofRule = "Main Challenges require the proof method shown on the challenge. WOM-tracked challenges do not require a VOD unless staff explicitly state otherwise.";
+    if (Array.isArray(state.rules)) {
+      const i = state.rules.indexOf(legacyVodRule);
+      if (i >= 0) { state.rules[i] = trackedProofRule; changed = true; }
+    }
 
     // Migrate the original themed team slot IDs to neutral internal IDs.
     // Custom team names are preserved and are always the user-facing identity.
     const legacyIds = { ember:"team-1", ash:"team-2", forge:"team-3", kin:"team-4" };
-    let changed = false;
     state.teams = (state.teams || []).map((team, index) => {
       const oldId = String(team.id || "");
       const nextId = legacyIds[oldId] || oldId || `team-${index + 1}`;
