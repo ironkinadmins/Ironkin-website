@@ -25,10 +25,28 @@ export async function onRequestPost({ request, env }) {
   const state = await loadGames(env);
 
   if (type === "session") {
-    const before = (state.sessions || []).length;
-    state.sessions = (state.sessions || []).filter(item => String(item.id) !== id);
-    if (state.sessions.length === before) {
+    const sessions = state.sessions || [];
+    const target = sessions.find(item => String(item.id) === id);
+    if (!target) {
       return Response.json({ error: "Attempt not found." }, { status: 404 });
+    }
+
+    if (target.type === "boss-rush") {
+      // A Boss Rush attempt is the record used to calculate attempts remaining.
+      // Remove the selected attempt plus any duplicate copy of the same logical
+      // attempt so an admin reset immediately gives the player their attempt back.
+      state.sessions = sessions.filter(item => {
+        if (String(item.id) === id) return false;
+        return !(
+          item.type === "boss-rush" &&
+          String(item.weekId || "") === String(target.weekId || "") &&
+          String(item.challengeId || "") === String(target.challengeId || "") &&
+          String(item.playerDiscordId || "") === String(target.playerDiscordId || "") &&
+          Number(item.attemptNumber || 0) === Number(target.attemptNumber || 0)
+        );
+      });
+    } else {
+      state.sessions = sessions.filter(item => String(item.id) !== id);
     }
   } else {
     const before = (state.submissions || []).length;
