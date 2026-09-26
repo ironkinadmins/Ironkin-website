@@ -18,6 +18,24 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const type = String(body.type || "");
   const id = String(body.id || "");
+  if (type === "reset-boss-rush") {
+    const playerDiscordId = String(body.playerDiscordId || "");
+    const challengeId = String(body.challengeId || "");
+    if (!playerDiscordId || !challengeId) {
+      return Response.json({ error: "Choose a player and Boss Rush challenge." }, { status: 400 });
+    }
+    const state = await loadGames(env);
+    const before = (state.sessions || []).length;
+    state.sessions = (state.sessions || []).filter(item => !(
+      item.type === "boss-rush" &&
+      String(item.challengeId || "") === challengeId &&
+      String(item.playerDiscordId || "") === playerDiscordId
+    ));
+    const removed = before - state.sessions.length;
+    await saveGames(env, state);
+    return Response.json({ ok: true, removed, state });
+  }
+
   if (!id || !["session", "submission"].includes(type)) {
     return Response.json({ error: "Choose a valid record to delete." }, { status: 400 });
   }
