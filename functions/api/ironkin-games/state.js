@@ -82,7 +82,7 @@ export async function onRequestGet({ request, env }) {
       const own = sessions.find(s => s.type !== "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
       if (own) item.session = own;
       if (challenge.trackingMode === "boss-rush" && team && session) {
-        item.myBossRushAttempts = allSessions.filter(s => s.type === "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && String(s.playerDiscordId || "") === String(session.id || "")).map(s => ({ id:s.id, status:s.status, startedAt:s.startedAt, endsAt:s.endsAt, durationMinutes:s.durationMinutes, completedAt:s.completedAt || "", completedBosses:s.completedBosses || [], bossGains:s.bossGains || {} }));
+        item.myBossRushAttempts = allSessions.filter(s => s.type === "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && String(s.playerDiscordId || "") === String(session.id || "")).map(s => ({ id:s.id, status:s.status, startedAt:s.startedAt, endsAt:s.endsAt, durationMinutes:s.durationMinutes, completedAt:s.completedAt || "", completedBosses:s.completedBosses || [], bossGains:s.bossGains || {}, late:!!s.late, reviewStatus:s.reviewStatus || "" }));
         const teamBosses = new Set(); allSessions.filter(s => s.type === "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && s.teamId === team.id && s.status === "completed").forEach(s => (s.completedBosses || []).forEach(b => teamBosses.add(b)));
         item.teamBossRushBosses = [...teamBosses];
       }
