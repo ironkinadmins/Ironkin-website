@@ -16,7 +16,7 @@ function submissionReviewStatus(related) {
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: challenge.name, kind: challenge.kind || "main", status: challenge.status || "upcoming",
-    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
+    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
     participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };
@@ -72,14 +72,20 @@ export async function onRequestGet({ request, env }) {
       // Main challenges remain hidden until that team's booked attempt starts.
       const opensAtMs = challenge.opensAt ? new Date(challenge.opensAt).getTime() : new Date(week.startDate || 0).getTime();
       const sideIsOpen = challenge.kind === "side" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
-      const publicReveal = sideIsOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
+      const bossRushIsOpen = challenge.trackingMode === "boss-rush" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
+      const publicReveal = sideIsOpen || bossRushIsOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
       const teamReveal = challenge.kind !== "side" && team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
       item.revealed = Boolean(reveal);
       if (!reveal) item.name = challenge.publicName || (challenge.kind === "side" ? "Mystery Side Challenge" : "Mystery Main Challenge");
-      const own = sessions.find(s => s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
+      const own = sessions.find(s => s.type !== "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && (!team || s.teamId === team.id));
       if (own) item.session = own;
+      if (challenge.trackingMode === "boss-rush" && team && session) {
+        item.myBossRushAttempts = allSessions.filter(s => s.type === "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && String(s.playerDiscordId || "") === String(session.id || "")).map(s => ({ id:s.id, status:s.status, startedAt:s.startedAt, endsAt:s.endsAt, durationMinutes:s.durationMinutes, completedAt:s.completedAt || "", completedBosses:s.completedBosses || [], bossGains:s.bossGains || {} }));
+        const teamBosses = new Set(); allSessions.filter(s => s.type === "boss-rush" && s.weekId === week.id && s.challengeId === challenge.id && s.teamId === team.id && s.status === "completed").forEach(s => (s.completedBosses || []).forEach(b => teamBosses.add(b)));
+        item.teamBossRushBosses = [...teamBosses];
+      }
       if (challenge.opensAt) item.isOpen = now >= new Date(challenge.opensAt).getTime() && (!challenge.closesAt || now <= new Date(challenge.closesAt).getTime());
       return item;
     })
