@@ -1,5 +1,6 @@
 import { getSession } from "../_auth.js";
 import { loadGames, memberTeam, challengeFor } from "./_store.js";
+import { hybridKv } from "../../_hybridKv.js";
 
 const WOM_GROUP_ID = "12095";
 const WOM_BASE = "https://api.wiseoldman.net/v2";
@@ -44,6 +45,18 @@ export async function onRequestGet({ request, env }) {
     return Response.json({ error:"Progress tracking is not available for this challenge." }, { status:400 });
   }
 
+  const cacheKey = `ironkin-games:clue-progress:${weekId}:${challengeId}:${team.id}`;
+  const kv = hybridKv(env, "drops");
+  const forceRefresh = url.searchParams.get("refresh") === "1";
+  const cachedRaw = await kv.get(cacheKey);
+  let cached = null;
+  try { cached = cachedRaw ? JSON.parse(cachedRaw) : null; } catch {}
+  const cachedAtMs = new Date(cached?.updatedAt || 0).getTime();
+  const refreshAvailableAt = Number.isFinite(cachedAtMs) ? cachedAtMs + 60 * 60 * 1000 : 0;
+  if (cached && (!forceRefresh || Date.now() < refreshAvailableAt)) {
+    return Response.json({ ...cached, refreshAvailableAt }, { headers:{ "Cache-Control":"no-store" } });
+  }
+
   const opensAt = challenge.opensAt || week.startDate;
   const closesAt = challenge.closesAt || week.endDate;
   const startMs = new Date(opensAt || 0).getTime();
@@ -82,11 +95,14 @@ export async function onRequestGet({ request, env }) {
     return { rsn, name:String(player.name || player.displayName || rsn), tiers, clues, points };
   }).sort((a,b) => b.points - a.points || b.clues - a.clues || a.rsn.localeCompare(b.rsn));
 
-  return Response.json({
+  const payload = {
     team:{ id:team.id, name:team.name },
     challenge:{ id:challenge.id, name:challenge.name },
     startsAt:new Date(startMs).toISOString(), endsAt:new Date(endMs).toISOString(),
     rows,
-    totals:{ clues:rows.reduce((n,r)=>n+r.clues,0), points:rows.reduce((n,r)=>n+r.points,0) }
-  }, { headers:{ "Cache-Control":"no-store" } });
+    totals:{ clues:rows.reduce((n,r)=>n+r.clues,0), points:rows.reduce((n,r)=>n+r.points,0) },
+    updatedAt:new Date().toISOString()
+  };
+  await kv.put(cacheKey, JSON.stringify(payload), { expirationTtl: 7200 });
+  return Response.json({ ...payload, refreshAvailableAt:Date.now() + 60 * 60 * 1000 }, { headers:{ "Cache-Control":"no-store" } });
 }
