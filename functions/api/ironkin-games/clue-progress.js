@@ -81,7 +81,7 @@ export async function onRequestGet({ request, env }) {
     const challengeId = url.searchParams.get("challengeId") || "";
     const { week, challenge } = challengeFor(state, weekId, challengeId);
     if (!week || !challenge) return json({ error:"Challenge not found." }, 404);
-    if (String(challenge.trackerType || "") !== "clue-progress" && !(String(challenge.kind || "main") === "side" && /clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`))) {
+    if (!["wom-clues","clue-progress"].includes(String(challenge.trackerType || "")) && !(String(challenge.kind || "main") === "side" && /clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`))) {
       return json({ error:"Progress tracking is not available for this challenge." }, 400);
     }
 

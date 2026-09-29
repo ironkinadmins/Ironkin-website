@@ -69,7 +69,15 @@ export async function loadGames(env) {
           changed = true;
         }
         if (!challenge.trackerType) {
-          challenge.trackerType = challenge.trackingMode === "boss-rush" ? "boss-rush" : (/clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`) && challenge.trackingMethod === "automatic" ? "clue-progress" : "none");
+          challenge.trackerType = challenge.trackingMode === "boss-rush" ? "timed-wom-attempt" : (/clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`) && challenge.trackingMethod === "automatic" ? "wom-clues" : "none");
+          changed = true;
+        }
+        if (challenge.trackerType === "boss-rush") { challenge.trackerType = "timed-wom-attempt"; changed = true; }
+        if (challenge.trackerType === "clue-progress") { challenge.trackerType = "wom-clues"; changed = true; }
+        if (challenge.trackingMethod === "automatic" && !challenge.scoring) {
+          challenge.scoring = challenge.trackerType === "wom-clues"
+            ? { mode:"weighted-clues", ranking:"highest", weights:{beginner:.5,easy:1,medium:2,hard:4,elite:7,master:10}, tieBreak:["master","elite","hard","medium","easy","beginner"] }
+            : challenge.trackerType === "timed-wom-attempt" ? { mode:"unique-metrics", ranking:"highest" } : { mode:"total-gain", ranking:"highest" };
           changed = true;
         }
         if (!challenge.libraryId) {
@@ -82,6 +90,18 @@ export async function loadGames(env) {
           }
           changed = true;
         }
+      }
+    }
+
+    // Normalize reusable definitions too. This does not change historical weekly IDs or runs.
+    for (const lib of state.challengeLibrary || []) {
+      if (lib.trackerType === "boss-rush") { lib.trackerType = "timed-wom-attempt"; lib.trackingMode = "boss-rush"; changed = true; }
+      if (lib.trackerType === "clue-progress") { lib.trackerType = "wom-clues"; lib.trackingMode = "team"; changed = true; }
+      if (lib.trackingMethod === "automatic" && !lib.scoring) {
+        lib.scoring = lib.trackerType === "wom-clues"
+          ? { mode:"weighted-clues", ranking:"highest", weights:{beginner:.5,easy:1,medium:2,hard:4,elite:7,master:10}, tieBreak:["master","elite","hard","medium","easy","beginner"] }
+          : lib.trackerType === "timed-wom-attempt" ? { mode:"unique-metrics", ranking:"highest" } : { mode:"total-gain", ranking:"highest" };
+        changed = true;
       }
     }
 

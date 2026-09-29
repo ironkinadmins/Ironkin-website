@@ -7,7 +7,7 @@ export async function onRequestPost({request,env}) {
   const body=await request.json().catch(()=>({})), state=await loadGames(env), team=memberTeam(state,session);
   if(!team)return Response.json({error:"You are not assigned to an Ironkin Games team."},{status:403});
   const {week,challenge}=challengeFor(state,body.weekId,body.challengeId);
-  if(!week||!challenge||challenge.trackingMode!=="boss-rush")return Response.json({error:"Boss Rush challenge not found."},{status:404});
+  if(!week||!challenge||!["timed-wom-attempt","boss-rush"].includes(String(challenge.trackerType||"")) && challenge.trackingMode!=="boss-rush")return Response.json({error:"Boss Rush challenge not found."},{status:404});
   const now=Date.now();
   if(challenge.opensAt&&now<new Date(challenge.opensAt).getTime())return Response.json({error:"Boss Rush has not opened yet."},{status:409});
   if(challenge.closesAt&&now>new Date(challenge.closesAt).getTime())return Response.json({error:"Boss Rush is closed."},{status:409});

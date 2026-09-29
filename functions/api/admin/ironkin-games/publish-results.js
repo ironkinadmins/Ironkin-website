@@ -1,25 +1,9 @@
 import { getSession, isStaffSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
+import { calculateAutomaticChallenge, automaticSubmission } from "../../ironkin-games/_autoScoring.js";
 
-export async function onRequestPost({ request, env }) {
-  const session = await getSession(request, env);
-  if (!isStaffSession(session)) return Response.json({ error: "Staff only." }, { status: 403 });
-
-  const body = await request.json().catch(() => ({}));
-  const weekId = String(body.weekId || "");
-  const action = body.action === "hide" ? "hide" : "publish";
-  const state = await loadGames(env);
-  if (state.gamesCompleted) return Response.json({ error: "The Ironkin Games are complete. Published results are locked." }, { status: 409 });
-  const week = (state.weeks || []).find(w => String(w.id) === weekId);
-  if (!week) return Response.json({ error: "Week not found." }, { status: 404 });
-
-  const published = new Set((state.publishedResultWeeks || []).map(String));
-  if (action === "publish") published.add(weekId);
-  else published.delete(weekId);
-
-  state.publishedResultWeeks = [...published];
-  state.resultsUnlocked = false; // retire the old global reveal toggle
-  await saveGames(env, state);
-
-  return Response.json({ ok: true, weekId, published: action === "publish", publishedResultWeeks: state.publishedResultWeeks });
-}
+async function calculateWeek(state,week,env){const challenges=[];for(const challenge of week.challenges||[]){if(String(challenge.trackingMethod||"submissions")!=="automatic")continue;const result=await calculateAutomaticChallenge(state,week,challenge,env);if(result)challenges.push({challengeId:challenge.id,name:challenge.name,kind:challenge.kind||"main",...result});}return challenges;}
+export async function onRequestPost({request,env}){const session=await getSession(request,env);if(!isStaffSession(session))return Response.json({error:"Staff only."},{status:403});const body=await request.json().catch(()=>({})),weekId=String(body.weekId||""),action=String(body.action||"publish"),state=await loadGames(env);if(state.gamesCompleted)return Response.json({error:"The Ironkin Games are complete. Published results are locked."},{status:409});const week=(state.weeks||[]).find(w=>String(w.id)===weekId);if(!week)return Response.json({error:"Week not found."},{status:404});
+ if(action==="preview"){try{return Response.json({ok:true,weekId,challenges:await calculateWeek(state,week,env)});}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results."},{status:502});}}
+ const published=new Set((state.publishedResultWeeks||[]).map(String));if(action==="hide")published.delete(weekId);else{let calculated=[];try{calculated=await calculateWeek(state,week,env);}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results. Nothing was published."},{status:502});}const autoIds=new Set((week.challenges||[]).filter(c=>String(c.trackingMethod||"")==="automatic").map(c=>String(c.id)));state.submissions=(state.submissions||[]).filter(s=>!(String(s.weekId)===weekId&&autoIds.has(String(s.challengeId))&&String(s.source||"")==="automatic"));for(const result of calculated){const challenge=(week.challenges||[]).find(c=>String(c.id)===String(result.challengeId));for(const row of result.rows)state.submissions.push(automaticSubmission(week,challenge,row));}published.add(weekId);}
+ state.publishedResultWeeks=[...published];state.resultsUnlocked=false;for(const team of state.teams||[])team.points=(state.submissions||[]).filter(s=>String(s.teamId)===String(team.id)&&String(s.status)==="approved").reduce((n,s)=>n+(Number(s.points)||0),0);await saveGames(env,state);return Response.json({ok:true,weekId,published:action!=="hide",publishedResultWeeks:state.publishedResultWeeks});}

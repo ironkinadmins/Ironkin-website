@@ -5,8 +5,10 @@ const clean = c => ({
   id:String(c.id||crypto.randomUUID()), name:String(c.name||"New Challenge"), publicName:String(c.publicName||"Mystery Challenge"),
   kind:c.kind==="side"?"side":"main", durationMode:c.durationMode==="week"?"week":"timed", durationMinutes:Math.max(1,Number(c.durationMinutes)||60),
   trackingMethod:["automatic","admin"].includes(c.trackingMethod)?c.trackingMethod:"submissions",
-  trackerType:["boss-rush","clue-progress"].includes(c.trackerType)?c.trackerType:"none",
-  trackingMode:c.trackerType==="boss-rush"?"boss-rush":"team", attemptsPerPlayer:Math.max(1,Number(c.attemptsPerPlayer)||1),
+  trackerType:["timed-wom-attempt","wom-clues","wom-metric","boss-rush","clue-progress"].includes(c.trackerType)?c.trackerType:"none",
+  trackerConfig:{metric:String(c.trackerConfig?.metric||""),metricLabel:String(c.trackerConfig?.metricLabel||"")},
+  scoring:{mode:String(c.scoring?.mode||((c.trackerType==="wom-clues"||c.trackerType==="clue-progress")?"weighted-clues":(c.trackerType==="timed-wom-attempt"||c.trackerType==="boss-rush")?"unique-metrics":"total-gain")),ranking:c.scoring?.ranking==="lowest"?"lowest":"highest",weights:{beginner:Number(c.scoring?.weights?.beginner??.5),easy:Number(c.scoring?.weights?.easy??1),medium:Number(c.scoring?.weights?.medium??2),hard:Number(c.scoring?.weights?.hard??4),elite:Number(c.scoring?.weights?.elite??7),master:Number(c.scoring?.weights?.master??10)},tieBreak:Array.isArray(c.scoring?.tieBreak)?c.scoring.tieBreak:["master","elite","hard","medium","easy","beginner"]},
+  trackingMode:["timed-wom-attempt","boss-rush"].includes(c.trackerType)?"boss-rush":"team", attemptsPerPlayer:Math.max(1,Number(c.attemptsPerPlayer)||1),
   participants:String(c.participants||"3-5 players"), proofRequired:c.trackingMethod==="submissions"?c.proofRequired!==false:false,
   summary:String(c.summary||""), objective:String(c.objective||""), instructions:String(c.instructions||""), rules:Array.isArray(c.rules)?c.rules.map(String):[], status:c.status||"active"
 });
