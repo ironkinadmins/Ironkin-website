@@ -11841,3 +11841,16 @@ a.ember-leader-row:hover { transform: translateX(3px); border-color: rgba(255,14
 
 /* Content images on Ranks and Shop scale down to the page width on phones. */
 .rank-images img,.shop-image img{max-width:100%;height:auto}
+
+/* Challenge Library editor hierarchy */
+.games-admin-challenge .games-config-section{padding:20px 0;border-top:1px solid var(--admin-line)}
+.games-admin-challenge .games-config-section:first-child{padding-top:4px;border-top:0}
+.games-admin-challenge .games-config-title{display:grid;gap:4px;margin-bottom:15px}
+.games-admin-challenge .games-config-title strong{display:block;font-size:.86rem;line-height:1.2;color:var(--admin-copy)}
+.games-admin-challenge .games-config-title span{display:block;color:var(--admin-muted);font-size:.69rem;line-height:1.45}
+.games-admin-challenge .challenge-fields-grid{gap:14px 16px}
+.games-admin-challenge .games-tracker-help{margin:-2px 0 2px;padding:11px 13px;border:1px solid var(--admin-line);border-radius:10px;background:rgba(255,255,255,.02);color:var(--admin-muted);font-size:.7rem;line-height:1.5}
+.games-admin-challenge .tracker-nested{padding:2px 0 0;gap:14px 16px}
+.games-admin-challenge .games-scoring-config{background:rgba(255,255,255,.012);margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+.games-admin-challenge .games-field-label{margin-bottom:2px}
+@media(max-width:760px){.games-admin-challenge .games-config-section{padding:17px 0}.games-admin-challenge .challenge-fields-grid{gap:12px}}
