@@ -2691,11 +2691,14 @@ async function changeDrop(name, direction) {
 }
 
 async function deleteDrop(name) {
-  await fetch("/api/drops/delete", {
+  if (!confirm(`Delete "${name}" from this event's tracked items?`)) return;
+  const response = await fetch("/api/drops/delete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ eventId: selectedEventId, name })
   });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) alert(data.error || "Could not delete tracked item.");
 
   loadAdminDrops();
 }

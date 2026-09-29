@@ -112,6 +112,31 @@ export async function deleteTrackedItem(env, websiteEventId, itemId) {
   return { synced: true };
 }
 
+// Removes tracked-item rows for an event whose item IDs are no longer in the
+// website drop list, so items deleted in Admin stop reaching RuneLite.
+// Rows matching a remaining drop by item ID or by name (legacy drops may lack an
+// ID in the list) are kept.
+export async function deleteOrphanedTrackedItems(env, websiteEventId, remainingDrops = []) {
+  if (!hasSupabase(env)) return { synced: false, removed: [] };
+  const eventFilter = `website_event_id=eq.${encodeURIComponent(websiteEventId)}`;
+  const response = await supabaseRest(env, `ironkin_event_items?select=item_id,item_name&${eventFilter}`);
+  const rows = await response.json();
+
+  const keepIds = new Set(remainingDrops.map(drop => Number(drop?.itemId)).filter(id => Number.isInteger(id) && id > 0));
+  const keepNames = new Set(remainingDrops.map(drop => String(drop?.name || "").trim().toLowerCase()).filter(Boolean));
+  const orphans = (Array.isArray(rows) ? rows : []).filter(row =>
+    !keepIds.has(Number(row.item_id)) && !keepNames.has(String(row.item_name || "").trim().toLowerCase())
+  );
+  if (!orphans.length) return { synced: true, removed: [] };
+
+  const ids = orphans.map(row => Number(row.item_id)).filter(Number.isInteger);
+  await supabaseRest(env, `ironkin_event_items?${eventFilter}&item_id=in.(${ids.join(",")})`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  });
+  return { synced: true, removed: orphans.map(row => ({ itemId: row.item_id, name: row.item_name })) };
+}
+
 export async function findActiveDuplicateSubmission(env, { pluginEventId, itemId, trackingRule, playerKey, clientSubmissionKey }) {
   if (!hasSupabase(env)) return null;
   const fields = "id,status,player_name,item_name,created_at";
