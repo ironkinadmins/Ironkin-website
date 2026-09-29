@@ -81,6 +81,75 @@ export async function updateAndReadBosses(env, rsn) {
   };
 }
 
+export async function updateAndReadBossesForFinish(env, rsn, officialEnd) {
+  const name = String(rsn || "").trim();
+  if (!name) throw new Error("Your team profile does not have an RSN assigned.");
+
+  const snapshotFrom = data => data?.latestSnapshot || data?.player?.latestSnapshot || data?.snapshot || null;
+  const bossesFrom = snapshot => {
+    const raw = snapshot?.data?.bosses || {};
+    const bosses = {};
+    for (const [metric, value] of Object.entries(raw)) bosses[metric] = Math.max(0, Number(value?.kills || 0));
+    return bosses;
+  };
+  const snapshotTime = snapshot => new Date(snapshot?.createdAt || snapshot?.updatedAt || 0).getTime();
+  const endMs = new Date(officialEnd || 0).getTime();
+  const toleranceMs = 10 * 1000;
+  const minimumMs = Number.isFinite(endMs) ? endMs - toleranceMs : 0;
+
+  // Ask WOM to update, but unlike the START flow, do not require the resulting
+  // snapshot to have been created after this POST. RuneLite commonly creates the
+  // correct ending snapshot on logout before the player clicks Finish Attempt.
+  let updateData = {};
+  try {
+    const response = await fetch(`${WOM_BASE}/players/${encodeURIComponent(name)}`, {
+      method: "POST",
+      headers: { ...headers(env), "Accept": "application/json" }
+    });
+    const text = await response.text().catch(() => "");
+    try { updateData = text ? JSON.parse(text) : {}; } catch {}
+    // A failed forced update is not fatal at finish: the RuneLite logout snapshot
+    // may already be safely stored in WOM and can be recovered below.
+  } catch {}
+
+  const candidates = [];
+  const direct = snapshotFrom(updateData);
+  if (direct) candidates.push(direct);
+
+  // Recover the snapshot closest to the official end. This also makes an attempt
+  // recoverable if the original Finish request failed even though WOM saved it.
+  if (Number.isFinite(endMs)) {
+    const startDate = new Date(endMs - 30 * 1000).toISOString();
+    const endDate = new Date(Date.now() + 5 * 1000).toISOString();
+    try {
+      const response = await fetch(`${WOM_BASE}/players/${encodeURIComponent(name)}/snapshots?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&limit=100`, {
+        headers: { ...headers(env), "Accept": "application/json" }
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => []);
+        if (Array.isArray(data)) candidates.push(...data);
+      }
+    } catch {}
+  }
+
+  // Prefer the earliest snapshot at/just after the official end. This avoids a
+  // later retry accidentally counting boss KC earned after the timed attempt.
+  const valid = candidates
+    .filter(s => Number.isFinite(snapshotTime(s)) && snapshotTime(s) >= minimumMs)
+    .sort((a, b) => snapshotTime(a) - snapshotTime(b));
+  const snapshot = valid[0] || null;
+
+  if (!snapshot) {
+    throw new Error("WOM hasn't returned your logout snapshot yet. Stay logged out and try Finish Attempt again. Your attempt data is safe.");
+  }
+
+  return {
+    rsn: name,
+    bosses: bossesFrom(snapshot),
+    womSnapshotAt: snapshot.createdAt || snapshot.updatedAt || ""
+  };
+}
+
 export function bossGains(before = {}, after = {}) {
   const gains = {};
   for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
