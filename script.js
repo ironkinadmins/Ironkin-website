@@ -560,7 +560,7 @@ function setupMemberSearch() {
 
       results.innerHTML = items.map(item => `
         <a class="nav-member-search-result" href="${escapeNavSearchHtml(item.profileUrl || "profile.html")}">
-          <img src="${escapeNavSearchHtml(item.avatarUrl || "assets/ironkin-emblem.png")}" alt="" />
+          <img src="${escapeNavSearchHtml(item.avatarUrl || "/assets/ironkin-emblem.png")}" alt="" onerror="this.onerror=null;this.src='/assets/ironkin-emblem.png';" />
           <span>
             <strong>${escapeNavSearchHtml(item.displayName || "Unknown member")}</strong>
             <small>${escapeNavSearchHtml(item.staffRank || item.rank || "Member")}</small>
@@ -668,7 +668,7 @@ function setupGlobalSearch() {
         : (data.syncWarning ? escapeNavSearchHtml(data.syncWarning) : "No matching members.");
       const memberHtml = members.length ? members.slice(0, 6).map(item => `
         <a class="global-search-result global-search-member" href="${escapeNavSearchHtml(item.profileUrl || "/profile.html")}">
-          <img src="${escapeNavSearchHtml(item.avatarUrl || "/assets/ironkin-emblem.png")}" alt="" />
+          <img src="${escapeNavSearchHtml(item.avatarUrl || "/assets/ironkin-emblem.png")}" alt="" onerror="this.onerror=null;this.src='/assets/ironkin-emblem.png';" />
           <span><strong>${escapeNavSearchHtml(item.displayName || "Unknown member")}</strong><small>${escapeNavSearchHtml(item.staffRank || item.rank || "Ironkin member")}</small></span>
           <em>Member</em>
         </a>
@@ -739,12 +739,12 @@ async function loadDiscordUser() {
     }
 
     if (isStaffUser(data.user)) {
-      if (staffHandbookNavLink) staffHandbookNavLink.style.display = "inline-block";
-      if (adminNavLink) adminNavLink.style.display = "inline-block";
+      if (staffHandbookNavLink) staffHandbookNavLink.style.display = "";
+      if (adminNavLink) adminNavLink.style.display = "";
     }
 
     if (logoutBtn) {
-      logoutBtn.style.display = "inline-block";
+      logoutBtn.style.display = "";
     }
   } catch {
     // Leave sign-in button as-is if auth check fails
@@ -2700,7 +2700,7 @@ function renderClanNewsEntry(entry) {
   return `
     <article class="clan-news-entry clan-news-preview-entry">
       <div class="clan-news-meta">
-        ${entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" loading="lazy">` : ""}
+        ${entry.avatar ? `<img src="${escapeHtml(entry.avatar)}" alt="" loading="lazy" onerror="this.remove();">` : ""}
         <span><strong>${escapeHtml(entry.author || "Ironkin Staff")}</strong><small>${escapeHtml(date)}</small></span>
       </div>
       <div class="clan-news-preview-copy">

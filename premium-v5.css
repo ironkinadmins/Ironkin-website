@@ -309,7 +309,7 @@ h2,h3,h4 { letter-spacing:-.028em!important; }
   background:linear-gradient(180deg,rgba(255,129,31,.10),rgba(255,129,31,.045))!important;
   box-shadow:inset 0 -2px #ff7a1a,0 6px 18px rgba(0,0,0,.1)!important;
 }
-.nav-dropdown-toggle span { opacity:.52; margin-left:3px; }
+.nav-dropdown-toggle span { opacity:.52; margin-left:3px; transform:translateY(-.3em); }
 .nav-dropdown-menu {
   margin-top:8px!important;
   min-width:190px;

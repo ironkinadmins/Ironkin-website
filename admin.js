@@ -2611,7 +2611,7 @@ async function searchStandardDropWiki(query) {
     const data = await response.json();
     const results = (Array.isArray(data) ? data : data.results || []).filter(item => item?.name && item?.image && Number(item?.id) > 0);
     resultsEl.innerHTML = results.length ? results.map(item => `
-      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-id="${Number(item.id)}" data-id="${Number(item.id || 0)}" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No RuneLite-trackable item results found.</div>`;
+      <div class="wiki-result"><img src="${escapeHtml(item.image)}" alt=""><span class="wiki-result-name">${escapeHtml(item.name)}</span><button type="button" data-id="${Number(item.id)}" data-name="${escapeHtml(item.name)}" data-image="${escapeHtml(item.image)}" data-url="${escapeHtml(item.url || "")}">Select</button></div>`).join("") : `<div class="wiki-loading">No RuneLite-trackable item results found.</div>`;
     resultsEl.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
       document.getElementById("dropNameInput").value = button.dataset.name || "";
       document.getElementById("dropItemIdInput").value = button.dataset.id || "";

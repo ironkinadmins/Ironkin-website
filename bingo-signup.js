@@ -107,7 +107,7 @@ function renderTeamList(team, mountId, countId) {
     return `
       <div class="bingo-team-member ${isCurrentUser ? "is-current-user" : ""}">
         <div class="bingo-member-main">
-          ${avatarUrl ? `<img src="${avatarUrl}" alt="" />` : `<span class="bingo-member-avatar-fallback">${safeInitial}</span>`}
+          ${avatarUrl ? `<img src="${avatarUrl}" alt="" data-initial="${safeInitial}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'bingo-member-avatar-fallback',textContent:this.dataset.initial}));" />` : `<span class="bingo-member-avatar-fallback">${safeInitial}</span>`}
           <div>
             <strong>${safeName}</strong>
             ${isCurrentUser ? `<small>You</small>` : `<small>Signed up</small>`}
