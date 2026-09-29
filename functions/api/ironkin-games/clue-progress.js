@@ -5,6 +5,7 @@ import { hybridKv } from "../../_hybridKv.js";
 const WOM_GROUP_ID = "12095";
 const WOM_BASE = "https://api.wiseoldman.net/v2";
 const REFRESH_MS = 60 * 60 * 1000;
+const STALE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const TIERS = [
   ["beginner", "clue_scrolls_beginner", 0.5],
   ["easy", "clue_scrolls_easy", 1],
@@ -35,7 +36,7 @@ function gainedValue(entry, metric){
 function json(body, status=200){
   return Response.json(body, { status, headers:{ "Cache-Control":"no-store" } });
 }
-async function womBulk(startIso, endIso, env){
+async function womBulkOnce(startIso, endIso, env){
   const qs = new URLSearchParams({ startDate:startIso, endDate:endIso });
   const url = `${WOM_BASE}/groups/${WOM_GROUP_ID}/bulk-gained?${qs}`;
   const headers = { "Accept":"application/json" };
@@ -58,6 +59,13 @@ async function womBulk(startIso, endIso, env){
   }
   return Array.isArray(body) ? body : body.data;
 }
+async function womBulk(startIso,endIso,env){
+  let last;
+  for(let attempt=0;attempt<3;attempt++){
+    try{return await womBulkOnce(startIso,endIso,env);}catch(error){last=error;if(attempt<2) await new Promise(r=>setTimeout(r,250*(attempt+1)));}
+  }
+  throw last;
+}
 
 export async function onRequestGet({ request, env }) {
   try {
@@ -73,7 +81,7 @@ export async function onRequestGet({ request, env }) {
     const challengeId = url.searchParams.get("challengeId") || "";
     const { week, challenge } = challengeFor(state, weekId, challengeId);
     if (!week || !challenge) return json({ error:"Challenge not found." }, 404);
-    if (String(challenge.kind || "main") !== "side" || !/clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`)) {
+    if (String(challenge.trackerType || "") !== "clue-progress" && !(String(challenge.kind || "main") === "side" && /clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`))) {
       return json({ error:"Progress tracking is not available for this challenge." }, 400);
     }
 
@@ -110,7 +118,13 @@ export async function onRequestGet({ request, env }) {
     const players = roster.filter(p => rsnOf(p));
     if (!players.length) return json({ error:"No OSRS names were found for your team roster." }, 400);
 
-    const entries = await womBulk(new Date(startMs).toISOString(), new Date(endMs).toISOString(), env);
+    let entries;
+    try { entries = await womBulk(new Date(startMs).toISOString(), new Date(endMs).toISOString(), env); }
+    catch (error) {
+      console.error("Clue progress WOM refresh failed", error);
+      if (cached) return json({ ...cached, stale:true, warning:"Wise Old Man is temporarily unavailable. Showing the last successful team progress.", refreshAvailableAt:Date.now()+60000 });
+      throw error;
+    }
     const byName = new Map(entries.map(entry => [norm(entry?.player?.displayName || entry?.player?.username || entry?.username), entry]));
 
     const rows = players.map(player => {
@@ -136,7 +150,7 @@ export async function onRequestGet({ request, env }) {
       updatedAt:new Date().toISOString()
     };
     if (kv) {
-      try { await kv.put(cacheKey, JSON.stringify(payload), { expirationTtl:7200 }); }
+      try { await kv.put(cacheKey, JSON.stringify(payload), { expirationTtl:STALE_TTL_SECONDS }); }
       catch (error) { console.warn("Clue progress cache write failed", error); }
     }
     return json({ ...payload, refreshAvailableAt:Date.now() + REFRESH_MS });

@@ -9,6 +9,7 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const { week, challenge } = challengeFor(state,body.weekId,body.challengeId);
   if (!week || !challenge) return Response.json({error:"Challenge not found."},{status:404});
+  if (String(challenge.trackingMethod || "submissions") !== "submissions") return Response.json({error:"This challenge is tracked automatically and does not accept manual submissions."},{status:409});
   const proofUrl = String(body.proofUrl||"").trim().slice(0,1000);
   const score = String(body.score||"").trim().slice(0,120);
   const notes = String(body.notes||"").trim().slice(0,1500);

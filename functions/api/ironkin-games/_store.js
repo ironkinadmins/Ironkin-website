@@ -41,6 +41,7 @@ export function defaultGames() {
       { id:"team-3", name:"Team 3", captainDiscordId:"", members:[], points:0 },
       { id:"team-4", name:"Team 4", captainDiscordId:"", members:[], points:0 }
     ],
+    challengeLibrary: [],
     weeks: [],
     sessions: [],
     submissions: [],
@@ -54,7 +55,35 @@ export async function loadGames(env) {
   try {
     const state = { ...defaultGames(), ...JSON.parse(raw) };
     state.publishedResultWeeks = Array.isArray(state.publishedResultWeeks) ? state.publishedResultWeeks.map(String) : [];
+    state.challengeLibrary = Array.isArray(state.challengeLibrary) ? state.challengeLibrary : [];
     let changed = false;
+
+    // Backward-compatible Challenge Library migration. Historical weekly challenge IDs
+    // are deliberately preserved because sessions/submissions/results reference them.
+    const libraryById = new Map(state.challengeLibrary.map(c => [String(c.id || ""), c]));
+    for (const week of state.weeks || []) {
+      week.challenges = Array.isArray(week.challenges) ? week.challenges : [];
+      for (const challenge of week.challenges) {
+        if (!challenge.trackingMethod) {
+          challenge.trackingMethod = challenge.trackingMode === "boss-rush" || /clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`) && challenge.proofRequired === false ? "automatic" : "submissions";
+          changed = true;
+        }
+        if (!challenge.trackerType) {
+          challenge.trackerType = challenge.trackingMode === "boss-rush" ? "boss-rush" : (/clue/i.test(`${challenge.name || ""} ${challenge.objective || ""}`) && challenge.trackingMethod === "automatic" ? "clue-progress" : "none");
+          changed = true;
+        }
+        if (!challenge.libraryId) {
+          const libId = `library-${challenge.id}`;
+          challenge.libraryId = libId;
+          if (!libraryById.has(libId)) {
+            const { opensAt, closesAt, results, ...definition } = challenge;
+            const lib = { ...definition, id:libId, sourceChallengeId:challenge.id, createdFromLegacy:true };
+            state.challengeLibrary.push(lib); libraryById.set(libId, lib);
+          }
+          changed = true;
+        }
+      }
+    }
 
     // Migrate the original blanket VOD rule now that some main challenges use
     // server-verified WOM tracking instead of manual video proof.
