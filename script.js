@@ -244,46 +244,48 @@ function getEventMetricLabel(event, standings = null) {
 }
 
 function getDefaultRewards(event) {
+  if (isClanGoalEvent(event)) {
+    return {
+      placement: [
+        { label: "🥇 1st Place", reward: "100 Embers" },
+        { label: "🥈 2nd Place", reward: "75 Embers" },
+        { label: "🥉 3rd Place", reward: "50 Embers" }
+      ],
+      participation: [
+        { requirement: "All qualifying participants", reward: "30 Embers" }
+      ]
+    };
+  }
+
   if (event?.type === "bounties" || event?.id === "bounties") {
     return { placement: [], participation: [] };
   }
 
-  if (event?.type?.includes("clan-goal")) {
+  if (event?.type === "botw" || event?.type === "sotw") {
     return {
       placement: [
-        { label: "25%", reward: "Clan Mass" },
-        { label: "50%", reward: "Bond Giveaway" },
-        { label: "75%", reward: "Bonus Embers" },
-        { label: "100%", reward: "Bond Giveaway" }
-      ],
-      participation: []
-    };
-  }
-
-  if (event?.type === "botw") {
-    return {
-      placement: [
-        { label: "🥇 1st Place", reward: "75 Embers + BOTW Rank" },
-        { label: "🥈 2nd Place", reward: "50 Embers" },
-        { label: "🥉 3rd Place", reward: "35 Embers" }
+        { label: "🥇 1st Place", reward: "75 Embers" },
+        { label: "🥈 2nd Place", reward: "60 Embers" },
+        { label: "🥉 3rd Place", reward: "45 Embers" }
       ],
       participation: [
-        { requirement: "High Tier", reward: "Participation Embers vary by boss" },
-        { requirement: "Low Tier", reward: "Participation Embers vary by boss" }
+        { requirement: "1st Tier", reward: "30 Embers" },
+        { requirement: "2nd Tier", reward: "20 Embers" },
+        { requirement: "3rd Tier", reward: "10 Embers" }
       ]
     };
   }
 
   return {
     placement: [
-      { label: "🥇 1st Place", reward: "50 Embers + SOTW Rank" },
-      { label: "🥈 2nd Place", reward: "40 Embers" },
-      { label: "🥉 3rd Place", reward: "35 Embers" }
+      { label: "🥇 1st Place", reward: "75 Embers" },
+      { label: "🥈 2nd Place", reward: "60 Embers" },
+      { label: "🥉 3rd Place", reward: "45 Embers" }
     ],
     participation: [
-      { requirement: "1250K XP", reward: "30 Embers" },
-      { requirement: "750K XP", reward: "20 Embers" },
-      { requirement: "300K XP", reward: "10 Embers" }
+      { requirement: "1st Tier", reward: "30 Embers" },
+      { requirement: "2nd Tier", reward: "20 Embers" },
+      { requirement: "3rd Tier", reward: "10 Embers" }
     ]
   };
 }
@@ -399,6 +401,8 @@ function renderRewardsSection(event) {
         <p class="eyebrow">Event Rewards</p>
         <h2>Rewards</h2>
       </div>
+
+      ${(event?.type === "botw" || event?.type === "sotw") ? `<p class="event-rewards-note"><strong>Flat rewards:</strong> rewards are not cumulative. Members receive only the highest Ember reward they qualify for.</p>` : ""}
 
       <div class="event-rewards-grid">
         <div class="reward-panel">
@@ -2208,7 +2212,7 @@ async function loadSingleEventDashboard() {
 
           ${!eventHasNotStarted && (isSotw || isBotw) ? renderEventContributionChart(standings, isSotw ? "XP Gained" : "KC Gained") : ""}
           ${(isSotw || isBotw) ? `<section class="event-panel event-full-leaderboard"><div class="event-section-title"><span>♜</span><h2>Participants</h2></div>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, isSotw ? "XP Gained" : "KC Gained", `single-${String(event.id||'event').replace(/[^a-z0-9-]/gi,'-')}`)}</section>` : ""}
-          <div class="event-detail-grid">
+          <div class="event-detail-grid ${isSotw || isBotw ? "event-detail-grid--single" : ""}">
             ${isSotw || isBotw ? "" : `<section class="event-panel"><h2>Leaderboard</h2><div id="singleEventContributors">${topContributors.length ? topContributors.map((player,index)=>`<div class="event-contributor-row"><strong>#${index+1} ${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} gained</span></div>`).join("") : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC/XP yet.")}</div></section>`}
             ${isClanGoal && event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
           </div>

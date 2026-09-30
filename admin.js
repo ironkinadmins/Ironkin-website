@@ -750,12 +750,13 @@ function getDefaultRewards(event) {
   if (isClanGoalEvent(event)) {
     return {
       placement: [
-        { label: "25%", reward: "Clan Mass" },
-        { label: "50%", reward: "Bond Giveaway" },
-        { label: "75%", reward: "Bonus Embers" },
-        { label: "100%", reward: "Bond Giveaway" }
+        { label: "🥇 1st Place", reward: "100 Embers" },
+        { label: "🥈 2nd Place", reward: "75 Embers" },
+        { label: "🥉 3rd Place", reward: "50 Embers" }
       ],
-      participation: []
+      participation: [
+        { requirement: "All qualifying participants", reward: "30 Embers" }
+      ]
     };
   }
 
@@ -763,30 +764,31 @@ function getDefaultRewards(event) {
     return { placement: [], participation: [] };
   }
 
-  if (event?.type === "botw") {
+  if (event?.type === "botw" || event?.type === "sotw") {
     return {
       placement: [
-        { label: "🥇 1st Place", reward: "75 Embers + BOTW Rank" },
-        { label: "🥈 2nd Place", reward: "50 Embers" },
-        { label: "🥉 3rd Place", reward: "35 Embers" }
+        { label: "🥇 1st Place", reward: "75 Embers" },
+        { label: "🥈 2nd Place", reward: "60 Embers" },
+        { label: "🥉 3rd Place", reward: "45 Embers" }
       ],
       participation: [
-        { requirement: "High Tier", reward: "Participation Embers vary by boss" },
-        { requirement: "Low Tier", reward: "Participation Embers vary by boss" }
+        { requirement: "1st Tier", reward: "30 Embers" },
+        { requirement: "2nd Tier", reward: "20 Embers" },
+        { requirement: "3rd Tier", reward: "10 Embers" }
       ]
     };
   }
 
   return {
     placement: [
-      { label: "🥇 1st Place", reward: "50 Embers + SOTW Rank" },
-      { label: "🥈 2nd Place", reward: "40 Embers" },
-      { label: "🥉 3rd Place", reward: "35 Embers" }
+      { label: "🥇 1st Place", reward: "75 Embers" },
+      { label: "🥈 2nd Place", reward: "60 Embers" },
+      { label: "🥉 3rd Place", reward: "45 Embers" }
     ],
     participation: [
-      { requirement: "1250K XP", reward: "30 Embers" },
-      { requirement: "750K XP", reward: "20 Embers" },
-      { requirement: "300K XP", reward: "10 Embers" }
+      { requirement: "1st Tier", reward: "30 Embers" },
+      { requirement: "2nd Tier", reward: "20 Embers" },
+      { requirement: "3rd Tier", reward: "10 Embers" }
     ]
   };
 }
