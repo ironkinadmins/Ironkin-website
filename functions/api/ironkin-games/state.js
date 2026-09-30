@@ -94,7 +94,7 @@ export async function onRequestGet({ request, env }) {
   // Access model:
   // - While Games are hidden, the public Games pages stay sealed; the separate Draft page remains public.
   // - Once Games are enabled, non-participants get Overview only. Signed-up players and staff get the full event.
-  const fullGamesAccess = Boolean(staff || (state.enabled && signedUp));
+  const fullGamesAccess = Boolean(staff || (state.enabled && (signedUp || team)));
   const overviewAccess = Boolean(staff || state.enabled);
 
   return Response.json({
