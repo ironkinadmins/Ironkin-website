@@ -507,6 +507,68 @@ async function fetchEventStandings(event) {
 }
 
 
+
+function formatCompactEventNumber(value) {
+  const n = Number(value || 0);
+  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(n >= 1e10 ? 1 : 2).replace(/\.0+$/, "")}b`;
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.0+$/, "")}m`;
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, "")}k`;
+  return formatNumber(n);
+}
+
+function formatEventUpdatedAt(value) {
+  if (!value) return "—";
+  const ms = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(ms)) return "—";
+  const mins = Math.max(0, Math.floor(ms / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function renderEventContributionChart(standings, metricLabel = "Gained") {
+  const points = Array.isArray(standings?.timeline) ? standings.timeline.filter(p => Number.isFinite(Number(p?.totalGained))) : [];
+  if (points.length < 2) {
+    return `<section class="event-contribution-card"><div class="event-section-title"><span>◈</span><h3>Contributions Over Time</h3></div><div class="event-chart-empty">Contribution history is being collected. The chart will populate as the event updates.</div></section>`;
+  }
+  const width=1000, height=230, px=18, py=18;
+  const values=points.map(p=>Number(p.totalGained||0));
+  const max=Math.max(...values,1), min=Math.min(...values,0), range=Math.max(max-min,1);
+  const coords=points.map((p,i)=>{const x=px+(i/(points.length-1))*(width-px*2); const y=height-py-((Number(p.totalGained||0)-min)/range)*(height-py*2); return [x,y];});
+  const line=coords.map((c,i)=>`${i?'L':'M'} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(' ');
+  const area=`${line} L ${coords[coords.length-1][0].toFixed(1)} ${height-py} L ${coords[0][0].toFixed(1)} ${height-py} Z`;
+  const firstDate=new Date(points[0].at), lastDate=new Date(points[points.length-1].at);
+  const dateFmt=d=>Number.isFinite(d.getTime())?d.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit'}):'';
+  return `<section class="event-contribution-card">
+    <div class="event-section-title"><span>◈</span><h3>Contributions Over Time</h3></div>
+    <div class="event-chart-wrap"><svg class="event-contribution-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="${escapeHtml(metricLabel)} contributions over time">
+      <path class="event-chart-area" d="${area}"></path><path class="event-chart-line" d="${line}"></path>
+      <circle class="event-chart-dot" cx="${coords.at(-1)[0]}" cy="${coords.at(-1)[1]}" r="5"></circle>
+    </svg><strong class="event-chart-total">${formatCompactEventNumber(values.at(-1))}</strong>
+    <div class="event-chart-axis"><span>${dateFmt(firstDate)}</span><span>${dateFmt(lastDate)}</span></div></div>
+  </section>`;
+}
+
+function renderExpandedEventLeaderboard(standings, metricLabel = "Gained", idPrefix = "event") {
+  const rows=(standings?.standings || []).filter(player=>Number(player.gained||0)>0);
+  if (!rows.length) return `<div class="event-chart-empty">No gains recorded yet.</div>`;
+  const tableRows=rows.map((player,index)=>`<tr class="event-leaderboard-row ${index>=10?'event-leaderboard-extra':''}">
+    <td class="event-rank">${index+1}</td><td><strong>${escapeHtml(player.name)}</strong></td>
+    <td class="event-gained">+${formatCompactEventNumber(player.gained)}</td><td>${formatCompactEventNumber(player.start)}</td><td>${formatCompactEventNumber(player.end)}</td><td>${formatEventUpdatedAt(player.updatedAt)}</td>
+  </tr>`).join('');
+  const button=rows.length>10?`<button type="button" class="btn event-show-all" data-event-leaderboard-toggle="${idPrefix}">View all ${rows.length} participants</button>`:'';
+  return `<div class="event-leaderboard-shell" id="${idPrefix}-leaderboard"><div class="event-leaderboard-scroll"><table class="event-leaderboard-table"><thead><tr><th>Rank</th><th>Player</th><th>${escapeHtml(metricLabel)}</th><th>Start</th><th>End</th><th>Updated</th></tr></thead><tbody>${tableRows}</tbody></table></div>${button}</div>`;
+}
+
+function setupEventLeaderboardToggles(root=document) {
+  root.querySelectorAll('[data-event-leaderboard-toggle]').forEach(button=>{
+    if(button.dataset.ready==='true') return; button.dataset.ready='true';
+    button.addEventListener('click',()=>{const shell=document.getElementById(`${button.dataset.eventLeaderboardToggle}-leaderboard`); if(!shell)return; const open=shell.classList.toggle('show-all'); button.textContent=open?'Show top 10':`View all ${shell.querySelectorAll('tbody tr').length} participants`;});
+  });
+}
+
 function escapeNavSearchHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -1633,21 +1695,12 @@ function renderBotwTierDashboardColumn(event, standings) {
         </div>
       </div>
 
-      <div class="event-detail-grid botw-tier-details">
-        <section class="event-panel inner-panel">
-          <h3>Leaderboard</h3>
-          ${topContributors.length
-            ? topContributors.map((player, index) => `
-                <div class="event-contributor-row">
-                  <strong>#${index + 1} ${escapeHtml(player.name)}</strong>
-                  <span>${formatNumber(player.gained)} gained</span>
-                </div>
-              `).join("")
-            : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC yet.")
-          }
-        </section>
-        ${renderCompetitionStats(event, standings)}
-      </div>
+      ${eventHasNotStarted ? "" : renderEventContributionChart(standings, "KC Gained")}
+      <section class="event-panel event-full-leaderboard">
+        <div class="event-section-title"><span>♜</span><h3>Participants</h3></div>
+        ${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, "KC Gained", `botw-${String(event.id||tier).replace(/[^a-z0-9-]/gi,'-')}`)}
+      </section>
+      <div class="event-detail-grid botw-tier-details">${renderCompetitionStats(event, standings)}</div>
 
       ${renderRewardsSection(event)}
 
@@ -1688,6 +1741,7 @@ async function renderBotwDashboard(dashboard, events) {
       </div>
     </section>
   `;
+  setupEventLeaderboardToggles(dashboard);
 
 }
 
@@ -2152,35 +2206,11 @@ async function loadSingleEventDashboard() {
               : ""
           }
 
+          ${!eventHasNotStarted && (isSotw || isBotw) ? renderEventContributionChart(standings, isSotw ? "XP Gained" : "KC Gained") : ""}
+          ${(isSotw || isBotw) ? `<section class="event-panel event-full-leaderboard"><div class="event-section-title"><span>♜</span><h2>Participants</h2></div>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, isSotw ? "XP Gained" : "KC Gained", `single-${String(event.id||'event').replace(/[^a-z0-9-]/gi,'-')}`)}</section>` : ""}
           <div class="event-detail-grid">
-
-            <section class="event-panel">
-
-              <h2>Leaderboard</h2>
-
-              <div id="singleEventContributors">
-
-                ${
-                  topContributors.length
-                    ? topContributors.map((player, index) => `
-                        <div class="event-contributor-row">
-                          <strong>#${index + 1} ${player.name}</strong>
-                          <span>${formatNumber(player.gained)} gained</span>
-                        </div>
-                      `).join("")
-                    : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC/XP yet.")
-                }
-
-              </div>
-
-            </section>
-
-            ${
-              isClanGoal && event.dropsEnabled
-                ? renderDropsPanel()
-                : renderCompetitionStats(event, standings)
-            }
-
+            ${isSotw || isBotw ? "" : `<section class="event-panel"><h2>Leaderboard</h2><div id="singleEventContributors">${topContributors.length ? topContributors.map((player,index)=>`<div class="event-contributor-row"><strong>#${index+1} ${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} gained</span></div>`).join("") : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC/XP yet.")}</div></section>`}
+            ${isClanGoal && event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
           </div>
 
           ${renderRewardsSection(event)}
@@ -5747,3 +5777,16 @@ else initPremiumUi();
 })();
 
 document.addEventListener("DOMContentLoaded", renderHomePersonalization);
+
+
+if (!window.__ironkinEventLeaderboardToggleReady) {
+  window.__ironkinEventLeaderboardToggleReady = true;
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-event-leaderboard-toggle]');
+    if (!button) return;
+    const shell = document.getElementById(`${button.dataset.eventLeaderboardToggle}-leaderboard`);
+    if (!shell) return;
+    const open = shell.classList.toggle('show-all');
+    button.textContent = open ? 'Show top 10' : `View all ${shell.querySelectorAll('tbody tr').length} participants`;
+  });
+}
