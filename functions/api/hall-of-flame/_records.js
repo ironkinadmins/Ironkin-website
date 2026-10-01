@@ -180,6 +180,48 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
 }
 
 
+export async function updateHallOfFlameReviewNotification(env, submission, outcome = {}) {
+  const token = String(env.DISCORD_BOT_TOKEN || "").trim();
+  const channelId = String(submission?.review_discord_channel_id || "").trim();
+  const messageId = String(submission?.review_discord_message_id || "").trim();
+  if (!token || !channelId || !messageId) return { updated:false, reason:"Review message was not recorded" };
+
+  const approved = outcome.status === "approved";
+  const removed = outcome.status === "removed";
+  const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+  const hallUrl = `${siteUrl}/hall-of-flame`;
+  const reviewer = String(outcome.reviewedBy || submission.reviewed_by_name || "Ironkin staff").trim();
+  const placement = Number(outcome.finalPlacement || submission.final_placement || 0);
+  const title = approved ? "✅ PB Approved" : removed ? "🗑️ PB Removed" : "❌ PB Rejected";
+  const color = approved ? 0x2ecc71 : removed ? 0x95a5a6 : 0xed4245;
+  const resultText = approved
+    ? (placement > 0 && placement <= 3 ? `🏆 **Ranked #${placement}** — this time is now live on the Hall of Flame.` : "Approved by staff.")
+    : removed ? "This previously approved time was removed from the active leaderboard by staff."
+    : "This submission was rejected by staff and was not added to the leaderboard.";
+  const embed = {
+    title,
+    url: hallUrl,
+    color,
+    description: `${resultText}\n\n[Open Hall of Flame](${hallUrl})`,
+    fields: [
+      { name:"Boss", value:String(submission.boss || "Unknown"), inline:true },
+      { name:"Player", value:String(submission.display_name || "Unknown"), inline:true },
+      { name:"Time", value:formatTime(submission.time_ms), inline:true }
+    ],
+    footer:{ text:`${approved ? "Approved" : removed ? "Removed" : "Rejected"} by ${reviewer}` },
+    timestamp:new Date().toISOString()
+  };
+  if (submission.proof_url) embed.image = { url:submission.proof_url };
+
+  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+    method:"PATCH",
+    headers:{ Authorization:`Bot ${token}`, "Content-Type":"application/json" },
+    body:JSON.stringify({ content:"", allowed_mentions:{ parse:[] }, embeds:[embed] })
+  });
+  if (!response.ok) return { updated:false, error:`Discord review update failed: ${await response.text()}` };
+  return { updated:true, messageId };
+}
+
 export async function notifyHallOfFlameReview(env, submission) {
   const settings = await getHallOfFlameDiscordSettings(env);
   if (!env.DISCORD_BOT_TOKEN || !settings.reviewChannelId) return { sent:false, reason:"Review channel not configured" };
@@ -210,5 +252,5 @@ export async function notifyHallOfFlameReview(env, submission) {
   });
   if (!response.ok) throw new Error(`Discord review notification failed: ${await response.text()}`);
   const sent = await response.json();
-  return { sent:true, messageId:sent.id };
+  return { sent:true, messageId:sent.id, channelId:settings.reviewChannelId };
 }

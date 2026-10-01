@@ -1,6 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
-import { approvedForBoss, bossMessage, getSubmission, mergeBoard, parseDiscordBoard, projectedPlacement, syncDiscordBoard } from "./_records.js";
+import { approvedForBoss, bossMessage, getSubmission, mergeBoard, parseDiscordBoard, projectedPlacement, syncDiscordBoard, updateHallOfFlameReviewNotification } from "./_records.js";
 
 const noStore = { "Cache-Control":"no-store" };
 export async function onRequestPost({ request, env }) {
@@ -22,7 +22,8 @@ export async function onRequestPost({ request, env }) {
   const placement = projectedPlacement(currentBoard, Number(submission.time_ms));
   const now = new Date().toISOString();
   const status = action === "approve" ? "approved" : "rejected";
-  await supabaseRest(env, `hall_of_flame_submissions?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body:JSON.stringify({ status, final_placement:placement, reviewed_by:String(session.id), reviewed_by_name:String(session.nick || session.global_name || session.username || "Staff"), reviewed_at:now, updated_at:now }) });
+  const reviewerName = String(session.nick || session.global_name || session.username || "Staff");
+  await supabaseRest(env, `hall_of_flame_submissions?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body:JSON.stringify({ status, final_placement:placement, reviewed_by:String(session.id), reviewed_by_name:reviewerName, reviewed_at:now, updated_at:now }) });
 
   let discord = { synced:false };
   const configResponse = await supabaseRest(env, `hall_of_flame_bosses?select=discord_sync,image_url&name=eq.${encodeURIComponent(submission.boss)}&limit=1`);
@@ -34,7 +35,9 @@ export async function onRequestPost({ request, env }) {
     const remainingApproved = alreadyApproved.filter(row => String(row.id) !== id);
     const board = mergeBoard(filteredLegacy, remainingApproved);
     if (bossConfig?.discord_sync !== false) discord = await syncDiscordBoard(env, submission.boss, board, "", bossConfig?.image_url || "");
-    return Response.json({ ok:true, status:"removed", discord }, { headers:noStore });
+    let reviewMessage={updated:false};
+    try { reviewMessage=await updateHallOfFlameReviewNotification(env, submission, { status:"removed", reviewedBy:reviewerName, finalPlacement:placement }); } catch (error) { reviewMessage={updated:false,error:String(error?.message||error)}; }
+    return Response.json({ ok:true, status:"removed", discord, reviewMessage }, { headers:noStore });
   }
   if (status === "approved") {
     const approved = [...alreadyApproved, { ...submission, status:"approved" }];
@@ -43,5 +46,7 @@ export async function onRequestPost({ request, env }) {
       discord = await syncDiscordBoard(env, submission.boss, board, submission.proof_url, bossConfig?.image_url || "");
     }
   }
-  return Response.json({ ok:true, status, finalPlacement:placement, discord }, { headers:noStore });
+  let reviewMessage={updated:false};
+  try { reviewMessage=await updateHallOfFlameReviewNotification(env, submission, { status, reviewedBy:reviewerName, finalPlacement:placement }); } catch (error) { reviewMessage={updated:false,error:String(error?.message||error)}; }
+  return Response.json({ ok:true, status, finalPlacement:placement, discord, reviewMessage }, { headers:noStore });
 }
