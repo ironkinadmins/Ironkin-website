@@ -11949,3 +11949,36 @@ body.archive-page .archive-empty-filter{column-span:all;width:100%;margin-bottom
 body.archive-page .archive-toolbar{flex-wrap:wrap}
 body.archive-page .archive-search{flex:1 1 240px;max-width:360px}
 @media(max-width:800px){body.archive-page .archive-grid{columns:1}body.archive-page .archive-search{max-width:none}}
+
+/* Event dashboard refinement — universal SOTW / BOTW competition view */
+body:has(#singleEventDashboard) .page{max-width:1240px}
+#singleEventDashboard .event-detail-card{border-radius:16px;background:rgba(14,11,9,.96);box-shadow:0 18px 55px rgba(0,0,0,.28)}
+#singleEventDashboard .event-detail-hero{padding:24px 26px;background:linear-gradient(110deg,rgba(42,24,14,.96),rgba(17,13,11,.98) 68%);border-bottom:1px solid rgba(255,255,255,.07)}
+#singleEventDashboard .event-detail-hero h1{font-size:clamp(1.9rem,4vw,2.65rem);margin:5px 0 8px}
+#singleEventDashboard .event-detail-hero p:not(.eyebrow){color:var(--muted);font-size:.92rem}
+#singleEventDashboard .event-percent-box{min-width:128px;border-radius:12px;padding:14px;background:rgba(0,0,0,.22)}
+#singleEventDashboard .event-percent-box strong{font-size:1.65rem}
+#singleEventDashboard .event-detail-body{padding:22px 26px 26px}
+#singleEventDashboard .event-kpi-grid{gap:10px;margin-bottom:18px}
+#singleEventDashboard .event-kpi{border-radius:12px;padding:15px 16px;background:rgba(255,255,255,.025)}
+#singleEventDashboard .event-kpi span{margin-bottom:5px;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+#singleEventDashboard .event-kpi strong{font-size:1.45rem}
+#singleEventDashboard .event-panel,#singleEventDashboard .event-contribution-card{border-radius:14px;background:rgba(255,255,255,.022);padding:18px;margin-bottom:14px;min-height:0}
+.event-podium-section{margin:4px 0 14px;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.022)}
+.event-section-heading-compact{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.event-section-heading-compact h2{margin:2px 0 0;font-size:1.15rem}.event-section-heading-compact>span{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.07em}
+.event-podium-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.event-podium-card{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;min-width:0;padding:13px 14px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:rgba(0,0,0,.18)}
+.event-podium-card strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-podium-card b{color:#f1ad5c;font-size:.92rem}.event-podium-card small{grid-column:3;color:var(--muted);font-size:.64rem}.event-podium-place{display:grid;place-items:center;width:31px;height:31px;border-radius:9px;background:rgba(255,122,26,.11);color:#f1ad5c;font-size:.7rem;font-weight:900;text-transform:uppercase}.event-podium-1{border-color:rgba(241,173,92,.25);background:rgba(241,173,92,.055)}
+#singleEventDashboard .event-chart-wrap{height:215px}#singleEventDashboard .event-contribution-chart{height:175px}
+#singleEventDashboard .event-full-leaderboard{padding:0;overflow:hidden}#singleEventDashboard .event-full-leaderboard>.event-section-title{padding:17px 18px 10px;margin:0}
+#singleEventDashboard .event-leaderboard-table{min-width:650px}#singleEventDashboard .event-leaderboard-table th{padding:9px 12px;font-size:.68rem}#singleEventDashboard .event-leaderboard-table td{padding:11px 12px;font-size:.86rem}
+#singleEventDashboard .event-show-all{margin:13px auto 16px}
+#singleEventDashboard .event-detail-grid{gap:14px;margin-bottom:16px}
+@media(max-width:700px){#singleEventDashboard .event-detail-hero,#singleEventDashboard .event-detail-body{padding:18px}.event-podium-grid{grid-template-columns:1fr}.event-podium-card{grid-template-columns:auto 1fr auto}.event-section-heading-compact{align-items:flex-start}.event-section-heading-compact>span{display:none}#singleEventDashboard .event-kpi-grid{grid-template-columns:1fr 1fr}#singleEventDashboard .event-kpi:last-child{grid-column:1/-1}}
+
+/* Event dashboard: personalized live position */
+.event-personal-position{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:22px;margin:18px 0;padding:18px 20px;border:1px solid rgba(231,126,35,.28);border-radius:14px;background:linear-gradient(100deg,rgba(231,126,35,.09),rgba(20,15,12,.72) 48%,rgba(20,15,12,.88));box-shadow:inset 3px 0 0 rgba(231,126,35,.7)}
+.event-personal-position .eyebrow{margin:0 0 3px}.event-personal-identity h2,.event-personal-position--empty h2{margin:0;font-size:1.22rem}.event-personal-identity>span,.event-personal-position--empty p{color:var(--muted);font-size:.86rem}.event-personal-stats{display:flex;align-items:stretch;gap:8px}.event-personal-stats>span{display:flex;min-width:112px;flex-direction:column;justify-content:center;padding:9px 12px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(0,0,0,.18)}.event-personal-stats small{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em}.event-personal-stats strong{margin-top:2px;font-size:1rem}.event-personal-chase strong{color:var(--accent,#e77e23)}.event-personal-chase.is-leading strong{color:#e9c66c}.event-personal-profile-link{white-space:nowrap;color:var(--accent,#e77e23);font-size:.82rem;font-weight:700;text-decoration:none}.event-personal-profile-link:hover{text-decoration:underline}.event-personal-position--empty{grid-template-columns:1fr auto}.event-personal-position--empty p{margin:4px 0 0}
+.event-leaderboard-row.is-you td{background:rgba(231,126,35,.09);border-top-color:rgba(231,126,35,.2);border-bottom-color:rgba(231,126,35,.2)}.event-leaderboard-row.is-you td:first-child{box-shadow:inset 3px 0 0 rgba(231,126,35,.75)}.event-you-badge{display:inline-flex;margin-left:8px;padding:2px 6px;border:1px solid rgba(231,126,35,.35);border-radius:999px;background:rgba(231,126,35,.12);color:var(--accent,#e77e23);font-size:.61rem;font-weight:800;letter-spacing:.08em;vertical-align:middle}
+@media(max-width:760px){.event-personal-position{grid-template-columns:1fr;gap:12px;padding:15px}.event-personal-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.event-personal-stats>span{min-width:0;padding:8px}.event-personal-profile-link{justify-self:start}.event-personal-position--empty{grid-template-columns:1fr}.event-you-badge{display:block;width:max-content;margin:3px 0 0}}

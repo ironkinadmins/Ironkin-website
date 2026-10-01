@@ -555,15 +555,61 @@ function renderEventContributionChart(standings, metricLabel = "Gained") {
   </section>`;
 }
 
-function renderExpandedEventLeaderboard(standings, metricLabel = "Gained", idPrefix = "event") {
+function getEventProfileNameCandidates(profile) {
+  return [profile?.rsn, profile?.displayName, profile?.username, ...(Array.isArray(profile?.previousRsns) ? profile.previousRsns : [])]
+    .map(normalizePlayerNameForMatch)
+    .filter(Boolean);
+}
+
+function getEventPersonalPosition(standings, profile) {
+  const rows = (standings?.standings || [])
+    .filter(player => Number(player?.gained || 0) > 0)
+    .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
+  const candidates = getEventProfileNameCandidates(profile);
+  if (!candidates.length) return { rows, index: -1, player: null, rank: null, next: null, toNext: null };
+  const index = rows.findIndex(player => candidates.includes(normalizePlayerNameForMatch(player?.name)));
+  const player = index >= 0 ? rows[index] : null;
+  const next = index > 0 ? rows[index - 1] : null;
+  return {
+    rows, index, player, rank: index >= 0 ? index + 1 : null, next,
+    toNext: player && next ? Math.max(Number(next.gained || 0) - Number(player.gained || 0) + 1, 0) : null
+  };
+}
+
+function renderEventPersonalPosition(standings, profile, metricLabel = "Gained") {
+  if (!profile) return "";
+  const pos = getEventPersonalPosition(standings, profile);
+  const unit = /xp/i.test(metricLabel) ? "XP" : /kc/i.test(metricLabel) ? "KC" : "gained";
+  const name = profile.rsn || profile.displayName || profile.username || "Your position";
+  if (!pos.player) {
+    return `<section class="event-personal-position event-personal-position--empty"><div><p class="eyebrow">Your Position</p><h2>${escapeHtml(name)}</h2><p>No tracked gain yet in this competition.</p></div><a href="profile.html" class="event-personal-profile-link">View Profile →</a></section>`;
+  }
+  const chase = pos.rank === 1
+    ? `<span class="event-personal-chase is-leading"><small>Position</small><strong>Leading</strong></span>`
+    : `<span class="event-personal-chase"><small>To #${pos.rank - 1}</small><strong>${formatNumber(pos.toNext)} ${unit}</strong></span>`;
+  return `<section class="event-personal-position"><div class="event-personal-identity"><p class="eyebrow">Your Position</p><h2>${escapeHtml(pos.player.name)}</h2><span>Live competition standing</span></div><div class="event-personal-stats"><span><small>Rank</small><strong>#${pos.rank}</strong></span><span><small>${escapeHtml(metricLabel)}</small><strong>+${formatNumber(pos.player.gained)}</strong></span>${chase}</div><a href="profile.html" class="event-personal-profile-link">View Profile →</a></section>`;
+}
+
+function renderExpandedEventLeaderboard(standings, metricLabel = "Gained", idPrefix = "event", profile = null) {
   const rows=(standings?.standings || []).filter(player=>Number(player.gained||0)>0);
   if (!rows.length) return `<div class="event-chart-empty">No gains recorded yet.</div>`;
-  const tableRows=rows.map((player,index)=>`<tr class="event-leaderboard-row ${index>=10?'event-leaderboard-extra':''}">
-    <td class="event-rank">${index+1}</td><td><strong>${escapeHtml(player.name)}</strong></td>
+  const candidates = getEventProfileNameCandidates(profile);
+  const tableRows=rows.map((player,index)=>{ const isYou = candidates.includes(normalizePlayerNameForMatch(player.name)); return `<tr class="event-leaderboard-row ${index>=10?'event-leaderboard-extra':''} ${isYou?'is-you':''}">
+    <td class="event-rank">${index+1}</td><td><strong>${escapeHtml(player.name)}</strong>${isYou?'<span class="event-you-badge">YOU</span>':''}</td>
     <td class="event-gained">+${formatCompactEventNumber(player.gained)}</td><td>${formatCompactEventNumber(player.start)}</td><td>${formatCompactEventNumber(player.end)}</td><td>${formatEventUpdatedAt(player.updatedAt)}</td>
-  </tr>`).join('');
+  </tr>`; }).join('');
   const button=rows.length>10?`<button type="button" class="btn event-show-all" data-event-leaderboard-toggle="${idPrefix}">View all ${rows.length} participants</button>`:'';
   return `<div class="event-leaderboard-shell" id="${idPrefix}-leaderboard"><div class="event-leaderboard-scroll"><table class="event-leaderboard-table"><thead><tr><th>Rank</th><th>Player</th><th>${escapeHtml(metricLabel)}</th><th>Start</th><th>End</th><th>Updated</th></tr></thead><tbody>${tableRows}</tbody></table></div>${button}</div>`;
+}
+
+function renderEventPodium(standings, metricLabel = "Gained") {
+  const leaders = (standings?.standings || []).filter(player => Number(player.gained || 0) > 0).slice(0, 3);
+  if (!leaders.length) return "";
+  const medals = ["1st", "2nd", "3rd"];
+  return `<section class="event-podium-section" aria-label="Current leaders">
+    <div class="event-section-heading-compact"><div><p class="eyebrow">Current Standings</p><h2>Front Runners</h2></div><span>${escapeHtml(metricLabel)}</span></div>
+    <div class="event-podium-grid">${leaders.map((player,index)=>`<div class="event-podium-card event-podium-${index+1}"><span class="event-podium-place">${medals[index]}</span><strong>${escapeHtml(player.name)}</strong><b>+${formatCompactEventNumber(player.gained)}</b><small>${escapeHtml(metricLabel)}</small></div>`).join("")}</div>
+  </section>`;
 }
 
 function setupEventLeaderboardToggles(root=document) {
@@ -1652,7 +1698,7 @@ function getBotwEventsForDashboard(events) {
   return [elite, standard].filter(Boolean);
 }
 
-function renderBotwTierDashboardColumn(event, standings) {
+function renderBotwTierDashboardColumn(event, standings, profile = null) {
   const tier = getBotwTierLabel(event) || "BOTW";
   const eventHasNotStarted = isBeforeEventStart(standings, event);
   const totalGained = eventHasNotStarted ? 0 : (standings?.totalGained || 0);
@@ -1699,10 +1745,11 @@ function renderBotwTierDashboardColumn(event, standings) {
         </div>
       </div>
 
+      ${!eventHasNotStarted ? renderEventPersonalPosition(standings, profile, "KC Gained") : ""}
       ${eventHasNotStarted ? "" : renderEventContributionChart(standings, "KC Gained")}
       <section class="event-panel event-full-leaderboard">
         <div class="event-section-title"><span>♜</span><h3>Participants</h3></div>
-        ${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, "KC Gained", `botw-${String(event.id||tier).replace(/[^a-z0-9-]/gi,'-')}`)}
+        ${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, "KC Gained", `botw-${String(event.id||tier).replace(/[^a-z0-9-]/gi,'-')}`, profile)}
       </section>
       <div class="event-detail-grid botw-tier-details">${renderCompetitionStats(event, standings)}</div>
 
@@ -1725,9 +1772,10 @@ async function renderBotwDashboard(dashboard, events) {
     return;
   }
 
-  const standingsList = await Promise.all(
-    botwEvents.map(event => fetchEventStandings(event).catch(() => null))
-  );
+  const [standingsList, profile] = await Promise.all([
+    Promise.all(botwEvents.map(event => fetchEventStandings(event).catch(() => null))),
+    fetchOwnClanGoalProfile()
+  ]);
 
   dashboard.innerHTML = `
     <section class="event-detail-card botw-dashboard-card">
@@ -1740,7 +1788,7 @@ async function renderBotwDashboard(dashboard, events) {
       </div>
       <div class="event-detail-body">
         <div class="botw-dashboard-grid">
-          ${botwEvents.map((event, index) => renderBotwTierDashboardColumn(event, standingsList[index])).join("")}
+          ${botwEvents.map((event, index) => renderBotwTierDashboardColumn(event, standingsList[index], profile)).join("")}
         </div>
       </div>
     </section>
@@ -2037,7 +2085,10 @@ async function loadSingleEventDashboard() {
       return;
     }
 
-    const standings = await fetchEventStandings(event).catch(() => null);
+    const [standings, eventProfile] = await Promise.all([
+      fetchEventStandings(event).catch(() => null),
+      fetchOwnClanGoalProfile()
+    ]);
     const eventHasNotStarted = isBeforeEventStart(standings, event);
 
     const totalGained = eventHasNotStarted ? 0 : (standings?.totalGained || 0);
@@ -2210,8 +2261,10 @@ async function loadSingleEventDashboard() {
               : ""
           }
 
+          ${!eventHasNotStarted && (isSotw || isBotw) ? renderEventPersonalPosition(standings, eventProfile, isSotw ? "XP Gained" : "KC Gained") : ""}
+          ${!eventHasNotStarted && (isSotw || isBotw) ? renderEventPodium(standings, isSotw ? "XP Gained" : "KC Gained") : ""}
           ${!eventHasNotStarted && (isSotw || isBotw) ? renderEventContributionChart(standings, isSotw ? "XP Gained" : "KC Gained") : ""}
-          ${(isSotw || isBotw) ? `<section class="event-panel event-full-leaderboard"><div class="event-section-title"><span>♜</span><h2>Participants</h2></div>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, isSotw ? "XP Gained" : "KC Gained", `single-${String(event.id||'event').replace(/[^a-z0-9-]/gi,'-')}`)}</section>` : ""}
+          ${(isSotw || isBotw) ? `<section class="event-panel event-full-leaderboard"><div class="event-section-title"><span>♜</span><h2>Full Standings</h2></div>${eventHasNotStarted ? "Leaderboard will appear when the event starts." : renderExpandedEventLeaderboard(standings, isSotw ? "XP Gained" : "KC Gained", `single-${String(event.id||'event').replace(/[^a-z0-9-]/gi,'-')}`, eventProfile)}</section>` : ""}
           <div class="event-detail-grid ${isSotw || isBotw ? "event-detail-grid--single" : ""}">
             ${isSotw || isBotw ? "" : `<section class="event-panel"><h2>Leaderboard</h2><div id="singleEventContributors">${topContributors.length ? topContributors.map((player,index)=>`<div class="event-contributor-row"><strong>#${index+1} ${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} gained</span></div>`).join("") : (eventHasNotStarted ? "Leaderboard will appear when the event starts." : "No gained KC/XP yet.")}</div></section>`}
             ${isClanGoal && event.dropsEnabled ? renderDropsPanel() : renderCompetitionStats(event, standings)}
@@ -2239,6 +2292,7 @@ async function loadSingleEventDashboard() {
       </section>
     `;
 
+    setupEventLeaderboardToggles(dashboard);
     loadDrops();
 
   } catch (error) {
