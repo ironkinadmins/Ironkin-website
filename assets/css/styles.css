@@ -12037,3 +12037,14 @@ body:has(#singleEventDashboard) .page{max-width:1240px}
 /* Hall of Flame — staff-managed record boards */
 .hof-manage-actions{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0}.hof-boss-admin-list{display:grid;gap:9px;margin-top:12px}.hof-boss-admin-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;padding:14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.018)}.hof-boss-admin-row strong{font-size:1rem}.hof-check{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;justify-content:flex-start;gap:9px!important;font-weight:600!important}.hof-check input{width:auto!important;margin:0}.hof-review-actions .danger{border-color:rgba(220,74,74,.42);color:#ef9292}.hof-review-actions .danger:hover{background:rgba(220,74,74,.1)}
 @media(max-width:640px){.hof-boss-admin-row{grid-template-columns:1fr}.hof-boss-admin-row .hof-review-actions{justify-content:flex-start}.hof-manage-actions .btn{flex:1 1 180px}}
+
+/* Hall of Flame: focused hero + utility navigation */
+.hof-title-primary{display:flex;align-items:center;justify-content:flex-start;margin-top:18px}
+.hof-utility-bar{display:flex;align-items:center;gap:6px;margin:14px 0 24px;padding:6px;border:1px solid var(--border);border-radius:12px;background:rgba(18,14,11,.68);width:max-content;max-width:100%}
+.hof-utility-link{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:800;font-size:.9rem;padding:9px 12px;border-radius:8px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.hof-utility-link:hover,.hof-utility-link:focus-visible{color:var(--text);background:rgba(255,255,255,.045)}
+.hof-utility-link.is-active{color:var(--text)}
+.hof-utility-link[hidden]{display:none!important}
+.hof-manage-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.hof-boss-admin-row .hof-review-actions{flex-wrap:wrap}
+@media(max-width:700px){.hof-title-primary{margin-top:14px}.hof-utility-bar{width:100%;overflow-x:auto;justify-content:flex-start}.hof-utility-link{flex:0 0 auto}.hof-title-primary .btn{width:100%}}

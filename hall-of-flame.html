@@ -6,7 +6,7 @@
   <title>Hall of Flame | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-admin-v3" />
+  <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-auth-sync-v5" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
 </head>
 <body>
@@ -17,13 +17,17 @@
       <p class="eyebrow">Ironkin Records</p>
       <h1>Hall of Flame</h1>
       <p>Verified Ironkin boss personal bests, proof screenshots, and record history.</p>
-      <div class="hof-title-actions">
-        <button id="hofSubmitOpen" class="btn primary" type="button">Submit PB</button>
-        <button id="hofMySubmissionsOpen" class="btn secondary" type="button" hidden>My Submissions</button>
-        <button id="hofReviewOpen" class="btn secondary" type="button" hidden>Review Queue <span id="hofPendingCount"></span></button>
-        <button id="hofManageOpen" class="btn secondary" type="button" hidden>Manage Records</button>
+      <div class="hof-title-primary">
+        <button id="hofSubmitOpen" class="btn primary" type="button">Submit a PB</button>
       </div>
     </section>
+
+    <nav id="hofUtilityBar" class="hof-utility-bar" aria-label="Hall of Flame tools">
+      <a class="hof-utility-link is-active" href="#hallOfFlameGrid">Record Boards</a>
+      <button id="hofMySubmissionsOpen" class="hof-utility-link" type="button" hidden>My Submissions</button>
+      <button id="hofReviewOpen" class="hof-utility-link" type="button" hidden>Review Queue <span id="hofPendingCount"></span></button>
+      <button id="hofManageOpen" class="hof-utility-link" type="button" hidden>Manage Records</button>
+    </nav>
 
     <section id="hofRecentRecords" class="hof-recent-records" hidden></section>
 
@@ -41,7 +45,7 @@
   </main>
 
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
-  <script src="/assets/js/script.js?v=20261001-hof-admin-v3"></script>
+  <script src="/assets/js/script.js?v=20261001-hof-auth-sync-v5"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

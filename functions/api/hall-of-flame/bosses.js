@@ -1,6 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
-import { discordMessages, normalizeBoss } from "./_records.js";
+import { approvedForBoss, bossMessage, discordMessages, mergeBoard, normalizeBoss, parseDiscordBoard, syncDiscordBoard } from "./_records.js";
 
 const noStore={"Cache-Control":"no-store"};
 const json=(body,status=200)=>Response.json(body,{status,headers:noStore});
@@ -24,6 +24,23 @@ export async function onRequestPost({request,env}){
   const session=await getSession(request,env);
   if(!isStaffSession(session)) return json({error:"Staff access required."},403);
   const body=await request.json().catch(()=>({}));
+  if(body.action==="sync" || body.action==="sync-all"){
+    const all=await listBosses(env,{all:true});
+    const targets=body.action==="sync-all"?all.filter(b=>b.active!==false&&b.discord_sync!==false):all.filter(b=>b.slug===slugify(body.slug)&&b.discord_sync!==false);
+    if(body.action==="sync"&&!targets.length) return json({error:"Boss not found or Discord sync is disabled."},404);
+    let synced=0, failed=0; const results=[];
+    for(const boss of targets){
+      try{
+        const legacyMessage=await bossMessage(env,boss.name);
+        const legacy=parseDiscordBoard(legacyMessage?.embeds?.[0]?.description||"");
+        const approved=await approvedForBoss(env,boss.name);
+        const board=mergeBoard(legacy,approved);
+        if(!board.length){results.push({slug:boss.slug,ok:false,skipped:true,reason:"No records"});continue;}
+        const result=await syncDiscordBoard(env,boss.name,board); synced++; results.push({slug:boss.slug,ok:true,...result});
+      }catch(error){failed++;results.push({slug:boss.slug,ok:false,error:error.message});}
+    }
+    return json({ok:failed===0,synced,failed,results});
+  }
   if(body.action==="import-discord"){
     const messages=await discordMessages(env);
     const ignored=new Set(["boss of the week","skill of the week","hall of flame quick links!"]);
