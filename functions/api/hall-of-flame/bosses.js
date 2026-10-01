@@ -18,6 +18,18 @@ async function listBosses(env,{all=false}={}){
     .sort((a,b)=>(Number(a.display_order)||0)-(Number(b.display_order)||0)||String(a.name||"").localeCompare(String(b.name||"")));
 }
 
+async function wikiBossImage(name){
+  const params=new URLSearchParams({action:"query",format:"json",formatversion:"2",generator:"search",gsrsearch:`intitle:${name}`,gsrnamespace:"0",gsrlimit:"6",prop:"pageimages",piprop:"original|thumbnail",pithumbsize:"600",origin:"*"});
+  const response=await fetch(`https://oldschool.runescape.wiki/api.php?${params}`,{headers:{"User-Agent":"Ironkin Clan Event (ironkinclan.com; Hall of Flame boss artwork)"}});
+  if(!response.ok) throw new Error(`OSRS Wiki image lookup failed (${response.status}).`);
+  const data=await response.json().catch(()=>({}));
+  const pages=Array.isArray(data?.query?.pages)?data.query.pages:[];
+  const norm=v=>String(v||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const wanted=norm(name);
+  const page=pages.find(p=>norm(p.title)===wanted)||pages.find(p=>norm(p.title).includes(wanted))||pages[0];
+  return {imageUrl:page?.original?.source||page?.thumbnail?.source||"",pageTitle:page?.title||""};
+}
+
 export async function onRequestGet({request,env}){
   const session=await getSession(request,env);
   const staff=isStaffSession(session);
@@ -35,6 +47,22 @@ export async function onRequestPost({request,env}){
   const session=await getSession(request,env);
   if(!isStaffSession(session)) return json({error:"Staff access required."},403);
   const body=await request.json().catch(()=>({}));
+  if(body.action==="wiki-image"){
+    const name=normalizeBoss(body.name);
+    if(!name) return json({error:"Boss name is required."},400);
+    try{const found=await wikiBossImage(name);if(!found.imageUrl)return json({error:`No OSRS Wiki image was found for ${name}. You can still paste an image URL manually.`},404);return json({ok:true,...found,source:"OSRS Wiki"});}
+    catch(error){return json({error:error.message||"OSRS Wiki image lookup failed."},502);}
+  }
+  if(body.action==="populate-wiki-images"){
+    const bosses=await listBosses(env,{all:true});
+    let updated=0,failed=0; const results=[];
+    for(const boss of bosses){
+      if(boss.image_url){results.push({slug:boss.slug,ok:true,skipped:true});continue;}
+      try{const found=await wikiBossImage(boss.name);if(!found.imageUrl)throw new Error("No image found");await supabaseRest(env,`hall_of_flame_bosses?slug=eq.${encodeURIComponent(boss.slug)}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({image_url:found.imageUrl,updated_at:new Date().toISOString()})});updated++;results.push({slug:boss.slug,ok:true,imageUrl:found.imageUrl});}
+      catch(error){failed++;results.push({slug:boss.slug,ok:false,error:error.message});}
+    }
+    return json({ok:failed===0,updated,failed,results});
+  }
   if(body.action==="sync" || body.action==="sync-all"){
     const all=await listBosses(env,{all:true});
     const targets=body.action==="sync-all"?all.filter(b=>b.active!==false&&b.discord_sync!==false):all.filter(b=>b.slug===slugify(body.slug)&&b.discord_sync!==false);
@@ -47,7 +75,7 @@ export async function onRequestPost({request,env}){
         const approved=await approvedForBoss(env,boss.name);
         const board=mergeBoard(legacy,approved);
         if(!board.length){results.push({slug:boss.slug,ok:false,skipped:true,reason:"No records"});continue;}
-        const result=await syncDiscordBoard(env,boss.name,board); synced++; results.push({slug:boss.slug,ok:true,...result});
+        const result=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||""); synced++; results.push({slug:boss.slug,ok:true,...result});
       }catch(error){failed++;results.push({slug:boss.slug,ok:false,error:error.message});}
     }
     return json({ok:failed===0,synced,failed,results});

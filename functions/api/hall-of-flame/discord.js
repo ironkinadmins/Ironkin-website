@@ -1,6 +1,7 @@
+import { getHallOfFlameDiscordSettings } from "./_records.js";
 export async function onRequestGet({ env }) {
   const token = env.DISCORD_BOT_TOKEN;
-  const channelId = env.HALL_OF_FLAME_CHANNEL_ID;
+  const { channelId } = await getHallOfFlameDiscordSettings(env);
 
   if (!token || !channelId) {
     return Response.json(

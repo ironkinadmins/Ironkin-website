@@ -1,7 +1,34 @@
 import { getSupabaseKey, supabaseRest } from "../_supabase.js";
+import { hybridKv } from "../../_hybridKv.js";
 
 export const PROOF_BUCKET = "hall-of-flame-proofs";
 const MEDALS = ["🥇", "🥈", "🥉"];
+const DISCORD_SETTINGS_KEY = "hall-of-flame:discord-settings";
+
+export async function getHallOfFlameDiscordSettings(env) {
+  let saved = {};
+  try {
+    const raw = await hybridKv(env, "drops")?.get(DISCORD_SETTINGS_KEY);
+    if (raw) saved = JSON.parse(raw) || {};
+  } catch {}
+  return {
+    channelId: String(saved.channelId || env.HALL_OF_FLAME_CHANNEL_ID || "").trim(),
+    channelName: String(saved.channelName || "").trim(),
+    source: saved.channelId ? "site" : (env.HALL_OF_FLAME_CHANNEL_ID ? "cloudflare" : "none")
+  };
+}
+
+export async function saveHallOfFlameDiscordSettings(env, settings) {
+  const value = {
+    channelId: String(settings?.channelId || "").trim(),
+    channelName: String(settings?.channelName || "").trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (!value.channelId) throw new Error("A Discord channel is required.");
+  await hybridKv(env, "drops").put(DISCORD_SETTINGS_KEY, JSON.stringify(value));
+  return value;
+}
+
 
 export function displayName(session) {
   return String(session?.nick || session?.global_name || session?.username || "Ironkin member").trim();
@@ -57,7 +84,7 @@ export function parseDiscordBoard(description) {
 
 export async function discordMessages(env) {
   const token = env.DISCORD_BOT_TOKEN;
-  const channelId = env.HALL_OF_FLAME_CHANNEL_ID;
+  const { channelId } = await getHallOfFlameDiscordSettings(env);
   if (!token || !channelId) throw new Error("Discord Hall of Flame integration is not configured.");
   const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, { headers: { Authorization: `Bot ${token}` } });
   const data = await response.json();
@@ -109,27 +136,30 @@ export function mergeBoard(legacy, approved) {
   return [...best.values()].sort((a,b) => a.timeMs-b.timeMs).slice(0,3);
 }
 
-export async function syncDiscordBoard(env, boss, board, proofUrl = "") {
+export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl = "") {
+  const { channelId } = await getHallOfFlameDiscordSettings(env);
+  if (!env.DISCORD_BOT_TOKEN || !channelId) throw new Error("Discord Hall of Flame integration is not configured.");
   const message = await bossMessage(env, boss);
   const existing = message?.embeds?.[0] || {};
   const description = board.map((row, i) => `${MEDALS[i]} • ${row.player} ${formatTime(row.timeMs)}${row.proofUrl ? ` - ${row.proofUrl}` : ""}`).join("\n");
   const embed = { ...existing, title: boss, description };
   if (proofUrl) embed.url = proofUrl;
+  if (imageUrl) embed.thumbnail = { url:imageUrl };
   const headers={ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" };
   if (!message) {
-    const createdResponse = await fetch(`https://discord.com/api/v10/channels/${env.HALL_OF_FLAME_CHANNEL_ID}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
+    const createdResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (!createdResponse.ok) throw new Error(`Discord Hall of Flame create failed: ${await createdResponse.text()}`);
     const created = await createdResponse.json();
     return { synced:true, messageId:created.id, mode:"created" };
   }
-  let response = await fetch(`https://discord.com/api/v10/channels/${env.HALL_OF_FLAME_CHANNEL_ID}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
+  let response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
   if (response.ok) return { synced:true, messageId:message.id, mode:"edited" };
   // Legacy Hall of Flame embeds may have been authored by a webhook or older bot.
   // Discord only allows a bot to edit its own messages, so create a new managed
   // embed if the legacy message cannot be edited. Future updates will find the
   // newest matching boss title and edit that managed message instead.
   if (response.status === 403 || response.status === 404) {
-    response = await fetch(`https://discord.com/api/v10/channels/${env.HALL_OF_FLAME_CHANNEL_ID}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
+    response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (response.ok) { const created=await response.json(); return { synced:true, messageId:created.id, mode:"created" }; }
   }
   throw new Error(`Discord Hall of Flame update failed: ${await response.text()}`);

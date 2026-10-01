@@ -12085,3 +12085,21 @@ body.ik-hall-page .hof-title-primary .btn::after{content:" →"}
   body.ik-hall-page .page-title>.hof-title-primary{margin-top:18px!important}
   body.ik-hall-page .hof-title-primary .btn{width:100%!important;justify-content:center!important}
 }
+
+
+/* Hall of Flame — boss artwork on managed record boards */
+.hof-record-card{position:relative;overflow:hidden;isolation:isolate}
+.hof-record-card-content{position:relative;z-index:2}
+.hof-boss-card-art{position:absolute;z-index:0;right:-2%;bottom:-10%;width:min(46%,280px);height:92%;object-fit:contain;object-position:right bottom;opacity:.105;filter:saturate(.78) contrast(1.06);pointer-events:none;user-select:none}
+.hof-record-card.has-boss-art::after{content:"";position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,rgba(16,13,11,.98) 0%,rgba(16,13,11,.9) 48%,rgba(16,13,11,.48) 100%);pointer-events:none}
+.hof-image-field{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.hof-image-field .btn{white-space:nowrap}
+.hof-image-preview{width:100%;min-height:74px;padding:8px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02)}
+.hof-image-preview[hidden]{display:none}
+.hof-image-preview img{display:block;max-width:120px;max-height:100px;object-fit:contain}
+@media(max-width:640px){.hof-boss-card-art{width:48%;height:78%;opacity:.08}.hof-image-field{grid-template-columns:1fr}.hof-image-field .btn{width:100%}}
+
+/* Hall of Flame — staff-managed Discord destination */
+.hof-discord-settings{margin:18px 0;padding:16px;border:1px solid rgba(255,138,31,.22);border-radius:14px;background:linear-gradient(135deg,rgba(255,138,31,.055),rgba(255,255,255,.018))}
+.hof-discord-settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:14px}.hof-discord-settings-head>div{display:grid;gap:4px}.hof-discord-settings-head strong{font-size:1.05rem}.hof-discord-settings-head small,.hof-discord-note{color:var(--muted);line-height:1.45}.hof-discord-status{white-space:nowrap;font-size:.78rem;font-weight:800;color:var(--muted)}.hof-discord-status.is-connected{color:#82c995}.hof-discord-controls{display:grid;grid-template-columns:minmax(240px,1fr) auto auto;align-items:end;gap:9px}.hof-discord-controls label{display:grid;gap:6px;font-size:.78rem;font-weight:800;color:var(--muted)}.hof-discord-controls select{width:100%;min-height:42px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:#100d0b;color:var(--text)}.hof-discord-note{margin:10px 0 0;font-size:.78rem}
+@media(max-width:720px){.hof-discord-settings-head{display:grid}.hof-discord-controls{grid-template-columns:1fr}.hof-discord-controls .btn{width:100%}}
