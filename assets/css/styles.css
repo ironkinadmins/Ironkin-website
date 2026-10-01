@@ -12048,3 +12048,40 @@ body:has(#singleEventDashboard) .page{max-width:1240px}
 .hof-manage-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
 .hof-boss-admin-row .hof-review-actions{flex-wrap:wrap}
 @media(max-width:700px){.hof-title-primary{margin-top:14px}.hof-utility-bar{width:100%;overflow-x:auto;justify-content:flex-start}.hof-utility-link{flex:0 0 auto}.hof-title-primary .btn{width:100%}}
+
+/* Hall of Flame hero CTA fitment */
+body.ik-hall-page .page-title{
+  display:grid!important;
+  grid-template-columns:minmax(220px,.72fr) minmax(300px,1.25fr) auto!important;
+  grid-template-rows:auto auto!important;
+  align-items:center!important;
+  column-gap:34px!important;
+  row-gap:6px!important;
+}
+body.ik-hall-page .page-title>.eyebrow{grid-column:1;grid-row:1;align-self:end;margin:0 0 2px!important}
+body.ik-hall-page .page-title>h1{grid-column:1;grid-row:2;margin:0!important}
+body.ik-hall-page .page-title>p:not(.eyebrow){grid-column:2;grid-row:1 / span 2;margin:0!important;max-width:520px}
+body.ik-hall-page .page-title>.hof-title-primary{grid-column:3;grid-row:1 / span 2;margin:0!important;justify-self:end}
+body.ik-hall-page .hof-title-primary .btn{
+  width:auto!important;
+  min-width:max-content!important;
+  min-height:44px!important;
+  padding:11px 18px!important;
+  border-radius:11px!important;
+  white-space:nowrap!important;
+  line-height:1!important;
+}
+body.ik-hall-page .hof-title-primary .btn::after{content:" →"}
+@media(max-width:900px){
+  body.ik-hall-page .page-title{grid-template-columns:1fr auto!important;grid-template-rows:auto auto auto!important;column-gap:20px!important}
+  body.ik-hall-page .page-title>.eyebrow{grid-column:1;grid-row:1}
+  body.ik-hall-page .page-title>h1{grid-column:1;grid-row:2}
+  body.ik-hall-page .page-title>p:not(.eyebrow){grid-column:1 / -1;grid-row:3;margin-top:8px!important}
+  body.ik-hall-page .page-title>.hof-title-primary{grid-column:2;grid-row:1 / span 2}
+}
+@media(max-width:600px){
+  body.ik-hall-page .page-title{display:block!important}
+  body.ik-hall-page .page-title>p:not(.eyebrow){margin-top:10px!important}
+  body.ik-hall-page .page-title>.hof-title-primary{margin-top:18px!important}
+  body.ik-hall-page .hof-title-primary .btn{width:100%!important;justify-content:center!important}
+}
