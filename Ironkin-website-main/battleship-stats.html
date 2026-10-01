@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battleship Bingo Stats | Ironkin Clan</title>
+  <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
+  <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
+  <link rel="stylesheet" href="/assets/css/styles.css?v=20260807-premium-v4" />
+  <style>
+    /* Scoped styles for the Battleship Bingo stats page only. */
+    main.page {
+      max-width: 920px;
+    }
+
+    /* Series colours are validated against this page's dark surface (#0d0b0a)
+       for the OKLCH lightness band, chroma floor, colourblind separation and
+       contrast. They keep the hues of the existing team pills, so a team reads
+       the same across the page. Do not hand-tweak without re-validating. */
+    #bsContent {
+      --bs-team1: #d47b18;
+      --bs-team2: #4b93f7;
+    }
+
+    .bs-summary {
+      padding: 1.4rem 1.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-total-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .bs-total-row strong {
+      font-size: 2.8rem;
+      line-height: 1;
+      color: #e8913f;
+      letter-spacing: -0.02em;
+    }
+
+    .bs-total-row span {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bs-gp-row {
+      margin-top: 0.4rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .bs-gp-row strong {
+      color: #e8913f;
+      font-size: 1.15rem;
+    }
+
+    .bs-meta {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin: 0.7rem 0 1rem;
+    }
+
+    .bs-toggle {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .bs-toggle button {
+      padding: 0.5rem 1.15rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .bs-toggle button.active {
+      background: #e8913f;
+      border-color: #e8913f;
+      color: #1f130b;
+      font-weight: bold;
+    }
+
+    .bs-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 0 0 0.75rem;
+    }
+
+    .bs-section-head h2 {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.82rem;
+      font-weight: bold;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #e8913f;
+      margin: 0;
+    }
+
+    .bs-section-hint {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .bs-legend-bar {
+      width: 64px;
+      height: 7px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #211812, #ec9245);
+    }
+
+    .bs-heat-featured {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: minmax(74px, auto);
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .bs-heat-featured .bs-cell:first-child {
+      grid-row: span 2;
+    }
+
+    .bs-heat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-cell {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.4rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      min-width: 0;
+    }
+
+    .bs-cell:hover {
+      outline: 2px solid rgba(255, 255, 255, 0.25);
+      outline-offset: -2px;
+    }
+
+    .bs-cell-name {
+      font-size: 0.82rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-cell-count {
+      font-size: 1.45rem;
+      font-weight: bold;
+      line-height: 1;
+      letter-spacing: -0.01em;
+    }
+
+    .bs-heat-featured .bs-cell:first-child .bs-cell-count {
+      font-size: 2.6rem;
+    }
+
+    .bs-cell.hot {
+      color: #1f130b;
+    }
+
+    .bs-cell.hot .bs-cell-name {
+      color: rgba(31, 19, 11, 0.85);
+    }
+
+    .bs-cell.cold {
+      color: var(--text);
+    }
+
+    .bs-cell.cold .bs-cell-name {
+      color: var(--muted);
+    }
+
+    .bs-feed {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1.5rem;
+    }
+
+    .bs-feed-item {
+      border-radius: 8px;
+    }
+
+    .bs-feed-item:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .bs-feed-item.expanded {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bs-feed-row {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .bs-feed-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bs-feed-chevron {
+      color: var(--muted);
+      font-size: 0.8rem;
+      min-width: 0.9rem;
+      text-align: center;
+    }
+
+    .bs-feed-detail {
+      padding: 0.1rem 0.9rem 0.6rem 2.6rem;
+    }
+
+    .bs-contrib-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.3rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.88rem;
+    }
+
+    .bs-contrib-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-contrib-team {
+      font-size: 0.7rem;
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .bs-contrib-team.team1 {
+      border-color: rgba(232, 145, 63, 0.55);
+      color: #e8913f;
+    }
+
+    .bs-contrib-team.team2 {
+      border-color: rgba(120, 180, 255, 0.5);
+      color: #9cc4ff;
+    }
+
+    .bs-contrib-kills {
+      min-width: 3rem;
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .bs-feed-rank {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: #e8913f;
+      font-size: 0.82rem;
+      min-width: 1.6rem;
+    }
+
+    .bs-feed-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-feed-gp {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      color: var(--muted);
+      font-size: 0.78rem;
+      min-width: 5.2rem;
+      text-align: right;
+    }
+
+    .bs-feed-pill {
+      min-width: 3.4rem;
+      text-align: center;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+
+    .bs-chart-wrap {
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-legend {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .bs-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .bs-legend-item i,
+    .bs-tip i {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .bs-legend-item i.team1,
+    .bs-tip i.team1 {
+      background: var(--bs-team1);
+    }
+
+    .bs-legend-item i.team2,
+    .bs-tip i.team2 {
+      background: var(--bs-team2);
+    }
+
+    .bs-legend-lead {
+      margin-left: auto;
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .bs-chart {
+      position: relative;
+    }
+
+    .bs-chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    /* Grid and axes stay recessive so the two lines carry the chart. */
+    .bs-grid {
+      stroke: rgba(255, 255, 255, 0.07);
+      stroke-width: 1;
+    }
+
+    .bs-grid-day {
+      stroke-dasharray: 2 5;
+    }
+
+    .bs-axis-label {
+      fill: var(--muted);
+      font-size: 11px;
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    }
+
+    .bs-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .bs-line.team1 { stroke: var(--bs-team1); }
+    .bs-line.team2 { stroke: var(--bs-team2); }
+    .bs-end-dot.team1 { fill: var(--bs-team1); }
+    .bs-end-dot.team2 { fill: var(--bs-team2); }
+
+    /* Labels wear text tokens; the dot beside them carries the identity. */
+    .bs-end-label {
+      fill: var(--muted);
+      font-size: 10px;
+    }
+
+    .bs-end-value {
+      fill: var(--text);
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .bs-crosshair {
+      stroke: rgba(255, 255, 255, 0.35);
+      stroke-width: 1;
+      stroke-dasharray: 3 3;
+      pointer-events: none;
+    }
+
+    .bs-chart-hit {
+      fill: transparent;
+      cursor: crosshair;
+    }
+
+    .bs-tip {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      pointer-events: none;
+      background: #1b1512;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      z-index: 2;
+    }
+
+    .bs-tip strong {
+      display: block;
+      color: var(--muted);
+      font-weight: normal;
+      font-size: 0.72rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .bs-tip span {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text);
+    }
+
+    .bs-tip b {
+      margin-left: auto;
+      padding-left: 0.75rem;
+    }
+
+    .bs-chart-table {
+      margin-top: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .bs-chart-table summary {
+      cursor: pointer;
+    }
+
+    .bs-chart-table table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+
+    .bs-chart-table th,
+    .bs-chart-table td {
+      text-align: right;
+      padding: 0.25rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bs-chart-table th:first-child,
+    .bs-chart-table td:first-child {
+      text-align: left;
+    }
+
+    .bs-chart-empty {
+      padding: 1.25rem;
+      border-radius: 14px;
+      border: 1px dashed rgba(255, 255, 255, 0.14);
+      margin-bottom: 1.75rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .bs-chart-empty p {
+      margin: 0 0 0.75rem;
+    }
+
+    .bs-slayers {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1.75rem;
+    }
+
+    .bs-slayer-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+    }
+
+    .bs-slayer-row:nth-child(odd) {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .bs-slayer-name {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    /* The name needs its own box: as a bare text node inside a flex row it
+       would clip instead of ellipsing. */
+    .bs-slayer-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-slayer-bar {
+      width: 32%;
+      max-width: 210px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .bs-slayer-bar > span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #8a4a1e, #ec9245);
+    }
+
+    .bs-auto-badge {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.1rem 0.42rem;
+      border-radius: 999px;
+      border: 1px dashed rgba(255, 200, 120, 0.5);
+      background: transparent;
+      color: #e8b871;
+      flex-shrink: 0;
+    }
+
+    button.bs-auto-badge.is-staff {
+      cursor: pointer;
+    }
+
+    button.bs-auto-badge.is-staff:hover {
+      border-style: solid;
+      border-color: #e8913f;
+      background: #e8913f;
+      color: #1f130b;
+    }
+
+    .bs-show-all {
+      align-self: flex-start;
+      margin-top: 0.6rem;
+      padding: 0.35rem 0.95rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .bs-show-all:hover {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .bs-notice {
+      color: var(--muted);
+      text-align: center;
+      padding: 1.25rem 0;
+    }
+
+    .bs-staff-toolbar {
+      display: none;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .bs-untracked {
+      margin-top: 0.5rem;
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 108, 108, 0.35);
+      background: rgba(255, 108, 108, 0.05);
+    }
+
+    .bs-untracked p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0.2rem 0 0.5rem;
+    }
+
+    .bs-untracked-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .bs-untracked-row:last-child {
+      border-bottom: none;
+    }
+
+    .bs-untracked-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bs-untracked-error {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* Transient and self-healing, so it stays quiet rather than borrowing the
+       red "needs attention" styling. */
+    .bs-wom-wait {
+      margin: 0.5rem 0 0;
+      padding: 0.6rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .bs-untracked-rsn {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* "Stalled" is the worse state of the two: the member looks fine everywhere
+       else on the page while their kills quietly stop counting. */
+    .bs-untracked-tag {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .bs-untracked-tag.stalled {
+      border-color: rgba(232, 145, 63, 0.6);
+      background: rgba(232, 145, 63, 0.14);
+      color: #f0a45c;
+    }
+
+    .bs-set-rsn {
+      padding: 0.25rem 0.7rem;
+      font-size: 0.78rem;
+    }
+
+    @media (max-width: 760px) {
+      .bs-heat-featured {
+        grid-template-columns: 1fr;
+      }
+
+      .bs-heat-featured .bs-cell:first-child {
+        grid-row: auto;
+        min-height: 96px;
+      }
+
+      .bs-heat-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .bs-total-row strong {
+        font-size: 2.2rem;
+      }
+
+      /* The bar is decorative - drop it before the name starts truncating. */
+      .bs-slayer-bar {
+        display: none;
+      }
+
+      .bs-slayer-row {
+        gap: 0.6rem;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
+</head>
+<body>
+  <div id="siteNav"></div>
+
+  <main class="page">
+    <section class="page-title">
+      <p class="eyebrow">Battleship Bingo</p>
+      <h1>Boss Kills During Bingo</h1>
+      <p>
+        Every boss killed by a signed-up member since the competition started,
+        refreshed every two hours from Wise Old Man.
+      </p>
+    </section>
+
+    <div class="bs-staff-toolbar" id="bsStaffToolbar">
+      <button class="btn secondary" id="bsRefreshBtn" type="button">Refresh Next Batch</button>
+      <button class="btn secondary danger" id="bsResetBtn" type="button">Reset Baseline</button>
+    </div>
+
+    <section id="bsContent" class="bs-notice">Loading boss kill totals...</section>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="/assets/js/script.js?v=20260825-nav-active-fix1"></script>
+  <script src="assets/js/battleship-stats.js?v=20260715-bstats-7"></script>
+  <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
+</body>
+</html>

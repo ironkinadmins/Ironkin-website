@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar | Ironkin Clan</title>
+  <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
+  <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
+  <link rel="stylesheet" href="/assets/css/styles.css?v=20260807-premium-v4" />
+  <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-hub-ux-v1">
+</head>
+
+<body class="calendar-page">
+  <div id="siteNav"></div>
+
+<main class="page">
+    <section class="page-title calendar-page-title">
+      <div>
+        <p class="eyebrow">Ironkin Events</p>
+        <h1>Calendar</h1>
+        <p>See what’s happening across the clan and plan around upcoming competitions, masses, giveaways, and deadlines.</p>
+      </div>
+      <a class="btn secondary calendar-events-link" href="/events">View Event Hub <span aria-hidden="true">→</span></a>
+    </section>
+
+    <div class="calendar-toolbar">
+      <div class="calendar-filters" id="calendarFilters">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="sotw">SOTW</button>
+        <button data-filter="botw">BOTW</button>
+        <button data-filter="mass">Masses</button>
+        <button data-filter="giveaway">Giveaways</button>
+        <button data-filter="challenge">Challenges</button>
+      </div>
+
+      <div class="calendar-toolbar-actions">
+        <button class="btn secondary calendar-view-toggle active" type="button" data-calendar-view="month">Month</button>
+        <button class="btn secondary calendar-view-toggle" type="button" data-calendar-view="agenda">Agenda</button>
+        <button class="btn secondary" type="button" id="calendarManageTemplatesBtn" hidden>Manage Templates</button>
+        <button class="btn primary" type="button" id="calendarQuickCreateBtn" hidden>+ Create Event</button>
+      </div>
+    </div>
+
+    <section class="calendar-health-card" id="calendarHealthCheck" hidden></section>
+
+
+    <aside class="calendar-template-modal" id="calendarTemplateManagerPanel" hidden>
+      <div class="calendar-template-manager">
+        <div class="calendar-modal-form-header">
+          <div>
+            <p class="eyebrow">Calendar Settings</p>
+            <h2>Manage Event Templates</h2>
+            <p class="admin-muted">Edit template defaults used when creating calendar events.</p>
+          </div>
+          <button class="calendar-modal-close" type="button" id="closeCalendarTemplateManagerBtn" aria-label="Close template manager">×</button>
+        </div>
+
+        <div class="calendar-template-manager-grid">
+          <section class="calendar-template-list-card">
+            <div class="calendar-template-list-header">
+              <h3>Templates</h3>
+              <button class="btn secondary small" type="button" id="addCalendarTemplateBtn">+ Add</button>
+            </div>
+            <div class="calendar-template-list" id="calendarTemplateList"></div>
+          </section>
+
+          <form class="calendar-template-editor" id="calendarTemplateEditorForm">
+            <label>
+              <span>Template Name</span>
+              <input id="templateEditorLabel" type="text" placeholder="Clan Mass" required />
+            </label>
+
+            <label>
+              <span>Template Key</span>
+              <input id="templateEditorKey" type="text" placeholder="clan-mass" required />
+            </label>
+
+            <label class="calendar-field-wide">
+              <span>Default Title</span>
+              <input id="templateEditorTitle" type="text" placeholder="Vet'ion Mass" />
+            </label>
+
+            <label>
+              <span>Internal Type</span>
+              <select id="templateEditorType">
+                <option value="normal">Normal Event</option>
+                <option value="mass">Clan Mass</option>
+                <option value="giveaway">Giveaway</option>
+                <option value="challenge">Challenge</option>
+                <option value="sotw">SOTW</option>
+                <option value="botw-elite">BOTW Elite</option>
+                <option value="botw-standard">BOTW Standard</option>
+                <option value="botw-elite-secondary">BOTW Elite - 2nd Boss</option>
+                <option value="botw-standard-secondary">BOTW Standard - 2nd Boss</option>
+                <option value="clan-goal">Clan Goal</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Duration Days</span>
+              <input id="templateEditorDurationDays" type="number" min="0" max="365" step="1" value="0" />
+            </label>
+
+            <label>
+              <span>Start Time</span>
+              <input id="templateEditorStart" type="text" placeholder="7:00" />
+            </label>
+
+            <label>
+              <span>End Time</span>
+              <input id="templateEditorEnd" type="text" placeholder="8:00" />
+            </label>
+
+            <label class="calendar-field-wide">
+              <span>Default Description</span>
+              <textarea id="templateEditorDescription" rows="3" placeholder="Optional default description"></textarea>
+            </label>
+
+            <div class="calendar-template-flags calendar-field-wide">
+              <label class="calendar-check-card">
+                <input id="templateEditorWom" type="checkbox" />
+                <span>Create WOM by default</span>
+              </label>
+              <label class="calendar-check-card">
+                <input id="templateEditorDiscord" type="checkbox" />
+                <span>Create Discord Event by default</span>
+              </label>
+            </div>
+
+            <div class="calendar-template-actions calendar-field-wide">
+              <button class="btn primary" type="submit">Save Template</button>
+              <button class="btn secondary" type="button" id="deleteCalendarTemplateBtn">Delete</button>
+              <button class="btn secondary" type="button" id="resetCalendarTemplatesBtn">Reset Defaults</button>
+            </div>
+
+            <p class="calendar-form-status" id="calendarTemplateManagerStatus"></p>
+          </form>
+        </div>
+      </div>
+    </aside>
+
+
+
+    <section id="calendarHappeningNow" class="calendar-happening-now"></section>
+
+    <div class="calendar-workspace">
+      <aside class="calendar-admin-sidebar" id="calendarAdminPanel" hidden>
+        <form class="calendar-sidebar-form" id="calendarEventForm">
+          <div class="calendar-modal-form-header">
+            <div>
+              <p class="eyebrow">Staff Calendar Admin</p>
+              <h2 id="calendarAdminFormTitle">Create Event</h2>
+              <p class="admin-muted">Click a day, drag-select multiple days, or choose a template below.</p>
+              <p class="calendar-timezone-note">🕒 Enter all admin times in Eastern Time (ET). Members will see Discord times in their own local timezone.</p>
+            </div>
+            <button class="calendar-modal-close" type="button" id="closeCalendarEventFormBtn" aria-label="Close event form">×</button>
+          </div>
+
+          <div class="calendar-modal-row calendar-template-type-row">
+            <label>
+              <span>Template</span>
+              <select id="calendarEventTemplateInput">
+                <option value="">No template</option>
+              </select>
+            </label>
+            <input id="calendarEventTypeInput" type="hidden" value="normal" />
+          </div>
+
+          <label class="calendar-field-wide">
+            <span>Title</span>
+            <input id="calendarEventTitleInput" type="text" required placeholder="Example: Vet'ion Clan Goal" />
+          </label>
+
+          <div class="calendar-modal-row calendar-date-time-row">
+            <label>
+              <span>Date</span>
+              <input id="calendarEventStartDateInput" type="date" required />
+            </label>
+            <label>
+              <span>Start Time</span>
+              <div class="calendar-time-control">
+                <input id="calendarEventStartTimeInput" type="text" inputmode="numeric" required value="7:00" placeholder="3:30" />
+                <select id="calendarEventStartMeridiemInput" aria-label="Start AM or PM">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
+            </label>
+            <label>
+              <span>End Time</span>
+              <div class="calendar-time-control">
+                <input id="calendarEventEndTimeInput" type="text" inputmode="numeric" required value="8:00" placeholder="4:30" />
+                <select id="calendarEventEndMeridiemInput" aria-label="End AM or PM">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
+            </label>
+          </div>
+
+          <label class="calendar-check-card calendar-multiday-option">
+            <input id="calendarMultiDayInput" type="checkbox" />
+            <span>Multi-day Event</span>
+          </label>
+
+          <label class="calendar-end-date-field" id="calendarEndDateField" hidden>
+            <span>End Date</span>
+            <input id="calendarEventEndDateInput" type="date" required />
+          </label>
+
+          <label class="calendar-field-wide">
+            <span>Description</span>
+            <textarea id="calendarEventDescriptionInput" rows="3" placeholder="Optional event details"></textarea>
+          </label>
+
+          <label>
+            <span>Repeat</span>
+            <select id="calendarRecurringInput">
+              <option value="none">None</option>
+              <option value="weekly-4">Weekly for 4 weeks</option>
+              <option value="weekly-8">Weekly for 8 weeks</option>
+              <option value="biweekly-4">Every 2 weeks for 4 events</option>
+              <option value="monthly-3">Monthly for 3 months</option>
+            </select>
+          </label>
+
+          <details class="calendar-advanced-options">
+            <summary>Advanced Options</summary>
+            <div class="calendar-advanced-options-body">
+              <label class="calendar-check-card">
+                <input id="calendarCreateWomInput" type="checkbox" />
+                <span>Create Wise Old Man competition</span>
+              </label>
+
+              <label class="calendar-check-card">
+                <input id="calendarCreateDiscordEventInput" type="checkbox" checked />
+                <span>Create Discord Scheduled Event</span>
+              </label>
+
+              <label class="calendar-check-card">
+                <input id="calendarPingEveryoneInput" type="checkbox" checked />
+                <span>Ping @everyone in Discord announcement</span>
+              </label>
+            </div>
+          </details>
+
+          <div class="calendar-wom-panel" id="calendarWomPanel" hidden>
+            <label id="calendarCompetitionTypeField">
+              <span>Competition Type</span>
+              <select id="calendarCompetitionTypeInput">
+                <option value="skill-xp">Skill XP</option>
+                <option value="boss-kc">Boss KC</option>
+              </select>
+            </label>
+
+            <label id="calendarSkillMetricField">
+              <span>Skill</span>
+              <select id="calendarSkillMetricInput"></select>
+            </label>
+
+            <label id="calendarBossMetricField" hidden>
+              <span>Boss</span>
+              <select id="calendarBossMetricInput"></select>
+            </label>
+
+            <label id="calendarTargetField" hidden>
+              <span id="calendarTargetLabel">Target</span>
+              <input id="calendarTargetInput" type="number" min="1" placeholder="Example: 2000" />
+            </label>
+
+            <label class="calendar-check-card">
+              <input id="calendarFeaturedInput" type="checkbox" />
+              <span>★ Override Homepage &amp; Discord Featured Event</span>
+            </label>
+
+            <p class="admin-muted" id="calendarWomAlreadyLinked" hidden></p>
+            <p class="admin-muted">Milestones stay editable from your existing Admin Dashboard after the event is created.</p>
+          </div>
+
+          <p class="calendar-form-status" id="calendarEventFormStatus"></p>
+
+          <div class="admin-action-row calendar-form-actions">
+            <button type="submit" class="btn primary">Save Event</button>
+            <button type="button" class="calendar-text-action" id="clearCalendarEventBtn">Clear</button>
+            <button type="button" class="calendar-text-action" id="cancelCalendarFormBtn">Cancel</button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="calendar-card">
+      <div class="calendar-header">
+        <button id="prevMonthBtn">←</button>
+        <div class="calendar-title-wrap">
+          <h2 id="calendarMonthTitle">Loading...</h2>
+          <span id="calendarMonthCount" class="calendar-month-count"></span>
+        </div>
+        <button id="nextMonthBtn">→</button>
+      </div>
+
+      <div class="calendar-weekdays">
+        <span>Sun</span>
+        <span>Mon</span>
+        <span>Tue</span>
+        <span>Wed</span>
+        <span>Thu</span>
+        <span>Fri</span>
+        <span>Sat</span>
+      </div>
+
+      <div id="calendarGrid" class="calendar-grid">
+        Loading calendar...
+      </div>
+      <p class="calendar-local-time-note">Times shown in your local timezone.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
+  </footer>
+
+  <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
+  <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
+</body>
+</html>
