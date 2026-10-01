@@ -150,13 +150,15 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   const message = await bossMessage(env, boss);
   const existing = message?.embeds?.[0] || {};
   const description = board.map((row, i) => `${MEDALS[i]} • ${row.player} ${formatTime(row.timeMs)}${row.proofUrl ? ` - ${row.proofUrl}` : ""}`).join("\n");
-  const embed = { ...existing, title: boss, description };
-  if (proofUrl) embed.url = proofUrl;
-  // The managed Wiki artwork is the only boss image on Hall of Flame embeds.
-  // Remove any old full-width image inherited from legacy Discord boards.
-  delete embed.image;
-  if (imageUrl) embed.thumbnail = { url:imageUrl };
-  else delete embed.thumbnail;
+  const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+  const hallUrl = `${siteUrl}/hall-of-flame`;
+  const embed = { ...existing, title: boss, description, url: hallUrl };
+  // Public Hall of Flame boards use the managed Wiki artwork as a full-width
+  // image beneath the Top 3, matching the visual treatment of the website cards.
+  // Do not use the boss artwork as a thumbnail.
+  delete embed.thumbnail;
+  if (imageUrl) embed.image = { url:imageUrl };
+  else delete embed.image;
   const headers={ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" };
   if (!message) {
     const createdResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
@@ -182,19 +184,25 @@ export async function notifyHallOfFlameReview(env, submission) {
   const settings = await getHallOfFlameDiscordSettings(env);
   if (!env.DISCORD_BOT_TOKEN || !settings.reviewChannelId) return { sent:false, reason:"Review channel not configured" };
   const mention = settings.pingRoleId ? `<@&${settings.pingRoleId}>` : "";
+  const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+  const hallUrl = `${siteUrl}/hall-of-flame#review`;
   const embed = {
     title: "🔥 New PB Awaiting Review",
+    url: hallUrl,
     color: 16742144,
+    description: `[Open Hall of Flame Review Queue](${hallUrl})`,
     fields: [
       { name:"Boss", value:String(submission.boss || "Unknown"), inline:true },
       { name:"Player", value:String(submission.display_name || "Unknown"), inline:true },
       { name:"Time", value:formatTime(submission.time_ms), inline:true },
-      { name:"Projected", value:`#${Number(submission.projected_placement) || "—"}`, inline:true },
-      { name:"Proof", value:submission.proof_url ? `[View screenshot](${submission.proof_url})` : "No proof link", inline:false }
+      { name:"Projected", value:`#${Number(submission.projected_placement) || "—"}`, inline:true }
     ],
     footer:{ text:"Review and approve/reject this submission on ironkinclan.com" },
     timestamp:new Date().toISOString()
   };
+  // Show the member's submitted proof directly in the review embed instead of
+  // making Council open a separate screenshot link.
+  if (submission.proof_url) embed.image = { url: submission.proof_url };
   const response = await fetch(`https://discord.com/api/v10/channels/${settings.reviewChannelId}/messages`, {
     method:"POST",
     headers:{ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" },
