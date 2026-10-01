@@ -15,12 +15,13 @@ export async function onRequestGet({request,env}){
   if(!await staff(request,env)) return json({error:"Staff access required."},403);
   try{
     const settings=await getHallOfFlameDiscordSettings(env);
-    let channels=[];
+    let channels=[],roles=[];
     if(env.DISCORD_GUILD_ID&&env.DISCORD_BOT_TOKEN){
-      const rows=await discord(env,`/guilds/${env.DISCORD_GUILD_ID}/channels`);
-      channels=rows.filter(c=>[0,5].includes(Number(c.type))).sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)).map(c=>({id:c.id,name:c.name,type:c.type}));
+      const [channelRows,roleRows]=await Promise.all([discord(env,`/guilds/${env.DISCORD_GUILD_ID}/channels`),discord(env,`/guilds/${env.DISCORD_GUILD_ID}/roles`)]);
+      channels=channelRows.filter(c=>[0,5].includes(Number(c.type))).sort((a,b)=>(Number(a.position)||0)-(Number(b.position)||0)).map(c=>({id:c.id,name:c.name,type:c.type}));
+      roles=roleRows.filter(r=>r.name!=="@everyone").sort((a,b)=>(Number(b.position)||0)-(Number(a.position)||0)).map(r=>({id:r.id,name:r.name}));
     }
-    return json({settings,channels,configured:Boolean(env.DISCORD_BOT_TOKEN&&settings.channelId)});
+    return json({settings,channels,roles,configured:Boolean(env.DISCORD_BOT_TOKEN&&settings.channelId)});
   }catch(e){return json({error:e.message||"Could not load Discord settings."},500);}
 }
 export async function onRequestPost({request,env}){
@@ -28,18 +29,23 @@ export async function onRequestPost({request,env}){
   const body=await request.json().catch(()=>({}));
   try{
     if(body.action==="save"){
-      const channelId=String(body.channelId||"").trim();
-      if(!channelId) return json({error:"Choose a Discord channel."},400);
+      const channelId=String(body.channelId||"").trim(),reviewChannelId=String(body.reviewChannelId||"").trim(),pingRoleId=String(body.pingRoleId||"").trim();
+      if(!channelId) return json({error:"Choose a public Hall of Flame channel."},400);
       const channel=await discord(env,`/channels/${channelId}`);
-      if(String(channel.guild_id||"")!==String(env.DISCORD_GUILD_ID||"")) return json({error:"That channel is not in the configured Ironkin Discord server."},400);
-      const settings=await saveHallOfFlameDiscordSettings(env,{channelId,channelName:channel.name});
+      if(String(channel.guild_id||"")!==String(env.DISCORD_GUILD_ID||"")) return json({error:"That public channel is not in the configured Ironkin Discord server."},400);
+      let reviewChannelName="",pingRoleName="";
+      if(reviewChannelId){const review=await discord(env,`/channels/${reviewChannelId}`);if(String(review.guild_id||"")!==String(env.DISCORD_GUILD_ID||""))return json({error:"That review channel is not in the configured Ironkin Discord server."},400);reviewChannelName=review.name;}
+      if(pingRoleId){const roles=await discord(env,`/guilds/${env.DISCORD_GUILD_ID}/roles`);const role=roles.find(r=>String(r.id)===pingRoleId);if(!role)return json({error:"That ping role was not found in the Ironkin Discord server."},400);pingRoleName=role.name;}
+      const settings=await saveHallOfFlameDiscordSettings(env,{channelId,channelName:channel.name,reviewChannelId,reviewChannelName,pingRoleId,pingRoleName});
       return json({ok:true,settings});
     }
     if(body.action==="test"){
       const settings=await getHallOfFlameDiscordSettings(env);
-      if(!settings.channelId) return json({error:"Choose and save a Hall of Flame channel first."},400);
-      const sent=await discord(env,`/channels/${settings.channelId}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({embeds:[{title:"🔥 Ironkin Hall of Flame",description:"Discord integration test successful. This channel is ready for Hall of Flame record boards.",color:16742144}]})});
-      return json({ok:true,messageId:sent.id});
+      if(!settings.channelId) return json({error:"Choose and save a public Hall of Flame channel first."},400);
+      await discord(env,`/channels/${settings.channelId}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({embeds:[{title:"🔥 Ironkin Hall of Flame",description:"Public record-board sync is connected.",color:16742144}]})});
+      let reviewSent=false;
+      if(settings.reviewChannelId){await discord(env,`/channels/${settings.reviewChannelId}/messages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:settings.pingRoleId?`<@&${settings.pingRoleId}>`:"",allowed_mentions:{roles:settings.pingRoleId?[settings.pingRoleId]:[]},embeds:[{title:"Hall of Flame review notifications",description:"New PB review notifications will be posted here.",color:16742144}]})});reviewSent=true;}
+      return json({ok:true,reviewSent});
     }
     return json({error:"Unknown action."},400);
   }catch(e){return json({error:e.message||"Discord settings update failed."},500);}

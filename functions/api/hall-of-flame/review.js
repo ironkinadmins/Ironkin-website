@@ -9,10 +9,11 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const id = String(body.id || "").trim();
   const action = String(body.action || "").trim().toLowerCase();
-  if (!id || !["approve","reject"].includes(action)) return Response.json({ error:"Invalid review request." }, { status:400, headers:noStore });
+  if (!id || !["approve","reject","remove"].includes(action)) return Response.json({ error:"Invalid review request." }, { status:400, headers:noStore });
   const submission = await getSubmission(env, id);
   if (!submission) return Response.json({ error:"Submission not found." }, { status:404, headers:noStore });
-  if (submission.status !== "pending") return Response.json({ error:"This submission has already been reviewed." }, { status:409, headers:noStore });
+  if (action !== "remove" && submission.status !== "pending") return Response.json({ error:"This submission has already been reviewed." }, { status:409, headers:noStore });
+  if (action === "remove" && submission.status !== "approved") return Response.json({ error:"Only an approved record can be removed from the leaderboard." }, { status:409, headers:noStore });
 
   const message = await bossMessage(env, submission.boss);
   const legacy = parseDiscordBoard(message?.embeds?.[0]?.description || "");
@@ -26,6 +27,15 @@ export async function onRequestPost({ request, env }) {
   let discord = { synced:false };
   const configResponse = await supabaseRest(env, `hall_of_flame_bosses?select=discord_sync,image_url&name=eq.${encodeURIComponent(submission.boss)}&limit=1`);
   const bossConfig = (await configResponse.json())?.[0];
+  if (action === "remove") {
+    // Remove the selected verified record from the active board. The submission row
+    // remains in the database as rejected, preserving who removed it and when.
+    const filteredLegacy = legacy.filter(row => !(String(row.player||"").trim().toLowerCase() === String(submission.display_name||"").trim().toLowerCase() && Number(row.timeMs) === Number(submission.time_ms)));
+    const remainingApproved = alreadyApproved.filter(row => String(row.id) !== id);
+    const board = mergeBoard(filteredLegacy, remainingApproved);
+    if (bossConfig?.discord_sync !== false) discord = await syncDiscordBoard(env, submission.boss, board, "", bossConfig?.image_url || "");
+    return Response.json({ ok:true, status:"removed", discord }, { headers:noStore });
+  }
   if (status === "approved") {
     const approved = [...alreadyApproved, { ...submission, status:"approved" }];
     const board = mergeBoard(legacy, approved);

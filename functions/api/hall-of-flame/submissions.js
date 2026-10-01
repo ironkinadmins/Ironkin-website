@@ -1,6 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
-import { bossMessage, displayName, normalizeBoss, parseDiscordBoard, parseTimeToMs, projectedPlacement, uploadProof } from "./_records.js";
+import { bossMessage, displayName, normalizeBoss, parseDiscordBoard, parseTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
 
 const noStore = { "Cache-Control":"no-store" };
 
@@ -41,5 +41,8 @@ export async function onRequestPost({ request, env }) {
   const proofUrl = await uploadProof(env, proof, id);
   const row = { id, discord_id:String(session.id), display_name:displayName(session), boss, boss_slug:String(bossConfig.slug), time_ms:timeMs, time_text:timeText, proof_url:proofUrl, status:"pending", projected_placement:placement, created_at:new Date().toISOString(), updated_at:new Date().toISOString() };
   await supabaseRest(env, "hall_of_flame_submissions", { method:"POST", headers:{ Prefer:"return=minimal" }, body:JSON.stringify(row) });
-  return Response.json({ ok:true, submission:row }, { status:201, headers:noStore });
+  // A Discord notification is helpful, but it must never make a valid PB submission fail.
+  let reviewNotification={sent:false};
+  try { reviewNotification=await notifyHallOfFlameReview(env,row); } catch (error) { reviewNotification={sent:false,error:String(error?.message||error)}; }
+  return Response.json({ ok:true, submission:row, reviewNotification }, { status:201, headers:noStore });
 }

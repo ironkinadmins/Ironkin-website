@@ -14,6 +14,10 @@ export async function getHallOfFlameDiscordSettings(env) {
   return {
     channelId: String(saved.channelId || env.HALL_OF_FLAME_CHANNEL_ID || "").trim(),
     channelName: String(saved.channelName || "").trim(),
+    reviewChannelId: String(saved.reviewChannelId || "").trim(),
+    reviewChannelName: String(saved.reviewChannelName || "").trim(),
+    pingRoleId: String(saved.pingRoleId || "").trim(),
+    pingRoleName: String(saved.pingRoleName || "").trim(),
     source: saved.channelId ? "site" : (env.HALL_OF_FLAME_CHANNEL_ID ? "cloudflare" : "none")
   };
 }
@@ -22,6 +26,10 @@ export async function saveHallOfFlameDiscordSettings(env, settings) {
   const value = {
     channelId: String(settings?.channelId || "").trim(),
     channelName: String(settings?.channelName || "").trim(),
+    reviewChannelId: String(settings?.reviewChannelId || "").trim(),
+    reviewChannelName: String(settings?.reviewChannelName || "").trim(),
+    pingRoleId: String(settings?.pingRoleId || "").trim(),
+    pingRoleName: String(settings?.pingRoleName || "").trim(),
     updatedAt: new Date().toISOString()
   };
   if (!value.channelId) throw new Error("A Discord channel is required.");
@@ -144,7 +152,11 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   const description = board.map((row, i) => `${MEDALS[i]} • ${row.player} ${formatTime(row.timeMs)}${row.proofUrl ? ` - ${row.proofUrl}` : ""}`).join("\n");
   const embed = { ...existing, title: boss, description };
   if (proofUrl) embed.url = proofUrl;
+  // The managed Wiki artwork is the only boss image on Hall of Flame embeds.
+  // Remove any old full-width image inherited from legacy Discord boards.
+  delete embed.image;
   if (imageUrl) embed.thumbnail = { url:imageUrl };
+  else delete embed.thumbnail;
   const headers={ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" };
   if (!message) {
     const createdResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
@@ -163,4 +175,32 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
     if (response.ok) { const created=await response.json(); return { synced:true, messageId:created.id, mode:"created" }; }
   }
   throw new Error(`Discord Hall of Flame update failed: ${await response.text()}`);
+}
+
+
+export async function notifyHallOfFlameReview(env, submission) {
+  const settings = await getHallOfFlameDiscordSettings(env);
+  if (!env.DISCORD_BOT_TOKEN || !settings.reviewChannelId) return { sent:false, reason:"Review channel not configured" };
+  const mention = settings.pingRoleId ? `<@&${settings.pingRoleId}>` : "";
+  const embed = {
+    title: "🔥 New PB Awaiting Review",
+    color: 16742144,
+    fields: [
+      { name:"Boss", value:String(submission.boss || "Unknown"), inline:true },
+      { name:"Player", value:String(submission.display_name || "Unknown"), inline:true },
+      { name:"Time", value:formatTime(submission.time_ms), inline:true },
+      { name:"Projected", value:`#${Number(submission.projected_placement) || "—"}`, inline:true },
+      { name:"Proof", value:submission.proof_url ? `[View screenshot](${submission.proof_url})` : "No proof link", inline:false }
+    ],
+    footer:{ text:"Review and approve/reject this submission on ironkinclan.com" },
+    timestamp:new Date().toISOString()
+  };
+  const response = await fetch(`https://discord.com/api/v10/channels/${settings.reviewChannelId}/messages`, {
+    method:"POST",
+    headers:{ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" },
+    body:JSON.stringify({ content:mention, allowed_mentions:{ roles:settings.pingRoleId?[settings.pingRoleId]:[] }, embeds:[embed] })
+  });
+  if (!response.ok) throw new Error(`Discord review notification failed: ${await response.text()}`);
+  const sent = await response.json();
+  return { sent:true, messageId:sent.id };
 }
