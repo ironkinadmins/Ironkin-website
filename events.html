@@ -9,29 +9,45 @@
   <link rel="stylesheet" href="/styles.css?v=20260823-profile-events-v1" />
   <link rel="stylesheet" href="/ironkin-games.css?v=20260812-games-1" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260913-modern-nav-headings">
+  <link rel="stylesheet" href="/events-refined.css?v=20261001-events-refined-1">
 </head>
-<body class="premium-ui events-premium-page">
+<body class="premium-ui events-premium-page events-refined-page">
   <div id="siteNav"></div>
 
-<main class="page">
-<section class="page-title premium-page-hero">
-  <div>
-    <p class="eyebrow">Compete. Contribute. Celebrate.</p>
-    <h1>Clan Events</h1>
-    <p>Everything happening across Ironkin-from weekly competitions and clan goals to bounties, bingo, and giveaways.</p>
-  </div>
-  <div class="premium-page-hero-mark" aria-hidden="true">⚔</div>
-</section>
+  <main class="page events-page-shell">
+    <section class="events-intro" aria-labelledby="eventsPageTitle">
+      <div class="events-intro-copy">
+        <p class="eyebrow">Ironkin Events</p>
+        <h1 id="eventsPageTitle">Compete with the clan.</h1>
+        <p>Weekly competitions, long-term clan goals, bounties, bingo and community events — all in one place.</p>
+      </div>
+      <a class="events-calendar-cta" href="calendar.html">
+        <span class="events-calendar-icon" aria-hidden="true">▦</span>
+        <span><small>Clan schedule</small><strong>View calendar</strong></span>
+        <span aria-hidden="true">→</span>
+      </a>
+    </section>
 
-<section class="event-filter-bar" aria-label="Filter clan events">
-  <button class="is-active" type="button" data-event-filter="all">All events</button>
-  <button type="button" data-event-filter="active">Active</button>
-  <button type="button" data-event-filter="inactive">Inactive</button>
-  <a href="calendar.html">View calendar <span>→</span></a>
-</section>
+    <section class="events-browser" aria-labelledby="eventsBrowseTitle">
+      <div class="events-browser-heading">
+        <div>
+          <p class="eyebrow">Event Hub</p>
+          <h2 id="eventsBrowseTitle">What’s happening in Ironkin</h2>
+        </div>
+        <div class="event-filter-bar" aria-label="Filter clan events">
+          <button class="is-active" type="button" data-event-filter="all">All</button>
+          <button type="button" data-event-filter="active">Active</button>
+          <button type="button" data-event-filter="inactive">Inactive</button>
+        </div>
+      </div>
 
-    <section id="eventHubGrid" class="event-hub-grid">
-      Loading events...
+      <section id="eventHubGrid" class="event-hub-grid" aria-live="polite" aria-busy="true">
+        <div class="events-loading-state">
+          <span class="events-loading-mark" aria-hidden="true"></span>
+          <strong>Loading clan events</strong>
+          <small>Checking current competitions and activities…</small>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -41,5 +57,15 @@
 
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
+  <script>
+    (() => {
+      const hub = document.getElementById('eventHubGrid');
+      if (!hub) return;
+      const observer = new MutationObserver(() => {
+        if (hub.querySelector('.event-hub-card')) hub.setAttribute('aria-busy', 'false');
+      });
+      observer.observe(hub, { childList: true });
+    })();
+  </script>
 </body>
 </html>
