@@ -99,3 +99,56 @@ body.home-ledger-v3 .home-brand-refined .btn{min-height:36px!important;padding:8
  body.home-ledger-v3 .home-brand-refined .btn{grid-column:1/-1;width:100%}
 }
 @media(prefers-reduced-motion:reduce){body.home-ledger-v3 *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* 2026-10-01 visual corrections: keep the live dashboard compact and aligned. */
+body.home-ledger-v3 .home-live-section{padding-top:0!important}
+body.home-ledger-v3 .home-ledger-grid{align-items:start!important}
+body.home-ledger-v3 .home-feature-panel{
+  align-self:start!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+body.home-ledger-v3 .home-ledger-side{
+  align-self:start!important;
+  height:auto!important;
+  grid-template-rows:auto auto!important;
+}
+body.home-ledger-v3 .home-ledger-side>.home-panel{
+  height:auto!important;
+  min-height:0!important;
+}
+body.home-ledger-v3 .home-upcoming-list,
+body.home-ledger-v3 .home-activity-list{
+  max-height:none!important;
+  overflow:visible!important;
+}
+body.home-ledger-v3 .home-calendar-panel .home-list-widget{
+  min-height:150px!important;
+}
+
+/* Compact Hall of Flame closer: no oversized legacy emblem leaking outside its rail. */
+body.home-ledger-v3 .home-brand-refined{
+  min-height:72px!important;
+  overflow:hidden!important;
+}
+body.home-ledger-v3 .home-brand-refined .premium-brand-mark{
+  display:grid!important;
+  place-items:center!important;
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  border-radius:50%!important;
+  margin:0!important;
+}
+body.home-ledger-v3 .home-brand-refined .premium-brand-mark img{
+  display:block!important;
+  width:26px!important;
+  height:26px!important;
+  max-width:26px!important;
+  max-height:26px!important;
+  object-fit:contain!important;
+}
+body.home-ledger-v3 .home-brand-refined>div:nth-child(2){min-width:0}
+body.home-ledger-v3 .home-brand-refined .eyebrow{margin:0 0 3px!important}
