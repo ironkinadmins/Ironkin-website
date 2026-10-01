@@ -8,29 +8,102 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260913-modern-nav-headings">
+  <style>
+    .rank-page-intro{margin-bottom:22px}
+    .rank-page-intro p:last-child{max-width:760px}
+    .rank-discord-note{margin-top:12px;color:var(--muted,#a9b0ba)}
+    .rank-discord-note strong{color:#e8edf3}
+    .rank-dashboard{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:18px;align-items:start}
+    .rank-panel{background:rgba(24,30,37,.94);border:1px solid rgba(139,157,177,.2);border-radius:16px;padding:22px;box-shadow:0 14px 34px rgba(0,0,0,.12)}
+    .rank-panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+    .rank-panel h2{margin:0;font-family:Georgia,'Times New Roman',serif;font-size:1.2rem;letter-spacing:.02em;text-transform:uppercase;color:#f1f3f5}
+    .rank-panel-meta{font-size:.76rem;color:#7f8b98;white-space:nowrap}
+    .rank-status{display:flex;align-items:center;gap:8px;margin:-4px 0 16px;font-size:.76rem;color:#aeb7c1}
+    .rank-status-dot{width:7px;height:7px;border-radius:50%;background:#65e6ae;box-shadow:0 0 8px rgba(101,230,174,.35)}
+    .rank-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .rank-tile{min-height:44px;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(49,58,68,.58);border:1px solid rgba(147,164,184,.2)}
+    .rank-icon{width:20px;height:20px;display:grid;place-items:center;flex:0 0 20px;font-size:17px;object-fit:contain}
+    .rank-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:.82rem;color:#e7ebef}
+    .rank-count{margin-left:auto;color:#9cc7ea;font-weight:800;font-size:.9rem}
+    .recent-list{display:flex;flex-direction:column}
+    .recent-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:42px;border-bottom:1px solid rgba(139,157,177,.18)}
+    .recent-row:last-child{border-bottom:0}
+    .recent-name{font-weight:650;font-size:.86rem;color:#e8ebee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .recent-date{font-size:.74rem;color:#8793a0;white-space:nowrap}
+    .rank-loading,.rank-empty{padding:18px 0;color:#8f9aa6;font-size:.86rem}
+    @media(max-width:900px){.rank-dashboard{grid-template-columns:1fr}.rank-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:560px){.rank-panel{padding:17px}.rank-grid{grid-template-columns:1fr}.rank-panel-head{align-items:flex-start}.recent-date{font-size:.68rem}}
+  </style>
 </head>
 <body>
   <div id="siteNav"></div>
 
-<main class="page">
-    <section class="page-title">
-      <p class="eyebrow">Ironkin Progression</p>
-      <h1>Rank Structure</h1>
-      <p>Members climb through the forge by earning Embers through activity, events, PvM, and dedication.</p>
+  <main class="page">
+    <section class="page-title rank-page-intro">
+      <p class="eyebrow">Ironkin Clan</p>
+      <h1>Ranks</h1>
+      <p>Live breakdown of the clan's current Discord ranks and newest members.</p>
+      <p class="rank-discord-note">For rank requirements, progression paths, and full rank information, see <strong>#rank-info</strong> in Discord.</p>
     </section>
 
-    <section class="rank-images">
-      <img src="assets/rank-structure-1.png" alt="Ironkin Rank Structure - Council and Elite Ranks">
-      <img src="assets/rank-structure-2.png" alt="Ironkin Rank Structure - Specialist Paths">
-      <img src="assets/rank-structure-3.png" alt="Ironkin Rank Structure - Core Ranks">
+    <section class="rank-dashboard" aria-label="Ironkin rank overview">
+      <article class="rank-panel">
+        <div class="rank-panel-head">
+          <h2>Rank Breakdown</h2>
+          <span class="rank-panel-meta" id="rankMemberCount">— members</span>
+        </div>
+        <div class="rank-status"><span class="rank-status-dot"></span><span id="rankUpdated">Loading current ranks…</span></div>
+        <div class="rank-grid" id="rankGrid"><div class="rank-loading">Loading rank breakdown…</div></div>
+      </article>
+
+      <article class="rank-panel">
+        <div class="rank-panel-head"><h2>Recently Joined</h2></div>
+        <div class="recent-list" id="recentMembers"><div class="rank-loading">Loading newest members…</div></div>
+      </article>
     </section>
   </main>
 
-  <footer>
-    <p>© Ironkin Clan. Not affiliated with Jagex.</p>
-  </footer>
-
+  <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
   <script src="/script.js?v=20260825-nav-active-fix1"></script>
   <script src="/premium-v5.js?v=20260825-v5-fix1" defer></script>
+  <script>
+    const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    function relativeTime(value){
+      if(!value) return "Updated recently";
+      const ms=Date.now()-new Date(value).getTime();
+      if(!Number.isFinite(ms)) return "Updated recently";
+      const mins=Math.max(0,Math.floor(ms/60000));
+      if(mins<1) return "Updated just now";
+      if(mins<60) return `Updated ${mins}m ago`;
+      const hours=Math.floor(mins/60); if(hours<24) return `Updated ${hours}h ago`;
+      return `Updated ${Math.floor(hours/24)}d ago`;
+    }
+    function dateLabel(value){
+      const date=new Date(value); if(!Number.isFinite(date.getTime())) return "—";
+      return date.toLocaleDateString(undefined,{month:'short',day:'2-digit',year:'numeric'});
+    }
+    function iconMarkup(item){
+      if(item.iconUrl) return `<img class="rank-icon" src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">`;
+      if(item.unicodeEmoji) return `<span class="rank-icon" aria-hidden="true">${escapeHtml(item.unicodeEmoji)}</span>`;
+      return `<img class="rank-icon" src="/assets/ironkin-emblem-favicon.png" alt="" loading="lazy">`;
+    }
+    async function loadRanks(){
+      const grid=document.getElementById('rankGrid'), recent=document.getElementById('recentMembers');
+      try{
+        const response=await fetch('/api/ranks/overview');
+        if(!response.ok) throw new Error('Unable to load ranks');
+        const data=await response.json();
+        document.getElementById('rankMemberCount').textContent=`${Number(data.memberCount||0).toLocaleString()} members`;
+        document.getElementById('rankUpdated').textContent=relativeTime(data.updatedAt);
+        grid.innerHTML=(data.ranks||[]).length ? data.ranks.map(rank=>`<div class="rank-tile">${iconMarkup(rank)}<span class="rank-name">${escapeHtml(rank.name)}</span><span class="rank-count">${Number(rank.count||0).toLocaleString()}</span></div>`).join('') : '<div class="rank-empty">No rank data available yet.</div>';
+        recent.innerHTML=(data.recent||[]).length ? data.recent.map(member=>`<div class="recent-row">${iconMarkup(member)}<span class="recent-name">${escapeHtml(member.displayName)}</span><time class="recent-date" datetime="${escapeHtml(member.memberSince)}">${escapeHtml(dateLabel(member.memberSince))}</time></div>`).join('') : '<div class="rank-empty">No recent join data available yet.</div>';
+      }catch(error){
+        grid.innerHTML='<div class="rank-empty">Rank data is temporarily unavailable.</div>';
+        recent.innerHTML='<div class="rank-empty">Recent member data is temporarily unavailable.</div>';
+        document.getElementById('rankUpdated').textContent='Could not refresh Discord data';
+      }
+    }
+    loadRanks();
+  </script>
 </body>
 </html>
