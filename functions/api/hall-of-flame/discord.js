@@ -10,7 +10,7 @@ export async function onRequestGet({ env }) {
   }
 
   const response = await fetch(
-    `https://discord.com/api/v10/channels/${channelId}/messages?limit=25`,
+    `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`,
     {
       headers: {
         Authorization: `Bot ${token}`
@@ -42,7 +42,10 @@ export async function onRequestGet({ env }) {
       title: embed?.title || "",
       description: embed?.description || "",
       fields: embed?.fields || [],
-      color: embed?.color || null
+      color: embed?.color || null,
+      imageUrl: embed?.image?.url || "",
+      thumbnailUrl: embed?.thumbnail?.url || "",
+      messageUrl: `https://discord.com/channels/${message.guild_id || "@me"}/${channelId}/${message.id}`
     };
   });
 

@@ -12007,3 +12007,29 @@ body:has(#singleEventDashboard) .page{max-width:1240px}
   .event-chart-scale{top:15px;bottom:39px;width:48px;font-size:.64rem}
   .event-chart-axis{left:55px!important;right:16px!important}
 }
+
+
+/* Records: SOTW/BOTW champion history moved from Hall of Flame. */
+.records-champions-section{grid-column:1/-1;min-width:0}
+.records-winner-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.records-champion-card{min-width:0;overflow:hidden}
+.records-champion-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.records-champion-heading .eyebrow{margin:0 0 4px}
+.records-champion-heading h2{margin:0}
+.records-champion-count{flex:0 0 auto;color:var(--muted,#9d938c);font-size:.78rem;padding-top:4px}
+.records-champion-table .hof-table-row,.records-champion-table .hof-table-head{grid-template-columns:minmax(150px,1.35fr) minmax(110px,.9fr) minmax(90px,.62fr) 28px}
+.records-event-cell{display:flex;flex-direction:column;min-width:0;gap:2px}
+.records-event-cell strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.records-event-cell small{color:var(--muted,#9d938c);font-size:.72rem;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){.records-winner-grid{grid-template-columns:1fr}}
+@media (max-width:620px){
+  .records-champion-table .hof-table-head{display:none}
+  .records-champion-table .hof-table-row{grid-template-columns:1fr auto;gap:7px 12px;padding:12px 0}
+  .records-champion-table .hof-table-row>span:nth-child(2){grid-column:1;color:var(--text,#f4eee8)}
+  .records-champion-table .hof-table-row>span:nth-child(3){grid-column:2;grid-row:1/3;align-self:center;text-align:right}
+  .records-champion-table .hof-table-row>span:nth-child(4){grid-column:2;grid-row:3;text-align:right}
+  .records-event-cell small{white-space:normal}
+}
+
+/* Hall of Flame — verified PB submissions */
+.hof-title-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.hof-recent-records{margin:0 0 20px}.hof-recent-strip{display:flex;gap:10px;overflow:auto;padding:2px 0 8px}.hof-recent-item{min-width:240px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(18,14,11,.72)}.hof-recent-item strong,.hof-recent-item span{display:block}.hof-recent-item span{margin-top:3px;color:var(--muted);font-size:.88rem}.hof-dialog{width:min(760px,calc(100vw - 24px));max-height:88vh;padding:0;border:1px solid rgba(255,133,36,.25);border-radius:16px;background:#100d0b;color:var(--text);box-shadow:0 24px 80px rgba(0,0,0,.55)}.hof-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}.hof-dialog-shell{position:relative;padding:24px}.hof-dialog-close{position:absolute;right:14px;top:12px;border:0;background:transparent;color:var(--muted);font-size:28px;cursor:pointer}.hof-form{display:grid;gap:14px}.hof-form label{display:grid;gap:6px;font-weight:700}.hof-form input,.hof-form select,.hof-form textarea{width:100%}.hof-form-help{color:var(--muted);font-size:.88rem}.hof-status-list,.hof-review-list,.hof-history-list{display:grid;gap:10px;margin-top:16px}.hof-submission-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.018)}.hof-submission-meta{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--muted);font-size:.88rem}.hof-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.hof-status.pending{background:rgba(255,145,40,.12);color:#ff9b3d}.hof-status.approved{background:rgba(76,175,80,.12);color:#8fd694}.hof-status.rejected{background:rgba(229,83,83,.12);color:#ef9292}.hof-review-actions{display:flex;gap:8px;justify-content:flex-end}.hof-proof-preview{display:block;max-width:100%;max-height:330px;margin:12px auto;border-radius:10px;border:1px solid var(--border)}.hof-record-row.is-verified{background:rgba(255,125,28,.035)}.hof-verified-mark{font-size:.72rem;color:#ff9a38;text-transform:uppercase;letter-spacing:.06em}.hof-card-actions{display:flex;justify-content:flex-end;margin-top:12px}.hof-history-button{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:800;cursor:pointer}.hof-empty{padding:18px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center}@media(max-width:640px){.hof-dialog-shell{padding:20px 16px}.hof-submission-row{grid-template-columns:1fr}.hof-review-actions{justify-content:flex-start}.hof-title-actions .btn{flex:1 1 auto}}

@@ -2802,13 +2802,14 @@ function renderSpeedRecordCard(entry) {
               <div class="hof-record-row">
                 <span class="hof-medal">${row.medal}</span>
                 <strong>${escapeHtml(row.text)}</strong>
-                ${row.url ? `<a href="${escapeHtml(row.url)}" target="_blank" rel="noopener" title="View proof">🔗</a>` : ""}
+                ${row.url ? `<a href="${escapeHtml(row.url)}" target="_blank" rel="noopener" title="View proof screenshot">🔗</a>` : ""}
               </div>
             `).join("")}
           </div>
         `
         : `<p class="admin-muted">No record holders listed yet.</p>`
       }
+      <div class="hof-card-actions"><button class="hof-history-button" type="button" data-hof-history="${escapeHtml(entry.title)}">Record history →</button></div>
     </article>
   `;
 }
@@ -2974,9 +2975,6 @@ async function loadHallOfFlamePage() {
 
     const entries = data.entries || [];
 
-    const sotw = entries.find(entry => entry.title === "Skill of the Week");
-    const botw = entries.find(entry => entry.title === "Boss of the Week");
-
     const records = entries.filter(entry =>
       entry.title &&
       ![
@@ -2987,31 +2985,6 @@ async function loadHallOfFlamePage() {
     );
 
     grid.innerHTML = `
-      <section class="hof-section hof-section-wide">
-        <div class="section-heading-row">
-          <div>
-            <p class="eyebrow">Competition Winners</p>
-            <h2>Event Champions</h2>
-          </div>
-        </div>
-
-        <div class="hof-winner-grid">
-          ${sotw ? `
-            <article class="card flame-card hof-summary-card">
-              <h2>${escapeHtml(sotw.title)}</h2>
-              ${renderWinnerTable(sotw)}
-            </article>
-          ` : ""}
-
-          ${botw ? `
-            <article class="card flame-card hof-summary-card">
-              <h2>${escapeHtml(botw.title)}</h2>
-              ${renderWinnerTable(botw)}
-            </article>
-          ` : ""}
-        </div>
-      </section>
-
       <section class="hof-section hof-section-wide">
         <div class="section-heading-row">
           <div>
@@ -3028,12 +3001,105 @@ async function loadHallOfFlamePage() {
         </div>
       </section>
     `;
+    window.__hofBosses = records.map(entry => entry.title).filter(Boolean).sort((a,b) => a.localeCompare(b));
+    await initHallOfFlameSubmissions();
   } catch (error) {
     grid.innerHTML = `<article class="card"><p>Could not load Hall of Flame: ${escapeHtml(error.message)}</p></article>`;
   }
 }
 
 
+
+
+function hofDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}) : "";
+}
+
+function hofTime(ms) {
+  const total=Math.max(0,Number(ms)||0), h=Math.floor(total/3600000), m=Math.floor((total%3600000)/60000), sec=Math.floor((total%60000)/1000), hs=Math.floor((total%1000)/10);
+  const s=String(sec).padStart(2,"0"), frac=hs?`.${String(hs).padStart(2,"0")}`:"";
+  return h?`${h}:${String(m).padStart(2,"0")}:${s}${frac}`:`${m}:${s}${frac}`;
+}
+
+function hofOpen(html) {
+  const dialog=document.getElementById("hofDialog"), body=document.getElementById("hofDialogBody");
+  if (!dialog||!body) return; body.innerHTML=html; dialog.showModal();
+}
+function hofClose(){document.getElementById("hofDialog")?.close();}
+
+function hofSubmissionRows(rows,{review=false}={}) {
+  if (!rows.length) return `<div class="hof-empty">Nothing here yet.</div>`;
+  return `<div class="${review?"hof-review-list":"hof-status-list"}">${rows.map(row=>`
+    <article class="hof-submission-row">
+      <div>
+        <div><strong>${escapeHtml(row.boss)}</strong> · <strong>${escapeHtml(hofTime(row.time_ms))}</strong> <span class="hof-status ${escapeHtml(row.status)}">${escapeHtml(row.status)}</span></div>
+        <div class="hof-submission-meta"><span>${escapeHtml(row.display_name||"")}</span><span>Submitted ${escapeHtml(hofDate(row.created_at))}</span>${row.projected_placement?`<span>Projected #${Number(row.projected_placement)}</span>`:""}${row.final_placement?`<span>Final #${Number(row.final_placement)}</span>`:""}</div>
+        <a href="${escapeHtml(row.proof_url)}" target="_blank" rel="noopener">View proof screenshot ↗</a>
+      </div>
+      ${review?`<div class="hof-review-actions"><button class="btn secondary" type="button" data-hof-review="reject" data-id="${escapeHtml(row.id)}">Reject</button><button class="btn primary" type="button" data-hof-review="approve" data-id="${escapeHtml(row.id)}">Approve</button></div>`:""}
+    </article>`).join("")}</div>`;
+}
+
+async function hofOpenSubmit() {
+  const bosses=Array.isArray(window.__hofBosses)?window.__hofBosses:[];
+  hofOpen(`<p class="eyebrow">Verified Records</p><h2>Submit a Boss PB</h2><p class="admin-muted">Your screenshot and time will be reviewed by Ironkin staff before the Hall of Flame changes.</p>
+    <form id="hofSubmitForm" class="hof-form">
+      <label>Boss<select name="boss" required><option value="">Choose a record board</option>${bosses.map(b=>`<option>${escapeHtml(b)}</option>`).join("")}</select></label>
+      <label>Personal best time<input name="time" required placeholder="Examples: 47.40, 1:23.50, 1:02:14" inputmode="decimal"></label>
+      <label>Proof screenshot<input name="proof" type="file" accept="image/png,image/jpeg,image/webp,image/gif" required></label>
+      <span class="hof-form-help">Maximum 8 MB. The screenshot becomes the proof link if the record is approved.</span>
+      <div id="hofSubmitMessage"></div><button class="btn primary" type="submit">Send for verification</button>
+    </form>`);
+}
+
+async function hofOpenMine() {
+  hofOpen(`<p class="eyebrow">Hall of Flame</p><h2>My Submissions</h2><p class="admin-muted">Loading…</p>`);
+  const body=document.getElementById("hofDialogBody");
+  try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load submissions.");body.innerHTML=`<p class="eyebrow">Hall of Flame</p><h2>My Submissions</h2>${hofSubmissionRows(d.submissions||[])}`;}catch(e){body.innerHTML=`<h2>My Submissions</h2><p>${escapeHtml(e.message)}</p>`;}
+}
+
+async function hofOpenReview() {
+  hofOpen(`<p class="eyebrow">Staff</p><h2>PB Review Queue</h2><p class="admin-muted">Loading…</p>`);
+  const body=document.getElementById("hofDialogBody");
+  try{const r=await fetch("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load queue.");body.innerHTML=`<p class="eyebrow">Staff Verification</p><h2>PB Review Queue</h2><p class="admin-muted">Placement is recalculated when you approve, so the queue cannot overwrite a newer record.</p>${hofSubmissionRows(d.submissions||[],{review:true})}`;}catch(e){body.innerHTML=`<h2>PB Review Queue</h2><p>${escapeHtml(e.message)}</p>`;}
+}
+
+async function hofOpenHistory(boss) {
+  hofOpen(`<p class="eyebrow">Record History</p><h2>${escapeHtml(boss)}</h2><p class="admin-muted">Loading verified PB history…</p>`);
+  const body=document.getElementById("hofDialogBody");
+  try{const r=await fetch(`/api/hall-of-flame/history?boss=${encodeURIComponent(boss)}`,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load history.");const rows=d.entries||[];body.innerHTML=`<p class="eyebrow">Record History</p><h2>${escapeHtml(boss)}</h2>${rows.length?`<div class="hof-history-list">${rows.map(x=>`<article class="hof-submission-row"><div><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><div class="hof-submission-meta"><span>Verified ${escapeHtml(hofDate(x.reviewed_at))}</span>${x.reviewed_by_name?`<span>by ${escapeHtml(x.reviewed_by_name)}</span>`:""}</div></div><a href="${escapeHtml(x.proof_url)}" target="_blank" rel="noopener">Proof ↗</a></article>`).join("")}</div>`:`<div class="hof-empty">No website-verified history yet. Existing Discord records remain visible on the board.</div>`}`;}catch(e){body.innerHTML=`<h2>${escapeHtml(boss)}</h2><p>${escapeHtml(e.message)}</p>`;}
+}
+
+async function hofLoadRecent() {
+  const mount=document.getElementById("hofRecentRecords"); if(!mount)return;
+  try{const r=await fetch("/api/hall-of-flame/history",{cache:"no-store"});const d=await r.json();if(!r.ok)return;const rows=(d.entries||[]).slice(0,6);if(!rows.length)return;mount.hidden=false;mount.innerHTML=`<div class="section-heading-row"><div><p class="eyebrow">Recently Verified</p><h2>Recent Records</h2></div></div><div class="hof-recent-strip">${rows.map(x=>`<button class="hof-recent-item" type="button" data-hof-history="${escapeHtml(x.boss)}"><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><span>${escapeHtml(x.boss)} · ${escapeHtml(hofDate(x.reviewed_at))}</span></button>`).join("")}</div>`;}catch{}
+}
+
+async function initHallOfFlameSubmissions(){
+  const submit=document.getElementById("hofSubmitOpen"); if(!submit)return;
+  let auth={signedIn:false}; try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});if(r.ok){const d=await r.json();auth={signedIn:true,isStaff:Boolean(d.isStaff),submissions:d.submissions||[]};}}catch{}
+  submit.textContent=auth.signedIn?"Submit PB":"Sign in to Submit PB";
+  const mine=document.getElementById("hofMySubmissionsOpen"), review=document.getElementById("hofReviewOpen"), count=document.getElementById("hofPendingCount");
+  if(mine)mine.hidden=!auth.signedIn;if(review)review.hidden=!auth.isStaff;
+  if(auth.isStaff){try{const r=await fetch("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});const d=await r.json();if(r.ok&&count)count.textContent=`(${(d.submissions||[]).length})`;}catch{}}
+  await hofLoadRecent();
+}
+
+document.addEventListener("click",async event=>{
+  const target=event.target.closest("[data-hof-close],#hofSubmitOpen,#hofMySubmissionsOpen,#hofReviewOpen,[data-hof-history],[data-hof-review]");if(!target)return;
+  if(target.matches("[data-hof-close]")){hofClose();return;}
+  if(target.id==="hofSubmitOpen"){try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});if(r.status===401){location.href=`/api/auth/login?returnTo=${encodeURIComponent(location.pathname)}`;return;}}catch{}hofOpenSubmit();return;}
+  if(target.id==="hofMySubmissionsOpen"){hofOpenMine();return;} if(target.id==="hofReviewOpen"){hofOpenReview();return;}
+  if(target.dataset.hofHistory){hofOpenHistory(target.dataset.hofHistory);return;}
+  if(target.dataset.hofReview){target.disabled=true;try{const r=await fetch("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:target.dataset.id,action:target.dataset.hofReview})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Review failed.");await hofOpenReview();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}}
+});
+
+document.addEventListener("submit",async event=>{
+  if(event.target.id!=="hofSubmitForm")return;event.preventDefault();const form=event.target,msg=document.getElementById("hofSubmitMessage"),button=form.querySelector('button[type="submit"]');button.disabled=true;msg.textContent="Uploading proof…";
+  try{const r=await fetch("/api/hall-of-flame/submissions",{method:"POST",body:new FormData(form)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Submission failed.");msg.innerHTML=`<span class="hof-status pending">Pending verification</span> Submitted successfully. Projected placement: #${Number(d.submission.projected_placement)}.`;form.reset();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}
+});
 
 
 function bountyRelativeTime(value) {
@@ -4131,14 +4197,122 @@ function renderRecordRows(entries, suffix = "") {
   `).join("");
 }
 
+function normalizeChampionMetric(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/boss of the week|skill of the week|botw|sotw|elite|standard/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function getArchiveChampionEventName(entry) {
+  const metric = String(entry?.metric || "").trim();
+  if (metric) return metric;
+
+  const title = String(entry?.title || "").trim();
+  return title
+    .replace(/^Skill of the Week\s*[-–:]?\s*/i, "")
+    .replace(/^Boss of the Week(?:\s*[-–:]\s*(?:Elite|Standard))?\s*[-–:]?\s*/i, "")
+    .trim() || title;
+}
+
+function getArchiveCompetitionTitle(entry) {
+  const title = String(entry?.title || "").trim();
+  const metric = String(entry?.metric || "").trim();
+  const label = String(entry?.label || "").trim();
+  const generic = /^(skill of the week|boss of the week(?:\s*[-–:]\s*(?:elite|standard))?)$/i;
+
+  if (title && !generic.test(title)) return title;
+  if (label && !/^(sotw|botw|botw elite|botw standard)$/i.test(label)) return label;
+  if (metric) {
+    const prefix = entry?.type === "sotw"
+      ? "Skill of the Week"
+      : `Boss of the Week${entry?.botwTier ? ` - ${String(entry.botwTier).replace(/^./, c => c.toUpperCase())}` : ""}`;
+    return `${prefix} - ${metric}`;
+  }
+  return title || label || "Archived event";
+}
+
+function buildChampionRows(type, archive = [], legacyEntry = null) {
+  const archived = (Array.isArray(archive) ? archive : [])
+    .filter(entry => entry?.type === type && entry?.winner?.name)
+    .map(entry => ({
+      eventName: getArchiveChampionEventName(entry),
+      winner: entry.winner.name,
+      score: `${formatNumber(Number(entry.winner.gained || 0))}${type === "sotw" ? " XP" : " KC"}`,
+      url: entry.womCompetitionId ? `https://wiseoldman.net/competitions/${encodeURIComponent(entry.womCompetitionId)}` : "",
+      competitionTitle: getArchiveCompetitionTitle(entry),
+      endedAt: entry.endedAt || entry.endDate || "",
+      source: "archive"
+    }));
+
+  const legacy = legacyEntry ? parseWinnerSummary(legacyEntry.description).map(row => ({
+    ...row,
+    competitionTitle: "",
+    endedAt: "",
+    source: "legacy"
+  })) : [];
+
+  // Preserve older Discord-maintained champions while preferring richer archive
+  // records when we can identify the same event/winner pair.
+  const seen = new Set();
+  const rows = [];
+  for (const row of [...archived, ...legacy]) {
+    const key = `${normalizeChampionMetric(row.eventName)}|${String(row.winner || "").toLowerCase().trim()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function renderChampionHistoryTable(title, rows, type) {
+  return `
+    <article class="card flame-card hof-summary-card records-champion-card">
+      <div class="records-champion-heading">
+        <div>
+          <p class="eyebrow">${type === "sotw" ? "SOTW" : "BOTW"}</p>
+          <h2>${escapeHtml(title)}</h2>
+        </div>
+        <span class="records-champion-count">${rows.length} recorded</span>
+      </div>
+      ${rows.length ? `
+        <div class="hof-table records-champion-table">
+          <div class="hof-table-head">
+            <span>Event</span><span>Winner</span><span>Score</span><span></span>
+          </div>
+          ${rows.map(row => `
+            <div class="hof-table-row records-champion-row">
+              <span class="records-event-cell">
+                <strong>${escapeHtml(row.eventName || "Event")}</strong>
+                ${row.competitionTitle ? `<small>${escapeHtml(row.competitionTitle)}</small>` : `<small>Legacy record</small>`}
+              </span>
+              <span>${escapeHtml(row.winner)}</span>
+              <span>${escapeHtml(row.score)}</span>
+              <span>${row.url ? `<a href="${escapeHtml(row.url)}" target="_blank" rel="noopener" title="View event">🔗</a>` : ""}</span>
+            </div>
+          `).join("")}
+        </div>
+      ` : `<p class="admin-muted">No ${type.toUpperCase()} champions recorded yet.</p>`}
+    </article>`;
+}
+
 async function loadRecordsPage() {
   const grid = document.getElementById("recordsGrid");
 
   if (!grid) return;
 
   try {
-    const archive = await fetchArchive().catch(() => []);
-    const emberLeaders = await fetchEmberLeaderboard(10).catch(() => []);
+    const [archive, emberLeaders, hallData] = await Promise.all([
+      fetchArchive().catch(() => []),
+      fetchEmberLeaderboard(10).catch(() => []),
+      fetch("/api/hall-of-flame/discord").then(response => response.ok ? response.json() : { entries: [] }).catch(() => ({ entries: [] }))
+    ]);
+    const hallEntries = Array.isArray(hallData?.entries) ? hallData.entries : [];
+    const legacySotw = hallEntries.find(entry => entry.title === "Skill of the Week") || null;
+    const legacyBotw = hallEntries.find(entry => entry.title === "Boss of the Week") || null;
+    const sotwChampions = buildChampionRows("sotw", archive, legacySotw);
+    const botwChampions = buildChampionRows("botw", archive, legacyBotw);
 
     const wins = new Map();
     const topThreeFinishes = new Map();
@@ -4173,6 +4347,20 @@ async function loadRecordsPage() {
     const topThreeRows = [...topThreeFinishes.entries()].sort((a, b) => b[1] - a[1]);
 
     grid.innerHTML = `
+      <section class="records-champions-section records-wide">
+        <div class="section-heading-row">
+          <div>
+            <p class="eyebrow">Competition History</p>
+            <h2>Event Champions</h2>
+            <p class="admin-muted">SOTW and BOTW winners, with the exact event title preserved whenever it exists in the archive.</p>
+          </div>
+        </div>
+        <div class="hof-winner-grid records-winner-grid">
+          ${renderChampionHistoryTable("Skill of the Week", sotwChampions, "sotw")}
+          ${renderChampionHistoryTable("Boss of the Week", botwChampions, "botw")}
+        </div>
+      </section>
+
       <article class="card record-card">
         <p class="eyebrow">Events</p>
         <h2>Most Event Wins</h2>

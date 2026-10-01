@@ -6,7 +6,7 @@
   <title>Hall of Flame | Ironkin Clan</title>
   <link rel="icon" type="image/png" href="/assets/ironkin-emblem-favicon.png">
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
-  <link rel="stylesheet" href="/assets/css/styles.css?v=20260807-premium-v4" />
+  <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-pb-v1" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
 </head>
 <body>
@@ -16,18 +16,31 @@
     <section class="page-title">
       <p class="eyebrow">Ironkin Records</p>
       <h1>Hall of Flame</h1>
-      <p>Where Ironkin legends are remembered — competition champions, speed records, and achievements preserved in one trophy room.</p>
+      <p>Verified Ironkin boss personal bests, proof screenshots, and record history.</p>
+      <div class="hof-title-actions">
+        <button id="hofSubmitOpen" class="btn primary" type="button">Submit PB</button>
+        <button id="hofMySubmissionsOpen" class="btn secondary" type="button" hidden>My Submissions</button>
+        <button id="hofReviewOpen" class="btn secondary" type="button" hidden>Review Queue <span id="hofPendingCount"></span></button>
+      </div>
     </section>
+
+    <section id="hofRecentRecords" class="hof-recent-records" hidden></section>
 
     <section id="hallOfFlameGrid" class="hall-grid">
       <article class="card">
         <p>Loading Hall of Flame...</p>
       </article>
     </section>
+    <dialog id="hofDialog" class="hof-dialog">
+      <div class="hof-dialog-shell">
+        <button class="hof-dialog-close" type="button" data-hof-close aria-label="Close">×</button>
+        <div id="hofDialogBody"></div>
+      </div>
+    </dialog>
   </main>
 
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
-  <script src="/assets/js/script.js?v=20260825-nav-active-fix1"></script>
+  <script src="/assets/js/script.js?v=20261001-hof-pb-v1"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
