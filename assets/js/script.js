@@ -2968,7 +2968,10 @@ async function hofFetchJson(url, options = {}) {
     throw new Error(response.ok ? "This Hall of Flame service returned an invalid response." : `Hall of Flame service unavailable (${response.status}).`);
   }
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const message = data?.detail ? `${data?.error || `Request failed (${response.status}).`} ${data.detail}` : (data?.error || `Request failed (${response.status}).`);
+    throw new Error(message);
+  }
   return data;
 }
 
@@ -3072,7 +3075,7 @@ async function hofOpenManage() {
       <div class="hof-manage-actions"><button class="btn secondary" type="button" data-hof-boss-action="import">Import current Discord boards</button><button class="btn secondary" type="button" data-hof-boss-action="sync-all">Sync All to Discord</button><button class="btn primary" type="button" data-hof-boss-action="new">Add Boss</button></div>
       <div class="hof-boss-admin-list">${rows.length?rows.map(b=>`<article class="hof-boss-admin-row"><div><strong>${escapeHtml(b.name)}</strong><div class="hof-submission-meta"><span>${escapeHtml(b.category||"Boss")}</span><span>${b.active?"Active":"Archived"}</span><span>${b.accept_submissions?"Submissions open":"Submissions closed"}</span><span>${b.discord_sync?"Discord sync on":"Discord sync off"}</span></div></div><div class="hof-review-actions"><button class="btn secondary" type="button" data-hof-boss-action="sync" data-slug="${escapeHtml(b.slug)}" ${!b.discord_sync?"disabled":""}>Sync Discord</button><button class="btn secondary" type="button" data-hof-boss-action="edit" data-slug="${escapeHtml(b.slug)}">Edit</button>${b.active?`<button class="btn secondary danger" type="button" data-hof-boss-action="archive" data-slug="${escapeHtml(b.slug)}">Archive</button>`:`<button class="btn secondary" type="button" data-hof-boss-action="restore" data-slug="${escapeHtml(b.slug)}">Restore</button>`}</div></article>`).join(""):`<div class="hof-empty">No managed bosses yet. Import the current Discord boards to start.</div>`}</div>`;
     window.__hofAdminBosses=rows;
-  }catch(e){body.innerHTML=`<h2>Manage Hall of Flame</h2><p>${escapeHtml(e.message)}</p><p class="admin-muted">If this is the first deployment, run SUPABASE_HALL_OF_FLAME_BOSSES_SETUP.sql in Supabase.</p>`;}
+  }catch(e){body.innerHTML=`<h2>Manage Hall of Flame</h2><p>${escapeHtml(e.message)}</p><p class="admin-muted">The database tables are present; this message shows the backend error returned by the Hall of Flame service.</p>`;}
 }
 function hofBossForm(b={}){
   hofOpen(`<p class="eyebrow">Staff</p><h2>${b.slug?"Edit":"Add"} Boss</h2><form id="hofBossForm" class="hof-form"><input type="hidden" name="slug" value="${escapeHtml(b.slug||"")}"><label>Boss name<input name="name" required value="${escapeHtml(b.name||"")}"></label><label>Category<select name="category"><option ${b.category==="Boss"?"selected":""}>Boss</option><option ${b.category==="Raid"?"selected":""}>Raid</option><option ${b.category==="Minigame"?"selected":""}>Minigame</option><option ${b.category==="Other"?"selected":""}>Other</option></select></label><label>Time format<input name="time_format" value="${escapeHtml(b.time_format||"MM:SS.ms")}"></label><label>Image URL <span class="hof-form-help">Optional</span><input name="image_url" value="${escapeHtml(b.image_url||"")}"></label><label class="hof-check"><input type="checkbox" name="visible" ${b.visible!==false?"checked":""}> Show on Hall of Flame</label><label class="hof-check"><input type="checkbox" name="accept_submissions" ${b.accept_submissions!==false?"checked":""}> Accept PB submissions</label><label class="hof-check"><input type="checkbox" name="discord_sync" ${b.discord_sync!==false?"checked":""}> Sync Top 3 to Discord</label><div id="hofBossMessage"></div><button class="btn primary" type="submit">Save Boss</button></form>`);

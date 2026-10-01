@@ -7,17 +7,28 @@ const json=(body,status=200)=>Response.json(body,{status,headers:noStore});
 const slugify=value=>normalizeBoss(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,100);
 
 async function listBosses(env,{all=false}={}){
-  const filters=all?"":"&active=eq.true&visible=eq.true";
-  const r=await supabaseRest(env,`hall_of_flame_bosses?select=*&order=display_order.asc,name.asc${filters}`);
-  return r.json();
+  // Keep the PostgREST request deliberately simple. Filtering/sorting this very
+  // small catalogue in the Function avoids deployment-specific PostgREST query
+  // parsing/schema-cache issues from turning the entire Hall of Flame into a 500.
+  const r=await supabaseRest(env,"hall_of_flame_bosses?select=*");
+  const rows=await r.json();
+  const bosses=Array.isArray(rows)?rows:[];
+  return bosses
+    .filter(b=>all||(b.active!==false&&b.visible!==false))
+    .sort((a,b)=>(Number(a.display_order)||0)-(Number(b.display_order)||0)||String(a.name||"").localeCompare(String(b.name||"")));
 }
 
 export async function onRequestGet({request,env}){
   const session=await getSession(request,env);
   const staff=isStaffSession(session);
   const url=new URL(request.url);
-  const bosses=await listBosses(env,{all:staff&&url.searchParams.get("scope")==="staff"});
-  return json({bosses,isStaff:staff,signedIn:Boolean(session)});
+  try {
+    const bosses=await listBosses(env,{all:staff&&url.searchParams.get("scope")==="staff"});
+    return json({bosses,isStaff:staff,signedIn:Boolean(session)});
+  } catch (error) {
+    // Staff get the actionable backend detail; public callers only get a safe message.
+    return json({error:"Could not load Hall of Flame record boards.",...(staff?{detail:String(error?.message||error)}:{})},500);
+  }
 }
 
 export async function onRequestPost({request,env}){
