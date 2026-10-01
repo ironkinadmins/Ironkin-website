@@ -51,19 +51,10 @@ export async function onRequestGet({ request }) {
       .map(([role, count]) => ({ role, count }))
       .sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
 
-    // Keep the member names grouped by WOM role so the Ranks page can reveal
-    // the roster for a rank without making another network request.
-    const rankMembers = {};
-    for (const membership of members) {
-      const role = String(membership?.role || "member").trim().toLowerCase() || "member";
-      const name = membership?.player?.displayName || membership?.player?.username || membership?.displayName || membership?.username;
-      if (!name) continue;
-      if (!rankMembers[role]) rankMembers[role] = [];
-      rankMembers[role].push(String(name));
-    }
-    for (const role of Object.keys(rankMembers)) {
-      rankMembers[role].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-    }
+    const rankMembers = members.map(membership => ({
+      name: membership?.player?.displayName || membership?.player?.username || membership?.displayName || membership?.username || "Unknown member",
+      role: String(membership?.role || "member").trim().toLowerCase() || "member"
+    }));
 
     const recentlyJoined = members
       .map(membership => ({
