@@ -7,7 +7,7 @@ export async function onRequestGet({ request }) {
 
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL(request.url).origin + "/api/recent-activity-cache-v4"
+      new URL(request.url).origin + "/api/recent-activity-cache-v5-ranks"
     );
 
     const cached = await cache.match(cacheKey);
@@ -33,9 +33,33 @@ export async function onRequestGet({ request }) {
     }
 
     const members =
-      groupData.members ||
       groupData.memberships ||
+      groupData.members ||
       [];
+
+    // Rank-page data is derived from the same WOM group request this endpoint
+    // already uses, so ranks.html does not need a second WOM request or a new
+    // Cloudflare Function. WOM GroupDetails exposes role and join timestamps
+    // on each membership.
+    const roleCounts = new Map();
+    for (const membership of members) {
+      const role = String(membership?.role || "member").trim().toLowerCase() || "member";
+      roleCounts.set(role, (roleCounts.get(role) || 0) + 1);
+    }
+
+    const rankBreakdown = Array.from(roleCounts.entries())
+      .map(([role, count]) => ({ role, count }))
+      .sort((a, b) => b.count - a.count || a.role.localeCompare(b.role));
+
+    const recentlyJoined = members
+      .map(membership => ({
+        name: membership?.player?.displayName || membership?.player?.username || membership?.displayName || membership?.username || "Unknown member",
+        role: String(membership?.role || "member"),
+        joinedAt: membership?.clientSyncJoinedAt || membership?.createdAt || null
+      }))
+      .filter(member => member.joinedAt)
+      .sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt))
+      .slice(0, 8);
 
     const usernames = members
       .map(member =>
@@ -90,7 +114,11 @@ export async function onRequestGet({ request }) {
       cachedFor: `${CACHE_SECONDS} seconds`,
       sampledMembers: usernames.length,
       displayedAchievements: achievements.length,
-      achievements
+      achievements,
+      memberCount: Number(groupData.memberCount) || members.length,
+      groupUpdatedAt: groupData.updatedAt || null,
+      rankBreakdown,
+      recentlyJoined
     });
 
     response.headers.set(
