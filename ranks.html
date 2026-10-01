@@ -87,20 +87,47 @@
       if(item.unicodeEmoji) return `<span class="rank-icon" aria-hidden="true">${escapeHtml(item.unicodeEmoji)}</span>`;
       return `<img class="rank-icon" src="/assets/ironkin-emblem-favicon.png" alt="" loading="lazy">`;
     }
+    const WOM_GROUP_URL = "https://api.wiseoldman.net/v2/groups/12095";
+    const RANK_ORDER = ["owner","deputy_owner","general","moderator","vanguard","nurse","raider","maxed","sapphire","carry","tzkal","tztok","legend","sage","cadet","sergeant","novice","corporal","recruit"];
+    const RANK_ICONS = {owner:"🔑",deputy_owner:"🗝️",general:"⭐",moderator:"⚒️",vanguard:"🛡️",nurse:"✚",raider:"✦",maxed:"⚔️",sapphire:"♦️",carry:"🎒",tzkal:"🔥",tztok:"🔥",legend:"🪽",sage:"🪄",cadet:"♟️",sergeant:"🎖️",novice:"✥",corporal:"⚜️",recruit:"⌁"};
+    function normalizeRole(value){ return String(value||"recruit").trim().toLowerCase().replace(/[\s-]+/g,"_"); }
+    function roleLabel(value){
+      const key=normalizeRole(value);
+      const special={deputy_owner:"Deputy Owner",tzkal:"TzKal",tztok:"TzTok"};
+      return special[key] || key.split('_').map(x=>x?x[0].toUpperCase()+x.slice(1):'').join(' ');
+    }
+    function womName(m){ return m?.player?.displayName || m?.player?.username || m?.displayName || m?.username || "Unknown member"; }
+    function womJoined(m){ return m?.createdAt || m?.joinedAt || m?.updatedAt || null; }
+    function rankIcon(key){ return `<span class="rank-icon" aria-hidden="true">${RANK_ICONS[key]||"✦"}</span>`; }
     async function loadRanks(){
       const grid=document.getElementById('rankGrid'), recent=document.getElementById('recentMembers');
       try{
-        const response=await fetch('/api/ranks/overview');
-        if(!response.ok) throw new Error('Unable to load ranks');
+        // The homepage already reads this public WOM group endpoint successfully. Using the
+        // same source here avoids an unnecessary Cloudflare/KV dependency for the Ranks page.
+        const response=await fetch(`${WOM_GROUP_URL}?t=${Date.now()}`, {cache:'no-store'});
+        if(!response.ok) throw new Error(`Wise Old Man returned ${response.status}`);
         const data=await response.json();
-        document.getElementById('rankMemberCount').textContent=`${Number(data.memberCount||0).toLocaleString()} members`;
-        document.getElementById('rankUpdated').textContent=relativeTime(data.updatedAt);
-        grid.innerHTML=(data.ranks||[]).length ? data.ranks.map(rank=>`<div class="rank-tile">${iconMarkup(rank)}<span class="rank-name">${escapeHtml(rank.name)}</span><span class="rank-count">${Number(rank.count||0).toLocaleString()}</span></div>`).join('') : '<div class="rank-empty">No rank data available yet.</div>';
-        recent.innerHTML=(data.recent||[]).length ? data.recent.map(member=>`<div class="recent-row">${iconMarkup(member)}<span class="recent-name">${escapeHtml(member.displayName)}</span><time class="recent-date" datetime="${escapeHtml(member.memberSince)}">${escapeHtml(dateLabel(member.memberSince))}</time></div>`).join('') : '<div class="rank-empty">No recent join data available yet.</div>';
+        const memberships=Array.isArray(data.memberships) ? data.memberships : (Array.isArray(data.members) ? data.members : []);
+        if(!memberships.length) throw new Error('No group memberships returned');
+
+        const counts=new Map();
+        memberships.forEach(m=>{ const key=normalizeRole(m.role || m.rank); counts.set(key,(counts.get(key)||0)+1); });
+        const keys=[...counts.keys()].sort((a,b)=>{
+          const ai=RANK_ORDER.indexOf(a), bi=RANK_ORDER.indexOf(b);
+          return (ai<0?999:ai)-(bi<0?999:bi) || roleLabel(a).localeCompare(roleLabel(b));
+        });
+        document.getElementById('rankMemberCount').textContent=`${Number(data.memberCount || memberships.length).toLocaleString()} members`;
+        document.getElementById('rankUpdated').textContent='Wise Old Man · Live';
+        grid.innerHTML=keys.map(key=>`<div class="rank-tile">${rankIcon(key)}<span class="rank-name">${escapeHtml(roleLabel(key))}</span><span class="rank-count">${counts.get(key).toLocaleString()}</span></div>`).join('');
+
+        const newest=memberships.filter(m=>womJoined(m) && Number.isFinite(new Date(womJoined(m)).getTime())).sort((a,b)=>new Date(womJoined(b))-new Date(womJoined(a))).slice(0,8);
+        recent.innerHTML=newest.length ? newest.map(m=>{ const key=normalizeRole(m.role || m.rank); const joined=womJoined(m); return `<div class="recent-row">${rankIcon(key)}<span class="recent-name">${escapeHtml(womName(m))}</span><time class="recent-date" datetime="${escapeHtml(joined)}">${escapeHtml(dateLabel(joined))}</time></div>`; }).join('') : '<div class="rank-empty">No recent join data available.</div>';
       }catch(error){
-        grid.innerHTML='<div class="rank-empty">Rank data is temporarily unavailable.</div>';
-        recent.innerHTML='<div class="rank-empty">Recent member data is temporarily unavailable.</div>';
-        document.getElementById('rankUpdated').textContent='Could not refresh Discord data';
+        console.error('Ranks page:',error);
+        grid.innerHTML='<div class="rank-empty">Could not load the Wise Old Man rank breakdown. Please refresh the page.</div>';
+        recent.innerHTML='<div class="rank-empty">Could not load recently joined members.</div>';
+        document.getElementById('rankMemberCount').textContent='— members';
+        document.getElementById('rankUpdated').textContent='Wise Old Man unavailable';
       }
     }
     loadRanks();
