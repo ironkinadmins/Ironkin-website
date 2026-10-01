@@ -11938,3 +11938,14 @@ body.archive-page .archive-empty-filter h2{margin:.2rem 0 .4rem}
 body.archive-page .archive-empty-filter p{margin:0;color:var(--muted)}
 @media(max-width:800px){body.archive-page .archive-page-title{align-items:flex-start;flex-direction:column}body.archive-page .archive-grid{grid-template-columns:1fr}body.archive-page .archive-toolbar{align-items:stretch;flex-direction:column}body.archive-page .archive-search{width:100%;min-width:0;margin:0}body.archive-page .archive-result-count{min-width:0;text-align:left;padding:0 3px}}
 @media(max-width:520px){body.archive-page .page{padding-top:24px}body.archive-page .archive-filter-group{display:grid;grid-template-columns:repeat(3,1fr);width:100%}body.archive-page .archive-filter{padding-inline:5px}body.archive-page .archive-card{padding:15px}}
+
+
+/* Archive fit + controls correction — 2026-10-01 */
+body.archive-page .archive-grid{display:block!important;columns:2;column-gap:14px}
+body.archive-page .archive-card{display:flex;flex-direction:column;width:100%;margin:0 0 14px!important;break-inside:avoid;page-break-inside:avoid}
+body.archive-page .archive-card[hidden]{display:none!important}
+body.archive-page .archive-card-actions{margin-top:auto}
+body.archive-page .archive-empty-filter{column-span:all;width:100%;margin-bottom:14px!important}
+body.archive-page .archive-toolbar{flex-wrap:wrap}
+body.archive-page .archive-search{flex:1 1 240px;max-width:360px}
+@media(max-width:800px){body.archive-page .archive-grid{columns:1}body.archive-page .archive-search{max-width:none}}

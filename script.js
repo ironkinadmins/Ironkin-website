@@ -2436,7 +2436,7 @@ function initArchiveControls(grid) {
   const buttons = [...document.querySelectorAll("[data-archive-filter]")];
   const search = document.getElementById("archiveSearch");
   const count = document.getElementById("archiveResultCount");
-  let activeFilter = "all";
+  let activeFilter = buttons.find(button => button.classList.contains("active"))?.dataset.archiveFilter || "all";
 
   const apply = () => {
     const query = String(search?.value || "").trim().toLowerCase();
@@ -2448,6 +2448,7 @@ function initArchiveControls(grid) {
       const searchMatch = !query || String(card.dataset.archiveSearch || "").includes(query);
       const show = typeMatch && searchMatch;
       card.hidden = !show;
+      card.style.display = show ? "" : "none";
       if (show) visible += 1;
     });
 
@@ -2464,9 +2465,14 @@ function initArchiveControls(grid) {
 
   buttons.forEach(button => button.addEventListener("click", () => {
     activeFilter = button.dataset.archiveFilter || "all";
-    buttons.forEach(item => item.classList.toggle("active", item === button));
+    buttons.forEach(item => {
+      const selected = item === button;
+      item.classList.toggle("active", selected);
+      item.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
     apply();
   }));
+  buttons.forEach(item => item.setAttribute("aria-pressed", item.dataset.archiveFilter === activeFilter ? "true" : "false"));
   search?.addEventListener("input", apply);
   apply();
 }
