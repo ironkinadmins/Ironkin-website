@@ -1,5 +1,5 @@
 import { hybridKv } from "../../_hybridKv.js";
-import { ensureDiscordProfilesSynced, getDiscordProfileSyncMeta } from "../../_discordProfiles.js";
+import { ensureDiscordProfilesSynced, getDiscordProfileSyncMeta } from "../_discordProfiles.js";
 
 const PROFILE_INDEX_KEY = "member-profiles:index";
 
