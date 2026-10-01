@@ -152,3 +152,15 @@ body.home-ledger-v3 .home-brand-refined .premium-brand-mark img{
 }
 body.home-ledger-v3 .home-brand-refined>div:nth-child(2){min-width:0}
 body.home-ledger-v3 .home-brand-refined .eyebrow{margin:0 0 3px!important}
+
+
+/* 2026-10-01: use the full live-column height for richer event standings. */
+@media(min-width:901px){
+  body.home-ledger-v3 .home-ledger-grid{align-items:stretch!important}
+  body.home-ledger-v3 .home-feature-panel{align-self:stretch!important;display:flex!important;flex-direction:column!important;height:100%!important}
+  body.home-ledger-v3 .home-feature-panel .home-top-three{flex:1 0 auto!important}
+  body.home-ledger-v3 .home-feature-panel .home-top-three div{min-height:39px!important;display:flex!important;align-items:center!important;justify-content:space-between!important}
+  body.home-ledger-v3 .home-feature-panel .featured-rotation-controls{margin-top:auto!important}
+  body.home-ledger-v3 .home-feature-panel .home-feature-button{align-self:flex-start!important}
+  body.home-ledger-v3 .home-ledger-side{height:100%!important}
+}

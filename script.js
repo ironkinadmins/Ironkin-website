@@ -1146,7 +1146,7 @@ function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
     if (topThree) {
       topThree.innerHTML = "";
       if (standings.standings?.length) {
-        standings.standings.slice(0, 3).forEach((player, playerIndex) => {
+        standings.standings.slice(0, 5).forEach((player, playerIndex) => {
           const div = document.createElement("div");
           div.innerHTML = `<strong>#${playerIndex + 1} ${escapeHtml(player.name)}</strong><span>${formatNumber(player.gained)} gained</span>`;
           topThree.appendChild(div);
