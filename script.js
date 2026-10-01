@@ -533,25 +533,57 @@ function formatEventUpdatedAt(value) {
 }
 
 function renderEventContributionChart(standings, metricLabel = "Gained") {
-  const points = Array.isArray(standings?.timeline) ? standings.timeline.filter(p => Number.isFinite(Number(p?.totalGained))) : [];
+  const points = Array.isArray(standings?.timeline)
+    ? standings.timeline.filter(point => Number.isFinite(Number(point?.totalGained)))
+    : [];
+
   if (points.length < 2) {
     return `<section class="event-contribution-card"><div class="event-section-title"><span>◈</span><h3>Contributions Over Time</h3></div><div class="event-chart-empty">Contribution history is being collected. The chart will populate as the event updates.</div></section>`;
   }
-  const width=1000, height=230, px=18, py=18;
-  const values=points.map(p=>Number(p.totalGained||0));
-  const max=Math.max(...values,1), min=Math.min(...values,0), range=Math.max(max-min,1);
-  const coords=points.map((p,i)=>{const x=px+(i/(points.length-1))*(width-px*2); const y=height-py-((Number(p.totalGained||0)-min)/range)*(height-py*2); return [x,y];});
-  const line=coords.map((c,i)=>`${i?'L':'M'} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(' ');
-  const area=`${line} L ${coords[coords.length-1][0].toFixed(1)} ${height-py} L ${coords[0][0].toFixed(1)} ${height-py} Z`;
-  const firstDate=new Date(points[0].at), lastDate=new Date(points[points.length-1].at);
-  const dateFmt=d=>Number.isFinite(d.getTime())?d.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit'}):'';
+
+  const width = 1000;
+  const height = 220;
+  const plot = { left: 72, right: 30, top: 24, bottom: 30 };
+  const values = points.map(point => Number(point.totalGained || 0));
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const rawRange = Math.max(rawMax - rawMin, 1);
+
+  // Give every event breathing room above and below its real values. For nearly-flat
+  // timelines, derive padding from the current total so the line never hugs an edge.
+  const referencePadding = Math.max(rawRange * 0.18, Math.abs(rawMax) * 0.06, 1);
+  const chartMin = Math.max(0, rawMin - referencePadding);
+  const chartMax = rawMax + referencePadding;
+  const chartRange = Math.max(chartMax - chartMin, 1);
+  const plotWidth = width - plot.left - plot.right;
+  const plotHeight = height - plot.top - plot.bottom;
+
+  const coords = points.map((point, index) => {
+    const x = plot.left + (index / (points.length - 1)) * plotWidth;
+    const y = plot.top + (1 - ((Number(point.totalGained || 0) - chartMin) / chartRange)) * plotHeight;
+    return [x, y];
+  });
+
+  const line = coords.map((coord, index) => `${index ? "L" : "M"} ${coord[0].toFixed(1)} ${coord[1].toFixed(1)}`).join(" ");
+  const baseline = height - plot.bottom;
+  const area = `${line} L ${coords.at(-1)[0].toFixed(1)} ${baseline} L ${coords[0][0].toFixed(1)} ${baseline} Z`;
+  const firstDate = new Date(points[0].at);
+  const lastDate = new Date(points.at(-1).at);
+  const dateFmt = date => Number.isFinite(date.getTime()) ? date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" }) : "";
+  const scaleValues = [chartMax, chartMin + chartRange / 2, chartMin];
+  const gridY = [plot.top, plot.top + plotHeight / 2, baseline];
+  const grids = gridY.map(y => `<line class="event-chart-gridline" x1="${plot.left}" y1="${y.toFixed(1)}" x2="${width - plot.right}" y2="${y.toFixed(1)}"></line>`).join("");
+
   return `<section class="event-contribution-card">
-    <div class="event-section-title"><span>◈</span><h3>Contributions Over Time</h3></div>
-    <div class="event-chart-wrap"><svg class="event-contribution-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="${escapeHtml(metricLabel)} contributions over time">
-      <path class="event-chart-area" d="${area}"></path><path class="event-chart-line" d="${line}"></path>
-      <circle class="event-chart-dot" cx="${coords.at(-1)[0]}" cy="${coords.at(-1)[1]}" r="5"></circle>
-    </svg><strong class="event-chart-total">${formatCompactEventNumber(values.at(-1))}</strong>
-    <div class="event-chart-axis"><span>${dateFmt(firstDate)}</span><span>${dateFmt(lastDate)}</span></div></div>
+    <div class="event-section-title event-chart-heading"><span>◈</span><h3>Contributions Over Time</h3><strong class="event-chart-current">${formatCompactEventNumber(values.at(-1))} <small>${escapeHtml(metricLabel)}</small></strong></div>
+    <div class="event-chart-wrap">
+      <div class="event-chart-scale" aria-hidden="true"><span>${formatCompactEventNumber(scaleValues[0])}</span><span>${formatCompactEventNumber(scaleValues[1])}</span><span>${formatCompactEventNumber(scaleValues[2])}</span></div>
+      <svg class="event-contribution-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="${escapeHtml(metricLabel)} contributions over time">
+        ${grids}<path class="event-chart-area" d="${area}"></path><path class="event-chart-line" d="${line}"></path>
+        <circle class="event-chart-dot" cx="${coords.at(-1)[0]}" cy="${coords.at(-1)[1]}" r="5"></circle>
+      </svg>
+      <div class="event-chart-axis"><span>${dateFmt(firstDate)}</span><span>${dateFmt(lastDate)}</span></div>
+    </div>
   </section>`;
 }
 
