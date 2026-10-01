@@ -5,6 +5,28 @@ export const PROOF_BUCKET = "hall-of-flame-proofs";
 const MEDALS = ["🥇", "🥈", "🥉"];
 const DISCORD_SETTINGS_KEY = "hall-of-flame:discord-settings";
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function discordFetch(url, options = {}, { maxRetries = 4 } = {}) {
+  let attempt = 0;
+  while (true) {
+    const response = await fetch(url, options);
+    if (response.status !== 429) return response;
+
+    if (attempt >= maxRetries) return response;
+    attempt += 1;
+
+    let retryAfterMs = 1000;
+    try {
+      const data = await response.clone().json();
+      if (Number.isFinite(Number(data?.retry_after))) retryAfterMs = Math.ceil(Number(data.retry_after) * 1000);
+    } catch {}
+    const headerDelay = Number(response.headers.get("Retry-After") || response.headers.get("X-RateLimit-Reset-After"));
+    if (Number.isFinite(headerDelay) && headerDelay > 0) retryAfterMs = Math.max(retryAfterMs, Math.ceil(headerDelay * 1000));
+    await sleep(Math.min(Math.max(retryAfterMs, 250), 15000));
+  }
+}
+
 export async function getHallOfFlameDiscordSettings(env) {
   let saved = {};
   try {
@@ -161,19 +183,19 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   else delete embed.image;
   const headers={ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" };
   if (!message) {
-    const createdResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
+    const createdResponse = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (!createdResponse.ok) throw new Error(`Discord Hall of Flame create failed: ${await createdResponse.text()}`);
     const created = await createdResponse.json();
     return { synced:true, messageId:created.id, mode:"created" };
   }
-  let response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
+  let response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
   if (response.ok) return { synced:true, messageId:message.id, mode:"edited" };
   // Legacy Hall of Flame embeds may have been authored by a webhook or older bot.
   // Discord only allows a bot to edit its own messages, so create a new managed
   // embed if the legacy message cannot be edited. Future updates will find the
   // newest matching boss title and edit that managed message instead.
   if (response.status === 403 || response.status === 404) {
-    response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
+    response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (response.ok) { const created=await response.json(); return { synced:true, messageId:created.id, mode:"created" }; }
   }
   throw new Error(`Discord Hall of Flame update failed: ${await response.text()}`);

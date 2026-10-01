@@ -77,6 +77,9 @@ export async function onRequestPost({request,env}){
         if(!board.length){results.push({slug:boss.slug,ok:false,skipped:true,reason:"No records"});continue;}
         const result=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||""); synced++; results.push({slug:boss.slug,ok:true,...result});
       }catch(error){failed++;results.push({slug:boss.slug,ok:false,error:error.message});}
+      // Keep bulk sync deliberately paced. discordFetch handles true 429 responses
+      // using Discord's retry_after; this small gap avoids needless bucket bursts.
+      if(body.action==="sync-all") await new Promise(resolve=>setTimeout(resolve,350));
     }
     return json({ok:failed===0,synced,failed,results});
   }
