@@ -106,7 +106,17 @@ export function parseDiscordBoard(description) {
     const clean = m[2].replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1").replace(/https?:\/\/\S+/g, "").replace(/\s+-\s*$/g, "").trim();
     const timeMatch = clean.match(/(\d+(?::\d+){0,2}(?:[.,]\d+)?)\s*$/);
     if (!timeMatch) return [];
-    const timeMs = parseTimeToMs(timeMatch[1]);
+    // Older Hall of Flame Discord boards sometimes used M:SS:cc (for
+    // example 1:10:00 = 1 minute, 10.00 seconds). parseTimeToMs treats
+    // three colon-separated groups as H:MM:SS, which would turn that into
+    // 1h 10m and produce an incorrect leaderboard order. Normalize only
+    // legacy Discord rows to the current MM:SS.cc representation first.
+    const rawTime = timeMatch[1];
+    const legacyHundredths = rawTime.match(/^(\d+):(\d{2}):(\d{2})$/);
+    const normalizedTime = legacyHundredths
+      ? `${legacyHundredths[1]}:${legacyHundredths[2]}.${legacyHundredths[3]}`
+      : rawTime;
+    const timeMs = parseTimeToMs(normalizedTime);
     if (!timeMs) return [];
     return [{ player: clean.slice(0, timeMatch.index).replace(/[-–—]\s*$/, "").trim(), timeMs, time: formatTime(timeMs), proofUrl }];
   }).sort((a,b) => a.timeMs - b.timeMs).slice(0, 3);
