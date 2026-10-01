@@ -1,17 +1,18 @@
-function createState() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  let binary = "";
-  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+import { createOAuthState, getSession } from "../_auth.js";
 
 export async function onRequestGet({ request, env }) {
-  const redirectUri =
-    env.DISCORD_REDIRECT_URI ||
-    `${new URL(request.url).origin}/api/auth/callback`;
+  const url = new URL(request.url);
+  const requestedReturnTo = url.searchParams.get("returnTo") || "/";
+  const returnTo = requestedReturnTo.startsWith("/") && !requestedReturnTo.startsWith("//") ? requestedReturnTo : "/";
 
-  const state = createState();
+  // A valid Ironkin session means Discord does not need to be invoked again.
+  const existingSession = await getSession(request, env);
+  if (existingSession) return Response.redirect(new URL(returnTo, url.origin).toString(), 302);
+
+  const redirectUri = env.DISCORD_REDIRECT_URI || `${url.origin}/api/auth/callback`;
+  // Signed state does not depend on a browser cookie surviving Discord's in-app
+  // browser / external-browser handoff and is not overwritten by another login tab.
+  const state = await createOAuthState(returnTo, env);
 
   const params = new URLSearchParams({
     client_id: env.DISCORD_CLIENT_ID,
@@ -25,7 +26,7 @@ export async function onRequestGet({ request, env }) {
     status: 302,
     headers: {
       Location: `https://discord.com/oauth2/authorize?${params.toString()}`,
-      "Set-Cookie": `ironkin_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
+      "Cache-Control": "no-store"
     }
   });
 }

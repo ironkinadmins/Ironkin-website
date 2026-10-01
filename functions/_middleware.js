@@ -60,6 +60,7 @@ export async function onRequest(context) {
 
   if (!session) {
     const loginUrl = new URL("/api/auth/login", url.origin);
+    loginUrl.searchParams.set("returnTo", `${url.pathname}${url.search}`);
     return Response.redirect(loginUrl.toString(), 302);
   }
 
