@@ -2423,6 +2423,54 @@ async function deleteArchiveEntry(archiveId) {
   await loadArchivePage();
 }
 
+function getArchiveFilterType(entry, isBingo = false) {
+  if (isBingo) return "bingo";
+  const type = String(entry?.type || "").toLowerCase();
+  if (type === "sotw") return "sotw";
+  if (type === "botw") return "botw";
+  if (type.includes("clan-goal") || type === "clan_goal") return "clan-goal";
+  return type || "other";
+}
+
+function initArchiveControls(grid) {
+  const buttons = [...document.querySelectorAll("[data-archive-filter]")];
+  const search = document.getElementById("archiveSearch");
+  const count = document.getElementById("archiveResultCount");
+  let activeFilter = "all";
+
+  const apply = () => {
+    const query = String(search?.value || "").trim().toLowerCase();
+    const cards = [...grid.querySelectorAll(".archive-card[data-archive-type]")];
+    let visible = 0;
+
+    cards.forEach(card => {
+      const typeMatch = activeFilter === "all" || card.dataset.archiveType === activeFilter;
+      const searchMatch = !query || String(card.dataset.archiveSearch || "").includes(query);
+      const show = typeMatch && searchMatch;
+      card.hidden = !show;
+      if (show) visible += 1;
+    });
+
+    grid.querySelector(".archive-empty-filter")?.remove();
+    if (!visible && cards.length) {
+      const empty = document.createElement("article");
+      empty.className = "card archive-empty-filter";
+      empty.innerHTML = `<p class="eyebrow">No Matches</p><h2>Nothing found</h2><p>Try another event type or search term.</p>`;
+      grid.appendChild(empty);
+    }
+
+    if (count) count.textContent = `${visible} ${visible === 1 ? "event" : "events"}`;
+  };
+
+  buttons.forEach(button => button.addEventListener("click", () => {
+    activeFilter = button.dataset.archiveFilter || "all";
+    buttons.forEach(item => item.classList.toggle("active", item === button));
+    apply();
+  }));
+  search?.addEventListener("input", apply);
+  apply();
+}
+
 async function loadArchivePage() {
   const grid = document.getElementById("archiveGrid");
 
@@ -2436,7 +2484,6 @@ async function loadArchivePage() {
     ]);
 
     const canDeleteArchive = isStaffUser(currentUser);
-
     grid.className = "archive-grid";
     grid.innerHTML = "";
 
@@ -2445,100 +2492,73 @@ async function loadArchivePage() {
         <article class="card archive-card">
           <p class="eyebrow">No Results Yet</p>
           <h2>Archive is empty</h2>
-          <p>Use the admin dashboard's End Event button to save completed events here.</p>
-        </article>
-      `;
+          <p>Completed events will appear here once they are archived.</p>
+        </article>`;
+      const count = document.getElementById("archiveResultCount");
+      if (count) count.textContent = "0 events";
       return;
     }
 
-    bingoArchive.forEach(entry => {
+    const records = [
+      ...bingoArchive.map(entry => ({ entry, isBingo: true, date: entry.archivedAt || 0 })),
+      ...archive.map(entry => ({ entry, isBingo: false, date: entry.endedAt || entry.archivedAt || 0 }))
+    ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    records.forEach(({ entry, isBingo }) => {
       const card = document.createElement("article");
       card.className = "card archive-card";
-      const dateText = entry.archivedAt ? new Date(entry.archivedAt).toLocaleDateString("en-US") : "Archived";
-      const winner = entry.winner === "ember"
-        ? entry.summary?.emberName
-        : entry.winner === "ash"
-          ? entry.summary?.ashName
-          : entry.winner === "tie" ? "Tie" : "Not recorded";
-      card.innerHTML = `
-        <p class="eyebrow">Battleship Bingo · ${dateText}</p>
-        <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
-        <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
-        <div class="archive-results-list">
-          <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.emberName || "Team 1")}</strong><span>${Number(entry.summary?.emberCompleted || 0)} tiles</span></div>
-          <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.ashName || "Team 2")}</strong><span>${Number(entry.summary?.ashCompleted || 0)} tiles</span></div>
-          <div class="archive-result-row"><strong>Saved records</strong><span>${Number(entry.summary?.proofCount || 0)} proofs · ${Number(entry.summary?.attackCount || 0)} attacks</span></div>
-        </div>
-        <div class="archive-card-actions">
-          <a class="btn secondary" href="/bingo-archive?id=${encodeURIComponent(entry.id)}">View All Four Boards</a>
-        </div>`;
-      grid.appendChild(card);
-    });
+      card.dataset.archiveType = getArchiveFilterType(entry, isBingo);
 
-    archive.forEach(entry => {
-      const card = document.createElement("article");
-      card.className = "card archive-card";
-
-      const dateText = entry.endedAt
-        ? new Date(entry.endedAt).toLocaleDateString("en-US")
-        : "Archived";
-
-      card.innerHTML = `
-        <p class="eyebrow">${entry.label || formatEventType(entry.type)} · ${dateText}</p>
-
-        <h2>${displayEventTitle(entry.title, entry.type)}</h2>
-
-        <p>
-          <strong>Winner:</strong> ${getArchiveWinnerText(entry)}
-        </p>
-
-        <div class="archive-results-list">
-          ${renderArchivedTopFive(entry)}
-        </div>
-
-        ${renderArchivedDrops(entry)}
-
-        <div class="archive-card-actions">
-          ${
-            entry.womCompetitionId
-              ? `
-                <a
-                  class="text-link"
-                  href="https://wiseoldman.net/competitions/${entry.womCompetitionId}"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  View WOM →
-                </a>
-              `
-              : ""
-          }
-
-          ${
-            canDeleteArchive
-              ? `<button class="btn secondary danger archive-delete-btn" type="button" data-archive-id="${entry.id}">Delete Archive</button>`
-              : ""
-          }
-        </div>
-      `;
-
+      if (isBingo) {
+        const dateText = entry.archivedAt ? new Date(entry.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "Archived";
+        const winner = entry.winner === "ember"
+          ? entry.summary?.emberName
+          : entry.winner === "ash"
+            ? entry.summary?.ashName
+            : entry.winner === "tie" ? "Tie" : "Not recorded";
+        card.dataset.archiveSearch = `${entry.title || "Battleship Bingo"} bingo ${winner || ""}`.toLowerCase();
+        card.innerHTML = `
+          <p class="eyebrow">Battleship Bingo · ${dateText}</p>
+          <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
+          <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
+          <div class="archive-results-list">
+            <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.emberName || "Team 1")}</strong><span>${Number(entry.summary?.emberCompleted || 0)} tiles</span></div>
+            <div class="archive-result-row"><strong>${escapeHtml(entry.summary?.ashName || "Team 2")}</strong><span>${Number(entry.summary?.ashCompleted || 0)} tiles</span></div>
+            <div class="archive-result-row"><strong>Saved records</strong><span>${Number(entry.summary?.proofCount || 0)} proofs · ${Number(entry.summary?.attackCount || 0)} attacks</span></div>
+          </div>
+          <div class="archive-card-actions">
+            <a class="btn secondary" href="/bingo-archive?id=${encodeURIComponent(entry.id)}">View Boards</a>
+          </div>`;
+      } else {
+        const dateText = entry.endedAt
+          ? new Date(entry.endedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+          : "Archived";
+        const label = entry.label || formatEventType(entry.type);
+        const title = displayEventTitle(entry.title, entry.type);
+        card.dataset.archiveSearch = `${label} ${title} ${getArchiveWinnerText(entry)}`.toLowerCase();
+        card.innerHTML = `
+          <p class="eyebrow">${escapeHtml(label)} · ${dateText}</p>
+          <h2>${escapeHtml(title)}</h2>
+          <p><strong>Winner:</strong> ${escapeHtml(getArchiveWinnerText(entry))}</p>
+          <div class="archive-results-list">${renderArchivedTopFive(entry)}</div>
+          ${renderArchivedDrops(entry)}
+          <div class="archive-card-actions">
+            ${entry.womCompetitionId ? `<a class="text-link" href="https://wiseoldman.net/competitions/${entry.womCompetitionId}" target="_blank" rel="noopener">View WOM →</a>` : ""}
+            ${canDeleteArchive ? `<button class="btn secondary danger archive-delete-btn" type="button" data-archive-id="${entry.id}">Delete Archive</button>` : ""}
+          </div>`;
+      }
       grid.appendChild(card);
     });
 
     grid.querySelectorAll(".archive-delete-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        deleteArchiveEntry(button.dataset.archiveId);
-      });
+      button.addEventListener("click", () => deleteArchiveEntry(button.dataset.archiveId));
     });
+
+    initArchiveControls(grid);
   } catch (error) {
-    grid.innerHTML = `
-      <article class="card archive-card">
-        <p>Could not load archive: ${error.message}</p>
-      </article>
-    `;
+    grid.innerHTML = `<article class="card archive-card"><p>Could not load archive: ${escapeHtml(error.message)}</p></article>`;
   }
 }
-
 
 
 function escapeHtml(value) {

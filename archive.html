@@ -9,14 +9,32 @@
   <link rel="stylesheet" href="/styles.css?v=20260807-premium-v4" />
   <link rel="stylesheet" href="/premium-v5.css?v=20260913-modern-nav-headings">
 </head>
-<body>
+<body class="archive-page">
   <div id="siteNav"></div>
 
 <main class="page">
-    <section class="page-title">
-      <p class="eyebrow">Ironkin History</p>
-      <h1>Event Archive</h1>
-      <p>Completed SOTW, BOTW, Clan Goal, and Battleship Bingo results saved from the admin dashboard.</p>
+    <section class="page-title archive-page-title">
+      <div>
+        <p class="eyebrow">Ironkin History</p>
+        <h1>Event Archive</h1>
+        <p>Past competitions, clan goals, and community events — with final standings preserved.</p>
+      </div>
+      <a class="btn secondary archive-events-link" href="/events.html">Current Events <span aria-hidden="true">→</span></a>
+    </section>
+
+    <section class="archive-toolbar" aria-label="Archive controls">
+      <div class="archive-filter-group" role="group" aria-label="Filter archived events">
+        <button class="archive-filter active" type="button" data-archive-filter="all">All</button>
+        <button class="archive-filter" type="button" data-archive-filter="sotw">SOTW</button>
+        <button class="archive-filter" type="button" data-archive-filter="botw">BOTW</button>
+        <button class="archive-filter" type="button" data-archive-filter="clan-goal">Clan Goals</button>
+        <button class="archive-filter" type="button" data-archive-filter="bingo">Bingo</button>
+      </div>
+      <label class="archive-search">
+        <span class="sr-only">Search archived events</span>
+        <input id="archiveSearch" type="search" placeholder="Search archive…" autocomplete="off" />
+      </label>
+      <span id="archiveResultCount" class="archive-result-count" aria-live="polite"></span>
     </section>
 
     <section id="archiveGrid" class="archive-grid">
