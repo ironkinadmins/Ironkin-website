@@ -43,6 +43,23 @@ export async function onRequestPost({ request, env }) {
   await supabaseRest(env, "hall_of_flame_submissions", { method:"POST", headers:{ Prefer:"return=minimal" }, body:JSON.stringify(row) });
   // A Discord notification is helpful, but it must never make a valid PB submission fail.
   let reviewNotification={sent:false};
-  try { reviewNotification=await notifyHallOfFlameReview(env,row); } catch (error) { reviewNotification={sent:false,error:String(error?.message||error)}; }
+  try {
+    reviewNotification=await notifyHallOfFlameReview(env,row);
+    if (reviewNotification?.sent && reviewNotification.messageId && reviewNotification.channelId) {
+      const reviewDiscord = {
+        review_discord_message_id:String(reviewNotification.messageId),
+        review_discord_channel_id:String(reviewNotification.channelId),
+        updated_at:new Date().toISOString()
+      };
+      await supabaseRest(env, `hall_of_flame_submissions?id=eq.${encodeURIComponent(id)}`, {
+        method:"PATCH",
+        headers:{ Prefer:"return=minimal" },
+        body:JSON.stringify(reviewDiscord)
+      });
+      Object.assign(row, reviewDiscord);
+    }
+  } catch (error) {
+    reviewNotification={sent:false,error:String(error?.message||error)};
+  }
   return Response.json({ ok:true, submission:row, reviewNotification }, { status:201, headers:noStore });
 }
