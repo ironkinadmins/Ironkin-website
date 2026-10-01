@@ -24,10 +24,12 @@ export async function onRequestPost({ request, env }) {
   await supabaseRest(env, `hall_of_flame_submissions?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body:JSON.stringify({ status, final_placement:placement, reviewed_by:String(session.id), reviewed_by_name:String(session.nick || session.global_name || session.username || "Staff"), reviewed_at:now, updated_at:now }) });
 
   let discord = { synced:false };
+  const configResponse = await supabaseRest(env, `hall_of_flame_bosses?select=discord_sync&name=eq.${encodeURIComponent(submission.boss)}&limit=1`);
+  const bossConfig = (await configResponse.json())?.[0];
   if (status === "approved") {
     const approved = [...alreadyApproved, { ...submission, status:"approved" }];
     const board = mergeBoard(legacy, approved);
-    if (board.some(row => row.submissionId === id || (row.source === "verified" && row.proofUrl === submission.proof_url))) {
+    if (bossConfig?.discord_sync !== false && board.some(row => row.submissionId === id || (row.source === "verified" && row.proofUrl === submission.proof_url))) {
       discord = await syncDiscordBoard(env, submission.boss, board, submission.proof_url);
     }
   }

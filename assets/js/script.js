@@ -2961,53 +2961,38 @@ async function loadClanNews() {
   }
 }
 
+async function hofFetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const type = response.headers.get("content-type") || "";
+  if (!type.includes("application/json")) {
+    throw new Error(response.ok ? "This Hall of Flame service returned an invalid response." : `Hall of Flame service unavailable (${response.status}).`);
+  }
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error || `Request failed (${response.status}).`);
+  return data;
+}
+
 async function loadHallOfFlamePage() {
   const grid = document.getElementById("hallOfFlameGrid");
   if (!grid) return;
-
   try {
-    const response = await fetch("/api/hall-of-flame/discord");
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Could not load Hall of Flame.");
-    }
-
-    const entries = data.entries || [];
-
-    const records = entries.filter(entry =>
-      entry.title &&
-      ![
-        "Boss of the Week",
-        "Skill of the Week",
-        "Hall Of Flame Quick Links!"
-      ].includes(entry.title)
-    );
-
-    grid.innerHTML = `
-      <section class="hof-section hof-section-wide">
-        <div class="section-heading-row">
-          <div>
-            <p class="eyebrow">Speed Records</p>
-            <h2>Record Boards</h2>
-          </div>
-        </div>
-
-        <div class="hof-record-grid">
-          ${records.length
-            ? records.map(renderSpeedRecordCard).join("")
-            : `<article class="card"><p>No Discord Hall of Flame records found.</p></article>`
-          }
-        </div>
-      </section>
-    `;
-    window.__hofBosses = records.map(entry => entry.title).filter(Boolean).sort((a,b) => a.localeCompare(b));
+    const [bossData, discordData] = await Promise.all([
+      hofFetchJson("/api/hall-of-flame/bosses", { cache:"no-store" }).catch(() => ({ bosses:[] })),
+      hofFetchJson("/api/hall-of-flame/discord", { cache:"no-store" }).catch(() => ({ entries:[] }))
+    ]);
+    const ignored = new Set(["Boss of the Week","Skill of the Week","Hall Of Flame Quick Links!"]);
+    const discordRecords=(discordData.entries||[]).filter(entry=>entry.title&&!ignored.has(entry.title));
+    const byName=new Map(discordRecords.map(entry=>[String(entry.title).trim().toLowerCase(),entry]));
+    const managed=Array.isArray(bossData.bosses)?bossData.bosses:[];
+    const records=(managed.length?managed.map(boss=>byName.get(String(boss.name).toLowerCase())||{title:boss.name,description:"",imageUrl:boss.image_url||"",thumbnailUrl:boss.image_url||"",managed:true}):discordRecords);
+    grid.innerHTML = `<section class="hof-section hof-section-wide"><div class="section-heading-row"><div><p class="eyebrow">Speed Records</p><h2>Record Boards</h2></div></div><div class="hof-record-grid">${records.length?records.map(renderSpeedRecordCard).join(""):`<article class="card"><p>No active Hall of Flame record boards yet.</p></article>`}</div></section>`;
+    window.__hofBosses = managed.filter(b=>b.active!==false&&b.accept_submissions!==false).map(b=>b.name).sort((a,b)=>a.localeCompare(b));
+    window.__hofBossConfigs = managed;
     await initHallOfFlameSubmissions();
   } catch (error) {
     grid.innerHTML = `<article class="card"><p>Could not load Hall of Flame: ${escapeHtml(error.message)}</p></article>`;
   }
 }
-
 
 
 
@@ -3057,48 +3042,65 @@ async function hofOpenSubmit() {
 async function hofOpenMine() {
   hofOpen(`<p class="eyebrow">Hall of Flame</p><h2>My Submissions</h2><p class="admin-muted">Loading…</p>`);
   const body=document.getElementById("hofDialogBody");
-  try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load submissions.");body.innerHTML=`<p class="eyebrow">Hall of Flame</p><h2>My Submissions</h2>${hofSubmissionRows(d.submissions||[])}`;}catch(e){body.innerHTML=`<h2>My Submissions</h2><p>${escapeHtml(e.message)}</p>`;}
+  try{const d=await hofFetchJson("/api/hall-of-flame/submissions",{cache:"no-store"});body.innerHTML=`<p class="eyebrow">Hall of Flame</p><h2>My Submissions</h2>${hofSubmissionRows(d.submissions||[])}`;}catch(e){body.innerHTML=`<h2>My Submissions</h2><p>${escapeHtml(e.message)}</p>`;}
 }
 
 async function hofOpenReview() {
   hofOpen(`<p class="eyebrow">Staff</p><h2>PB Review Queue</h2><p class="admin-muted">Loading…</p>`);
   const body=document.getElementById("hofDialogBody");
-  try{const r=await fetch("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load queue.");body.innerHTML=`<p class="eyebrow">Staff Verification</p><h2>PB Review Queue</h2><p class="admin-muted">Placement is recalculated when you approve, so the queue cannot overwrite a newer record.</p>${hofSubmissionRows(d.submissions||[],{review:true})}`;}catch(e){body.innerHTML=`<h2>PB Review Queue</h2><p>${escapeHtml(e.message)}</p>`;}
+  try{const d=await hofFetchJson("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});body.innerHTML=`<p class="eyebrow">Staff Verification</p><h2>PB Review Queue</h2><p class="admin-muted">Placement is recalculated when you approve, so the queue cannot overwrite a newer record.</p>${hofSubmissionRows(d.submissions||[],{review:true})}`;}catch(e){body.innerHTML=`<h2>PB Review Queue</h2><p>${escapeHtml(e.message)}</p>`;}
 }
 
 async function hofOpenHistory(boss) {
   hofOpen(`<p class="eyebrow">Record History</p><h2>${escapeHtml(boss)}</h2><p class="admin-muted">Loading verified PB history…</p>`);
   const body=document.getElementById("hofDialogBody");
-  try{const r=await fetch(`/api/hall-of-flame/history?boss=${encodeURIComponent(boss)}`,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not load history.");const rows=d.entries||[];body.innerHTML=`<p class="eyebrow">Record History</p><h2>${escapeHtml(boss)}</h2>${rows.length?`<div class="hof-history-list">${rows.map(x=>`<article class="hof-submission-row"><div><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><div class="hof-submission-meta"><span>Verified ${escapeHtml(hofDate(x.reviewed_at))}</span>${x.reviewed_by_name?`<span>by ${escapeHtml(x.reviewed_by_name)}</span>`:""}</div></div><a href="${escapeHtml(x.proof_url)}" target="_blank" rel="noopener">Proof ↗</a></article>`).join("")}</div>`:`<div class="hof-empty">No website-verified history yet. Existing Discord records remain visible on the board.</div>`}`;}catch(e){body.innerHTML=`<h2>${escapeHtml(boss)}</h2><p>${escapeHtml(e.message)}</p>`;}
+  try{const d=await hofFetchJson(`/api/hall-of-flame/history?boss=${encodeURIComponent(boss)}`,{cache:"no-store"});const rows=d.entries||[];body.innerHTML=`<p class="eyebrow">Record History</p><h2>${escapeHtml(boss)}</h2>${rows.length?`<div class="hof-history-list">${rows.map(x=>`<article class="hof-submission-row"><div><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><div class="hof-submission-meta"><span>Verified ${escapeHtml(hofDate(x.reviewed_at))}</span>${x.reviewed_by_name?`<span>by ${escapeHtml(x.reviewed_by_name)}</span>`:""}</div></div><a href="${escapeHtml(x.proof_url)}" target="_blank" rel="noopener">Proof ↗</a></article>`).join("")}</div>`:`<div class="hof-empty">No website-verified history yet. Existing Discord records remain visible on the board.</div>`}`;}catch(e){body.innerHTML=`<h2>${escapeHtml(boss)}</h2><p>${escapeHtml(e.message)}</p>`;}
 }
 
 async function hofLoadRecent() {
   const mount=document.getElementById("hofRecentRecords"); if(!mount)return;
-  try{const r=await fetch("/api/hall-of-flame/history",{cache:"no-store"});const d=await r.json();if(!r.ok)return;const rows=(d.entries||[]).slice(0,6);if(!rows.length)return;mount.hidden=false;mount.innerHTML=`<div class="section-heading-row"><div><p class="eyebrow">Recently Verified</p><h2>Recent Records</h2></div></div><div class="hof-recent-strip">${rows.map(x=>`<button class="hof-recent-item" type="button" data-hof-history="${escapeHtml(x.boss)}"><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><span>${escapeHtml(x.boss)} · ${escapeHtml(hofDate(x.reviewed_at))}</span></button>`).join("")}</div>`;}catch{}
+  try{const d=await hofFetchJson("/api/hall-of-flame/history",{cache:"no-store"});const rows=(d.entries||[]).slice(0,6);if(!rows.length)return;mount.hidden=false;mount.innerHTML=`<div class="section-heading-row"><div><p class="eyebrow">Recently Verified</p><h2>Recent Records</h2></div></div><div class="hof-recent-strip">${rows.map(x=>`<button class="hof-recent-item" type="button" data-hof-history="${escapeHtml(x.boss)}"><strong>${escapeHtml(x.display_name)} · ${escapeHtml(hofTime(x.time_ms))}</strong><span>${escapeHtml(x.boss)} · ${escapeHtml(hofDate(x.reviewed_at))}</span></button>`).join("")}</div>`;}catch{}
 }
 
+async function hofOpenManage() {
+  hofOpen(`<p class="eyebrow">Staff</p><h2>Manage Hall of Flame</h2><p class="admin-muted">Loading record boards…</p>`);
+  const body=document.getElementById("hofDialogBody");
+  try{
+    const d=await hofFetchJson("/api/hall-of-flame/bosses?scope=staff",{cache:"no-store"});
+    const rows=d.bosses||[];
+    body.innerHTML=`<p class="eyebrow">Staff</p><h2>Manage Hall of Flame</h2><p class="admin-muted">Bosses are managed here. Archive a board to preserve its history while removing it from submissions and the public page.</p>
+      <div class="hof-manage-actions"><button class="btn secondary" type="button" data-hof-boss-action="import">Import current Discord boards</button><button class="btn primary" type="button" data-hof-boss-action="new">Add Boss</button></div>
+      <div class="hof-boss-admin-list">${rows.length?rows.map(b=>`<article class="hof-boss-admin-row"><div><strong>${escapeHtml(b.name)}</strong><div class="hof-submission-meta"><span>${escapeHtml(b.category||"Boss")}</span><span>${b.active?"Active":"Archived"}</span><span>${b.accept_submissions?"Submissions open":"Submissions closed"}</span><span>${b.discord_sync?"Discord sync on":"Discord sync off"}</span></div></div><div class="hof-review-actions"><button class="btn secondary" type="button" data-hof-boss-action="edit" data-slug="${escapeHtml(b.slug)}">Edit</button>${b.active?`<button class="btn secondary danger" type="button" data-hof-boss-action="archive" data-slug="${escapeHtml(b.slug)}">Archive</button>`:`<button class="btn secondary" type="button" data-hof-boss-action="restore" data-slug="${escapeHtml(b.slug)}">Restore</button>`}</div></article>`).join(""):`<div class="hof-empty">No managed bosses yet. Import the current Discord boards to start.</div>`}</div>`;
+    window.__hofAdminBosses=rows;
+  }catch(e){body.innerHTML=`<h2>Manage Hall of Flame</h2><p>${escapeHtml(e.message)}</p><p class="admin-muted">If this is the first deployment, run SUPABASE_HALL_OF_FLAME_BOSSES_SETUP.sql in Supabase.</p>`;}
+}
+function hofBossForm(b={}){
+  hofOpen(`<p class="eyebrow">Staff</p><h2>${b.slug?"Edit":"Add"} Boss</h2><form id="hofBossForm" class="hof-form"><input type="hidden" name="slug" value="${escapeHtml(b.slug||"")}"><label>Boss name<input name="name" required value="${escapeHtml(b.name||"")}"></label><label>Category<select name="category"><option ${b.category==="Boss"?"selected":""}>Boss</option><option ${b.category==="Raid"?"selected":""}>Raid</option><option ${b.category==="Minigame"?"selected":""}>Minigame</option><option ${b.category==="Other"?"selected":""}>Other</option></select></label><label>Time format<input name="time_format" value="${escapeHtml(b.time_format||"MM:SS.ms")}"></label><label>Image URL <span class="hof-form-help">Optional</span><input name="image_url" value="${escapeHtml(b.image_url||"")}"></label><label class="hof-check"><input type="checkbox" name="visible" ${b.visible!==false?"checked":""}> Show on Hall of Flame</label><label class="hof-check"><input type="checkbox" name="accept_submissions" ${b.accept_submissions!==false?"checked":""}> Accept PB submissions</label><label class="hof-check"><input type="checkbox" name="discord_sync" ${b.discord_sync!==false?"checked":""}> Sync Top 3 to Discord</label><div id="hofBossMessage"></div><button class="btn primary" type="submit">Save Boss</button></form>`);
+}
 async function initHallOfFlameSubmissions(){
   const submit=document.getElementById("hofSubmitOpen"); if(!submit)return;
-  let auth={signedIn:false}; try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});if(r.ok){const d=await r.json();auth={signedIn:true,isStaff:Boolean(d.isStaff),submissions:d.submissions||[]};}}catch{}
+  let auth={signedIn:false}; try{const d=await hofFetchJson("/api/hall-of-flame/submissions",{cache:"no-store"});auth={signedIn:true,isStaff:Boolean(d.isStaff),submissions:d.submissions||[]};}catch{}
   submit.textContent=auth.signedIn?"Submit PB":"Sign in to Submit PB";
-  const mine=document.getElementById("hofMySubmissionsOpen"), review=document.getElementById("hofReviewOpen"), count=document.getElementById("hofPendingCount");
-  if(mine)mine.hidden=!auth.signedIn;if(review)review.hidden=!auth.isStaff;
-  if(auth.isStaff){try{const r=await fetch("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});const d=await r.json();if(r.ok&&count)count.textContent=`(${(d.submissions||[]).length})`;}catch{}}
+  const mine=document.getElementById("hofMySubmissionsOpen"), review=document.getElementById("hofReviewOpen"), manage=document.getElementById("hofManageOpen"), count=document.getElementById("hofPendingCount");
+  if(mine)mine.hidden=!auth.signedIn;if(review)review.hidden=!auth.isStaff;if(manage)manage.hidden=!auth.isStaff;
+  if(auth.isStaff){try{const d=await hofFetchJson("/api/hall-of-flame/submissions?scope=staff&status=pending",{cache:"no-store"});if(count)count.textContent=`(${(d.submissions||[]).length})`;}catch{}}
   await hofLoadRecent();
 }
 
 document.addEventListener("click",async event=>{
-  const target=event.target.closest("[data-hof-close],#hofSubmitOpen,#hofMySubmissionsOpen,#hofReviewOpen,[data-hof-history],[data-hof-review]");if(!target)return;
+  const target=event.target.closest("[data-hof-close],#hofSubmitOpen,#hofMySubmissionsOpen,#hofReviewOpen,#hofManageOpen,[data-hof-history],[data-hof-review],[data-hof-boss-action]");if(!target)return;
   if(target.matches("[data-hof-close]")){hofClose();return;}
   if(target.id==="hofSubmitOpen"){try{const r=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});if(r.status===401){location.href=`/api/auth/login?returnTo=${encodeURIComponent(location.pathname)}`;return;}}catch{}hofOpenSubmit();return;}
-  if(target.id==="hofMySubmissionsOpen"){hofOpenMine();return;} if(target.id==="hofReviewOpen"){hofOpenReview();return;}
+  if(target.id==="hofMySubmissionsOpen"){hofOpenMine();return;} if(target.id==="hofReviewOpen"){hofOpenReview();return;} if(target.id==="hofManageOpen"){hofOpenManage();return;}
+  if(target.dataset.hofBossAction){const action=target.dataset.hofBossAction;if(action==="new"){hofBossForm({});return;}if(action==="edit"){const b=(window.__hofAdminBosses||[]).find(x=>x.slug===target.dataset.slug);if(b)hofBossForm(b);return;}target.disabled=true;try{if(action==="import"){await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"import-discord"})});}else{const b=(window.__hofAdminBosses||[]).find(x=>x.slug===target.dataset.slug);if(!b)throw new Error("Boss not found.");if(action==="archive")await hofFetchJson(`/api/hall-of-flame/bosses?slug=${encodeURIComponent(b.slug)}`,{method:"DELETE"});if(action==="restore")await hofFetchJson("/api/hall-of-flame/bosses",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:b.slug,active:true,visible:true,accept_submissions:true})});}await hofOpenManage();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}return;}
   if(target.dataset.hofHistory){hofOpenHistory(target.dataset.hofHistory);return;}
-  if(target.dataset.hofReview){target.disabled=true;try{const r=await fetch("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:target.dataset.id,action:target.dataset.hofReview})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Review failed.");await hofOpenReview();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}}
+  if(target.dataset.hofReview){target.disabled=true;try{await hofFetchJson("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:target.dataset.id,action:target.dataset.hofReview})});await hofOpenReview();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}}
 });
 
 document.addEventListener("submit",async event=>{
+  if(event.target.id==="hofBossForm"){event.preventDefault();const form=event.target,fd=new FormData(form),slug=String(fd.get("slug")||"");const payload={slug,name:fd.get("name"),category:fd.get("category"),time_format:fd.get("time_format"),image_url:fd.get("image_url"),visible:fd.has("visible"),accept_submissions:fd.has("accept_submissions"),discord_sync:fd.has("discord_sync"),active:true};const msg=document.getElementById("hofBossMessage");try{await hofFetchJson("/api/hall-of-flame/bosses",{method:slug?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});await hofOpenManage();await loadHallOfFlamePage();}catch(e){if(msg)msg.textContent=e.message;}return;}
   if(event.target.id!=="hofSubmitForm")return;event.preventDefault();const form=event.target,msg=document.getElementById("hofSubmitMessage"),button=form.querySelector('button[type="submit"]');button.disabled=true;msg.textContent="Uploading proof…";
-  try{const r=await fetch("/api/hall-of-flame/submissions",{method:"POST",body:new FormData(form)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Submission failed.");msg.innerHTML=`<span class="hof-status pending">Pending verification</span> Submitted successfully. Projected placement: #${Number(d.submission.projected_placement)}.`;form.reset();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}
+  try{const d=await hofFetchJson("/api/hall-of-flame/submissions",{method:"POST",body:new FormData(form)});msg.innerHTML=`<span class="hof-status pending">Pending verification</span> Submitted successfully. Projected placement: #${Number(d.submission.projected_placement)}.`;form.reset();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}
 });
 
 

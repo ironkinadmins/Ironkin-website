@@ -31,13 +31,15 @@ export async function onRequestPost({ request, env }) {
   if (proof.size > 8 * 1024 * 1024) return Response.json({ error:"Screenshot must be 8 MB or smaller." }, { status:400, headers:noStore });
   if (!/^image\/(png|jpeg|webp|gif)$/i.test(proof.type || "")) return Response.json({ error:"Proof must be a PNG, JPG, WEBP, or GIF image." }, { status:400, headers:noStore });
 
+  const bossConfigResponse = await supabaseRest(env, `hall_of_flame_bosses?select=*&name=eq.${encodeURIComponent(boss)}&active=eq.true&accept_submissions=eq.true&limit=1`);
+  const bossConfig = (await bossConfigResponse.json())?.[0];
+  if (!bossConfig) return Response.json({ error:"That boss is not currently accepting Hall of Flame submissions." }, { status:400, headers:noStore });
   const message = await bossMessage(env, boss);
-  if (!message) return Response.json({ error:"That boss does not have a Hall of Flame record board yet." }, { status:400, headers:noStore });
-  const currentBoard = parseDiscordBoard(message.embeds?.[0]?.description || "");
+  const currentBoard = parseDiscordBoard(message?.embeds?.[0]?.description || "");
   const placement = projectedPlacement(currentBoard, timeMs);
   const id = crypto.randomUUID();
   const proofUrl = await uploadProof(env, proof, id);
-  const row = { id, discord_id:String(session.id), display_name:displayName(session), boss, time_ms:timeMs, time_text:timeText, proof_url:proofUrl, status:"pending", projected_placement:placement, created_at:new Date().toISOString(), updated_at:new Date().toISOString() };
+  const row = { id, discord_id:String(session.id), display_name:displayName(session), boss, boss_slug:String(bossConfig.slug), time_ms:timeMs, time_text:timeText, proof_url:proofUrl, status:"pending", projected_placement:placement, created_at:new Date().toISOString(), updated_at:new Date().toISOString() };
   await supabaseRest(env, "hall_of_flame_submissions", { method:"POST", headers:{ Prefer:"return=minimal" }, body:JSON.stringify(row) });
   return Response.json({ ok:true, submission:row }, { status:201, headers:noStore });
 }

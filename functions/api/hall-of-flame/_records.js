@@ -111,12 +111,17 @@ export function mergeBoard(legacy, approved) {
 
 export async function syncDiscordBoard(env, boss, board, proofUrl = "") {
   const message = await bossMessage(env, boss);
-  if (!message) return { synced:false, reason:"message-not-found" };
-  const existing = message.embeds?.[0] || {};
+  const existing = message?.embeds?.[0] || {};
   const description = board.map((row, i) => `${MEDALS[i]} • ${row.player} ${formatTime(row.timeMs)}${row.proofUrl ? ` - ${row.proofUrl}` : ""}`).join("\n");
   const embed = { ...existing, title: boss, description };
   if (proofUrl) embed.url = proofUrl;
   const headers={ Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type":"application/json" };
+  if (!message) {
+    const createdResponse = await fetch(`https://discord.com/api/v10/channels/${env.HALL_OF_FLAME_CHANNEL_ID}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
+    if (!createdResponse.ok) throw new Error(`Discord Hall of Flame create failed: ${await createdResponse.text()}`);
+    const created = await createdResponse.json();
+    return { synced:true, messageId:created.id, mode:"created" };
+  }
   let response = await fetch(`https://discord.com/api/v10/channels/${env.HALL_OF_FLAME_CHANNEL_ID}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
   if (response.ok) return { synced:true, messageId:message.id, mode:"edited" };
   // Legacy Hall of Flame embeds may have been authored by a webhook or older bot.
