@@ -7,7 +7,7 @@ export async function onRequestGet({ request }) {
 
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL(request.url).origin + "/api/recent-activity-cache-v6-rank-members"
+      new URL(request.url).origin + "/api/recent-activity-cache-v7-rank-members-fixed"
     );
 
     const cached = await cache.match(cacheKey);

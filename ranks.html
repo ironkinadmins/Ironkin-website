@@ -68,15 +68,16 @@
         $('rankMemberTotal').textContent = `${Number(data.memberCount || 0).toLocaleString()} members`;
         $('rankStatus').textContent = `Wise Old Man • Updated ${data.groupUpdatedAt ? dateLabel(data.groupUpdatedAt) : 'recently'}`;
         $('rankBreakdown').innerHTML = ranks.length ? ranks.map(r => `<button type="button" class="rank-pill" data-role="${esc(r.role)}" aria-expanded="false">${roleIconHtml(r.role)}<span class="rank-pill-name">${esc(label(r.role))}</span><span class="rank-pill-count">${Number(r.count||0).toLocaleString()}</span></button>`).join('') : '<div class="rank-error">No rank data was returned.</div>';
+        const normalizeRole = value => String(value || 'member').trim().toLowerCase().replace(/[\s-]+/g, '_');
         const allMembers = Array.isArray(data.rankMembers) ? data.rankMembers : [];
         const panel = $('rankMembersPanel');
         $('rankBreakdown').querySelectorAll('.rank-pill').forEach(button => button.addEventListener('click', () => {
-          const role = button.dataset.role || 'member';
+          const role = normalizeRole(button.dataset.role || 'member');
           const wasOpen = button.classList.contains('is-active');
           $('rankBreakdown').querySelectorAll('.rank-pill').forEach(x => { x.classList.remove('is-active'); x.setAttribute('aria-expanded','false'); });
           if (wasOpen) { panel.classList.remove('is-open'); panel.innerHTML=''; return; }
           button.classList.add('is-active'); button.setAttribute('aria-expanded','true');
-          const names = allMembers.filter(m => String(m.role).toLowerCase() === role).map(m => m.name).sort((a,b)=>a.localeCompare(b));
+          const names = allMembers.filter(m => normalizeRole(m.role) === role).map(m => m.name).filter(Boolean).sort((a,b)=>a.localeCompare(b));
           panel.innerHTML = `<div class="rank-members-head"><strong>${esc(label(role))}</strong><span>${names.length.toLocaleString()} ${names.length===1?'member':'members'}</span></div><div class="rank-members-list">${names.map(name=>`<div class="rank-member-name">${esc(name)}</div>`).join('')}</div>`;
           panel.classList.add('is-open');
         }));
