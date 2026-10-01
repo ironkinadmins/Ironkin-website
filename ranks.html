@@ -13,10 +13,10 @@
     .rank-live-card{background:linear-gradient(180deg,rgba(34,25,20,.96),rgba(23,17,14,.98));border:1px solid rgba(255,126,31,.28);border-radius:24px;padding:26px;box-shadow:0 18px 50px rgba(0,0,0,.2)}
     .rank-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.rank-card-head h2{margin:0;font-size:1.35rem}.rank-member-total{color:var(--muted,#aaa);font-size:.86rem;white-space:nowrap}
     .rank-status{display:flex;align-items:center;gap:9px;color:var(--muted,#aaa);font-size:.84rem;margin-bottom:18px}.rank-status-dot{width:8px;height:8px;border-radius:50%;background:#ff7e1f;box-shadow:0 0 10px rgba(255,126,31,.55)}
-    .rank-breakdown-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.rank-pill{display:flex;align-items:center;gap:10px;min-height:48px;padding:9px 12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);border-radius:10px}.rank-pill-icon{width:24px;text-align:center;font-size:1.05rem}.rank-pill-name{font-weight:700;font-size:.88rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-pill-count{margin-left:auto;color:#ff9a4c;font-weight:800;font-variant-numeric:tabular-nums}
+    .rank-breakdown-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.rank-pill{display:flex;align-items:center;gap:10px;min-height:48px;padding:9px 12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);border-radius:10px;color:inherit;font:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .16s ease,background .16s ease,transform .16s ease}.rank-pill:hover{border-color:rgba(255,126,31,.48);background:rgba(255,126,31,.075);transform:translateY(-1px)}.rank-pill:focus-visible{outline:2px solid #ff7e1f;outline-offset:2px}.rank-pill.is-active{border-color:rgba(255,126,31,.7);background:rgba(255,126,31,.11)}.rank-pill-icon{width:24px;text-align:center;font-size:1.05rem}.rank-pill-name{font-weight:700;font-size:.88rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-pill-count{margin-left:auto;color:#ff9a4c;font-weight:800;font-variant-numeric:tabular-nums}.rank-roster{display:none;margin-top:14px;padding:16px 17px;border:1px solid rgba(255,126,31,.22);background:rgba(0,0,0,.16);border-radius:14px}.rank-roster.is-open{display:block}.rank-roster-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.rank-roster-title{margin:0;font-size:1rem}.rank-roster-count{color:#ff9a4c;font-size:.8rem;font-weight:800}.rank-roster-members{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px}.rank-roster-member{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ddd2cb;font-size:.86rem;padding:4px 0}
     .rank-recent-list{display:grid}.rank-recent-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid rgba(255,255,255,.09)}.rank-recent-row:last-child{border-bottom:0}.rank-recent-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-recent-date{color:var(--muted,#999);font-size:.78rem;white-space:nowrap}.rank-error{color:#c7bdb7;padding:8px 0}.rank-info-link{color:#ff7e1f;font-weight:800}
-    @media(max-width:900px){.rank-live-grid{grid-template-columns:1fr}.rank-breakdown-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:540px){.rank-live-card{padding:20px}.rank-breakdown-grid{grid-template-columns:1fr}.rank-recent-date{font-size:.72rem}}
+    @media(max-width:900px){.rank-live-grid{grid-template-columns:1fr}.rank-breakdown-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rank-roster-members{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:540px){.rank-live-card{padding:20px}.rank-breakdown-grid{grid-template-columns:1fr}.rank-roster-members{grid-template-columns:1fr}.rank-recent-date{font-size:.72rem}}
   </style>
 </head>
 <body>
@@ -34,6 +34,7 @@
         <div class="rank-card-head"><h2>Rank Breakdown</h2><span class="rank-member-total" id="rankMemberTotal">— members</span></div>
         <div class="rank-status"><span class="rank-status-dot"></span><span id="rankStatus">Loading current ranks…</span></div>
         <div class="rank-breakdown-grid" id="rankBreakdown"><div class="rank-error">Loading rank breakdown…</div></div>
+        <div class="rank-roster" id="rankRoster" aria-live="polite"></div>
       </article>
       <article class="rank-live-card">
         <div class="rank-card-head"><h2>Recently Joined</h2></div>
@@ -62,7 +63,22 @@
         const ranks = data.rankBreakdown.slice().sort((a,b)=>(order.get(a.role)??999)-(order.get(b.role)??999)||b.count-a.count||a.role.localeCompare(b.role));
         $('rankMemberTotal').textContent = `${Number(data.memberCount || 0).toLocaleString()} members`;
         $('rankStatus').textContent = `Wise Old Man • Updated ${data.groupUpdatedAt ? dateLabel(data.groupUpdatedAt) : 'recently'}`;
-        $('rankBreakdown').innerHTML = ranks.length ? ranks.map(r => `<div class="rank-pill"><span class="rank-pill-icon" aria-hidden="true">${roleIcons[r.role] || '◆'}</span><span class="rank-pill-name">${esc(label(r.role))}</span><span class="rank-pill-count">${Number(r.count||0).toLocaleString()}</span></div>`).join('') : '<div class="rank-error">No rank data was returned.</div>';
+        const rankMembers = data.rankMembers && typeof data.rankMembers === 'object' ? data.rankMembers : {};
+        $('rankBreakdown').innerHTML = ranks.length ? ranks.map(r => `<button type="button" class="rank-pill" data-rank="${esc(r.role)}" aria-expanded="false" aria-controls="rankRoster"><span class="rank-pill-icon" aria-hidden="true">${roleIcons[r.role] || '◆'}</span><span class="rank-pill-name">${esc(label(r.role))}</span><span class="rank-pill-count">${Number(r.count||0).toLocaleString()}</span></button>`).join('') : '<div class="rank-error">No rank data was returned.</div>';
+        const roster = $('rankRoster');
+        $('rankBreakdown').addEventListener('click', event => {
+          const pill = event.target.closest('.rank-pill');
+          if (!pill) return;
+          const role = pill.dataset.rank;
+          const wasOpen = pill.classList.contains('is-active');
+          document.querySelectorAll('.rank-pill.is-active').forEach(el => { el.classList.remove('is-active'); el.setAttribute('aria-expanded','false'); });
+          if (wasOpen) { roster.classList.remove('is-open'); roster.innerHTML = ''; return; }
+          const names = Array.isArray(rankMembers[role]) ? rankMembers[role] : [];
+          pill.classList.add('is-active');
+          pill.setAttribute('aria-expanded','true');
+          roster.innerHTML = `<div class="rank-roster-head"><h3 class="rank-roster-title">${esc(label(role))}</h3><span class="rank-roster-count">${names.length.toLocaleString()} ${names.length === 1 ? 'member' : 'members'}</span></div><div class="rank-roster-members">${names.length ? names.map(name => `<div class="rank-roster-member">${esc(name)}</div>`).join('') : '<div class="rank-error">No members found for this rank.</div>'}</div>`;
+          roster.classList.add('is-open');
+        });
         const recent = Array.isArray(data.recentlyJoined) ? data.recentlyJoined : [];
         $('rankRecent').innerHTML = recent.length ? recent.map(m => `<div class="rank-recent-row"><span aria-hidden="true">${roleIcons[m.role] || '◆'}</span><span class="rank-recent-name">${esc(m.name)}</span><span class="rank-recent-date">${esc(dateLabel(m.joinedAt))}</span></div>`).join('') : '<div class="rank-error">No join dates are available from Wise Old Man yet.</div>';
       }catch(error){
