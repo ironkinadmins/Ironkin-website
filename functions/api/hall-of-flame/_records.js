@@ -177,7 +177,10 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   if (!env.DISCORD_BOT_TOKEN || !channelId) throw new Error("Discord Hall of Flame integration is not configured.");
   const message = await bossMessage(env, boss);
   const existing = message?.embeds?.[0] || {};
-  const description = board.map((row, i) => `${MEDALS[i]} • ${row.player} ${formatTime(row.timeMs)}${row.proofUrl ? ` - ${row.proofUrl}` : ""}`).join("\n");
+  const description = board.map((row, i) => {
+    const label = `${row.player} ${formatTime(row.timeMs)}`;
+    return `${MEDALS[i]} • ${row.proofUrl ? `[${label}](${row.proofUrl})` : label}`;
+  }).join("\n");
   const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
   const hallUrl = `${siteUrl}/hall-of-flame`;
   const embed = { ...existing, title: boss, description, url: hallUrl };
