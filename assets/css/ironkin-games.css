@@ -327,3 +327,15 @@
 
 /* Contract risk filter */
 .contract-tier-filterbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}.contract-tier-filter{appearance:none;display:flex;align-items:center;gap:10px;min-height:54px;padding:9px 11px;border:1px solid rgba(255,255,255,.075);border-radius:9px;background:#0d0b09;color:#a49b92;text-align:left;cursor:pointer;transition:border-color .15s ease,background .15s ease,color .15s ease}.contract-tier-filter>span:last-child{min-width:0}.contract-tier-filter strong,.contract-tier-filter small{display:block}.contract-tier-filter strong{font-size:.82rem;color:#ddd5cd}.contract-tier-filter small{margin-top:2px;font-size:.58rem;color:#79726b}.contract-tier-filter .contract-tier-icon{flex:0 0 31px}.contract-tier-filter.risk-safe .contract-tier-icon{color:#9ac5a2;background:rgba(81,145,95,.14)}.contract-tier-filter.risk-risky .contract-tier-icon{color:#e2a45d;background:rgba(199,132,51,.14)}.contract-tier-filter.risk-all-in .contract-tier-icon{color:#d9877e;background:rgba(164,72,61,.15)}.contract-tier-filter.risk-safe.is-active{border-color:rgba(96,154,108,.6);background:rgba(69,128,82,.11)}.contract-tier-filter.risk-risky.is-active{border-color:rgba(209,138,55,.62);background:rgba(184,121,46,.11)}.contract-tier-filter.risk-all-in.is-active{border-color:rgba(168,78,67,.65);background:rgba(147,59,49,.12)}.contract-tier-filter.is-active strong{color:#f1ebe5}.contract-tier-panels .contract-tier-group{margin-top:0}.contract-tier-group[hidden]{display:none!important}@media(max-width:600px){.contract-tier-filterbar{grid-template-columns:1fr}.contract-tier-filter{min-height:48px}}
+/* v7 challenge information cleanup */
+.games-week-view{gap:14px}
+.challenge-summary{min-height:0!important;max-width:68ch;margin-top:13px!important;margin-bottom:13px!important;font-size:.88rem;line-height:1.5}
+.games-reveal{padding:15px 16px!important;background:rgba(216,153,75,.035)!important}
+.games-reveal-heading{margin-bottom:8px}
+.games-objective{padding:10px 12px;border-left:2px solid rgba(216,153,75,.65);background:rgba(0,0,0,.16);border-radius:0 7px 7px 0;font-size:.84rem!important;line-height:1.48!important}
+.games-rules-divider{margin:13px 0 9px}
+.games-rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.games-rule-item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start;padding:8px 9px;border:1px solid rgba(255,255,255,.055);border-radius:8px;background:rgba(0,0,0,.13)}
+.games-rule-item>span{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;background:rgba(216,153,75,.10);color:#dca15a;font-size:.61rem;font-weight:900}
+.games-rule-item p{margin:1px 0 0!important;color:#c8c2bb!important;font-size:.76rem!important;line-height:1.38!important}
+@media(max-width:680px){.games-rules-grid{grid-template-columns:1fr}}
