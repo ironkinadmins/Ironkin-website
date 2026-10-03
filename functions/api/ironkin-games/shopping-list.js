@@ -21,10 +21,14 @@ export async function onRequestGet({ request, env }) {
   const isOpen = testMode || ((!Number.isFinite(start) || now >= start) && (!Number.isFinite(end) || now <= end));
   if (!isOpen) return Response.json({ error:"This Shopping List is not currently available." }, { status:403 });
   const eventId = shoppingEventId(week.id, challenge.id, team.id);
-  const rows = await shoppingSubmissionRows(env, eventId);
+  // Staff Test Mode is a private preview. Never read live Shopping List
+  // submissions here, otherwise the preview can expose/live-reflect team results.
+  // An empty row set renders every configured objective as still needed while
+  // preserving the selected test week/team and the real configured item pool.
+  const rows = testMode ? [] : await shoppingSubmissionRows(env, eventId);
   const items = shoppingTeamProgress(state, team, challenge, rows);
   return Response.json({
-    ok:true, eventId, teamId:team.id, teamName:team.name, isOpen,
+    ok:true, eventId, teamId:team.id, teamName:team.name, isOpen, testMode,
     found:items.filter(x=>x.status==="approved").length,
     pending:items.filter(x=>x.status==="pending").length,
     total:shoppingItems(challenge).length,
