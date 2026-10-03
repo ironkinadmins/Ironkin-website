@@ -4,6 +4,8 @@ import { hasSupabase, supabaseRest, listTrackedItems } from "../api/_supabase.js
 import { resolveOsrsItemIdByName } from "../api/_osrsItems.js";
 import { makePluginEventId } from "../api/_pluginEvents.js";
 import { readDropsWithClanGoalFallback, getDropListKey } from "../api/drops/_dropKeys.js";
+import { loadGames } from "../api/ironkin-games/_store.js";
+import { shoppingChallenges, shoppingEventId, teamForDiscord, shoppingSubmissionRows, shoppingTeamProgress } from "../api/ironkin-games/_shoppingList.js";
 
 function safeJson(value, fallback) {
   try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
@@ -154,6 +156,26 @@ export async function onRequestGet({ request, env }) {
       if (eventPassword) responseEvent.eventPassword = eventPassword;
       result.push(responseEvent);
     }
+  }
+
+  // Ironkin Games Shopping List is a virtual tracked event. It is player/team-aware:
+  // only rostered Games members receive it, and items already pending/approved for
+  // their team disappear from the plugin list so no second proof is generated.
+  try {
+    const games = await loadGames(env);
+    const team = teamForDiscord(games, auth.pluginUser?.discordId);
+    if (team) {
+      for (const entry of shoppingChallenges(games)) {
+        if (!entry.open) continue;
+        const eventId = shoppingEventId(entry.week.id, entry.challenge.id, team.id);
+        const rows = await shoppingSubmissionRows(env, eventId);
+        const progress = shoppingTeamProgress(games, team, entry.challenge, rows);
+        const remaining = progress.filter(item => item.status === "missing").map(item => item.itemId);
+        if (remaining.length) result.push({ eventId, items: remaining });
+      }
+    }
+  } catch (error) {
+    console.warn("Could not append Ironkin Games Shopping List items", error);
   }
 
   const url = new URL(request.url);

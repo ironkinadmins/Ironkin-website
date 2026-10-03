@@ -8,6 +8,8 @@ import {
   isUniqueViolation
 } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
+import { loadGames } from "../../api/ironkin-games/_store.js";
+import { resolveShoppingEvent } from "../../api/ironkin-games/_shoppingList.js";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
@@ -116,13 +118,22 @@ async function handlePluginSubmission(context) {
       pluginOnly: true
     };
   }
+  let shopping = null;
+  if (!event && requestedEventId.startsWith("ig-shopping-")) {
+    const games = await loadGames(env);
+    shopping = await resolveShoppingEvent(games, env, requestedEventId, pluginUser?.discordId);
+    if (shopping) event = { id: requestedEventId, type: "ironkin-games-shopping-list", title: shopping.challenge.name || "Ironkin Games Shopping List", active: true, dropsEnabled: true, pluginEventId: requestedEventId };
+  }
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
   const websiteEventId = String(event.id || "");
-  const tracked = await getTrackedItem(env, websiteEventId, itemId);
-  if (!tracked) return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
+  let tracked = shopping ? shopping.progress.find(entry => Number(entry.itemId) === itemId) : await getTrackedItem(env, websiteEventId, itemId);
+  if (!tracked || (shopping && tracked.status !== "missing")) {
+    if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:requestedEventId, itemid:itemId, status:tracked.status }, { status:200 });
+    return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
+  }
 
-  const trackingRule = ["repeatable", "once_per_player", "once_per_event"].includes(String(tracked.tracking_rule || "")) ? String(tracked.tracking_rule) : "repeatable";
+  const trackingRule = shopping ? "once_per_event" : (["repeatable", "once_per_player", "once_per_event"].includes(String(tracked.tracking_rule || "")) ? String(tracked.tracking_rule) : "repeatable");
   const discordId = String(pluginUser?.discordId || "");
   const playerKey = normalizePlayerKey(discordId, username);
   const clientTimestamp = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString();
@@ -145,7 +156,7 @@ async function handlePluginSubmission(context) {
       discord_id: discordId,
       player_key: playerKey,
       item_id: itemId,
-      item_name: String(tracked.item_name || body.itemName || `Item ${itemId}`),
+      item_name: String(tracked.item_name || tracked.name || body.itemName || `Item ${itemId}`),
       quantity,
       participants,
       tracking_rule: trackingRule,
