@@ -110,7 +110,7 @@ export async function onRequestGet({ request, env }) {
       id:t.id, name:t.name, points:publicPoints.get(String(t.id)) || 0,
       members:(t.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "", ehp:m.ehp, ehb:m.ehb, totalLevel:m.totalLevel }))
     })), weeks:fullGamesAccess ? weeks : [],
-    myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team) } : null,
+    myTeam: team ? { id:team.id, name:team.name, captainDiscordId:team.captainDiscordId, memberCount:teamMemberCount(team), members:(team.members || []).map(m => ({ name:m.name || m.rsn || "Member", rsn:m.rsn || "" })) } : null,
     // Public master schedule: expose only safe scheduling metadata for all teams.
     // Never expose challenge names, objectives, rules, scores, proof, or other reveal-sensitive data here.
     scheduleSessions: fullGamesAccess ? allSessions.filter(s => s.scheduledAt).map(s => {
