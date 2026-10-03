@@ -26,17 +26,28 @@ export function shoppingChallenges(state, now = Date.now()) {
 }
 
 export function shoppingItems(challenge) {
-  return (Array.isArray(challenge?.shoppingItems) ? challenge.shoppingItems : []).map((item, index) => ({
-    id: String(item.id || `shopping-${index + 1}`),
-    itemId: Number(item.itemId) || 0,
-    name: String(item.name || `Item ${item.itemId || ""}`).trim(),
-    image: String(item.image || "").trim()
-  })).filter(item => Number.isInteger(item.itemId) && item.itemId > 0);
+  return (Array.isArray(challenge?.shoppingItems) ? challenge.shoppingItems : []).map((item, index) => {
+    const legacyId = Number(item.itemId) || 0;
+    const itemIds = [...new Set((Array.isArray(item.itemIds) ? item.itemIds : [legacyId])
+      .map(Number).filter(id => Number.isInteger(id) && id > 0))];
+    return {
+      id: String(item.id || `shopping-${index + 1}`),
+      itemId: itemIds[0] || 0,
+      itemIds,
+      name: String(item.name || `Item ${itemIds[0] || ""}`).trim(),
+      image: String(item.image || "").trim()
+    };
+  }).filter(item => item.itemIds.length);
+}
+
+export function shoppingObjectiveForItem(challenge, itemId) {
+  const id = Number(itemId) || 0;
+  return shoppingItems(challenge).find(item => item.itemIds.includes(id)) || null;
 }
 
 export async function shoppingSubmissionRows(env, eventId) {
   if (!hasSupabase(env)) return [];
-  const response = await supabaseRest(env, `ironkin_event_submissions?select=id,item_id,item_name,player_name,discord_id,status,proof_url,client_timestamp,processed_at,claimed_at,created_at&website_event_id=eq.${encodeURIComponent(eventId)}&status=in.(pending,approved)&order=created_at.asc&limit=5000`);
+  const response = await supabaseRest(env, `ironkin_event_submissions?select=id,item_id,item_name,shopping_objective_id,player_name,discord_id,status,proof_url,client_timestamp,processed_at,claimed_at,created_at&website_event_id=eq.${encodeURIComponent(eventId)}&status=in.(pending,approved)&order=created_at.asc&limit=5000`);
   const rows = await response.json();
   return Array.isArray(rows) ? rows : [];
 }
@@ -44,18 +55,20 @@ export async function shoppingSubmissionRows(env, eventId) {
 export function shoppingTeamProgress(state, team, challenge, rows) {
   const memberIds = new Set([String(team?.captainDiscordId || ""), ...(team?.members || []).map(m => String(m.discordId || m.id || ""))].filter(Boolean));
   const items = shoppingItems(challenge);
-  const byItem = new Map();
+  const byObjective = new Map();
   for (const row of rows || []) {
     if (!memberIds.has(String(row.discord_id || ""))) continue;
     const itemId = Number(row.item_id) || 0;
-    if (!items.some(item => item.itemId === itemId)) continue;
-    const previous = byItem.get(itemId);
-    if (!previous || String(row.status) === "approved" || String(previous.status) !== "approved") byItem.set(itemId, row);
+    const objective = items.find(item => String(row.shopping_objective_id || "") === item.id || item.itemIds.includes(itemId));
+    if (!objective) continue;
+    const previous = byObjective.get(objective.id);
+    if (!previous || String(row.status) === "approved" || String(previous.status) !== "approved") byObjective.set(objective.id, row);
   }
   return items.map(item => {
-    const row = byItem.get(item.itemId) || null;
+    const row = byObjective.get(item.id) || null;
     return {
       ...item,
+      matchedItemId: row ? (Number(row.item_id) || 0) : 0,
       status: row ? String(row.status || "pending") : "missing",
       submissionId: row?.id || "",
       playerName: row?.player_name || "",

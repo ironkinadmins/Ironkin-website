@@ -170,7 +170,7 @@ export async function onRequestGet({ request, env }) {
         const eventId = shoppingEventId(entry.week.id, entry.challenge.id, team.id);
         const rows = await shoppingSubmissionRows(env, eventId);
         const progress = shoppingTeamProgress(games, team, entry.challenge, rows);
-        const remaining = progress.filter(item => item.status === "missing").map(item => item.itemId);
+        const remaining = progress.filter(item => item.status === "missing").flatMap(item => item.itemIds || [item.itemId]);
         if (remaining.length) result.push({ eventId, items: remaining });
       }
     }

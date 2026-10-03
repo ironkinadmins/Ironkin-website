@@ -9,7 +9,7 @@ import {
 } from "../../api/_supabase.js";
 import { makePluginEventId } from "../../api/_pluginEvents.js";
 import { loadGames } from "../../api/ironkin-games/_store.js";
-import { resolveShoppingEvent } from "../../api/ironkin-games/_shoppingList.js";
+import { resolveShoppingEvent, shoppingObjectiveForItem } from "../../api/ironkin-games/_shoppingList.js";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
@@ -127,9 +127,10 @@ async function handlePluginSubmission(context) {
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
   const websiteEventId = String(event.id || "");
-  let tracked = shopping ? shopping.progress.find(entry => Number(entry.itemId) === itemId) : await getTrackedItem(env, websiteEventId, itemId);
+  const shoppingObjective = shopping ? shoppingObjectiveForItem(shopping.challenge, itemId) : null;
+  let tracked = shopping ? shopping.progress.find(entry => entry.id === shoppingObjective?.id) : await getTrackedItem(env, websiteEventId, itemId);
   if (!tracked || (shopping && tracked.status !== "missing")) {
-    if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:requestedEventId, itemid:itemId, status:tracked.status }, { status:200 });
+    if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:requestedEventId, itemid:itemId, shoppingObjectiveId:tracked.id, status:tracked.status }, { status:200 });
     return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
   }
 
@@ -157,6 +158,7 @@ async function handlePluginSubmission(context) {
       player_key: playerKey,
       item_id: itemId,
       item_name: String(tracked.item_name || tracked.name || body.itemName || `Item ${itemId}`),
+      shopping_objective_id: shopping ? String(tracked.id || "") : "",
       quantity,
       participants,
       tracking_rule: trackingRule,
