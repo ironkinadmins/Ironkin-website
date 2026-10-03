@@ -16,7 +16,7 @@ function submissionReviewStatus(related) {
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: challenge.name, kind: challenge.kind || "main", status: challenge.status || "upcoming",
-    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:challenge.trackingMethod||"submissions", trackerType:challenge.trackerType||"none", trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
+    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:challenge.trackingMethod||"submissions", trackerType:challenge.trackerType||"none", contracts: reveal && challenge.trackerType==="contracts" ? (challenge.contracts||[]) : [], trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
     participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };
@@ -29,7 +29,12 @@ export async function onRequestGet({ request, env }) {
   const session = await getSession(request, env);
   const staff = isStaffSession(session);
   const signedUp = Boolean(session && (state.signups || []).some(s => String(s.discordId || "") === String(session.id || "")));
-  const team = memberTeam(state, session);
+  let team = memberTeam(state, session);
+  const url = new URL(request.url);
+  const testMode = staff && url.searchParams.get("test") === "1";
+  const testTeamId = String(url.searchParams.get("testTeamId") || "");
+  const testPlayerDiscordId = String(url.searchParams.get("testPlayerDiscordId") || "");
+  if (testMode) team = (state.teams || []).find(t => String(t.id) === testTeamId) || team;
   const allSessions = state.sessions || [];
   // Staff may review all sessions, but the public challenge reveal must still
   // behave like a normal player view. Only this viewer's own team sessions can
@@ -73,7 +78,8 @@ export async function onRequestGet({ request, env }) {
       const opensAtMs = challenge.opensAt ? new Date(challenge.opensAt).getTime() : new Date(week.startDate || 0).getTime();
       const sideIsOpen = challenge.kind === "side" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
       const bossRushIsOpen = (challenge.trackingMode === "boss-rush" || challenge.trackerType === "timed-wom-attempt") && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
-      const publicReveal = sideIsOpen || bossRushIsOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
+      const contractsAreOpen = challenge.trackerType === "contracts" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
+      const publicReveal = testMode || sideIsOpen || bossRushIsOpen || contractsAreOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
       const teamReveal = challenge.kind !== "side" && team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
@@ -116,7 +122,7 @@ export async function onRequestGet({ request, env }) {
         submissionStatus
       };
     }) : [],
-    signedIn:Boolean(session), isStaff:staff,
+    signedIn:Boolean(session), isStaff:staff, testMode:Boolean(testMode), testPlayerDiscordId:testMode?testPlayerDiscordId:"",
     publishedResultWeeks:[...publishedWeeks],
     hasPublishedResults:publishedWeeks.size > 0,
     gamesCompleted:Boolean(state.gamesCompleted),
