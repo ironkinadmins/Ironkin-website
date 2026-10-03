@@ -43,7 +43,7 @@ async function womBulkOnce(startIso, endIso, env){
   if (env?.WOM_API_KEY) headers["x-api-key"] = env.WOM_API_KEY;
   let response;
   try {
-    response = await fetch(url, { headers });
+    response = await fetch(url, { headers, signal:AbortSignal.timeout(12000) });
   } catch (error) {
     throw new Error(`Could not connect to Wise Old Man: ${error?.message || "network request failed"}`);
   }
