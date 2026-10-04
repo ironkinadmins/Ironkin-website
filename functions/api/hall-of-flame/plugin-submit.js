@@ -1,26 +1,41 @@
 import { supabaseRest } from "../_supabase.js";
+import { requirePluginUser } from "../_pluginAuth.js";
 import { bossMessage, normalizeBoss, parseDiscordBoard, parseTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
 
 const noStore = { "Cache-Control":"no-store" };
 
-function unauthorized(message = "Invalid plugin API key.") {
-  return Response.json({ error:message }, { status:401, headers:noStore });
+function normalizeRsn(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
-function pluginAuthorized(request, env) {
-  const expected = String(env.HALL_OF_FLAME_PLUGIN_API_KEY || "").trim();
-  if (!expected) return false;
-  const headerKey = String(request.headers.get("X-Ironkin-Plugin-Key") || "").trim();
-  const auth = String(request.headers.get("Authorization") || "").trim();
-  const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
-  return (headerKey && headerKey === expected) || (bearer && bearer === expected);
+async function requirePersonalPluginUser(request, env) {
+  // Hall of Flame uses the same per-member plugin API keys as the rest of
+  // Ironkin. Keep accepting the legacy HOF header name so existing RuneLite
+  // builds can send a personal key without relying on a shared server key.
+  const personalKey = String(
+    request.headers.get("x-api-key") ||
+    request.headers.get("X-Ironkin-Plugin-Key") ||
+    ""
+  ).trim();
+
+  if (!personalKey) {
+    return { ok:false, response:Response.json({ error:"Missing personal plugin API key." }, { status:401, headers:noStore }) };
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set("x-api-key", personalKey);
+  const authRequest = new Request(request, { headers });
+  return requirePluginUser(authRequest, env);
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!String(env.HALL_OF_FLAME_PLUGIN_API_KEY || "").trim()) {
-    return Response.json({ error:"Hall of Flame plugin submissions are not configured." }, { status:503, headers:noStore });
-  }
-  if (!pluginAuthorized(request, env)) return unauthorized();
+  const auth = await requirePersonalPluginUser(request, env);
+  if (!auth.ok) return auth.response;
+  const pluginUser = auth.pluginUser;
 
   let form;
   try {
@@ -29,7 +44,13 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ error:"Use multipart/form-data." }, { status:400, headers:noStore });
   }
 
-  const player = String(form.get("player") || form.get("rsn") || "").replace(/\s+/g, " ").trim().slice(0, 64);
+  const submittedPlayer = String(form.get("player") || form.get("rsn") || "").replace(/\s+/g, " ").trim().slice(0, 64);
+  const accountRsn = String(pluginUser?.rsn || pluginUser?.displayName || "").replace(/\s+/g, " ").trim().slice(0, 64);
+  if (!accountRsn) return Response.json({ error:"Your personal plugin API key is not linked to an RSN." }, { status:403, headers:noStore });
+  if (submittedPlayer && normalizeRsn(submittedPlayer) !== normalizeRsn(accountRsn)) {
+    return Response.json({ error:"This personal plugin API key does not belong to the submitted RSN." }, { status:403, headers:noStore });
+  }
+  const player = accountRsn;
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();
   const timeMs = parseTimeToMs(timeText);
@@ -53,7 +74,7 @@ export async function onRequestPost({ request, env }) {
   const proofUrl = await uploadProof(env, proof, id);
   const row = {
     id,
-    discord_id:`runelite:${player.toLowerCase()}`.slice(0, 120),
+    discord_id:String(pluginUser.discordId || "").slice(0, 120),
     display_name:player,
     boss,
     boss_slug:String(bossConfig.slug),
