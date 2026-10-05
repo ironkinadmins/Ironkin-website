@@ -404,3 +404,9 @@
 
 /* Overview dashboard: published progression + sealed reveal-safe cards */
 .games-overview-chart,.games-progress-card{margin-top:14px}.games-overview-challenge.is-sealed h3{color:#d7d0c7}.games-overview-challenge.is-sealed{background:linear-gradient(135deg,rgba(255,255,255,.025),rgba(230,157,57,.025))}.games-up-next{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding:13px;border:1px solid rgba(230,157,57,.18);border-radius:11px;background:rgba(230,157,57,.055)}.games-up-next>span{font-size:9px;font-weight:900;letter-spacing:.1em;color:#e69d39}.games-up-next>strong{font-size:16px}.games-up-next>small{color:#9f978f;font-size:12px}.games-progress-card .games-week-track{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.games-progress-card .games-week-step{min-width:0}.games-progress-card .games-week-step small{white-space:normal}@media(max-width:760px){.games-progress-card .games-week-track{grid-template-columns:1fr}}
+
+/* Shopping List staff quick-team controls */
+.shopping-admin-team{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border:1px solid rgba(255,160,45,.22);border-radius:10px;background:rgba(255,160,45,.045)}
+.shopping-admin-team label{font-size:11px;font-weight:800;letter-spacing:.12em;color:#f5a33b}
+.shopping-admin-team select{min-width:190px;padding:8px 10px;border-radius:8px;background:#12110f;color:#f5f1e8;border:1px solid rgba(255,255,255,.16)}
+.shopping-admin-team span{font-size:12px;color:#9e978e}

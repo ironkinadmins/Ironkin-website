@@ -11,6 +11,8 @@ export async function onRequestGet({ request, env }) {
   const staff = isStaffSession(session);
   const testMode = staff && url.searchParams.get("test") === "1";
   let team = memberTeam(state, session);
+  const adminTeamId = staff ? String(url.searchParams.get("adminTeamId") || "") : "";
+  if (adminTeamId) team = (state.teams || []).find(t => String(t.id) === adminTeamId) || team;
   if (testMode) team = (state.teams || []).find(t => String(t.id) === String(url.searchParams.get("testTeamId") || "")) || team;
   if (!team) return Response.json({ error:"You are not assigned to an Ironkin Games team." }, { status:403 });
   const weekId = String(url.searchParams.get("weekId") || "");
@@ -30,6 +32,7 @@ export async function onRequestGet({ request, env }) {
   const items = shoppingTeamProgress(state, team, challenge, rows);
   return Response.json({
     ok:true, eventId, teamId:team.id, teamName:team.name, isOpen, testMode, isStaff:staff,
+    teams: staff ? (state.teams || []).map(t => ({ id:String(t.id || ""), name:String(t.name || "Team") })).filter(t=>t.id) : [],
     teamMembers: staff ? (team.members || []).map(m => ({ discordId:String(m.discordId || m.id || ""), name:String(m.name || m.rsn || m.displayName || m.discordName || m.discordId || "Member") })).filter(m=>m.discordId) : [],
     found:items.filter(x=>x.status==="approved").length,
     pending:items.filter(x=>x.status==="pending").length,

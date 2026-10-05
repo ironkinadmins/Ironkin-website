@@ -60,11 +60,17 @@ export async function shoppingSubmissionRows(env, eventId) {
 }
 
 export function shoppingTeamProgress(state, team, challenge, rows) {
-  const memberIds = new Set([String(team?.captainDiscordId || ""), ...(team?.members || []).map(m => String(m.discordId || m.id || ""))].filter(Boolean));
+  const members = team?.members || [];
+  const memberIds = new Set([String(team?.captainDiscordId || ""), ...members.map(m => String(m.discordId || m.id || ""))].filter(Boolean));
+  const cleanName = value => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const memberNames = new Set(members.flatMap(m => [m.name, m.rsn, m.displayName, m.discordName]).map(cleanName).filter(Boolean));
   const items = shoppingItems(challenge);
   const byObjective = new Map();
   for (const row of rows || []) {
-    if (!memberIds.has(String(row.discord_id || ""))) continue;
+    // Normal path is Discord ID. Name fallback keeps manual /submit rows usable
+    // if an older bot record omitted discord_id but preserved the member name/RSN.
+    const belongsToTeam = memberIds.has(String(row.discord_id || "")) || memberNames.has(cleanName(row.player_name));
+    if (!belongsToTeam) continue;
     const itemId = Number(row.item_id) || 0;
     const objective = items.find(item => String(row.shopping_objective_id || "") === item.id || item.itemIds.includes(itemId));
     if (!objective) continue;
