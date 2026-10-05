@@ -12114,3 +12114,7 @@ body.ik-hall-page .hof-title-primary .btn::after{content:" →"}
 /* Wiki artwork belongs to the boss itself; no large legacy/banner image preview. */
 .hof-image-preview{display:none!important}
 @media(max-width:720px){.hof-discord-simple-grid{grid-template-columns:1fr}.hof-discord-simple-actions{justify-content:stretch}.hof-discord-simple-actions .btn{flex:1}.hof-manage-toolbar{flex-wrap:wrap}.hof-more-actions{margin-left:0}.hof-boss-admin-row{grid-template-columns:1fr}.hof-record-manage-row{align-items:flex-start}}
+
+/* Hall of Flame — unambiguous PB time entry + resilient record rows */
+.hof-time-fieldset{margin:0;padding:0;border:0;min-width:0}.hof-time-fieldset>legend{margin-bottom:7px;font-weight:700}.hof-time-parts{display:grid;grid-template-columns:minmax(88px,1fr) 14px minmax(88px,1fr) 14px minmax(100px,1fr);gap:8px;align-items:end}.hof-time-parts label{gap:5px}.hof-time-parts label>span{font-size:.76rem;color:var(--muted)}.hof-time-separator{align-self:end;padding-bottom:11px;text-align:center;font-size:1.2rem;font-weight:900;color:var(--muted)}.hof-record-row{min-width:0}.hof-record-row strong{min-width:0;overflow-wrap:anywhere}.hof-record-row a{position:relative;z-index:3}
+@media(max-width:520px){.hof-time-parts{grid-template-columns:1fr 12px 1fr}.hof-time-parts label:last-child{grid-column:1 / -1}.hof-time-parts>.hof-time-separator:nth-of-type(2){display:none}}

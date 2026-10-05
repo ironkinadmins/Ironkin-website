@@ -82,14 +82,30 @@ export function parseTimeToMs(value) {
   return Math.round(seconds * 1000);
 }
 
+export function parseSubmissionTimeToMs(value) {
+  // New Hall of Flame submissions must always be explicit minutes:seconds.
+  // This prevents ambiguous values such as "4.45" being interpreted as 4.45 seconds
+  // when the member intended 4 minutes 45 seconds.
+  const raw = String(value || "").trim().replace(/,/g, ".");
+  const match = raw.match(/^(\d+):([0-5]\d)(?:\.(\d{1,3}))?$/);
+  if (!match) return null;
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2]);
+  const fraction = match[3] || "";
+  const millis = fraction ? Number(fraction.padEnd(3, "0")) : 0;
+  const total = (minutes * 60 + seconds) * 1000 + millis;
+  if (!Number.isFinite(total) || total <= 0 || total > 24 * 3600 * 1000) return null;
+  return total;
+}
+
 export function formatTime(ms) {
   const total = Math.max(0, Number(ms) || 0);
   const hours = Math.floor(total / 3600000);
   const minutes = Math.floor((total % 3600000) / 60000);
   const seconds = Math.floor((total % 60000) / 1000);
-  const hundredths = Math.floor((total % 1000) / 10);
+  const milliseconds = Math.floor(total % 1000);
   const sec = `${seconds}`.padStart(2, "0");
-  const frac = hundredths ? `.${`${hundredths}`.padStart(2, "0")}` : "";
+  const frac = milliseconds ? `.${milliseconds % 10 === 0 ? String(Math.floor(milliseconds / 10)).padStart(2, "0") : String(milliseconds).padStart(3, "0")}` : "";
   if (hours) return `${hours}:${`${minutes}`.padStart(2, "0")}:${sec}${frac}`;
   return `${minutes}:${sec}${frac}`;
 }

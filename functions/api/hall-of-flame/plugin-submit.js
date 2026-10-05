@@ -1,6 +1,6 @@
 import { supabaseRest } from "../_supabase.js";
 import { requirePluginUser } from "../_pluginAuth.js";
-import { bossMessage, normalizeBoss, parseDiscordBoard, parseTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
+import { bossMessage, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
 
 const noStore = { "Cache-Control":"no-store" };
 
@@ -63,7 +63,7 @@ export async function onRequestPost({ request, env }) {
   const player = accountRsn;
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();
-  const timeMs = parseTimeToMs(timeText);
+  const timeMs = parseSubmissionTimeToMs(timeText);
   const proof = form.get("proof");
 
   if (!player) return Response.json({ error:"player (RSN) is required." }, { status:400, headers:noStore });

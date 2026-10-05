@@ -1,6 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
-import { bossMessage, displayName, normalizeBoss, parseDiscordBoard, parseTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
+import { bossMessage, displayName, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
 
 const noStore = { "Cache-Control":"no-store" };
 
@@ -24,7 +24,7 @@ export async function onRequestPost({ request, env }) {
   const form = await request.formData();
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();
-  const timeMs = parseTimeToMs(timeText);
+  const timeMs = parseSubmissionTimeToMs(timeText);
   const proof = form.get("proof");
   if (!boss || !timeMs) return Response.json({ error:"Choose a boss and enter a valid PB time." }, { status:400, headers:noStore });
   if (!(proof instanceof File) || proof.size <= 0) return Response.json({ error:"A proof screenshot is required." }, { status:400, headers:noStore });

@@ -2769,8 +2769,10 @@ function parseSpeedRecordRows(description) {
 
     const medal = medalMatch[1];
     let text = medalMatch[2] || "";
-    let url = extractFirstUrl(text);
+    const markdownLink = parseMarkdownLink(text);
+    let url = markdownLink?.url || extractFirstUrl(text);
 
+    if (markdownLink) text = markdownLink.label;
     if (!url && lines[i + 1] && /^https?:\/\//i.test(lines[i + 1])) {
       url = extractFirstUrl(lines[i + 1]);
       i += 1;
@@ -2778,6 +2780,7 @@ function parseSpeedRecordRows(description) {
 
     text = stripUrls(text)
       .replace(/\s+-\s*$/g, "")
+      .replace(/^\[|\]\($/g, "")
       .trim();
 
     if (!text) continue;
@@ -3009,8 +3012,8 @@ function hofDate(value) {
 }
 
 function hofTime(ms) {
-  const total=Math.max(0,Number(ms)||0), h=Math.floor(total/3600000), m=Math.floor((total%3600000)/60000), sec=Math.floor((total%60000)/1000), hs=Math.floor((total%1000)/10);
-  const s=String(sec).padStart(2,"0"), frac=hs?`.${String(hs).padStart(2,"0")}`:"";
+  const total=Math.max(0,Number(ms)||0), h=Math.floor(total/3600000), m=Math.floor((total%3600000)/60000), sec=Math.floor((total%60000)/1000), millis=Math.floor(total%1000);
+  const s=String(sec).padStart(2,"0"), frac=millis?`.${millis%10===0?String(Math.floor(millis/10)).padStart(2,"0"):String(millis).padStart(3,"0")}`:"";
   return h?`${h}:${String(m).padStart(2,"0")}:${s}${frac}`:`${m}:${s}${frac}`;
 }
 
@@ -3038,7 +3041,7 @@ async function hofOpenSubmit() {
   hofOpen(`<p class="eyebrow">Verified Records</p><h2>Submit a Boss PB</h2><p class="admin-muted">Your screenshot and time will be reviewed by Ironkin staff before the Hall of Flame changes.</p>
     <form id="hofSubmitForm" class="hof-form">
       <label>Boss<select name="boss" required><option value="">Choose a record board</option>${bosses.map(b=>`<option>${escapeHtml(b)}</option>`).join("")}</select></label>
-      <label>Personal best time<input name="time" required placeholder="Examples: 47.40, 1:23.50, 1:02:14" inputmode="decimal"></label>
+      <fieldset class="hof-time-fieldset"><legend>Personal best time</legend><div class="hof-time-parts"><label><span>Minutes</span><input name="time_minutes" type="number" min="0" max="1439" step="1" value="0" required inputmode="numeric"></label><span class="hof-time-separator">:</span><label><span>Seconds</span><input name="time_seconds" type="number" min="0" max="59" step="1" placeholder="00" required inputmode="numeric"></label><span class="hof-time-separator">.</span><label><span>Milliseconds</span><input name="time_milliseconds" type="number" min="0" max="999" step="1" placeholder="000" inputmode="numeric"></label></div><span class="hof-form-help">Enter each unit separately. Example: 4 minutes, 45 seconds = 4:45.</span></fieldset>
       <label>Proof screenshot<input name="proof" type="file" accept="image/png,image/jpeg,image/webp,image/gif" required></label>
       <span class="hof-form-help">Maximum 8 MB. The screenshot becomes the proof link if the record is approved.</span>
       <div id="hofSubmitMessage"></div><button class="btn primary" type="submit">Send for verification</button>
@@ -3165,8 +3168,14 @@ document.addEventListener("click",async event=>{
 
 document.addEventListener("submit",async event=>{
   if(event.target.id==="hofBossForm"){event.preventDefault();const form=event.target,fd=new FormData(form),slug=String(fd.get("slug")||"");const payload={slug,name:fd.get("name"),category:fd.get("category"),time_format:fd.get("time_format"),image_url:fd.get("image_url"),visible:fd.has("visible"),accept_submissions:fd.has("accept_submissions"),discord_sync:fd.has("discord_sync"),active:true};const msg=document.getElementById("hofBossMessage");try{await hofFetchJson("/api/hall-of-flame/bosses",{method:slug?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});await hofOpenManage();await loadHallOfFlamePage();}catch(e){if(msg)msg.textContent=e.message;}return;}
-  if(event.target.id!=="hofSubmitForm")return;event.preventDefault();const form=event.target,msg=document.getElementById("hofSubmitMessage"),button=form.querySelector('button[type="submit"]');button.disabled=true;msg.textContent="Uploading proof…";
-  try{const d=await hofFetchJson("/api/hall-of-flame/submissions",{method:"POST",body:new FormData(form)});msg.innerHTML=`<span class="hof-status pending">Pending verification</span> Submitted successfully. Projected placement: #${Number(d.submission.projected_placement)}.`;form.reset();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}
+  if(event.target.id!=="hofSubmitForm")return;event.preventDefault();const form=event.target,msg=document.getElementById("hofSubmitMessage"),button=form.querySelector('button[type="submit"]');
+  const minutes=Number(form.elements.time_minutes?.value),seconds=Number(form.elements.time_seconds?.value),millisecondsRaw=String(form.elements.time_milliseconds?.value||"").trim();
+  if(!Number.isInteger(minutes)||minutes<0||!Number.isInteger(seconds)||seconds<0||seconds>59||minutes+seconds<=0){msg.textContent="Enter a valid time using minutes and seconds.";return;}
+  const milliseconds=millisecondsRaw===""?0:Number(millisecondsRaw);
+  if(!Number.isInteger(milliseconds)||milliseconds<0||milliseconds>999){msg.textContent="Milliseconds must be between 0 and 999.";return;}
+  const fd=new FormData(form),fraction=milliseconds?`.${String(milliseconds).padStart(3,"0")}`:"";fd.set("time",`${minutes}:${String(seconds).padStart(2,"0")}${fraction}`);fd.delete("time_minutes");fd.delete("time_seconds");fd.delete("time_milliseconds");
+  button.disabled=true;msg.textContent="Uploading proof…";
+  try{const d=await hofFetchJson("/api/hall-of-flame/submissions",{method:"POST",body:fd});msg.innerHTML=`<span class="hof-status pending">Pending verification</span> Submitted successfully. Projected placement: #${Number(d.submission.projected_placement)}.`;form.reset();}catch(e){msg.textContent=e.message;}finally{button.disabled=false;}
 });
 
 

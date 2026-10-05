@@ -1,5 +1,5 @@
 import { getSession, isStaffSession } from "../_auth.js";
-import { approvedForBoss, bossMessage, formatTime, mergeBoard, parseDiscordBoard, parseTimeToMs, syncDiscordBoard } from "./_records.js";
+import { approvedForBoss, bossMessage, formatTime, mergeBoard, parseDiscordBoard, parseSubmissionTimeToMs, syncDiscordBoard } from "./_records.js";
 import { supabaseRest } from "../_supabase.js";
 import { hybridKv } from "../../_hybridKv.js";
 
@@ -23,7 +23,7 @@ export async function onRequestPost({request,env}){
   const body=await request.json().catch(()=>({}));
   const slug=String(body.slug||"").trim(),index=Number(body.index),player=String(body.player||"").trim(),time=String(body.time||"").trim();
   if(!slug||!Number.isInteger(index)||index<0||index>2||!player||!time)return json({error:"Boss, record, player, and time are required."},400);
-  const timeMs=parseTimeToMs(time); if(!timeMs)return json({error:"Enter a valid PB time, for example 0:36 or 1:10.00."},400);
+  const timeMs=parseSubmissionTimeToMs(time); if(!timeMs)return json({error:"Enter a valid PB time in minutes:seconds, for example 0:36 or 1:10.00."},400);
   const boss=await bossBySlug(env,slug); if(!boss)return json({error:"Boss not found."},404);
   const legacy=await legacyBoard(env,boss.name); if(!legacy[index])return json({error:"That imported Discord record no longer exists."},404);
   const before={...legacy[index]}; legacy[index]={...legacy[index],player,timeMs,time:formatTime(timeMs)};
