@@ -48,17 +48,19 @@ export async function onRequestPost({request,env}){
     legacy.splice(resolvedIndex,1);
     const refreshed=await approvedForBoss(env,boss.name);
     const board=mergeBoard(legacy,refreshed);
-    const discord=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||"");
+    let discord=null,discordWarning="";
+    try{discord=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||"");}catch(error){discordWarning=String(error?.message||"Discord sync failed.");}
     try{const kv=hybridKv(env,"drops"),raw=await kv?.get(AUDIT_KEY),audit=raw?JSON.parse(raw):[];audit.push({boss:boss.name,bossSlug:boss.slug,before:{player:before.player,timeMs:before.timeMs},after:{player,timeMs},source:"verified",editedBy:String(session?.nick||session?.global_name||session?.username||"Staff"),editedAt:now});await kv?.put(AUDIT_KEY,JSON.stringify(audit.slice(-250)));}catch{}
-    return json({ok:true,record:{player,timeMs,time:formatTime(timeMs)},source:"verified",discord});
+    return json({ok:true,record:{player,timeMs,time:formatTime(timeMs)},source:"verified",discord,discordWarning});
   }
   legacy[resolvedIndex]={...legacy[resolvedIndex],player,timeMs,time:formatTime(timeMs)};
   const board=mergeBoard(legacy,approved);
-  const discord=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||"");
+  let discord=null,discordWarning="";
+  try{discord=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||"");}catch(error){discordWarning=String(error?.message||"Discord sync failed.");}
   try{
     const kv=hybridKv(env,"drops"); const raw=await kv?.get(AUDIT_KEY); const audit=raw?JSON.parse(raw):[];
     audit.push({boss:boss.name,bossSlug:boss.slug,before:{player:before.player,timeMs:before.timeMs},after:{player,timeMs},editedBy:String(session?.nick||session?.global_name||session?.username||"Staff"),editedAt:new Date().toISOString()});
     await kv?.put(AUDIT_KEY,JSON.stringify(audit.slice(-250)));
   }catch{}
-  return json({ok:true,record:{player,timeMs,time:formatTime(timeMs)},discord});
+  return json({ok:true,record:{player,timeMs,time:formatTime(timeMs)},discord,discordWarning});
 }
