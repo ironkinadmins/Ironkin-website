@@ -18,6 +18,39 @@ export async function onRequestGet({request,env}){
   return json({boss:{slug:boss.slug,name:boss.name},records:records.map((r,index)=>({...r,index}))});
 }
 
+export async function onRequestDelete({request,env}){
+  const session=await staff(request,env); if(!session)return json({error:"Staff access required."},403);
+  const body=await request.json().catch(()=>({}));
+  const slug=String(body.slug||"").trim(),index=Number(body.index);
+  const originalPlayer=String(body.originalPlayer||"").trim(),originalTime=String(body.originalTime||"").trim();
+  if(!slug||!Number.isInteger(index)||index<0||index>2)return json({error:"Boss and record are required."},400);
+  const boss=await bossBySlug(env,slug); if(!boss)return json({error:"Boss not found."},404);
+  const legacy=await legacyBoard(env,boss.name);
+  const originalTimeMs=parseTimeToMs(originalTime);
+  let resolvedIndex=(originalPlayer&&originalTimeMs)?legacy.findIndex(r=>String(r.player||"").trim().toLowerCase()===originalPlayer.toLowerCase()&&Number(r.timeMs)===Number(originalTimeMs)):-1;
+  if(resolvedIndex<0) resolvedIndex=index;
+  if(!legacy[resolvedIndex])return json({error:"That Hall of Flame record could not be found. Refresh the page and try again."},404);
+  const before={...legacy[resolvedIndex]};
+  const approved=await approvedForBoss(env,boss.name);
+  const approvedMatch=approved.find(r=>String(r.display_name||"").trim().toLowerCase()===String(before.player||"").trim().toLowerCase()&&Number(r.time_ms)===Number(before.timeMs));
+  let source="legacy";
+  if(approvedMatch?.id){
+    const del=await supabaseRest(env,`hall_of_flame_submissions?id=eq.${encodeURIComponent(approvedMatch.id)}`,{method:"DELETE",headers:{Prefer:"return=representation"}});
+    if(!del.ok)return json({error:`Could not remove the verified record: ${await del.text()}`},del.status||500);
+    const removed=await del.json().catch(()=>[]);
+    if(!Array.isArray(removed)||removed.length===0)return json({error:"The verified Hall of Flame record was not removed. Refresh the page and try again."},409);
+    source="verified";
+  }
+  // Remove the currently mirrored row as well, then rebuild from remaining verified records.
+  legacy.splice(resolvedIndex,1);
+  const refreshed=await approvedForBoss(env,boss.name);
+  const board=mergeBoard(legacy,refreshed);
+  let discord=null,discordWarning="";
+  try{discord=await syncDiscordBoard(env,boss.name,board,"",boss.image_url||"");}catch(error){discordWarning=String(error?.message||"Discord sync failed.");}
+  try{const kv=hybridKv(env,"drops"),raw=await kv?.get(AUDIT_KEY),audit=raw?JSON.parse(raw):[];audit.push({boss:boss.name,bossSlug:boss.slug,before:{player:before.player,timeMs:before.timeMs},action:"remove",source,editedBy:String(session?.nick||session?.global_name||session?.username||"Staff"),editedAt:new Date().toISOString()});await kv?.put(AUDIT_KEY,JSON.stringify(audit.slice(-250)));}catch{}
+  return json({ok:true,removed:{player:before.player,timeMs:before.timeMs,time:formatTime(before.timeMs)},source,discord,discordWarning});
+}
+
 export async function onRequestPost({request,env}){
   const session=await staff(request,env); if(!session)return json({error:"Staff access required."},403);
   const body=await request.json().catch(()=>({}));
