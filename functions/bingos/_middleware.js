@@ -1,36 +1,12 @@
-import { hybridKv } from "../_hybridKv.js";
-function jsonError(message, status = 400) {
-  return Response.json({ error: message }, { status });
-}
-
-function cleanApiKey(value) {
-  return String(value || "").trim();
-}
-
-async function readPluginUser(env, apiKey) {
-  const raw = await hybridKv(env, "drops").get(`plugin-api-key:${apiKey}`);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+import { requirePluginUser } from "../api/_pluginAuth.js";
 
 export async function onRequest(context) {
-  const apiKey = cleanApiKey(context.request.headers.get("x-api-key"));
+  // Use the same Discord-ID-based plugin authentication as every other
+  // RuneLite endpoint. Current profile data is hydrated on each request, so
+  // changing an OSRS name never requires generating a new personal API key.
+  const auth = await requirePluginUser(context.request, context.env);
+  if (!auth.ok) return auth.response;
 
-  if (!apiKey) {
-    return jsonError("Missing x-api-key header.", 401);
-  }
-
-  const pluginUser = await readPluginUser(context.env, apiKey);
-
-  if (!pluginUser?.discordId) {
-    return jsonError("Invalid API key.", 401);
-  }
-
-  context.data.pluginUser = pluginUser;
+  context.data.pluginUser = auth.pluginUser;
   return context.next();
 }

@@ -4,13 +4,6 @@ import { bossMessage, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs,
 
 const noStore = { "Cache-Control":"no-store" };
 
-function normalizeRsn(value) {
-  return String(value || "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
 
 async function requirePersonalPluginUser(request, env) {
   // Hall of Flame uses the same per-member plugin API keys as the rest of
@@ -55,12 +48,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   const submittedPlayer = String(form.get("player") || form.get("rsn") || "").replace(/\s+/g, " ").trim().slice(0, 64);
-  const accountRsn = String(pluginUser?.rsn || pluginUser?.displayName || "").replace(/\s+/g, " ").trim().slice(0, 64);
-  if (!accountRsn) return Response.json({ error:"Your personal plugin API key is not linked to an RSN." }, { status:403, headers:noStore });
-  if (submittedPlayer && normalizeRsn(submittedPlayer) !== normalizeRsn(accountRsn)) {
-    return Response.json({ error:"This personal plugin API key does not belong to the submitted RSN." }, { status:403, headers:noStore });
-  }
-  const player = accountRsn;
+  // Authentication is bound to the Discord member behind the personal API key.
+  // Prefer the member's current profile RSN, but never reject a valid key just
+  // because RuneLite reports a newer RSN than the key originally stored.
+  const player = String(pluginUser?.rsn || submittedPlayer || pluginUser?.displayName || "").replace(/\s+/g, " ").trim().slice(0, 64);
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();
   const timeMs = parseSubmissionTimeToMs(timeText);
