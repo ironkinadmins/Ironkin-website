@@ -44,13 +44,13 @@ async function sha256Hex(value) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-function duplicateResponse({ duplicate, requestedEventId, itemId, participants }) {
+function duplicateResponse({ duplicate, requestedEventId: effectiveEventId, itemId, participants }) {
   return Response.json({
     success: true,
     duplicate: true,
     duplicateReason: duplicate?.reason || "unique_constraint",
     submissionId: duplicate?.id || null,
-    eventId: requestedEventId,
+    eventId: effectiveEventId,
     itemid: itemId,
     participants,
     status: duplicate?.status || "pending"
@@ -85,6 +85,7 @@ async function handlePluginSubmission(context) {
   if (!auth.ok) return auth.response;
   const pluginUser = auth.pluginUser;
   const requestedEventId = String(params.eventId || "").trim();
+  let effectiveEventId = requestedEventId;
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return Response.json({ error: "Invalid JSON body." }, { status: 400 });
 
@@ -126,11 +127,50 @@ async function handlePluginSubmission(context) {
   }
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
-  const websiteEventId = String(event.id || "");
-  const shoppingObjective = shopping ? shoppingObjectiveForItem(shopping.challenge, itemId) : null;
+  let websiteEventId = String(event.id || "");
+  let shoppingObjective = shopping ? shoppingObjectiveForItem(shopping.challenge, itemId) : null;
   let tracked = shopping ? shopping.progress.find(entry => entry.id === shoppingObjective?.id) : await getTrackedItem(env, websiteEventId, itemId);
+
+  // Discord manual /submit currently routes Shopping List proofs through the
+  // existing Clan Goal/Event category. If the item is not a real Clan Goal
+  // tracked item, transparently route it to this player's active team Shopping
+  // List instead. Real Clan Goal items always keep their normal behavior.
+  const isClanGoalRoute = websiteEventId === "clan-goal" || String(event.type || "").includes("clan-goal");
+  if (!tracked && !shopping && isClanGoalRoute) {
+    const games = await loadGames(env);
+    const activeShopping = (games?.weeks || []).flatMap(week =>
+      (week?.challenges || []).map(challenge => ({ week, challenge }))
+    ).filter(({ week, challenge }) => {
+      if (String(challenge?.trackerType || "") !== "shopping-list") return false;
+      const now = Date.now();
+      const start = new Date(challenge.opensAt || week.startDate || 0).getTime();
+      const end = new Date(challenge.closesAt || week.endDate || 0).getTime();
+      return (!Number.isFinite(start) || now >= start) && (!Number.isFinite(end) || now <= end);
+    });
+
+    for (const entry of activeShopping) {
+      const team = (games.teams || []).find(t =>
+        String(t.captainDiscordId || "") === String(pluginUser?.discordId || "") ||
+        (t.members || []).some(m => String(m.discordId || m.id || "") === String(pluginUser?.discordId || ""))
+      );
+      if (!team) break;
+      const candidateEventId = `ig-shopping-${String(entry.week.id || "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")}-${String(entry.challenge.id || "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")}-${String(team.id || "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")}`;
+      const candidate = await resolveShoppingEvent(games, env, candidateEventId, pluginUser?.discordId);
+      const objective = candidate ? shoppingObjectiveForItem(candidate.challenge, itemId) : null;
+      const progressItem = candidate && objective ? candidate.progress.find(x => x.id === objective.id) : null;
+      if (!progressItem) continue;
+      shopping = candidate;
+      shoppingObjective = objective;
+      tracked = progressItem;
+      effectiveEventId = candidate.eventId;
+      websiteEventId = candidate.eventId;
+      event = { id:candidate.eventId, type:"ironkin-games-shopping-list", title:candidate.challenge.name || "Ironkin Games Shopping List", active:true, dropsEnabled:true, pluginEventId:candidate.eventId };
+      break;
+    }
+  }
+
   if (!tracked || (shopping && tracked.status !== "missing")) {
-    if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:requestedEventId, itemid:itemId, shoppingObjectiveId:tracked.id, status:tracked.status }, { status:200 });
+    if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:effectiveEventId, itemid:itemId, shoppingObjectiveId:tracked.id, status:tracked.status }, { status:200 });
     return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
   }
 
@@ -139,20 +179,20 @@ async function handlePluginSubmission(context) {
   const playerKey = normalizePlayerKey(discordId, username);
   const clientTimestamp = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : new Date().toISOString();
   // Protect against HTTP retries/double firing even for repeatable items.
-  const clientSubmissionKey = await sha256Hex(`${requestedEventId}|${playerKey}|${itemId}|${quantity}|${clientTimestamp}`);
-  const duplicateLookup = { pluginEventId: requestedEventId, itemId, trackingRule, playerKey, clientSubmissionKey };
+  const clientSubmissionKey = await sha256Hex(`${effectiveEventId}|${playerKey}|${itemId}|${quantity}|${clientTimestamp}`);
+  const duplicateLookup = { pluginEventId: effectiveEventId, itemId, trackingRule, playerKey, clientSubmissionKey };
   const duplicate = await findActiveDuplicateSubmission(env, duplicateLookup);
-  if (duplicate) return duplicateResponse({ duplicate, requestedEventId, itemId, participants });
+  if (duplicate) return duplicateResponse({ duplicate, requestedEventId: effectiveEventId, itemId, participants });
 
   const submissionId = crypto.randomUUID();
   let record;
   try {
     record = await insertEventSubmission(env, {
       id: submissionId,
-      plugin_event_id: requestedEventId,
+      plugin_event_id: effectiveEventId,
       website_event_id: websiteEventId,
       event_type: String(event.type || ""),
-      event_name: String(event.title || event.label || requestedEventId),
+      event_name: String(event.title || event.label || effectiveEventId),
       player_name: username,
       discord_id: discordId,
       player_key: playerKey,
@@ -173,7 +213,7 @@ async function handlePluginSubmission(context) {
     const existing = await findActiveDuplicateSubmission(env, duplicateLookup).catch(() => null);
     return duplicateResponse({
       duplicate: existing || { reason: "unique_constraint", status: "pending" },
-      requestedEventId,
+      requestedEventId: effectiveEventId,
       itemId,
       participants
     });
@@ -189,7 +229,7 @@ async function handlePluginSubmission(context) {
   return Response.json({
     success: true,
     submissionId: savedId,
-    eventId: requestedEventId,
+    eventId: effectiveEventId,
     itemid: itemId,
     participants,
     status: "pending"
