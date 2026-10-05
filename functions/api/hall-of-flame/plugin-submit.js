@@ -26,9 +26,14 @@ async function requirePersonalPluginUser(request, env) {
     return { ok:false, response:Response.json({ error:"Missing personal plugin API key." }, { status:401, headers:noStore }) };
   }
 
+  // Do not clone the incoming multipart Request here. In Workers, constructing a
+  // second Request from the original can transfer/lock its body stream, causing
+  // the later request.formData() call to fail even though the multipart header
+  // and boundary are valid. Authentication only needs headers, so use a
+  // body-less request for the existing plugin auth helper.
   const headers = new Headers(request.headers);
   headers.set("x-api-key", personalKey);
-  const authRequest = new Request(request, { headers });
+  const authRequest = new Request(request.url, { method:"GET", headers });
   return requirePluginUser(authRequest, env);
 }
 
@@ -37,11 +42,16 @@ export async function onRequestPost({ request, env }) {
   if (!auth.ok) return auth.response;
   const pluginUser = auth.pluginUser;
 
+  const contentType = String(request.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.startsWith("multipart/form-data")) {
+    return Response.json({ error:"Use multipart/form-data." }, { status:400, headers:noStore });
+  }
+
   let form;
   try {
     form = await request.formData();
   } catch {
-    return Response.json({ error:"Use multipart/form-data." }, { status:400, headers:noStore });
+    return Response.json({ error:"Invalid multipart/form-data body." }, { status:400, headers:noStore });
   }
 
   const submittedPlayer = String(form.get("player") || form.get("rsn") || "").replace(/\s+/g, " ").trim().slice(0, 64);
