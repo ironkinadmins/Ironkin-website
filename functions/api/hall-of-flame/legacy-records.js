@@ -39,10 +39,13 @@ export async function onRequestPost({request,env}){
   // A Discord board row may be backed by an approved website/plugin submission.
   // Edit that source row when possible so the next Discord sync does not restore
   // the old value. Otherwise this is a true legacy/imported Discord-only record.
-  const approvedMatch=approved.find(r=>String(r.player||"").trim().toLowerCase()===String(before.player||"").trim().toLowerCase() && Number(r.timeMs)===Number(before.timeMs));
+  const approvedMatch=approved.find(r=>String(r.display_name||"").trim().toLowerCase()===String(before.player||"").trim().toLowerCase() && Number(r.time_ms)===Number(before.timeMs));
   if(approvedMatch?.submissionId){
     const now=new Date().toISOString();
-    await supabaseRest(env,`hall_of_flame_submissions?id=eq.${encodeURIComponent(approvedMatch.submissionId)}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({display_name:player,time_ms:timeMs,time_text:formatTime(timeMs),updated_at:now})});
+    const updateResponse=await supabaseRest(env,`hall_of_flame_submissions?id=eq.${encodeURIComponent(approvedMatch.id)}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({display_name:player,time_ms:timeMs,time_text:formatTime(timeMs),updated_at:now})});
+    if(!updateResponse.ok) return json({error:`Could not update the verified record: ${await updateResponse.text()}`},updateResponse.status||500);
+    const updatedRows=await updateResponse.json().catch(()=>[]);
+    if(!Array.isArray(updatedRows)||updatedRows.length===0) return json({error:"The verified Hall of Flame record was not updated. Refresh the page and try again."},409);
     // Remove the old mirrored row from the legacy side before merging the updated
     // verified record, otherwise the old and corrected times can both appear.
     legacy.splice(resolvedIndex,1);
