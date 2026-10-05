@@ -47,7 +47,14 @@ export function shoppingObjectiveForItem(challenge, itemId) {
 
 export async function shoppingSubmissionRows(env, eventId) {
   if (!hasSupabase(env)) return [];
-  const response = await supabaseRest(env, `ironkin_event_submissions?select=id,item_id,item_name,shopping_objective_id,player_name,discord_id,status,proof_url,client_timestamp,processed_at,claimed_at,created_at&website_event_id=eq.${encodeURIComponent(eventId)}&status=in.(pending,approved)&order=created_at.asc&limit=5000`);
+  // RuneLite submissions use the team-specific Shopping List event id. Manual
+  // Discord /submit rows use one shared catalog event so the bot never has to
+  // choose between duplicate per-team catalog entries. Team ownership is
+  // resolved below from the submitter's Discord id against the live Games
+  // roster, so an in-progress Games configuration never needs to be re-saved.
+  const manualEventId = "ig-shopping-manual";
+  const eventFilter = `or=(website_event_id.eq.${encodeURIComponent(eventId)},website_event_id.eq.${encodeURIComponent(manualEventId)})`;
+  const response = await supabaseRest(env, `ironkin_event_submissions?select=id,item_id,item_name,shopping_objective_id,player_name,discord_id,status,proof_url,client_timestamp,processed_at,claimed_at,created_at&${eventFilter}&status=in.(pending,approved)&order=created_at.asc&limit=5000`);
   const rows = await response.json();
   return Array.isArray(rows) ? rows : [];
 }

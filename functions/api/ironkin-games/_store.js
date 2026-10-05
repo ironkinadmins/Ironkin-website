@@ -146,24 +146,32 @@ export async function loadGames(env) {
 
 async function syncShoppingCatalog(env, state) {
   if (!hasSupabase(env)) return;
-  const rows = [];
+
+  // Discord /submit needs a single catalog row per Shopping List item. Using
+  // per-team catalog rows makes the bot see the same item multiple times and
+  // leaves it unable to know which team event to mirror. The actual team is
+  // resolved from the submitter's Discord id against the live Games roster
+  // when the website reads Shopping List progress. RuneLite continues to use
+  // its existing team-specific virtual event ids and is unaffected.
+  const manualEventId = "ig-shopping-manual";
+  const byItemId = new Map();
   for (const week of state.weeks || []) {
     for (const challenge of week.challenges || []) {
       if (String(challenge.trackerType || "") !== "shopping-list") continue;
-      for (const team of state.teams || []) {
-        const eventId = shoppingEventId(week.id, challenge.id, team.id);
-        for (const item of shoppingItems(challenge)) {
-          for (const itemId of item.itemIds || [item.itemId]) rows.push({
-            website_event_id: eventId, plugin_event_id: eventId, item_id: Number(itemId),
+      for (const item of shoppingItems(challenge)) {
+        for (const itemId of item.itemIds || [item.itemId]) {
+          const id = Number(itemId);
+          if (!Number.isInteger(id) || id <= 0 || byItemId.has(id)) continue;
+          byItemId.set(id, {
+            website_event_id: manualEventId, plugin_event_id: manualEventId, item_id: id,
             item_name: String(item.name || ""), image_url: String(item.image || ""),
-            wiki_url: "", reward_embers: 0, tracking_rule: "once_per_event"
+            wiki_url: "", reward_embers: 0, tracking_rule: "repeatable"
           });
         }
       }
     }
   }
-  // Shopping List catalog rows are derived from Games configuration. Rebuild
-  // them whenever Games is saved so Discord /submit always reflects the list.
+  const rows = [...byItemId.values()];
   await supabaseRest(env, "ironkin_event_items?plugin_event_id=like.ig-shopping-*", { method:"DELETE", headers:{ Prefer:"return=minimal" } });
   if (rows.length) await supabaseRest(env, "ironkin_event_items?on_conflict=website_event_id,item_id", {
     method:"POST", headers:{ Prefer:"resolution=merge-duplicates,return=minimal" }, body:JSON.stringify(rows)
