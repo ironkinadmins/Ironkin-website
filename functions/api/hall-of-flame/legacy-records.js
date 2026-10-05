@@ -40,7 +40,7 @@ export async function onRequestPost({request,env}){
   // Edit that source row when possible so the next Discord sync does not restore
   // the old value. Otherwise this is a true legacy/imported Discord-only record.
   const approvedMatch=approved.find(r=>String(r.display_name||"").trim().toLowerCase()===String(before.player||"").trim().toLowerCase() && Number(r.time_ms)===Number(before.timeMs));
-  if(approvedMatch?.submissionId){
+  if(approvedMatch?.id){
     const now=new Date().toISOString();
     const updateResponse=await supabaseRest(env,`hall_of_flame_submissions?id=eq.${encodeURIComponent(approvedMatch.id)}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({display_name:player,time_ms:timeMs,time_text:formatTime(timeMs),updated_at:now})});
     if(!updateResponse.ok) return json({error:`Could not update the verified record: ${await updateResponse.text()}`},updateResponse.status||500);
