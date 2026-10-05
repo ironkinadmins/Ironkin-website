@@ -6181,3 +6181,51 @@ if (!window.__ironkinEventLeaderboardToggleReady) {
     button.textContent = open ? 'Show top 10' : `View all ${shell.querySelectorAll('tbody tr').length} participants`;
   });
 }
+
+// Mobile Discord OAuth helper. Discord's native app session cannot be transferred
+// into Safari/Chrome; OAuth authorization is controlled by Discord. Explain that
+// handoff before leaving Ironkin so mobile members are not surprised by a web login.
+(function setupMobileDiscordLoginHelp() {
+  const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "") || window.matchMedia?.("(max-width: 760px)").matches;
+  const isLoginLink = link => link?.matches?.('a[href^="/api/auth/login"]');
+
+  function closeModal(modal) {
+    modal?.remove();
+    document.body.classList.remove("discord-mobile-login-open");
+  }
+
+  function showModal(loginHref) {
+    const modal = document.createElement("div");
+    modal.className = "discord-mobile-login-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "discordMobileLoginTitle");
+    modal.innerHTML = `
+      <div class="discord-mobile-login-card">
+        <button class="discord-mobile-login-close" type="button" aria-label="Close">×</button>
+        <div class="discord-mobile-login-icon" aria-hidden="true">↗</div>
+        <p class="eyebrow">Discord sign-in</p>
+        <h2 id="discordMobileLoginTitle">Signing in on mobile</h2>
+        <p>Discord may open its secure <strong>web sign-in</strong> even when you're already signed into the Discord app. Discord controls this step, so Ironkin can't transfer your app login into the browser.</p>
+        <p class="discord-mobile-login-note">If Discord recognizes your browser session, you'll go straight to authorization. If not, use a Discord sign-in method available on that page. Once Ironkin login succeeds, this device stays signed in for up to 30 days.</p>
+        <div class="discord-mobile-login-actions">
+          <a class="btn primary" data-discord-mobile-continue href="${loginHref}">Continue with Discord</a>
+          <button class="btn secondary" data-discord-mobile-cancel type="button">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.body.classList.add("discord-mobile-login-open");
+    modal.querySelector(".discord-mobile-login-close")?.addEventListener("click", () => closeModal(modal));
+    modal.querySelector("[data-discord-mobile-cancel]")?.addEventListener("click", () => closeModal(modal));
+    modal.addEventListener("click", event => { if (event.target === modal) closeModal(modal); });
+    modal.querySelector("[data-discord-mobile-continue]")?.focus();
+  }
+
+  document.addEventListener("click", event => {
+    const link = event.target.closest?.('a[href^="/api/auth/login"]');
+    if (!isLoginLink(link) || !isMobile() || link.dataset.mobileLoginBypass === "1") return;
+    event.preventDefault();
+    const href = link.getAttribute("href") || "/api/auth/login";
+    showModal(href);
+  });
+})();

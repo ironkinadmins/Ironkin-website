@@ -12140,3 +12140,13 @@ body.ik-hall-page .hof-title-primary .btn::after{content:" →"}
 .tracked-item-edit-actions { display:flex; align-items:end; justify-content:space-between; gap:.5rem; grid-column:1 / -1; }
 @media (max-width: 900px) { .tracked-item-editor { grid-template-columns:1fr 1fr; } }
 @media (max-width: 560px) { .tracked-item-editor { grid-template-columns:1fr; } }
+
+/* Mobile Discord OAuth explanation */
+.discord-mobile-login-modal{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;background:rgba(5,4,3,.78);backdrop-filter:blur(8px)}
+.discord-mobile-login-card{position:relative;width:min(100%,460px);padding:28px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:#120e0b;box-shadow:0 28px 90px rgba(0,0,0,.58)}
+.discord-mobile-login-card h2{margin:4px 0 12px;font-size:1.65rem}.discord-mobile-login-card p{line-height:1.55;color:rgba(255,255,255,.78)}
+.discord-mobile-login-card .discord-mobile-login-note{margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(255,139,48,.08);border:1px solid rgba(255,139,48,.18);font-size:.92rem}
+.discord-mobile-login-icon{display:grid;place-items:center;width:42px;height:42px;margin-bottom:14px;border-radius:12px;background:linear-gradient(135deg,var(--ember),#ffb15a);color:#180a02;font-size:1.35rem;font-weight:900}
+.discord-mobile-login-close{position:absolute;top:12px;right:14px;border:0;background:transparent;color:rgba(255,255,255,.65);font-size:1.8rem;line-height:1;cursor:pointer}
+.discord-mobile-login-actions{display:flex;gap:10px;margin-top:20px}.discord-mobile-login-actions .btn{flex:1;justify-content:center}.discord-mobile-login-open{overflow:hidden}
+@media(max-width:520px){.discord-mobile-login-card{padding:24px 20px}.discord-mobile-login-actions{flex-direction:column}.discord-mobile-login-card h2{font-size:1.45rem}}
