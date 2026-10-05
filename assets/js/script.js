@@ -2772,7 +2772,7 @@ function parseSpeedRecordRows(description) {
     const markdownLink = parseMarkdownLink(text);
     let url = markdownLink?.url || extractFirstUrl(text);
 
-    if (markdownLink) text = markdownLink.label;
+    if (markdownLink) text = markdownLink.text;
     if (!url && lines[i + 1] && /^https?:\/\//i.test(lines[i + 1])) {
       url = extractFirstUrl(lines[i + 1]);
       i += 1;
