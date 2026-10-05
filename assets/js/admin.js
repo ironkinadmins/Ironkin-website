@@ -2433,18 +2433,39 @@ async function loadAdminDrops() {
           <span>${formatDropTrackingRule(drop.trackingRule)}</span>
           ${drop.itemId ? `<span>RuneLite tracking enabled</span>` : `<span class="tracked-item-warning">Re-add from search to enable RuneLite tracking</span>`}
         </div>
-        ${pvmEntry ? `
-          <div class="tracked-item-boss-editor">
-            <label>
-              <span>Boss / category</span>
-              <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name">
-            </label>
-            <button type="button" data-drop-action="save-boss">Save Boss</button>
-            <div class="tracked-item-order-actions" aria-label="Item order">
+        <div class="tracked-item-editor">
+          <label>
+            <span>Item name</span>
+            <input type="text" data-drop-name value="${escapeHtml(drop.name || "")}" placeholder="Item name">
+          </label>
+          <label>
+            <span>OSRS item ID</span>
+            <input type="number" min="1" step="1" data-drop-item-id value="${drop.itemId ? Number(drop.itemId) : ""}" placeholder="Item ID">
+          </label>
+          <label>
+            <span>Embers</span>
+            <input type="number" min="0" step="1" data-drop-reward value="${Number(drop.rewardEmbers || 0)}">
+          </label>
+          <label>
+            <span>Duplicate rule</span>
+            <select data-drop-tracking-rule>
+              <option value="repeatable" ${String(drop.trackingRule || "repeatable") === "repeatable" ? "selected" : ""}>Count every drop</option>
+              <option value="once_per_player" ${drop.trackingRule === "once_per_player" ? "selected" : ""}>Once per player</option>
+              <option value="once_per_event" ${drop.trackingRule === "once_per_event" ? "selected" : ""}>Once per event</option>
+            </select>
+          </label>
+          ${pvmEntry ? `<label>
+            <span>Boss / category</span>
+            <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name">
+          </label>` : ""}
+          <div class="tracked-item-edit-actions">
+            <button type="button" data-drop-action="save">Save changes</button>
+            ${pvmEntry ? `<div class="tracked-item-order-actions" aria-label="Item order">
               <button type="button" data-drop-action="up" ${canMoveUp ? "" : "disabled"} title="Move item up">↑</button>
               <button type="button" data-drop-action="down" ${canMoveDown ? "" : "disabled"} title="Move item down">↓</button>
-            </div>
-          </div>` : ""}
+            </div>` : ""}
+          </div>
+        </div>
         <div class="tracked-item-danger-row">
           <span>Remove this item from tracking</span>
           <button type="button" class="tracked-item-delete" data-drop-action="delete">Delete item</button>
@@ -2452,7 +2473,13 @@ async function loadAdminDrops() {
       </div>`;
 
     item.querySelector('[data-drop-action="delete"]')?.addEventListener("click", () => deleteDrop(drop.name));
-    item.querySelector('[data-drop-action="save-boss"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { boss: item.querySelector('[data-drop-boss]')?.value || "" }));
+    item.querySelector('[data-drop-action="save"]')?.addEventListener("click", () => updateTrackedItem(drop.name, {
+      newName: item.querySelector('[data-drop-name]')?.value || "",
+      itemId: item.querySelector('[data-drop-item-id]')?.value || "",
+      rewardEmbers: item.querySelector('[data-drop-reward]')?.value || 0,
+      trackingRule: item.querySelector('[data-drop-tracking-rule]')?.value || "repeatable",
+      ...(pvmEntry ? { boss: item.querySelector('[data-drop-boss]')?.value || "" } : {})
+    }));
     item.querySelector('[data-drop-action="up"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "up" }));
     item.querySelector('[data-drop-action="down"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "down" }));
     return item;
@@ -2537,6 +2564,25 @@ async function loadAdminDrops() {
     catalog.querySelectorAll(".tracked-boss-group").forEach(group => { group.open = false; });
     catalog.querySelectorAll(".tracked-item-record").forEach(item => { item.open = false; });
   });
+}
+
+
+async function updateTrackedItem(name, changes = {}) {
+  if (!selectedEventId || !name) return;
+  const newName = String(changes.newName || "").trim();
+  const itemId = Number(changes.itemId || 0);
+  if (!newName) { alert("Item name cannot be blank."); return; }
+  if (!Number.isInteger(itemId) || itemId <= 0) { alert("Enter a valid OSRS item ID."); return; }
+
+  const response = await fetch("/api/drops/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId: selectedEventId, name, ...changes, newName, itemId })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { alert(data.error || "Could not update tracked item."); return; }
+  if (data.supabaseWarning && data.supabaseWarning !== "not-configured") console.warn("Supabase sync warning:", data.supabaseWarning);
+  loadAdminDrops();
 }
 
 async function updatePvmDropOrder(name, changes = {}) {

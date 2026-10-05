@@ -12124,3 +12124,19 @@ body.ik-hall-page .hof-title-primary .btn::after{content:" →"}
 .hof-row-admin{width:28px;height:28px;display:inline-grid;place-items:center;padding:0;border:1px solid rgba(255,122,26,.28);border-radius:7px;background:rgba(255,122,26,.07);color:var(--muted);font:inherit;line-height:1;cursor:pointer}
 .hof-row-admin:hover{border-color:var(--ember);color:var(--ember);background:rgba(255,122,26,.12)}
 .hof-row-admin[hidden]{display:none!important}
+
+.tracked-item-editor {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) minmax(120px, .8fr) minmax(100px, .7fr) minmax(170px, 1.2fr);
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.tracked-item-editor label { display:flex; flex-direction:column; gap:.25rem; min-width:0; }
+.tracked-item-editor label > span { color:rgba(255,255,255,.48); font-size:.64rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.tracked-item-editor input, .tracked-item-editor select { width:100%; min-height:34px; }
+.tracked-item-edit-actions { display:flex; align-items:end; justify-content:space-between; gap:.5rem; grid-column:1 / -1; }
+@media (max-width: 900px) { .tracked-item-editor { grid-template-columns:1fr 1fr; } }
+@media (max-width: 560px) { .tracked-item-editor { grid-template-columns:1fr; } }

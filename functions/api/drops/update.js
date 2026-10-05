@@ -1,9 +1,19 @@
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { getDropListKey, readDropsWithClanGoalFallback } from "./_dropKeys.js";
+import { upsertTrackedItem } from "../_supabase.js";
+import { makePluginEventId } from "../_pluginEvents.js";
 
 function bossName(drop) {
   return String(drop?.boss || "").trim() || "Unassigned";
+}
+
+async function resolvePluginEventId(env, websiteEventId) {
+  const raw = await hybridKv(env, "drops").get("events:active");
+  let events = [];
+  try { events = raw ? JSON.parse(raw) : []; } catch { events = []; }
+  const event = (Array.isArray(events) ? events : []).find(entry => String(entry?.id || "") === String(websiteEventId || ""));
+  return event ? makePluginEventId(event) : String(websiteEventId || "");
 }
 
 function groupByBoss(drops) {
@@ -49,13 +59,35 @@ export async function onRequestPost({ request, env }) {
     let index = drops.findIndex(drop => String(drop?.name || "").toLowerCase() === name.toLowerCase());
     if (index < 0) return Response.json({ error: "Tracked item not found." }, { status: 404 });
 
+    const originalName = String(drops[index]?.name || "");
+    const originalBoss = bossName(drops[index]);
+    const allowedTrackingRules = new Set(["repeatable", "once_per_player", "once_per_event"]);
+
+    if (body.newName !== undefined) {
+      const newName = String(body.newName || "").trim();
+      if (!newName) return Response.json({ error: "Item name cannot be blank." }, { status: 400 });
+      const duplicate = drops.some((drop, dropIndex) => dropIndex !== index && String(drop?.name || "").toLowerCase() === newName.toLowerCase());
+      if (duplicate) return Response.json({ error: "Another tracked item already uses that name." }, { status: 409 });
+      drops[index] = { ...drops[index], name: newName };
+    }
+    if (body.itemId !== undefined) {
+      const itemId = Number(body.itemId);
+      if (!Number.isInteger(itemId) || itemId <= 0) return Response.json({ error: "Invalid OSRS item ID." }, { status: 400 });
+      drops[index] = { ...drops[index], itemId };
+    }
+    if (body.rewardEmbers !== undefined) {
+      drops[index] = { ...drops[index], rewardEmbers: Math.max(0, Math.floor(Number(body.rewardEmbers || 0))) };
+    }
+    if (body.trackingRule !== undefined) {
+      const trackingRule = String(body.trackingRule || "");
+      if (!allowedTrackingRules.has(trackingRule)) return Response.json({ error: "Invalid duplicate rule." }, { status: 400 });
+      drops[index] = { ...drops[index], trackingRule };
+    }
+
     if (body.boss !== undefined) {
       const newBoss = String(body.boss || "").trim();
       const item = { ...drops[index], boss: newBoss };
       drops.splice(index, 1);
-
-      // If that boss already exists, place the item at the end of its group so the
-      // website remains grouped by boss automatically. Otherwise keep its old slot.
       const normalized = newBoss || "Unassigned";
       const lastSameBoss = drops.map(bossName).lastIndexOf(normalized);
       if (lastSameBoss >= 0) drops.splice(lastSameBoss + 1, 0, item);
@@ -72,5 +104,20 @@ export async function onRequestPost({ request, env }) {
   }
 
   await hybridKv(env, "drops").put(result.key || getDropListKey(eventId), JSON.stringify(drops));
-  return Response.json({ success: true, eventId, drops });
+
+  let supabaseWarning = null;
+  if (!body.moveBoss && body.name) {
+    const updated = drops.find(drop => String(drop?.name || "").toLowerCase() === String(body.newName || body.name || "").trim().toLowerCase());
+    if (updated?.itemId) {
+      const pluginEventId = await resolvePluginEventId(env, eventId);
+      const sync = await upsertTrackedItem(env, {
+        websiteEventId: eventId, pluginEventId, itemId: Number(updated.itemId), itemName: updated.name,
+        imageUrl: updated.image || "", wikiUrl: updated.wikiUrl || "",
+        rewardEmbers: Number(updated.rewardEmbers || 0), trackingRule: updated.trackingRule || "repeatable"
+      }).catch(error => ({ synced: false, reason: error.message }));
+      if (!sync?.synced) supabaseWarning = sync?.reason || "sync-failed";
+    }
+  }
+
+  return Response.json({ success: true, eventId, drops, supabaseWarning });
 }
