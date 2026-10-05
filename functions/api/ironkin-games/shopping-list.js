@@ -14,6 +14,9 @@ export async function onRequestGet({ request, env }) {
   const adminTeamId = staff ? String(url.searchParams.get("adminTeamId") || "") : "";
   if (adminTeamId) team = (state.teams || []).find(t => String(t.id) === adminTeamId) || team;
   if (testMode) team = (state.teams || []).find(t => String(t.id) === String(url.searchParams.get("testTeamId") || "")) || team;
+  // Staff do not need to be rostered. If no explicit admin team was selected,
+  // default the admin Shopping List manager to the first configured team.
+  if (!team && staff) team = (state.teams || [])[0] || null;
   if (!team) return Response.json({ error:"You are not assigned to an Ironkin Games team." }, { status:403 });
   const weekId = String(url.searchParams.get("weekId") || "");
   const challengeId = String(url.searchParams.get("challengeId") || "");
