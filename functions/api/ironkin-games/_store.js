@@ -1,4 +1,6 @@
 import { hybridKv } from "../../_hybridKv.js";
+import { hasSupabase, supabaseRest } from "../_supabase.js";
+import { shoppingEventId, shoppingItems } from "./_shoppingList.js";
 export const GAMES_KEY = "ironkin-games:v1";
 
 export function defaultGames() {
@@ -142,9 +144,36 @@ export async function loadGames(env) {
   }
 }
 
+async function syncShoppingCatalog(env, state) {
+  if (!hasSupabase(env)) return;
+  const rows = [];
+  for (const week of state.weeks || []) {
+    for (const challenge of week.challenges || []) {
+      if (String(challenge.trackerType || "") !== "shopping-list") continue;
+      for (const team of state.teams || []) {
+        const eventId = shoppingEventId(week.id, challenge.id, team.id);
+        for (const item of shoppingItems(challenge)) {
+          for (const itemId of item.itemIds || [item.itemId]) rows.push({
+            website_event_id: eventId, plugin_event_id: eventId, item_id: Number(itemId),
+            item_name: String(item.name || ""), image_url: String(item.image || ""),
+            wiki_url: "", reward_embers: 0, tracking_rule: "once_per_event"
+          });
+        }
+      }
+    }
+  }
+  // Shopping List catalog rows are derived from Games configuration. Rebuild
+  // them whenever Games is saved so Discord /submit always reflects the list.
+  await supabaseRest(env, "ironkin_event_items?plugin_event_id=like.ig-shopping-*", { method:"DELETE", headers:{ Prefer:"return=minimal" } });
+  if (rows.length) await supabaseRest(env, "ironkin_event_items?on_conflict=website_event_id,item_id", {
+    method:"POST", headers:{ Prefer:"resolution=merge-duplicates,return=minimal" }, body:JSON.stringify(rows)
+  });
+}
+
 export async function saveGames(env, state) {
   state.updatedAt = new Date().toISOString();
   await hybridKv(env, "drops").put(GAMES_KEY, JSON.stringify(state));
+  try { await syncShoppingCatalog(env, state); } catch (error) { console.warn("Shopping List catalog sync failed", error); }
   return state;
 }
 
