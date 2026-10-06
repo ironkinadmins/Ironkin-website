@@ -82,7 +82,16 @@ export function shoppingTeamProgress(state, team, challenge, rows) {
     const belongsToTeam = memberIds.has(String(row.discord_id || "")) || memberNames.has(cleanName(row.player_name));
     if (!belongsToTeam) continue;
     const itemId = Number(row.item_id) || 0;
-    const objective = items.find(item => String(row.shopping_objective_id || "") === item.id || item.itemIds.includes(itemId));
+    // Never let a stale positional shopping_objective_id (shopping-1, shopping-2, ...)
+    // mark a different live objective complete. The submitted item ID must belong
+    // to that objective. This is important for live weeks that were created before
+    // the Shopping List/library was edited: old submission rows can otherwise hide
+    // unrelated objectives (and every alternative item in a grouped objective)
+    // from RuneLite's /events/item-list response.
+    const objectiveById = items.find(item => String(row.shopping_objective_id || "") === item.id);
+    const objective = (objectiveById && objectiveById.itemIds.includes(itemId))
+      ? objectiveById
+      : items.find(item => item.itemIds.includes(itemId));
     if (!objective) continue;
     const previous = byObjective.get(objective.id);
     if (!previous || String(row.status) === "approved" || String(previous.status) !== "approved") byObjective.set(objective.id, row);
