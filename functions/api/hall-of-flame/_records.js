@@ -258,11 +258,13 @@ export async function updateHallOfFlameReviewNotification(env, submission, outco
   const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
   const hallUrl = `${siteUrl}/hall-of-flame`;
   const reviewer = String(outcome.reviewedBy || submission.reviewed_by_name || "Ironkin staff").trim();
-  const placement = Number(outcome.finalPlacement || submission.final_placement || 0);
   const title = approved ? "✅ PB Approved" : removed ? "🗑️ PB Removed" : "❌ PB Rejected";
   const color = approved ? 0x2ecc71 : removed ? 0x95a5a6 : 0xed4245;
+  // Keep finalized review posts intentionally compact and permanent. Do not put
+  // rank text here because a PB can later move down or fall off the active Top 3.
+  // The proof remains stored in Supabase/My Submissions; only Discord drops it.
   const resultText = approved
-    ? (placement > 0 && placement <= 3 ? `🏆 **Ranked #${placement}** — this time is now live on the Hall of Flame.` : "Approved by staff.")
+    ? "Approved by staff."
     : removed ? "This previously approved time was removed from the active leaderboard by staff."
     : "This submission was rejected by staff and was not added to the leaderboard.";
   const embed = {
@@ -276,7 +278,9 @@ export async function updateHallOfFlameReviewNotification(env, submission, outco
     footer:{ text:`${approved ? "Approved" : removed ? "Removed" : "Rejected"} by ${reviewer}` },
     timestamp:new Date().toISOString()
   };
-  if (submission.proof_url) embed.image = { url:submission.proof_url };
+  // Finalized Discord review messages never show the proof image. The original
+  // proof_url is untouched in the submission row so My Submissions and history
+  // keep permanent access to the evidence.
 
   const headers={ Authorization:`Bot ${token}`, "Content-Type":"application/json" };
   const patchMessage = async id => discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${id}`, {
