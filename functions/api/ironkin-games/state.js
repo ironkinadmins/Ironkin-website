@@ -1,5 +1,6 @@
 import { getSession, isStaffSession } from "../_auth.js";
 import { loadGames, memberTeam, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
+import { shoppingItems } from "./_shoppingList.js";
 
 
 function submissionReviewStatus(related) {
@@ -16,7 +17,7 @@ function submissionReviewStatus(related) {
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: reveal ? challenge.name : (challenge.publicName || (challenge.kind === "side" ? "Mystery Side Challenge" : "Mystery Main Challenge")), kind: challenge.kind || "main", status: challenge.status || "upcoming",
-    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:reveal?(challenge.trackingMethod||"submissions"):"sealed", trackerType:reveal?(challenge.trackerType||"none"):"sealed", contracts: reveal && challenge.trackerType==="contracts" ? (challenge.contracts||[]) : [], shoppingItems: reveal && challenge.trackerType==="shopping-list" ? (challenge.shoppingItems||[]) : [], locationHunt: reveal && challenge.trackerType==="location-hunt" ? (challenge.locationHunt||[]) : [], triviaHunt: reveal && challenge.trackerType==="trivia-hunt" ? (challenge.triviaHunt||[]).map(({answer,...x})=>x) : [], trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
+    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:reveal?(challenge.trackingMethod||"submissions"):"sealed", trackerType:reveal?(challenge.trackerType||"none"):"sealed", contracts: reveal && challenge.trackerType==="contracts" ? (challenge.contracts||[]) : [], shoppingItems: reveal && challenge.trackerType==="shopping-list" ? shoppingItems(challenge) : [], locationHunt: reveal && challenge.trackerType==="location-hunt" ? (challenge.locationHunt||[]) : [], triviaHunt: reveal && challenge.trackerType==="trivia-hunt" ? (challenge.triviaHunt||[]).map(({answer,...x})=>x) : [], trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
     participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };

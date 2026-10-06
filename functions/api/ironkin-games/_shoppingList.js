@@ -28,8 +28,18 @@ export function shoppingChallenges(state, now = Date.now()) {
 export function shoppingItems(challenge) {
   return (Array.isArray(challenge?.shoppingItems) ? challenge.shoppingItems : []).map((item, index) => {
     const legacyId = Number(item.itemId) || 0;
-    const itemIds = [...new Set((Array.isArray(item.itemIds) ? item.itemIds : [legacyId])
+    let itemIds = [...new Set((Array.isArray(item.itemIds) ? item.itemIds : [legacyId])
       .map(Number).filter(id => Number.isInteger(id) && id > 0))];
+
+    // Canonical ID repair for grouped Ironkin Games Shopping List objectives.
+    // This protects RuneLite from stale/mistyped IDs saved in the live Games state.
+    const objectiveName = String(item.name || "").trim().toLowerCase();
+    if (objectiveName.includes("moon key")) {
+      itemIds = [30105, 30107]; // tooth half, loop half
+    } else if (objectiveName.includes("perilous moons")) {
+      itemIds = [28988, 28997, 29000, 29004, 29007, 29010, 29013, 29016, 29019, 29022, 29025, 29028];
+    }
+
     return {
       id: String(item.id || `shopping-${index + 1}`),
       itemId: itemIds[0] || 0,
