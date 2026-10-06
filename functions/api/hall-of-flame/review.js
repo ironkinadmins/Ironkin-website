@@ -9,11 +9,18 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const id = String(body.id || "").trim();
   const action = String(body.action || "").trim().toLowerCase();
-  if (!id || !["approve","reject","remove"].includes(action)) return Response.json({ error:"Invalid review request." }, { status:400, headers:noStore });
+  if (!id || !["approve","reject","remove","resync"].includes(action)) return Response.json({ error:"Invalid review request." }, { status:400, headers:noStore });
   const submission = await getSubmission(env, id);
   if (!submission) return Response.json({ error:"Submission not found." }, { status:404, headers:noStore });
-  if (action !== "remove" && submission.status !== "pending") return Response.json({ error:"This submission has already been reviewed." }, { status:409, headers:noStore });
+  if (!["remove","resync"].includes(action) && submission.status !== "pending") return Response.json({ error:"This submission has already been reviewed." }, { status:409, headers:noStore });
   if (action === "remove" && submission.status !== "approved") return Response.json({ error:"Only an approved record can be removed from the leaderboard." }, { status:409, headers:noStore });
+  if (action === "resync") {
+    if (!["approved","rejected"].includes(submission.status)) return Response.json({ error:"Only reviewed submissions can be resynced." }, { status:409, headers:noStore });
+    let reviewMessage={updated:false};
+    try { reviewMessage=await updateHallOfFlameReviewNotification(env,submission,{status:submission.status,reviewedBy:submission.reviewed_by_name,finalPlacement:submission.final_placement}); }
+    catch(error){ reviewMessage={updated:false,error:String(error?.message||error)}; }
+    return Response.json({ok:Boolean(reviewMessage.updated),status:submission.status,reviewMessage},{status:reviewMessage.updated?200:207,headers:noStore});
+  }
 
   const message = await bossMessage(env, submission.boss);
   const legacy = parseDiscordBoard(message?.embeds?.[0]?.description || "");
@@ -34,7 +41,10 @@ export async function onRequestPost({ request, env }) {
     const filteredLegacy = legacy.filter(row => !(String(row.player||"").trim().toLowerCase() === String(submission.display_name||"").trim().toLowerCase() && Number(row.timeMs) === Number(submission.time_ms)));
     const remainingApproved = alreadyApproved.filter(row => String(row.id) !== id);
     const board = mergeBoard(filteredLegacy, remainingApproved);
-    if (bossConfig?.discord_sync !== false) discord = await syncDiscordBoard(env, submission.boss, board, "", bossConfig?.image_url || "");
+    if (bossConfig?.discord_sync !== false) {
+      try { discord = await syncDiscordBoard(env, submission.boss, board, "", bossConfig?.image_url || ""); }
+      catch (error) { discord = { synced:false, error:String(error?.message || error) }; }
+    }
     let reviewMessage={updated:false};
     try { reviewMessage=await updateHallOfFlameReviewNotification(env, submission, { status:"removed", reviewedBy:reviewerName, finalPlacement:placement }); } catch (error) { reviewMessage={updated:false,error:String(error?.message||error)}; }
     return Response.json({ ok:true, status:"removed", discord, reviewMessage }, { headers:noStore });
@@ -43,7 +53,8 @@ export async function onRequestPost({ request, env }) {
     const approved = [...alreadyApproved, { ...submission, status:"approved" }];
     const board = mergeBoard(legacy, approved);
     if (bossConfig?.discord_sync !== false && board.some(row => row.submissionId === id || (row.source === "verified" && row.proofUrl === submission.proof_url))) {
-      discord = await syncDiscordBoard(env, submission.boss, board, submission.proof_url, bossConfig?.image_url || "");
+      try { discord = await syncDiscordBoard(env, submission.boss, board, submission.proof_url, bossConfig?.image_url || ""); }
+      catch (error) { discord = { synced:false, error:String(error?.message || error) }; }
     }
   }
   let reviewMessage={updated:false};

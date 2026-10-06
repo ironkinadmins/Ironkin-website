@@ -131,7 +131,7 @@ export function parseDiscordBoard(description) {
     const timeMs = parseTimeToMs(legacyValue);
     if (!timeMs) return [];
     return [{ player: clean.slice(0, timeMatch.index).replace(/[-–—]\s*$/, "").trim(), timeMs, time: formatTime(timeMs), proofUrl }];
-  }).sort((a,b) => a.timeMs - b.timeMs).slice(0, 3);
+  }).sort((a,b) => a.timeMs - b.timeMs);
 }
 
 export async function discordMessages(env) {
@@ -151,8 +151,27 @@ export async function bossMessage(env, boss) {
 }
 
 export function projectedPlacement(board, timeMs) {
-  const sorted = [...board, { timeMs, candidate: true }].sort((a,b) => a.timeMs - b.timeMs);
-  return sorted.findIndex(row => row.candidate) + 1;
+  // Rank by distinct PB times, so an exact tie shares the same placement.
+  // Example: 0:47, 0:47, 0:49.80 => #1, #1, #2.
+  const candidateTime = Number(timeMs);
+  const fasterDistinctTimes = [...new Set((board || [])
+    .map(row => Number(row.timeMs))
+    .filter(value => Number.isFinite(value) && value < candidateTime))];
+  return fasterDistinctTimes.length + 1;
+}
+
+export function rankBoard(rows, maxPlacement = 3) {
+  const sorted = [...(rows || [])].sort((a,b) => Number(a.timeMs) - Number(b.timeMs));
+  let placement = 0;
+  let previousTime = null;
+  return sorted.map(row => {
+    const timeMs = Number(row.timeMs);
+    if (previousTime === null || timeMs !== previousTime) {
+      placement += 1;
+      previousTime = timeMs;
+    }
+    return { ...row, placement };
+  }).filter(row => row.placement <= maxPlacement);
 }
 
 export async function uploadProof(env, file, submissionId) {
@@ -185,7 +204,7 @@ export function mergeBoard(legacy, approved) {
     const key = String(row.player || "").trim().toLowerCase();
     if (key && !best.has(key)) best.set(key, row);
   }
-  return [...best.values()].sort((a,b) => a.timeMs-b.timeMs).slice(0,3);
+  return rankBoard([...best.values()], 3);
 }
 
 export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl = "") {
@@ -195,7 +214,8 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   const existing = message?.embeds?.[0] || {};
   const description = board.map((row, i) => {
     const label = `${row.player} ${formatTime(row.timeMs)}`;
-    return `${MEDALS[i]} • ${row.proofUrl ? `[${label}](${row.proofUrl})` : label}`;
+    const placement = Number(row.placement) || (i + 1);
+    return `${MEDALS[placement - 1] || "🏅"} • ${row.proofUrl ? `[${label}](${row.proofUrl})` : label}`;
   }).join("\n");
   const siteUrl = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
   const hallUrl = `${siteUrl}/hall-of-flame`;
@@ -230,8 +250,8 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
 export async function updateHallOfFlameReviewNotification(env, submission, outcome = {}) {
   const token = String(env.DISCORD_BOT_TOKEN || "").trim();
   const channelId = String(submission?.review_discord_channel_id || "").trim();
-  const messageId = String(submission?.review_discord_message_id || "").trim();
-  if (!token || !channelId || !messageId) return { updated:false, reason:"Review message was not recorded" };
+  const storedMessageId = String(submission?.review_discord_message_id || "").trim();
+  if (!token || !channelId) return { updated:false, reason:"Review channel was not recorded" };
 
   const approved = outcome.status === "approved";
   const removed = outcome.status === "removed";
@@ -246,11 +266,9 @@ export async function updateHallOfFlameReviewNotification(env, submission, outco
     : removed ? "This previously approved time was removed from the active leaderboard by staff."
     : "This submission was rejected by staff and was not added to the leaderboard.";
   const embed = {
-    title,
-    url: hallUrl,
-    color,
-    description: `${resultText}\n\n[Open Hall of Flame](${hallUrl})`,
-    fields: [
+    title, url:hallUrl, color,
+    description:`${resultText}\n\n[Open Hall of Flame](${hallUrl})`,
+    fields:[
       { name:"Boss", value:String(submission.boss || "Unknown"), inline:true },
       { name:"Player", value:String(submission.display_name || "Unknown"), inline:true },
       { name:"Time", value:formatTime(submission.time_ms), inline:true }
@@ -260,13 +278,49 @@ export async function updateHallOfFlameReviewNotification(env, submission, outco
   };
   if (submission.proof_url) embed.image = { url:submission.proof_url };
 
-  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
-    method:"PATCH",
-    headers:{ Authorization:`Bot ${token}`, "Content-Type":"application/json" },
-    body:JSON.stringify({ content:"", allowed_mentions:{ parse:[] }, embeds:[embed] })
+  const headers={ Authorization:`Bot ${token}`, "Content-Type":"application/json" };
+  const patchMessage = async id => discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${id}`, {
+    method:"PATCH", headers, body:JSON.stringify({ content:"", allowed_mentions:{ parse:[] }, embeds:[embed] })
   });
-  if (!response.ok) return { updated:false, error:`Discord review update failed: ${await response.text()}` };
-  return { updated:true, messageId };
+  const messageMatchesSubmission = message => {
+    const current=message?.embeds?.[0]||{};
+    const proof=String(submission?.proof_url||"");
+    if(proof && String(current?.image?.url||"")===proof) return true;
+    const fields=Array.isArray(current.fields)?current.fields:[];
+    const field=name=>String(fields.find(f=>String(f?.name||"").toLowerCase()===name)?.value||"").trim().toLowerCase();
+    return field("boss")===String(submission?.boss||"").trim().toLowerCase()
+      && field("player")===String(submission?.display_name||"").trim().toLowerCase()
+      && field("time")===formatTime(submission?.time_ms).trim().toLowerCase();
+  };
+
+  // Never blindly PATCH the stored ID: older failures could leave an ID pointing
+  // at another PB. Verify it belongs to this exact submission first.
+  let messageId="";
+  if(storedMessageId){
+    const check=await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${storedMessageId}`, { headers:{Authorization:`Bot ${token}`} });
+    if(check.ok){const message=await check.json().catch(()=>null);if(messageMatchesSubmission(message))messageId=storedMessageId;}
+  }
+
+  // Recover stale/missing IDs by matching the unique proof image, with
+  // boss+player+time as a fallback for older review messages.
+  if(!messageId){
+    const recent=await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, { headers:{Authorization:`Bot ${token}`} });
+    if(recent.ok){
+      const messages=await recent.json().catch(()=>[]);
+      const match=Array.isArray(messages)?messages.find(message=>messageMatchesSubmission(message)):null;
+      if(match?.id) messageId=String(match.id);
+    }
+  }
+  if(!messageId) return {updated:false,reason:"Matching Discord review message was not found"};
+
+  const response=await patchMessage(messageId);
+  if(!response.ok) return {updated:false,error:`Discord review update failed: ${await response.text()}`};
+
+  // Heal the database pointer when recovery found the right Discord post.
+  if(messageId!==storedMessageId){
+    try{await supabaseRest(env,`hall_of_flame_submissions?id=eq.${encodeURIComponent(submission.id)}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({review_discord_message_id:messageId,updated_at:new Date().toISOString()})});}catch{}
+  }
+  return {updated:true,messageId,recovered:messageId!==storedMessageId};
 }
 
 export async function notifyHallOfFlameReview(env, submission) {
