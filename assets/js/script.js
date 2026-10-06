@@ -3148,7 +3148,7 @@ document.addEventListener("click",async event=>{
   if(target.dataset.hofBossAction){const action=target.dataset.hofBossAction;if(action==="new"){hofBossForm({});return;}if(action==="manage-records"){hofOpenManageRecords();return;}if(action==="back-manage"){hofOpenManage();return;}if(action==="boss-records"){hofOpenManageRecords(target.dataset.slug);return;}if(action==="edit"){const b=(window.__hofAdminBosses||[]).find(x=>x.slug===target.dataset.slug);if(b)hofBossForm(b);return;}target.disabled=true;try{if(action==="save-discord"){const channelId=document.getElementById("hofDiscordChannel")?.value||"",reviewChannelId=document.getElementById("hofDiscordReviewChannel")?.value||"",pingRoleId=document.getElementById("hofDiscordPingRole")?.value||"";await hofFetchJson("/api/hall-of-flame/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"save",channelId,reviewChannelId,pingRoleId})});await hofOpenManage();return;}else if(action==="test-discord"){await hofFetchJson("/api/hall-of-flame/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"test"})});alert("Discord test sent. If a review channel is configured, it received a test notification too.");target.disabled=false;return;}else if(action==="import"){await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"import-discord"})});}else if(action==="wiki-all"){const result=await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"populate-wiki-images"})});alert(`Wiki images: ${result.updated||0} added${result.failed?`, ${result.failed} not found`:""}.`);}else if(action==="repair-discord"){
       if(!confirm("Standardize all existing reviewed Discord embeds and rebuild all Hall of Flame boards from the website records? Approved/rejected review posts will use the same compact format with no proof image. Proofs remain saved in My Submissions. This will not re-approve or duplicate submissions.")){target.disabled=false;return;}
       const originalText=target.textContent; target.textContent="Repairing reviews…";
-      let reviewFixed=0,reviewSkipped=0;const failures=[];
+      let reviewFixed=0,reviewSkipped=0;const failures=[],reviewNotFound=[];
       let reviewed=[];
       for(const status of ["approved","rejected"]){
         try{const data=await hofFetchJson(`/api/hall-of-flame/submissions?scope=staff&status=${status}`,{cache:"no-store"});reviewed.push(...(data.submissions||[]));}
@@ -3156,7 +3156,7 @@ document.addEventListener("click",async event=>{
       }
       for(let i=0;i<reviewed.length;i++){
         const row=reviewed[i];target.textContent=`Repairing reviews ${i+1}/${reviewed.length}…`;
-        try{const result=await hofFetchJson("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:row.id,action:"resync"})});if(result.reviewMessage?.updated)reviewFixed++;else reviewSkipped++;}
+        try{const result=await hofFetchJson("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:row.id,action:"resync"})});if(result.reviewMessage?.updated)reviewFixed++;else{reviewSkipped++;reviewNotFound.push({name:`${row.boss} — ${row.display_name} — ${hofFormatTime(Number(row.time_ms)||0)}`,reason:result.reviewMessage?.reason||result.reviewMessage?.error||"Matching Discord review message was not found"});}}
         catch(error){reviewSkipped++;failures.push({name:`${row.boss} — ${row.display_name}`,error:error.message||"Review repair failed"});}
         if(i<reviewed.length-1)await new Promise(resolve=>setTimeout(resolve,300));
       }
@@ -3169,8 +3169,9 @@ document.addEventListener("click",async event=>{
         if(i<bosses.length-1)await new Promise(resolve=>setTimeout(resolve,450));
       }
       target.textContent=originalText;
-      const details=failures.slice(0,6).map(x=>`\n• ${x.name}: ${x.error}`).join("");
-      alert(`Discord standardization complete: ${reviewFixed} review message${reviewFixed===1?"":"s"} repaired, ${boardsSynced} board${boardsSynced===1?"":"s"} synced${reviewSkipped?`, ${reviewSkipped} review message${reviewSkipped===1?"":"s"} not found`:""}${boardsSkipped?`, ${boardsSkipped} empty board${boardsSkipped===1?"":"s"} skipped`:""}${failures.length?`, ${failures.length} issue${failures.length===1?"":"s"}`:""}.${details}`);
+      const missingDetails=reviewNotFound.length?`\n\nReview messages not found:\n${reviewNotFound.map(x=>`• ${x.name}${x.reason?` — ${x.reason}`:""}`).join("\n")}`:"";
+      const failureDetails=failures.length?`\n\nOther issues:\n${failures.slice(0,10).map(x=>`• ${x.name}: ${x.error}`).join("\n")}`:"";
+      alert(`Discord standardization complete: ${reviewFixed} review message${reviewFixed===1?"":"s"} repaired, ${boardsSynced} board${boardsSynced===1?"":"s"} synced${reviewSkipped?`, ${reviewSkipped} review message${reviewSkipped===1?"":"s"} not found`:""}${boardsSkipped?`, ${boardsSkipped} empty board${boardsSkipped===1?"":"s"} skipped`:""}${failures.length?`, ${failures.length} issue${failures.length===1?"":"s"}`:""}.${missingDetails}${failureDetails}`);
     }else if(action==="sync-all"){
       // Run each board as its own HTTP request. This gives every boss a fresh
       // Cloudflare Worker invocation instead of exhausting one Worker's

@@ -260,11 +260,15 @@ export async function updateHallOfFlameReviewNotification(env, submission, outco
   const reviewer = String(outcome.reviewedBy || submission.reviewed_by_name || "Ironkin staff").trim();
   const title = approved ? "✅ PB Approved" : removed ? "🗑️ PB Removed" : "❌ PB Rejected";
   const color = approved ? 0x2ecc71 : removed ? 0x95a5a6 : 0xed4245;
-  // Keep finalized review posts intentionally compact and permanent. Do not put
-  // rank text here because a PB can later move down or fall off the active Top 3.
-  // The proof remains stored in Supabase/My Submissions; only Discord drops it.
+  // Keep finalized review posts compact, but preserve the placement earned when
+  // the PB was approved. Standardization/resync passes the stored final_placement,
+  // so old approved embeds are rebuilt in the same format as new approvals.
+  // Proof remains stored in Supabase/My Submissions; only Discord drops the image.
+  const finalPlacement = Number(outcome.finalPlacement ?? submission.final_placement);
   const resultText = approved
-    ? "Approved by staff."
+    ? (Number.isFinite(finalPlacement) && finalPlacement <= 3
+        ? `🏆 Ranked #${finalPlacement} — this time is now live on the Hall of Flame.`
+        : "PB verified and added to Record History.")
     : removed ? "This previously approved time was removed from the active leaderboard by staff."
     : "This submission was rejected by staff and was not added to the leaderboard.";
   const embed = {
