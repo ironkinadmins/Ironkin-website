@@ -71,10 +71,10 @@ async function updatePlayerWithRetry(env,name){
 export async function updateAndReadMetric(env,rsn,metric,{requireFresh=false}={}){const name=String(rsn||"").trim();if(!name)throw new Error("Your roster profile does not have an RSN assigned.");const requestedAt=Date.now();let data={};try{data=await updatePlayerWithRetry(env,name);}catch(e){throw new Error(`Could not update Wise Old Man: ${e.message}`);}let snap=snapshotFrom(data);const fresh=s=>{const t=new Date(s?.createdAt||s?.updatedAt||0).getTime();return Number.isFinite(t)&&t>=requestedAt-5000;};if(!snap||(requireFresh&&!fresh(snap))){for(let i=0;i<6;i++){if(i)await sleep(550);const r=await womFetch(env,`/players/${encodeURIComponent(name)}`,{},"Ironkin Games Contracts");if(!r.ok)continue;const d=await r.json().catch(()=>({}));const candidate=snapshotFrom(d);if(candidate&&(!requireFresh||fresh(candidate))){snap=candidate;break;}}}if(!snap)throw new Error("Wise Old Man did not return a player snapshot.");if(requireFresh&&!fresh(snap))throw new Error("WOM has not confirmed a fresh baseline yet. Please try again in a moment.");return{value:metricValue(snap,metric),snapshotAt:snap.createdAt||snap.updatedAt||new Date().toISOString()};}
 export async function listClaims(env,weekId,challengeId,teamId,testMode=false){const r=await supabaseRest(env,`ironkin_games_contract_claims?week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}&is_test=eq.${testMode?"true":"false"}&select=*&order=claimed_at.asc`);return await r.json();}
 export async function insertClaim(env,row){try{const r=await supabaseRest(env,"ironkin_games_contract_claims",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify([row])});return (await r.json())?.[0]||null;}catch(e){if(isUniqueViolation(e))throw Object.assign(new Error("That contract was just claimed, or you already have a contract."),{status:409});throw e;}}
-export async function refreshClaim(env,claim,force=false){
+export async function refreshClaim(env,claim,force=false,bypassCooldown=false){
   const last=new Date(claim.last_refreshed_at||claim.claimed_at||0).getTime();
   const minAge=force?CONTRACT_MANUAL_REFRESH_MS:CONTRACT_REFRESH_MS;
-  if(Number.isFinite(last)&&Date.now()-last<minAge)return claim;
+  if(!bypassCooldown&&Number.isFinite(last)&&Date.now()-last<minAge)return claim;
   const snap=await updateAndReadMetric(env,claim.rsn,claim.metric);
   let baseline=num(claim.baseline);
   let repairedBaseline=null;
