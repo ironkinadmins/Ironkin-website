@@ -6236,7 +6236,7 @@ if (!window.__ironkinEventLeaderboardToggleReady) {
         <p>Discord may open its secure <strong>web sign-in</strong> even when you're already signed into the Discord app. Discord controls this step, so Ironkin can't transfer your app login into the browser.</p>
         <p class="discord-mobile-login-note">If Discord recognizes your browser session, you'll go straight to authorization. If not, use a Discord sign-in method available on that page. Once Ironkin login succeeds, this device stays signed in for up to 30 days.</p>
         <div class="discord-mobile-login-actions">
-          <a class="btn primary" data-discord-mobile-continue href="${loginHref}">Continue with Discord</a>
+          <a class="btn primary" data-discord-mobile-continue data-mobile-login-bypass="1" href="${loginHref}">Continue with Discord</a>
           <button class="btn secondary" data-discord-mobile-cancel type="button">Cancel</button>
         </div>
       </div>`;
