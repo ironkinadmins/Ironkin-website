@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 const idOf=p=>String(p?.discordId||p?.id||"");
 const displayOf=s=>String(s?.nick||s?.global_name||s?.username||"Admin Captain");
@@ -14,7 +14,7 @@ const buildSequence=(teams,signups,order)=>{
 };
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env);
- if(!isStaffSession(session))return Response.json({error:"Staff only."},{status:403});
+ if(!isGamesAdminSession(session))return Response.json({error:"Staff only."},{status:403});
  const body=await request.json().catch(()=>({})), action=String(body.action||""); const state=await loadGames(env);
  state.draft=state.draft&&typeof state.draft==="object"?state.draft:{status:"setup",order:[],picks:[]};
  const teams=(state.teams||[]).slice(0,4), teamIds=new Set(teams.map(t=>String(t.id))), signups=state.signups||[];

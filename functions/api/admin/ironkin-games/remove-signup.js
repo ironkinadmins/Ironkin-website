@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 function memberId(value) {
@@ -6,7 +6,7 @@ function memberId(value) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!isStaffSession(await getSession(request, env))) {
+  if (!isGamesAdminSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 

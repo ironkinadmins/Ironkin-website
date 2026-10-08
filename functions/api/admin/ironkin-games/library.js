@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 const clean = c => ({
@@ -17,7 +17,7 @@ const clean = c => ({
   summary:String(c.summary||""), objective:String(c.objective||""), instructions:String(c.instructions||""), rules:Array.isArray(c.rules)?c.rules.map(String):[], status:c.status||"active"
 });
 export async function onRequestPost({request,env}){
-  if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
+  if(!isGamesAdminSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
   const body=await request.json().catch(()=>({})), state=await loadGames(env), action=String(body.action||"save");
   state.challengeLibrary=Array.isArray(state.challengeLibrary)?state.challengeLibrary:[];
   if(action==="delete"){

@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../_auth.js";
+import { getSession, isGamesAdminSession } from "../_auth.js";
 import { loadGames, memberTeam, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
 import { shoppingItems } from "./_shoppingList.js";
 
@@ -17,7 +17,7 @@ function submissionReviewStatus(related) {
 function safeChallenge(challenge, reveal) {
   const base = {
     id: challenge.id, name: reveal ? challenge.name : (challenge.publicName || (challenge.kind === "side" ? "Mystery Side Challenge" : "Mystery Main Challenge")), kind: challenge.kind || "main", status: challenge.status || "upcoming",
-    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:reveal?(challenge.trackingMethod||"submissions"):"sealed", trackerType:reveal?(challenge.trackerType||"none"):"sealed", contracts: reveal && challenge.trackerType==="contracts" ? (challenge.contracts||[]) : [], shoppingItems: reveal && challenge.trackerType==="shopping-list" ? shoppingItems(challenge) : [], locationHunt: reveal && challenge.trackerType==="location-hunt" ? (challenge.locationHunt||[]) : [], triviaHunt: reveal && challenge.trackerType==="trivia-hunt" ? (challenge.triviaHunt||[]).map(({answer,...x})=>x) : [], trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
+    durationMode: challenge.durationMode === "week" ? "week" : "timed", durationMinutes: Number(challenge.durationMinutes || 0), trackingMethod:reveal?(challenge.trackingMethod||"submissions"):"sealed", trackerType:reveal?(challenge.trackerType||"none"):"sealed", contracts: reveal && challenge.trackerType==="contracts" ? (challenge.contracts||[]) : [], shoppingItems: reveal && challenge.trackerType==="shopping-list" ? shoppingItems(challenge) : [], locationHunt: reveal && challenge.trackerType==="location-hunt" ? (challenge.locationHunt||[]) : [], triviaHunt: reveal && challenge.trackerType==="trivia-hunt" ? (challenge.triviaHunt||[]).filter((x,i)=>{const explicit=Date.parse(x.revealsAt||"");const base=Date.parse(challenge.opensAt||"");const reveal=Number.isFinite(explicit)?explicit:(Number.isFinite(base)?base+i*86400000:Infinity);return Date.now()>=reveal;}).map(({answer,...x})=>x) : [], trackingMode: challenge.trackingMode || "team", attemptsPerPlayer: Math.max(1, Number(challenge.attemptsPerPlayer || 1)), opensAt: challenge.opensAt || "", closesAt: challenge.closesAt || "",
     participants: challenge.participants || "", minimumParticipants: challengeMinimumParticipants(challenge), proofRequired: challenge.proofRequired !== false,
     summary: challenge.summary || "", results: challenge.results || []
   };
@@ -28,7 +28,7 @@ function safeChallenge(challenge, reveal) {
 export async function onRequestGet({ request, env }) {
   const state = await loadGames(env);
   const session = await getSession(request, env);
-  const staff = isStaffSession(session);
+  const staff = isGamesAdminSession(session);
   const signedUp = Boolean(session && (state.signups || []).some(s => String(s.discordId || "") === String(session.id || "")));
   let team = memberTeam(state, session);
   const url = new URL(request.url);

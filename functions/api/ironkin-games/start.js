@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../_auth.js";
+import { getSession, isGamesAdminSession } from "../_auth.js";
 import { loadGames, saveGames, memberTeam, challengeFor, challengeMinimumParticipants, teamMemberCount } from "./_store.js";
 
 export async function onRequestPost({ request, env }) {
@@ -6,7 +6,7 @@ export async function onRequestPost({ request, env }) {
   if (!session) return Response.json({error:"Sign in with Discord first."},{status:401});
   const state = await loadGames(env);
   const team = memberTeam(state, session);
-  const staff = isStaffSession(session);
+  const staff = isGamesAdminSession(session);
   const body = await request.json().catch(() => ({}));
   const { week, challenge } = challengeFor(state, body.weekId, body.challengeId);
   if (!week || !challenge) return Response.json({error:"Challenge not found."},{status:404});

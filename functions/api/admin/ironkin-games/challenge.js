@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 function validateChallenge(week, challenge){
@@ -15,7 +15,7 @@ function validateChallenge(week, challenge){
 }
 
 export async function onRequestPost({request,env}){
-  if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
+  if(!isGamesAdminSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
   const body=await request.json().catch(()=>null);
   if(!body?.weekId||!body?.challenge?.id) return Response.json({error:"Week and challenge are required."},{status:400});
   const state=await loadGames(env);

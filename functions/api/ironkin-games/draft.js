@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../_auth.js";
+import { getSession, isGamesAdminSession } from "../_auth.js";
 import { loadGames } from "./_store.js";
 const idOf = p => String(p?.discordId || p?.id || "");
 const nameOf = p => p?.rsn || p?.displayName || p?.name || "Player";
@@ -10,7 +10,7 @@ const buildSequence=(teams,signups,order)=>{
   return seq;
 };
 export async function onRequestGet({request,env}){
-  const state=await loadGames(env), session=await getSession(request,env), staff=isStaffSession(session);
+  const state=await loadGames(env), session=await getSession(request,env), staff=isGamesAdminSession(session);
   const signups=Array.isArray(state.signups)?state.signups:[];
   const draft=state.draft&&typeof state.draft==="object"?state.draft:{status:"setup",order:[],picks:[]};
   const signupIds=new Set(signups.map(idOf));

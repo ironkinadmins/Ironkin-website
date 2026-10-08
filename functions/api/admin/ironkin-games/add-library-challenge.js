@@ -1,7 +1,7 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 export async function onRequestPost({request,env}){
-  if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
+  if(!isGamesAdminSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
   const body=await request.json().catch(()=>({})),state=await loadGames(env);
   const week=(state.weeks||[]).find(w=>String(w.id)===String(body.weekId)),lib=(state.challengeLibrary||[]).find(c=>String(c.id)===String(body.libraryId));
   if(!week||!lib) return Response.json({error:"Week or challenge definition not found."},{status:404});

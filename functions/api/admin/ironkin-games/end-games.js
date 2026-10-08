@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 function buildFinalData(state) {
@@ -46,7 +46,7 @@ function buildFinalData(state) {
 
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
-  if (!isStaffSession(session)) return Response.json({ error: "Staff only." }, { status: 403 });
+  if (!isGamesAdminSession(session)) return Response.json({ error: "Staff only." }, { status: 403 });
 
   const state = await loadGames(env);
   if (state.gamesCompleted) return Response.json({ error: "Ironkin Games have already been ended." }, { status: 409 });

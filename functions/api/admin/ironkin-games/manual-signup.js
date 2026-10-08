@@ -1,5 +1,5 @@
 import { hybridKv } from "../../../_hybridKv.js";
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 const WOM_GROUP_ID = "12095";
@@ -56,7 +56,7 @@ function statsFromPlayer(player) {
 
 export async function onRequestPost({ request, env }) {
   const staff = await getSession(request, env);
-  if (!isStaffSession(staff)) return Response.json({ error: "Staff only." }, { status: 403 });
+  if (!isGamesAdminSession(staff)) return Response.json({ error: "Staff only." }, { status: 403 });
 
   const body = await request.json().catch(() => ({}));
   const rsn = String(body.rsn || "").trim();

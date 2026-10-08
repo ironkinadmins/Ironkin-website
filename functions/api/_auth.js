@@ -99,6 +99,12 @@ export async function verifyOAuthState(state, env) {
   }
 }
 
+// Ironkin Games administration is restricted to the event organizer only.
+// Do not use Discord staff roles to authorize access to unrevealed answers.
+export function isGamesAdminSession(session) {
+  return Boolean(session && String(session.id || "") === "183611092402962432");
+}
+
 export function isStaffSession(session) {
   return Boolean(session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId)));
 }

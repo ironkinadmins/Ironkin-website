@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../_auth.js";
+import { getSession, isGamesAdminSession } from "../_auth.js";
 import { loadGames, memberTeam } from "./_store.js";
 import { shoppingEventId, shoppingItems, shoppingSubmissionRows, shoppingTeamProgress } from "./_shoppingList.js";
 import { insertEventSubmission } from "../_supabase.js";
@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   if (!session) return Response.json({ error:"Sign in required." }, { status:401 });
   const state = await loadGames(env);
   const url = new URL(request.url);
-  const staff = isStaffSession(session);
+  const staff = isGamesAdminSession(session);
   const testMode = staff && url.searchParams.get("test") === "1";
   let team = memberTeam(state, session);
   const adminTeamId = staff ? String(url.searchParams.get("adminTeamId") || "") : "";
@@ -47,7 +47,7 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
-  if (!session || !isStaffSession(session)) return Response.json({ error:"Staff access required." }, { status:403 });
+  if (!session || !isGamesAdminSession(session)) return Response.json({ error:"Staff access required." }, { status:403 });
   const body = await request.json().catch(()=>null);
   if (!body) return Response.json({ error:"Invalid request." }, { status:400 });
   const state = await loadGames(env);

@@ -1,4 +1,4 @@
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, isGamesAdminSession } from "../../_auth.js";
 import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 
 function validateWeekChallengeWindows(weeks){
@@ -31,12 +31,12 @@ function validateWeekChallengeWindows(weeks){
 }
 
 export async function onRequestGet({request,env}){
-  if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
+  if(!isGamesAdminSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
   return Response.json(await loadGames(env),{headers:{"Cache-Control":"no-store"}});
 }
 
 export async function onRequestPost({request,env}){
-  if(!isStaffSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
+  if(!isGamesAdminSession(await getSession(request,env))) return Response.json({error:"Staff only."},{status:403});
   const body=await request.json().catch(()=>null);
   if(!body||typeof body!=="object") return Response.json({error:"Invalid state."},{status:400});
   const weekError=validateWeekChallengeWindows(body.weeks);
