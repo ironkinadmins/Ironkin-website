@@ -477,3 +477,22 @@
 .tt-summary.tt-summary-clear span{font-size:11px;letter-spacing:.08em}
 .tt-summary.tt-summary-clear small{font-size:12px;line-height:1.45;color:#b8aea4;text-align:left}
 @media(max-width:640px){.tt-summary.tt-summary-clear{grid-template-columns:1fr}.tt-summary.tt-summary-clear>div{padding:14px}}
+
+/* Week 3 featured challenge cards */
+.games-challenge-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:20px!important}
+.games-challenge-grid>.challenge-card{min-height:390px;border-radius:20px!important;box-shadow:0 20px 50px rgba(0,0,0,.28)!important}
+.games-challenge-grid>.challenge-card>*{margin-left:26px;margin-right:26px}
+.games-challenge-grid>.challenge-card:before{height:5px}
+.games-challenge-grid .challenge-card-head{margin-top:26px;gap:20px}
+.games-challenge-grid .challenge-card-head h2{font-size:clamp(1.55rem,2.5vw,2.15rem)}
+.games-challenge-grid .challenge-summary{font-size:1rem;line-height:1.7;margin-top:22px!important;min-height:64px!important}
+.games-challenge-grid .challenge-meta{gap:9px;margin-bottom:22px!important}
+.games-challenge-grid .challenge-meta span{padding:9px 12px!important}
+.games-challenge-grid .challenge-availability{padding:15px!important;margin-top:auto!important}
+.games-challenge-grid .challenge-actions{margin-top:auto;margin-bottom:24px!important}
+.games-challenge-grid .challenge-actions .games-btn{padding:14px 18px;font-size:.92rem}
+.games-challenge-grid>.challenge-card-side{background:linear-gradient(145deg,rgba(21,26,34,.97),rgba(12,13,16,.98))!important;border-color:rgba(127,155,197,.25)!important}
+.tt-best-five-banner{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 20px;margin:14px 0 20px;border:1px solid rgba(216,153,75,.30);background:rgba(216,153,75,.07);border-radius:12px}
+.tt-best-five-banner strong,.tt-best-five-banner span{display:block}.tt-best-five-banner strong{color:#e8b06c;font-size:.76rem;letter-spacing:.08em}.tt-best-five-banner span{color:#bcb4a9;font-size:.78rem;margin-top:5px}.tt-best-five-banner b{font-size:1.35rem;white-space:nowrap;color:#f1c17b}
+.tt-count-status{display:inline-flex;align-items:center;margin:7px 0 10px;padding:5px 9px;border-radius:7px;border:1px solid rgba(255,255,255,.10);color:#a9a39b;font-size:.72rem;font-weight:700}.tt-count-status.is-counting{color:#e6b66c;background:rgba(216,153,75,.1);border-color:rgba(216,153,75,.3)}.tt-card.tt-counting{border-color:rgba(216,153,75,.35)}
+@media(max-width:800px){.games-challenge-grid{grid-template-columns:1fr!important}.games-challenge-grid>.challenge-card{min-height:0}.games-challenge-grid>.challenge-card>*{margin-left:18px;margin-right:18px}.tt-best-five-banner{flex-wrap:wrap}}
