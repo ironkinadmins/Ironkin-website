@@ -450,3 +450,19 @@
 .results-standing-score small{font-size:.67rem;color:var(--muted)}
 .results-week-body .results-challenge-card{margin-top:20px}
 @media(max-width:760px){.results-week-toggle{padding:14px;gap:9px}.results-week-index{flex-basis:36px;height:36px}.results-week-title>strong{font-size:1.03rem}.results-week-title>small{font-size:.7rem}.results-week-toggle .games-pill{font-size:.61rem}.results-week-body{padding:0 12px 14px}.results-standings-grid{grid-template-columns:1fr}.results-section-label{flex-direction:column;align-items:flex-start}}
+
+/* Published points progression: legible team series and ties */
+.games-chart-redesign .games-chart-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:16px 0 18px}
+.games-chart-redesign .games-chart-legend-item{display:flex;align-items:center;gap:9px;min-width:0;padding:10px 12px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.025);font-size:12px}
+.games-chart-redesign .games-chart-legend-item strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:650;color:#eee5da}
+.games-chart-redesign .games-chart-legend-item small{margin-left:auto;white-space:nowrap;color:#c9bfb1;font-size:11px}
+.games-chart-redesign .games-chart-key{flex:0 0 18px;height:4px}
+.games-chart-redesign .games-points-chart{min-height:250px;max-height:350px}
+.games-chart-redesign .games-chart-line{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.games-chart-redesign .games-chart-line.team-1{stroke-dasharray:10 5}
+.games-chart-redesign .games-chart-line.team-3{stroke-dasharray:3 6}
+.games-chart-redesign .games-chart-dot{stroke:#17120f;stroke-width:2.5}
+.games-chart-redesign .games-chart-summary{display:flex;gap:10px 20px;flex-wrap:wrap;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.08);color:#a99d91;font-size:12px}
+.games-chart-redesign .games-chart-summary strong{color:#eee5da}
+@media(max-width:800px){.games-chart-redesign .games-chart-legend{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){.games-chart-redesign .games-chart-legend-item{padding:8px;gap:6px}.games-chart-redesign .games-chart-legend-item strong{font-size:11px}.games-chart-redesign .games-chart-legend-item small{font-size:10px}}
