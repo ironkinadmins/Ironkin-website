@@ -3,7 +3,7 @@ import { loadGames, memberTeam } from './_store.js';
 import { hybridKv } from '../../_hybridKv.js';
 import { getSupabaseKey } from '../_supabase.js';
 const headers={'Cache-Control':'no-store'};
-const activities=['Corrupted Gauntlet','Zulrah','Vorkath','Phantom Muspah','Hallowed Sepulchre','Prifddinas Agility Course','Tempoross','Werewolf Agility Course'];
+const activities=['Corrupted Gauntlet','Zulrah','Vorkath','Phantom Muspah','Hallowed Sepulchre','Prifddinas Agility Course','Tempoross','Werewolf Skullball'];
 const sepulchreRule='Hallowed Sepulchre requires a complete Floors 1–4 run, starting at Floor 1 and finishing Floor 4 (no Floor 5), with screenshot proof of the run time.';
 const raids=['Chambers of Xeric','Theatre of Blood','Tombs of Amascut'];
 const error=(message,status=400)=>Response.json({error:message},{status,headers});

@@ -28,7 +28,7 @@ const TIME_TRIAL_ACTIVITIES=[
 {id:"hallowed-sepulchre",name:"Hallowed Sepulchre",metric:"time",direction:"lowest",objective:"Fastest complete run through Floors 1–4 only; start at Floor 1, finish Floor 4; screenshot proof of completion and run time required; Floor 5 not required"},
 {id:"prifddinas-agility",name:"Prifddinas Agility Course",metric:"time",direction:"lowest",objective:"Fastest lap; verified timing method required"},
 {id:"tempoross",name:"Tempoross",metric:"points",direction:"highest",objective:"Highest personal points in one successful game"},
-{id:"werewolf-agility",name:"Werewolf Agility Course",metric:"time",direction:"lowest",objective:"Fastest lap; verified timing method required"}
+{id:"werewolf-skullball",name:"Werewolf Skullball",metric:"time",direction:"lowest",objective:"Fastest Skullball completion; verified timing method required"}
 ];
 function timeTrialsTemplate(){return {
 id:"library-ironkin-time-trials",name:"Ironkin Time Trials",publicName:"Mystery Main Challenge",kind:"main",durationMode:"week",durationMinutes:60,trackingMethod:"submissions",trackerType:"time-trials",trackerConfig:{metric:"",metricLabel:""},trackingMode:"team",attemptsPerPlayer:999,participants:"All team members; raid bonuses require at least 3 teammates",proofRequired:true,status:"active",
