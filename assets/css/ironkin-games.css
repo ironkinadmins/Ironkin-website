@@ -469,3 +469,11 @@
 
 /* GeoGuessr side challenge */
 .geo-summary{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:14px 0;padding:16px;border:1px solid #654927;border-radius:12px;background:#21190f}.geo-summary strong{color:#f4d18c;font-size:19px}.geo-summary span{color:#c9bfb1;font-size:13px}.geo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}.geo-round{background:#191512;border:1px solid #574127;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}.geo-round header{display:flex;justify-content:space-between;gap:12px;align-items:center}.geo-round h3{margin:0}.geo-round header strong{color:#f4d18c;font-size:12px}.geo-images{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px}.geo-images img{width:100%;max-height:220px;object-fit:contain;background:#090807;border-radius:7px}.geo-round small,.geo-round p{color:#c9bfb1}.geo-round form{display:flex;flex-direction:column;gap:9px}.geo-round input[type=file]{display:block;max-width:100%;margin-top:7px}.geo-round button{align-self:flex-start}
+
+/* Week 3: clarify trial scoring without a live team leaderboard */
+.tt-summary.tt-summary-clear{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tt-summary.tt-summary-clear>div{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;padding:17px 19px;min-width:0}
+.tt-summary.tt-summary-clear strong{font-size:clamp(21px,2.4vw,30px);line-height:1.1}
+.tt-summary.tt-summary-clear span{font-size:11px;letter-spacing:.08em}
+.tt-summary.tt-summary-clear small{font-size:12px;line-height:1.45;color:#b8aea4;text-align:left}
+@media(max-width:640px){.tt-summary.tt-summary-clear{grid-template-columns:1fr}.tt-summary.tt-summary-clear>div{padding:14px}}
