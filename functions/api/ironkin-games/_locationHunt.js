@@ -10,13 +10,13 @@ export function locationHuntStops(challenge,week){
  });
 }
 export function locationPoints(n){return n<=1?5:n===2?3:1;}
-export async function clueRows(env,weekId,challengeId,teamId){
- const r=await supabaseRest(env,`ironkin_games_location_clues?select=*&week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}`);
+export async function clueRows(env,weekId,challengeId,teamId,test=false){
+ const r=await supabaseRest(env,`ironkin_games_location_clues${test?"_test":""}?select=*&week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}`);
  const rows=await r.json();return Array.isArray(rows)?rows:[];
 }
-export async function locationRows(env,weekId,challengeId,teamId){
+export async function locationRows(env,weekId,challengeId,teamId,test=false){
   if(!hasSupabase(env)) return [];
-  const r=await supabaseRest(env,`ironkin_games_location_submissions?select=*&week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}&order=submitted_at.asc`);
+  const r=await supabaseRest(env,`ironkin_games_location_submissions${test?"_test":""}?select=*&week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}&order=submitted_at.asc`);
   const rows=await r.json(); return Array.isArray(rows)?rows:[];
 }
 export function currentLocationRows(rows){
