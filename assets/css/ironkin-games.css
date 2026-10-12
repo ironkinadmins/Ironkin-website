@@ -496,3 +496,21 @@
 .tt-best-five-banner strong,.tt-best-five-banner span{display:block}.tt-best-five-banner strong{color:#e8b06c;font-size:.76rem;letter-spacing:.08em}.tt-best-five-banner span{color:#bcb4a9;font-size:.78rem;margin-top:5px}.tt-best-five-banner b{font-size:1.35rem;white-space:nowrap;color:#f1c17b}
 .tt-count-status{display:inline-flex;align-items:center;margin:7px 0 10px;padding:5px 9px;border-radius:7px;border:1px solid rgba(255,255,255,.10);color:#a9a39b;font-size:.72rem;font-weight:700}.tt-count-status.is-counting{color:#e6b66c;background:rgba(216,153,75,.1);border-color:rgba(216,153,75,.3)}.tt-card.tt-counting{border-color:rgba(216,153,75,.35)}
 @media(max-width:800px){.games-challenge-grid{grid-template-columns:1fr!important}.games-challenge-grid>.challenge-card{min-height:0}.games-challenge-grid>.challenge-card>*{margin-left:18px;margin-right:18px}.tt-best-five-banner{flex-wrap:wrap}}
+
+/* GeoGuessr screenshot lightbox — only previously revealed clues are navigable */
+.geo-image-open{position:relative;display:block;min-width:0;width:100%;padding:0!important;border:0!important;background:#090807!important;border-radius:8px;overflow:hidden;cursor:zoom-in;align-self:stretch!important}
+.geo-image-open img{display:block;width:100%;max-height:220px;object-fit:contain}
+.geo-image-expand{position:absolute;right:7px;top:7px;padding:3px 7px;border-radius:6px;background:rgba(0,0,0,.75);color:white;font-size:17px;line-height:1.2}
+.geo-image-open:hover img{filter:brightness(1.13)}
+.geo-image-open:focus-visible{outline:2px solid #e8ad5b;outline-offset:3px}
+.geo-image-lightbox{position:fixed;inset:0;z-index:2147483000;background:rgba(5,4,3,.97);display:flex;flex-direction:column;color:#f4eee6;padding:16px;box-sizing:border-box}
+.geo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:13px}
+.geo-lightbox-actions{display:flex;align-items:center;gap:7px}
+.geo-lightbox-actions button,.geo-lightbox-nav{background:#211b15;color:#f4eee6;border:1px solid #6b4d2b;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:16px}
+.geo-lightbox-actions button:hover,.geo-lightbox-nav:hover{background:#48301b}
+.geo-lightbox-nav:disabled{opacity:.25;cursor:default}
+.geo-lightbox-stage{flex:1;display:flex;align-items:center;gap:10px;min-height:0}
+.geo-lightbox-viewport{flex:1;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+.geo-lightbox-viewport img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;touch-action:none;transform-origin:center center}
+.geo-lightbox-hint{text-align:center;color:#ad9d8b;font-size:12px;padding:12px 0 3px}
+@media(max-width:600px){.geo-image-lightbox{padding:8px}.geo-lightbox-toolbar{flex-wrap:wrap}.geo-lightbox-nav{padding:8px}.geo-lightbox-hint{font-size:10px}}
