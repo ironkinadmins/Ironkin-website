@@ -25,13 +25,13 @@ function score(state,rows){
   const best=[];
   for(const t of state.teams||[]){const mine=approved.filter(r=>r.kind==='raid'&&r.index===index&&r.teamId===t.id&&Number.isFinite(r.value)&&r.value>0).sort((a,b)=>a.value-b.value)[0];if(mine)best.push({...mine,teamName:t.name});}
   best.sort((a,b)=>a.value-b.value);
-  return {name,teams:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,members:r.members,value:r.value,rank:i+1,speedPoints:[2,1.5,1,0.5][i]||0,completionPoints:1}))};
+  return {name,teams:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,members:r.members,value:r.value,rank:i+1,speedPoints:[5,3,2,1][i]||0,completionPoints:3}))};
  });
  const standings=(state.teams||[]).map(t=>{
   const placements=result.map(a=>a.results.find(x=>x.teamId===t.id)?.points||0).sort((a,b)=>b-a);
   const trials=placements.slice(0,5).reduce((a,b)=>a+b,0);
   const completed=raidResults.filter(r=>r.teams.some(x=>x.teamId===t.id)).length;
-  const completion=completed+(completed===3?1:0);
+  const completion=completed*3+(completed===3?1:0);
   const speed=raidResults.reduce((sum,r)=>sum+(r.teams.find(x=>x.teamId===t.id)?.speedPoints||0),0);
   const bonus=completion+speed;
   return {teamId:t.id,teamName:t.name,trials,completion,speed,bonus,total:trials+bonus,completedRaids:completed};
