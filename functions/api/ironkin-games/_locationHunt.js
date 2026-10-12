@@ -1,12 +1,18 @@
 import { hasSupabase, supabaseRest, getSupabaseKey } from "../_supabase.js";
 
-export function locationHuntStops(challenge, week) {
-  const base = new Date(challenge?.opensAt || week?.startDate || 0).getTime();
-  return (Array.isArray(challenge?.locationHunt) ? challenge.locationHunt : []).map((x,i)=>{
-    const explicit = new Date(x.revealsAt || 0).getTime();
-    const revealMs = Number.isFinite(explicit) && explicit > 0 ? explicit : base + i*86400000;
-    return { id:String(x.id||`location-${i+1}`), title:String(x.title||`Location ${i+1}`), image:String(x.image||""), requirement:String(x.requirement||"Recreate the screenshot with your team."), minimumPlayers:Math.max(1,Number(x.minimumPlayers)||4), revealsAt:Number.isFinite(revealMs)?new Date(revealMs).toISOString():"" };
-  });
+export function locationHuntStops(challenge,week){
+ const base=new Date(challenge?.opensAt||week?.startDate||0).getTime();
+ const configured=Array.isArray(challenge?.locationHunt)?challenge.locationHunt:[];
+ return configured.map((x,i)=>{
+  const explicit=new Date(x.revealsAt||0).getTime();const at=Number.isFinite(explicit)&&explicit>0?explicit:base;
+  const images=(Array.isArray(x.images)&&x.images.length?x.images:String(x.image||'').split(',')).map(v=>String(v).trim()).filter(Boolean);
+  return {id:String(x.id||`location-${i+1}`),title:String(x.title||`Round ${i+1}`),images,requirement:String(x.requirement||'Screenshot your character at the matching location.'),minimumPlayers:Math.max(1,Number(x.minimumPlayers)||1),revealsAt:new Date(at).toISOString()};
+ });
+}
+export function locationPoints(n){return n<=1?5:n===2?3:1;}
+export async function clueRows(env,weekId,challengeId,teamId){
+ const r=await supabaseRest(env,`ironkin_games_location_clues?select=*&week_id=eq.${encodeURIComponent(weekId)}&challenge_id=eq.${encodeURIComponent(challengeId)}&team_id=eq.${encodeURIComponent(teamId)}`);
+ const rows=await r.json();return Array.isArray(rows)?rows:[];
 }
 export async function locationRows(env,weekId,challengeId,teamId){
   if(!hasSupabase(env)) return [];

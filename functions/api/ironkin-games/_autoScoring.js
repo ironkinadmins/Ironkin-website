@@ -1,7 +1,7 @@
 import { hybridKv } from "../../_hybridKv.js";
 import { listClaims, refreshClaim } from "./_contracts.js";
 import { shoppingEventId, shoppingSubmissionRows, shoppingTeamProgress } from "./_shoppingList.js";
-import { locationHuntStops, locationRows, currentLocationRows } from "./_locationHunt.js";
+import { locationHuntStops, locationRows, currentLocationRows, locationPoints } from "./_locationHunt.js";
 import { triviaHuntStops, triviaStandings } from "./_triviaHunt.js";
 
 const WOM_BASE="https://api.wiseoldman.net/v2", WOM_GROUP_ID="12095", STALE_TTL=7*24*60*60;
@@ -29,7 +29,10 @@ export async function calculateAutomaticChallenge(state,week,challenge,env){cons
   for(const row of rows){const bonus=extra[String(row.teamName||"").trim().toLowerCase()];if(bonus){row.score+=bonus;row.points+=bonus;row.scoreLabel=`${row.score} Trivia Hunt bonus points`;row.breakdown.bonusPoints=row.score;row.breakdown.manualAdjustment=bonus;}}
  }
  rows.sort((a,b)=>b.score-a.score||String(a.teamName).localeCompare(String(b.teamName)));let place=0,lastScore=null;rows.forEach((r,i)=>{if(r.score!==lastScore)place=i+1;r.placement=place;lastScore=r.score;});return{tracker,rows,stale:false};}
- if(tracker==="location-hunt"){const rows=[];for(const team of state.teams||[]){const stops=locationHuntStops(challenge,week),latest=currentLocationRows(await locationRows(env,week.id,challenge.id,team.id)),approved=stops.map(s=>({stop:s,row:latest.get(s.id)})).filter(x=>x.row?.status==="approved"),elapsed=approved.reduce((n,x)=>n+Math.max(0,new Date(x.row.submitted_at).getTime()-new Date(x.stop.revealsAt).getTime()),0);rows.push({teamId:team.id,teamName:team.name,score:approved.length,elapsedMs:elapsed,scoreLabel:`${approved.length} / ${stops.length} locations`,breakdown:{approved:approved.length,total:stops.length,elapsedMs:elapsed,locations:approved.map(x=>({title:x.stop.title,submittedAt:x.row.submitted_at,revealsAt:x.stop.revealsAt,proofUrl:x.row.proof_url}))}});}rows.sort((a,b)=>b.score-a.score||a.elapsedMs-b.elapsedMs||String(a.teamName).localeCompare(String(b.teamName)));let place=0,last="";rows.forEach((r,i)=>{const key=`${r.score}|${r.elapsedMs}`;if(key!==last)place=i+1;r.placement=place;r.points=Number((state.scoring?.side||[])[place-1])||0;last=key;});return{tracker,rows,stale:false};}
+ if(tracker==="location-hunt"){
+  const rows=[];for(const team of state.teams||[]){const stops=locationHuntStops(challenge,week),latest=currentLocationRows(await locationRows(env,week.id,challenge.id,team.id)),approved=stops.map(s=>({stop:s,row:latest.get(s.id)})).filter(x=>x.row?.status==="approved"),score=approved.reduce((sum,x)=>sum+locationPoints(Number(x.row.clues_used)||1),0);rows.push({teamId:team.id,teamName:team.name,score,scoreLabel:`${score} / ${stops.length*5} clue points`,breakdown:{approved:approved.length,total:stops.length,locations:approved.map(x=>({title:x.stop.title,submittedAt:x.row.submitted_at,proofUrl:x.row.proof_url,points:locationPoints(Number(x.row.clues_used)||1)}))}});}
+  rows.sort((a,b)=>b.score-a.score||String(a.teamName).localeCompare(String(b.teamName)));let place=0,lastScore=null;rows.forEach((r,i)=>{if(r.score!==lastScore)place=i+1;r.placement=place;r.points=Number((state.scoring?.side||[])[place-1])||0;lastScore=r.score;});return{tracker,rows,stale:false};
+ }
  if(tracker==="shopping-list"){const rows=[];for(const team of state.teams||[]){const eventId=shoppingEventId(week.id,challenge.id,team.id),allRows=await shoppingSubmissionRows(env,eventId),progress=shoppingTeamProgress(state,team,challenge,allRows),found=progress.filter(x=>x.status==="approved");rows.push({teamId:team.id,teamName:team.name,score:found.length,scoreLabel:`${found.length} / ${progress.length} shopping list items`,breakdown:{found:found.length,total:progress.length,items:found.map(x=>({itemId:x.itemId,name:x.name,player:x.playerName,obtainedAt:x.obtainedAt}))}});}
   const weekNumber=Number(week.number??week.weekNumber??String(week.name||"").match(/\b(?:week\s*)?(\d+)\b/i)?.[1]);
   if(weekNumber===2){
