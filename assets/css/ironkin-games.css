@@ -514,3 +514,32 @@
 .geo-lightbox-viewport img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;touch-action:none;transform-origin:center center}
 .geo-lightbox-hint{text-align:center;color:#ad9d8b;font-size:12px;padding:12px 0 3px}
 @media(max-width:600px){.geo-image-lightbox{padding:8px}.geo-lightbox-toolbar{flex-wrap:wrap}.geo-lightbox-nav{padding:8px}.geo-lightbox-hint{font-size:10px}}
+
+
+/* Week 3: featured cooperative raids */
+.tt-raids-heading{align-items:flex-start;margin-top:12px}
+.tt-raids-intro{max-width:690px;color:#b9ab9a;font-size:.86rem;line-height:1.5;margin:7px 0 0}
+.tt-raid-feature-grid{gap:15px;margin-bottom:12px}
+.tt-raid-feature{padding:20px!important;border:1px solid #66482a!important;background:linear-gradient(145deg,#241a12,#120f0c 72%)!important;border-radius:14px;justify-content:flex-start}
+.tt-raid-feature-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tt-raid-code{font-size:.68rem;letter-spacing:.13em;color:#f0b96a;font-weight:800}
+.tt-raid-pill{font-size:.68rem;border-radius:100px;padding:5px 9px;border:1px solid #514030;color:#bcae9e;white-space:nowrap}
+.tt-raid-approved{color:#a6e4b7;border-color:#346647;background:#14291c}
+.tt-raid-pending{color:#f5c27a;border-color:#77512b;background:#30210f}
+.tt-raid-feature h4{font-size:1.18rem;margin:0;color:#f6ebdd}
+.tt-raid-feature .tt-raid-mode{margin:0;color:#c2b2a1;font-size:.79rem}
+.tt-raid-awards{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tt-raid-awards>div{padding:12px;border:1px solid #4b3828;background:#211810;border-radius:9px;display:flex;flex-direction:column;gap:4px}
+.tt-raid-awards strong{font-size:1.55rem;color:#e9b36c;line-height:1}
+.tt-raid-awards span{font-size:.62rem;letter-spacing:.06em;color:#b4a394}
+.tt-raid-personal{display:flex;flex-direction:column;gap:4px;padding:12px 0;border-top:1px solid #3d2e22;border-bottom:1px solid #3d2e22}
+.tt-raid-personal>span{font-size:.65rem;letter-spacing:.07em;color:#aa9b8b}
+.tt-raid-personal>strong{font-size:1.06rem;color:#f4e7d7}
+.tt-raid-personal small{color:#b7a695}
+.tt-raid-feature>.games-btn{width:100%;margin-top:auto}
+.tt-raid-all-bonus{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #5c4129;background:#20170f;border-radius:10px;padding:15px 18px;margin-bottom:26px}
+.tt-raid-all-bonus>div{display:flex;flex-direction:column;gap:5px}
+.tt-raid-all-bonus>div strong{color:#f1e5d7;font-size:.9rem}
+.tt-raid-all-bonus>div span{color:#b4a596;font-size:.77rem}
+.tt-raid-all-bonus>strong{color:#e9b46d;white-space:nowrap;font-size:1rem}
+@media(max-width:850px){.tt-raid-feature-grid{grid-template-columns:1fr}.tt-raid-feature{min-width:0}}
