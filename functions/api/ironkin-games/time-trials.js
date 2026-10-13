@@ -4,7 +4,7 @@ import { hybridKv } from '../../_hybridKv.js';
 import { getSupabaseKey } from '../_supabase.js';
 const headers={'Cache-Control':'no-store'};
 const activities=['Corrupted Gauntlet','Zulrah','Vorkath','Phantom Muspah','Hallowed Sepulchre','Prifddinas Agility Course','Tempoross','Werewolf Skullball'];
-const sepulchreRule='Hallowed Sepulchre requires a complete Floors 1–4 run, starting at Floor 1 and finishing Floor 4 (no Floor 5), with screenshot proof of the run time.';
+const sepulchreRule='Hallowed Sepulchre requires a complete Floors 1–5 run, starting at Floor 1 and finishing Floor 5, with screenshot proof of the run time.';
 const raids=['Chambers of Xeric','Theatre of Blood','Tombs of Amascut'];
 const error=(message,status=400)=>Response.json({error:message},{status,headers});
 function locate(state,wid,cid,staff,test){const week=(state.weeks||[]).find(w=>String(w.id)===String(wid));let challenge=week?.challenges?.find(c=>String(c.id)===String(cid)&&(/time.trials/i.test(String(c.trackerType||''))||/ironkin time trials/i.test(String(c.name||''))));if(!challenge&&staff&&test&&cid==='staff-preview-time-trials'&&state.weeks?.[2]?.id===week?.id)challenge={id:cid,name:'Ironkin Time Trials',revealed:false};return {week,challenge};}
