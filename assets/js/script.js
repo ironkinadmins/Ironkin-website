@@ -2522,6 +2522,7 @@ function initArchiveControls(grid) {
   const buttons = [...document.querySelectorAll("[data-archive-filter]")];
   const search = document.getElementById("archiveSearch");
   const count = document.getElementById("archiveResultCount");
+  const reset = document.getElementById("archiveReset");
   let activeFilter = buttons.find(button => button.classList.contains("active"))?.dataset.archiveFilter || "all";
 
   const apply = () => {
@@ -2546,7 +2547,8 @@ function initArchiveControls(grid) {
       grid.appendChild(empty);
     }
 
-    if (count) count.textContent = `${visible} ${visible === 1 ? "event" : "events"}`;
+    if (count) count.textContent = `${visible} of ${cards.length} ${cards.length === 1 ? "event" : "events"}`;
+    if (reset) reset.hidden = activeFilter === "all" && !query;
   };
 
   buttons.forEach(button => button.addEventListener("click", () => {
@@ -2560,6 +2562,11 @@ function initArchiveControls(grid) {
   }));
   buttons.forEach(item => item.setAttribute("aria-pressed", item.dataset.archiveFilter === activeFilter ? "true" : "false"));
   search?.addEventListener("input", apply);
+  reset?.addEventListener("click", () => {
+    if (search) search.value = "";
+    buttons.find(button => button.dataset.archiveFilter === "all")?.click();
+    search?.focus();
+  });
   apply();
 }
 
@@ -2577,6 +2584,7 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
     grid.className = "archive-grid";
+    grid.setAttribute("aria-busy", "false");
     grid.innerHTML = "";
 
     if (!archive.length && !bingoArchive.length) {
@@ -2610,7 +2618,7 @@ async function loadArchivePage() {
             : entry.winner === "tie" ? "Tie" : "Not recorded";
         card.dataset.archiveSearch = `${entry.title || "Battleship Bingo"} bingo ${winner || ""}`.toLowerCase();
         card.innerHTML = `
-          <p class="eyebrow">Battleship Bingo · ${dateText}</p>
+          <div class="archive-card-meta"><span class="archive-type-pill">Battleship Bingo</span><time>${dateText}</time></div>
           <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
           <div class="archive-results-list">
@@ -2629,7 +2637,7 @@ async function loadArchivePage() {
         const title = displayEventTitle(entry.title, entry.type);
         card.dataset.archiveSearch = `${label} ${title} ${getArchiveWinnerText(entry)}`.toLowerCase();
         card.innerHTML = `
-          <p class="eyebrow">${escapeHtml(label)} · ${dateText}</p>
+          <div class="archive-card-meta"><span class="archive-type-pill">${escapeHtml(label)}</span><time>${dateText}</time></div>
           <h2>${escapeHtml(title)}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(getArchiveWinnerText(entry))}</p>
           <div class="archive-results-list">${renderArchivedTopFive(entry)}</div>
@@ -2648,7 +2656,12 @@ async function loadArchivePage() {
 
     initArchiveControls(grid);
   } catch (error) {
-    grid.innerHTML = `<article class="card archive-card"><p>Could not load archive: ${escapeHtml(error.message)}</p></article>`;
+    grid.setAttribute("aria-busy", "false");
+    grid.innerHTML = `<article class="card archive-card archive-error"><h2>Couldn’t load the archive</h2><p>${escapeHtml(error.message)}</p><button class="btn secondary" type="button" id="archiveRetry">Try again</button></article>`;
+    document.getElementById("archiveRetry")?.addEventListener("click", () => {
+      grid.setAttribute("aria-busy", "true");
+      loadArchivePage();
+    });
   }
 }
 

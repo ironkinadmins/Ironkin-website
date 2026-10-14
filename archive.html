@@ -8,23 +8,26 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-archive-fix1" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
+  <link rel="stylesheet" href="/assets/css/archive-refined.css?v=20261014-1" />
 </head>
-<body class="archive-page">
+<body class="premium-ui archive-page archive-refined-page">
   <div id="siteNav"></div>
 
-<main class="page">
-    <section class="page-title archive-page-title">
+<main class="page archive-shell">
+    <section class="page-title archive-page-title" aria-labelledby="archiveTitle">
       <div>
         <p class="eyebrow">Ironkin History</p>
-        <h1>Event Archive</h1>
-        <p>Past competitions, clan goals, and community events — with final standings preserved.</p>
+        <h1 id="archiveTitle">The legacy of Ironkin.</h1>
+        <p>Relive the victories, rivalries and milestones that forged our clan. Every finished event, preserved in one place.</p>
       </div>
-      <a class="btn secondary archive-events-link" href="/events.html">Current Events <span aria-hidden="true">→</span></a>
+      <a class="archive-events-link" href="/events.html"><span class="archive-events-icon" aria-hidden="true">↗</span><span><small>Back to the action</small><strong>Current events</strong></span><span aria-hidden="true">→</span></a>
     </section>
 
-    <section class="archive-toolbar" aria-label="Archive controls">
+    <section class="archive-browser" aria-labelledby="archiveBrowseTitle">
+      <div class="archive-browser-heading"><div><p class="eyebrow">The record books</p><h2 id="archiveBrowseTitle">Past competitions</h2></div><p>Explore the clan’s history</p></div>
+    <div class="archive-toolbar" aria-label="Archive controls">
       <div class="archive-filter-group" role="group" aria-label="Filter archived events">
-        <button class="archive-filter active" type="button" data-archive-filter="all">All</button>
+        <button class="archive-filter active" type="button" data-archive-filter="all" aria-pressed="true">All</button>
         <button class="archive-filter" type="button" data-archive-filter="sotw">SOTW</button>
         <button class="archive-filter" type="button" data-archive-filter="botw">BOTW</button>
         <button class="archive-filter" type="button" data-archive-filter="clan-goal">Clan Goals</button>
@@ -32,15 +35,17 @@
       </div>
       <label class="archive-search">
         <span class="sr-only">Search archived events</span>
-        <input id="archiveSearch" type="search" placeholder="Search archive…" autocomplete="off" />
+        <span class="archive-search-icon" aria-hidden="true">⌕</span><input id="archiveSearch" type="search" placeholder="Search events or winners…" autocomplete="off" />
       </label>
-      <span id="archiveResultCount" class="archive-result-count" aria-live="polite"></span>
-    </section>
+      <span id="archiveResultCount" class="archive-result-count" role="status" aria-live="polite"></span>
+      <button id="archiveReset" class="archive-reset" type="button" hidden>Clear filters</button>
+    </div>
 
-    <section id="archiveGrid" class="archive-grid">
+    <section id="archiveGrid" class="archive-grid" aria-label="Archived events" aria-busy="true">
       <article class="card">
-        <p>Loading archived events...</p>
+        <span class="archive-loading-mark" aria-hidden="true"></span><strong>Opening the record books</strong><p>Gathering completed clan events…</p>
       </article>
+    </section>
     </section>
   </main>
 
