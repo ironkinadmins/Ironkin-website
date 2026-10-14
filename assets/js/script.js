@@ -2522,6 +2522,7 @@ function initArchiveControls(grid) {
   const buttons = [...document.querySelectorAll("[data-archive-filter]")];
   const search = document.getElementById("archiveSearch");
   const count = document.getElementById("archiveResultCount");
+  const reset = document.getElementById("archiveReset");
   let activeFilter = buttons.find(button => button.classList.contains("active"))?.dataset.archiveFilter || "all";
 
   const apply = () => {
@@ -2546,7 +2547,8 @@ function initArchiveControls(grid) {
       grid.appendChild(empty);
     }
 
-    if (count) count.textContent = `${visible} ${visible === 1 ? "event" : "events"}`;
+    if (count) count.textContent = `${visible} of ${cards.length} ${cards.length === 1 ? "event" : "events"}`;
+    if (reset) reset.hidden = activeFilter === "all" && !query;
   };
 
   buttons.forEach(button => button.addEventListener("click", () => {
@@ -2560,6 +2562,11 @@ function initArchiveControls(grid) {
   }));
   buttons.forEach(item => item.setAttribute("aria-pressed", item.dataset.archiveFilter === activeFilter ? "true" : "false"));
   search?.addEventListener("input", apply);
+  reset?.addEventListener("click", () => {
+    if (search) search.value = "";
+    buttons.find(button => button.dataset.archiveFilter === "all")?.click();
+    search?.focus();
+  });
   apply();
 }
 
@@ -2577,6 +2584,7 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
     grid.className = "archive-grid";
+    grid.setAttribute("aria-busy", "false");
     grid.innerHTML = "";
 
     if (!archive.length && !bingoArchive.length) {
@@ -2610,7 +2618,7 @@ async function loadArchivePage() {
             : entry.winner === "tie" ? "Tie" : "Not recorded";
         card.dataset.archiveSearch = `${entry.title || "Battleship Bingo"} bingo ${winner || ""}`.toLowerCase();
         card.innerHTML = `
-          <p class="eyebrow">Battleship Bingo · ${dateText}</p>
+          <div class="archive-card-meta"><span class="archive-type-pill">Battleship Bingo</span><time>${dateText}</time></div>
           <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
           <div class="archive-results-list">
@@ -2629,7 +2637,7 @@ async function loadArchivePage() {
         const title = displayEventTitle(entry.title, entry.type);
         card.dataset.archiveSearch = `${label} ${title} ${getArchiveWinnerText(entry)}`.toLowerCase();
         card.innerHTML = `
-          <p class="eyebrow">${escapeHtml(label)} · ${dateText}</p>
+          <div class="archive-card-meta"><span class="archive-type-pill">${escapeHtml(label)}</span><time>${dateText}</time></div>
           <h2>${escapeHtml(title)}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(getArchiveWinnerText(entry))}</p>
           <div class="archive-results-list">${renderArchivedTopFive(entry)}</div>
@@ -2648,7 +2656,12 @@ async function loadArchivePage() {
 
     initArchiveControls(grid);
   } catch (error) {
-    grid.innerHTML = `<article class="card archive-card"><p>Could not load archive: ${escapeHtml(error.message)}</p></article>`;
+    grid.setAttribute("aria-busy", "false");
+    grid.innerHTML = `<article class="card archive-card archive-error"><h2>Couldn’t load the archive</h2><p>${escapeHtml(error.message)}</p><button class="btn secondary" type="button" id="archiveRetry">Try again</button></article>`;
+    document.getElementById("archiveRetry")?.addEventListener("click", () => {
+      grid.setAttribute("aria-busy", "true");
+      loadArchivePage();
+    });
   }
 }
 
@@ -2794,26 +2807,11 @@ function parseSpeedRecordRows(description) {
 function renderSpeedRecordCard(entry) {
   const rows = parseSpeedRecordRows(entry.description);
 
-  // Prefer the approved gold-medal record. For older unsorted data, use the
-  // fastest valid time; do not invent a champion if no valid time is available.
-  const getTime = row => {
-    const match = String(row.text || "").match(/(\d+(?::\d+){1,2}(?:[.,]\d+)?)\s*$/);
-    if (!match) return null;
-    const parts = match[1].replace(",", ".").split(":").map(Number);
-    if (parts.some(part => !Number.isFinite(part))) return null;
-    return { label: match[1], ms: parts.reduce((acc, part) => acc * 60 + part, 0) * 1000,
-      player: String(row.text).slice(0, match.index).trim() };
-  };
-  const timed = rows.map(row => ({ row, time: getTime(row) })).filter(item => item.time && item.time.player);
-  const gold = timed.find(item => item.row.medal === "🥇");
-  const champion = gold || timed.sort((a, b) => a.time.ms - b.time.ms)[0] || null;
-  const leader = champion?.row.text || rows[0]?.text || "Awaiting first record";
-  const hasChampion = Boolean(champion);
   return `
-    <article class="card flame-card hof-record-card${hasChampion ? " hof-champion-card" : ""}${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
+    <article class="card flame-card hof-record-card${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
       ${entry.imageUrl || entry.thumbnailUrl ? `<img class="hof-boss-card-art" src="${escapeHtml(entry.imageUrl || entry.thumbnailUrl)}" alt="" loading="lazy" decoding="async">` : ""}
       <div class="hof-record-card-content">
-      <div class="hof-card-heading"><h2>${escapeHtml(entry.title)}</h2>${hasChampion ? `<div class="hof-champion-award"><span class="hof-champion-trophy" aria-hidden="true">🏆</span><div class="hof-champion-details"><span class="hof-champion-eyebrow">Reigning champion</span><strong class="hof-champion-name">${escapeHtml(champion.time.player)}</strong></div><span class="hof-champion-time">${escapeHtml(champion.time.label)}</span></div>` : `<p class="hof-card-leader hof-awaiting-record">${escapeHtml(leader)}</p>`}</div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
+      <h2>${escapeHtml(entry.title)}</h2>
 
       ${rows.length
         ? `
@@ -2830,7 +2828,7 @@ function renderSpeedRecordCard(entry) {
         : `<p class="admin-muted">No record holders listed yet.</p>`
       }
       <div class="hof-card-actions"><button class="hof-history-button" type="button" data-hof-history="${escapeHtml(entry.title)}">Record history →</button></div>
-      </div></div>
+      </div>
     </article>
   `;
 }
@@ -3009,9 +3007,7 @@ async function loadHallOfFlamePage() {
     const byName=new Map(discordRecords.map(entry=>[String(entry.title).trim().toLowerCase(),entry]));
     const managed=Array.isArray(bossData.bosses)?bossData.bosses:[];
     const records=(managed.length?managed.map(boss=>{const legacy=byName.get(String(boss.name).toLowerCase())||{};return {...legacy,title:boss.name,slug:boss.slug,description:legacy.description||"",imageUrl:boss.image_url||legacy.imageUrl||legacy.thumbnailUrl||"",thumbnailUrl:boss.image_url||legacy.thumbnailUrl||legacy.imageUrl||"",managed:true};}):discordRecords);
-    window.__hofDisplayedRecords = records.map(entry=>({...entry, _holderCount:parseSpeedRecordRows(entry.description).length}));
-    hofSetupExplorer();
-    hofRenderRecordBoards();
+    grid.innerHTML = `<section class="hof-section hof-section-wide"><div class="section-heading-row"><div><p class="eyebrow">Speed Records</p><h2>Record Boards</h2></div></div><div class="hof-record-grid">${records.length?records.map(renderSpeedRecordCard).join(""):`<article class="card"><p>No active Hall of Flame record boards yet.</p></article>`}</div></section>`;
     window.__hofBosses = managed.filter(b=>b.active!==false&&b.accept_submissions!==false).map(b=>b.name).sort((a,b)=>a.localeCompare(b));
     window.__hofBossConfigs = managed;
     await initHallOfFlameSubmissions();
@@ -3020,34 +3016,6 @@ async function loadHallOfFlamePage() {
   }
 }
 
-
-
-function hofRenderRecordBoards() {
-  const grid=document.getElementById("hallOfFlameGrid"); if(!grid)return;
-  const query=(document.getElementById("hofBoardSearch")?.value||"").trim().toLocaleLowerCase();
-  const sort=document.getElementById("hofBoardSort")?.value||"name";
-  const records=(window.__hofDisplayedRecords||[]).filter(entry=>`${entry.title} ${entry.description||""}`.toLocaleLowerCase().includes(query));
-  records.sort((a,b)=>sort==="leaders"?b._holderCount-a._holderCount||a.title.localeCompare(b.title):sort==="name-desc"?b.title.localeCompare(a.title):a.title.localeCompare(b.title));
-  grid.innerHTML=`<section class="hof-section hof-section-wide"><div class="hof-record-grid">${records.length?records.map(renderSpeedRecordCard).join(""):`<div class="hof-no-results"><h3>No matching boards</h3><p>Try another boss or player name.</p></div>`}</div></section>`;
-  const count=document.getElementById("hofBoardCount");if(count)count.textContent=`${records.length} of ${(window.__hofDisplayedRecords||[]).length} boards`;
-  const clear=document.getElementById("hofClearSearch");if(clear)clear.hidden=!query;
-  // The existing permission checks are re-applied after every render.
-  grid.querySelectorAll("[data-hof-row-admin]").forEach(button=>{button.hidden=!window.__hofAuth?.isStaff;});
-}
-
-function hofSetupExplorer() {
-  const search=document.getElementById("hofBoardSearch");if(!search||search.dataset.bound)return;
-  search.dataset.bound="true";
-  search.addEventListener("input",hofRenderRecordBoards);
-  document.getElementById("hofBoardSort")?.addEventListener("change",hofRenderRecordBoards);
-  document.getElementById("hofClearSearch")?.addEventListener("click",()=>{search.value="";hofRenderRecordBoards();search.focus();});
-  document.getElementById("hallOfFlameGrid")?.addEventListener("click",event=>{
-    const button=event.target.closest(".hof-expand");if(!button)return;
-    const details=button.closest(".hof-record-card")?.querySelector(".hof-card-details");if(!details)return;
-    details.hidden=!details.hidden;button.setAttribute("aria-expanded",String(!details.hidden));
-    button.innerHTML=details.hidden?'View standings <span aria-hidden="true">↓</span>':'Hide standings <span aria-hidden="true">↑</span>';
-  });
-}
 
 
 function hofDate(value) {
@@ -4151,81 +4119,69 @@ function renderEmberRows(leaders, compact = false) {
 
 async function loadEmberLeaderboard() {
   const container = document.getElementById("emberLeaderboard");
-
   if (!container) return;
-
+  const escape = value => escapeHtml(String(value ?? ""));
+  const profileLink = player => player.user_id && /^\d{15,22}$/.test(String(player.user_id))
+    ? `/profile.html?id=${encodeURIComponent(player.user_id)}` : "";
   try {
     const leaders = await fetchEmberLeaderboard();
-
     if (!leaders.length) {
-      container.innerHTML = `<p class="admin-muted">No Ember balances found yet.</p>`;
+      container.innerHTML = `<div class="ember-empty">No Ember balances have been recorded yet.</div>`;
       return;
     }
-
-    const totalEmbers = leaders.reduce(
-      (sum, player) => sum + Number(player.balance || 0),
-      0
-    );
-
-    const highest = leaders[0];
-
+    const total = leaders.reduce((sum, player) => sum + Number(player.balance || 0), 0);
+    const podium = leaders.slice(0, 3);
+    const podiumCard = player => {
+      const href = profileLink(player);
+      const tag = href ? "a" : "div";
+      return `<${tag} class="ember-podium-card place-${player.rank}" ${href ? `href="${href}"` : ""}>
+        <span class="ember-podium-medal" aria-hidden="true">${player.rank === 1 ? "👑" : player.rank === 2 ? "🥈" : "🥉"}</span>
+        <small>${player.rank === 1 ? "EMBER CHAMPION" : `RANK #${player.rank}`}</small>
+        <strong>${escape(player.display_name)}</strong>
+        <span class="ember-podium-balance">${formatNumber(player.balance)} <em>Embers</em></span>
+        <span class="ember-podium-view">${href ? "View profile ↗" : "Profile unavailable"}</span>
+      </${tag}>`;
+    };
+    const row = player => {
+      const href = profileLink(player);
+      const tag = href ? "a" : "div";
+      return `<${tag} class="ember-rank-entry ${player.rank <= 3 ? `top-${player.rank}` : ""}" ${href ? `href="${href}"` : ""}>
+        <span class="ember-rank-number">${player.rank <= 3 ? ["🥇","🥈","🥉"][player.rank-1] : `#${player.rank}`}</span>
+        <strong>${escape(player.display_name)}</strong>
+        <span class="ember-rank-balance">${formatNumber(player.balance)} <small>Embers</small></span>
+        <span class="ember-rank-arrow" aria-hidden="true">${href ? "↗" : ""}</span>
+      </${tag}>`;
+    };
     container.innerHTML = `
       <div class="ember-summary-grid">
-        <div>
-          <strong>${formatNumber(totalEmbers)}</strong>
-          <span>Total Embers</span>
-        </div>
-
-        <div>
-          <strong>${formatNumber(leaders.length)}</strong>
-          <span>Members Ranked</span>
-        </div>
-
-        <div>
-          <strong>${formatNumber(highest.balance)}</strong>
-          <span>Highest Balance</span>
-        </div>
+        <div><span>Clan Ember Wealth</span><strong>${formatNumber(total)}</strong></div>
+        <div><span>Ranked Members</span><strong>${formatNumber(leaders.length)}</strong></div>
+        <div><span>Top Balance</span><strong>${formatNumber(leaders[0].balance)}</strong></div>
       </div>
-
-      <div class="ember-podium" aria-label="Top three Ember holders">
-        ${leaders.slice(0, 3).map(player => `
-          <a class="ember-podium-card place-${player.rank}" href="/profile.html?id=${encodeURIComponent(player.user_id || "")}">
-            <span class="ember-podium-medal">${player.rank === 1 ? "🥇" : player.rank === 2 ? "🥈" : "🥉"}</span>
-            <strong>${escapeHtml(player.display_name)}</strong>
-            <span>${formatNumber(player.balance)} Embers</span>
-            <small>#${player.rank}</small>
-          </a>
-        `).join("")}
-      </div>
-
-      <input
-        id="emberSearchInput"
-        class="ember-search"
-        type="text"
-        placeholder="Search member..."
-      />
-
-      <div id="emberLeaderboardRows">
-        ${renderEmberRows(leaders.slice(3))}
-      </div>
+      <div class="ember-section-head"><div><span class="eyebrow">THE TOP THREE</span><h2>Ember Royalty</h2></div><span>Current standings</span></div>
+      <div class="ember-podium">${podium.map(podiumCard).join("")}</div>
+      <div class="ember-section-head ember-rankings-head"><div><span class="eyebrow">THE FULL ROSTER</span><h2>Clan Rankings</h2></div><span id="emberMatchCount">${leaders.length} members</span></div>
+      <div class="ember-toolbar"><label for="emberSearchInput">Find a member</label><input id="emberSearchInput" class="ember-search" type="search" autocomplete="off" placeholder="Search clan members…" /><button id="emberClearSearch" type="button" hidden>Clear</button></div>
+      <div id="emberLeaderboardRows" class="ember-rank-list"></div>
     `;
-
     const searchInput = document.getElementById("emberSearchInput");
     const rowsContainer = document.getElementById("emberLeaderboardRows");
-
-    searchInput.addEventListener("input", () => {
-      const search = searchInput.value.toLowerCase().trim();
-
-      const filtered = leaders.filter(player =>
-        String(player.display_name || "")
-          .toLowerCase()
-          .includes(search)
-      );
-
-      rowsContainer.innerHTML = renderEmberRows(search ? filtered : leaders.slice(3));
-    });
+    const clearButton = document.getElementById("emberClearSearch");
+    const count = document.getElementById("emberMatchCount");
+    const update = () => {
+      const q = searchInput.value.trim().toLocaleLowerCase();
+      const filtered = q ? leaders.filter(p => String(p.display_name || "").toLocaleLowerCase().includes(q)) : leaders;
+      rowsContainer.innerHTML = filtered.length ? filtered.map(row).join("") : `<p class="ember-empty">No members match that search.</p>`;
+      count.textContent = `${filtered.length} of ${leaders.length} members`;
+      clearButton.hidden = !q;
+    };
+    searchInput.addEventListener("input", update);
+    clearButton.addEventListener("click", () => { searchInput.value = ""; update(); searchInput.focus(); });
+    update();
   } catch (error) {
-    container.textContent = error.message;
+    container.innerHTML = `<div class="ember-empty"><p>Couldn't load the Ember rankings.</p><button type="button" id="emberRetry">Try again</button></div>`;
+    document.getElementById("emberRetry")?.addEventListener("click", loadEmberLeaderboard);
+    console.error("Ember leaderboard:", error);
   }
 }
 

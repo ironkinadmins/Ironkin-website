@@ -315,7 +315,9 @@ async function loadProfile() {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || "Could not load profile.");
+      const failure = new Error(data.error || "Could not load profile.");
+      failure.status = response.status;
+      throw failure;
     }
 
     renderProfile(data.profile);
@@ -325,7 +327,7 @@ async function loadProfile() {
         <div class="profile-loading-card error">
           ${profileEscapeHtml(error.message)}
           <br /><br />
-          <a class="btn primary" href="/api/auth/login">Sign in with Discord</a>
+          ${error.status === 401 ? `<a class="btn primary" href="/api/auth/login">Sign in with Discord</a>` : `<a class="btn" href="/ember-leaderboard.html">Back to Ember Leaderboard</a>`}
         </div>
       `;
     }

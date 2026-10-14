@@ -8,23 +8,18 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20260807-premium-v4" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
+  <link rel="stylesheet" href="/assets/css/ember-refined.css?v=1" />
 </head>
 <body>
   <div id="siteNav"></div>
 
-  <main class="page">
-    <section class="page-title">
-      <p class="eyebrow">Ironkin Economy</p>
-      <h1>Ember Leaderboard</h1>
-      <p>Top Ember balances from the Ironkin bot.</p>
+  <main class="page ember-page">
+    <section class="ember-hero" aria-labelledby="emberTitle">
+      <div><p class="eyebrow">IRONKIN ECONOMY · HALL OF WEALTH</p><h1 id="emberTitle">Ember Leaderboard<span class="ember-flame">✦</span></h1><p>Every Ember earned. Every rank claimed. See who leads the kin.</p></div>
+      <div class="ember-hero-symbol" aria-hidden="true">🔥</div>
     </section>
-
-    <section class="card leaderboard-card">
-      <div id="emberLeaderboard" class="ember-leaderboard-list">
-        <div class="leaderboard-skeleton">
-          <span class="skeleton-line"></span><span class="skeleton-line"></span><span class="skeleton-line"></span>
-        </div>
-      </div>
+    <section class="ember-board-shell" aria-label="Ember rankings">
+      <div id="emberLeaderboard" class="ember-leaderboard-list" aria-live="polite"><div class="leaderboard-skeleton"><span class="skeleton-line"></span><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
     </section>
   </main>
 
