@@ -71,3 +71,19 @@
 .archive-refined-page .archive-card-details .archive-card-actions{margin-top:12px;padding-top:12px;flex-wrap:wrap;gap:10px}
 @media(max-width:1050px){.archive-refined-page .archive-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:680px){.archive-refined-page .archive-grid{grid-template-columns:minmax(0,1fr)!important}.archive-refined-page .archive-card{min-height:185px}}
+
+/* Archive v3: a single combined hero and a reliably multi-column card gallery.
+   Override legacy .card/grid placement rules as well as older archive breakpoints. */
+.archive-refined-page .archive-browser{margin-top:18px}
+.archive-refined-page .archive-page-title{align-items:center}
+.archive-refined-page .archive-hero-section-label{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:23px;color:#f7eae0;font-size:1rem;font-weight:850}
+.archive-refined-page .archive-hero-rule{width:28px;height:2px;background:#ff8a2a;border-radius:2px}
+.archive-refined-page .archive-hero-subtitle{color:#a99687;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;font-weight:750}
+.archive-refined-page #archiveGrid.archive-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch!important;gap:14px!important}
+.archive-refined-page #archiveGrid.archive-grid > .archive-card{grid-column:auto!important;grid-row:auto!important;display:flex!important;float:none!important;clear:none!important;position:relative;max-width:none!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
+.archive-refined-page #archiveGrid.archive-grid > .archive-card[hidden]{display:none!important}
+.archive-refined-page #archiveGrid.archive-grid > .archive-empty-filter,
+.archive-refined-page #archiveGrid.archive-grid > .archive-error,
+.archive-refined-page #archiveGrid.archive-grid[aria-busy="true"] > .card{grid-column:1/-1!important}
+@media(max-width:850px){.archive-refined-page #archiveGrid.archive-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:580px){.archive-refined-page #archiveGrid.archive-grid{grid-template-columns:minmax(0,1fr)!important}.archive-refined-page .archive-hero-subtitle{display:none}}
