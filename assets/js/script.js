@@ -2799,7 +2799,7 @@ function renderSpeedRecordCard(entry) {
     <article class="card flame-card hof-record-card${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
       ${entry.imageUrl || entry.thumbnailUrl ? `<img class="hof-boss-card-art" src="${escapeHtml(entry.imageUrl || entry.thumbnailUrl)}" alt="" loading="lazy" decoding="async">` : ""}
       <div class="hof-record-card-content">
-      <div class="hof-card-heading"><span class="hof-card-kicker">Boss record board</span><h2>${escapeHtml(entry.title)}</h2><p class="hof-card-leader">${escapeHtml(leader)}</p></div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
+      <div class="hof-card-heading"><h2>${escapeHtml(entry.title)}</h2><p class="hof-card-leader">${escapeHtml(leader)}</p></div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
 
       ${rows.length
         ? `

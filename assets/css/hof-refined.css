@@ -49,3 +49,19 @@ body:has(#hallOfFlameGrid) #hallOfFlameGrid .hof-record-row{border-bottom-color:
 body:has(#hallOfFlameGrid) #hallOfFlameGrid .hof-history-button{color:#ffb977!important}
 body:has(#hallOfFlameGrid) #hallOfFlameGrid .hof-record-card:hover{border-color:#e7a26a!important;box-shadow:0 14px 32px rgba(0,0,0,.35)!important}
 @media(max-width:700px){body:has(#hallOfFlameGrid) .hof-hero.page-title{padding:22px 19px 0!important}.hof-hero-main{align-items:flex-start;flex-direction:column;gap:15px}.hof-hero-submit{width:100%;justify-content:center}body:has(#hallOfFlameGrid) .hof-hero .hof-utility-bar{overflow-x:auto!important;flex-wrap:nowrap!important;scrollbar-width:thin}body:has(#hallOfFlameGrid) .hof-explore-heading{flex-direction:row;align-items:center}}
+
+/* Readability correction: keep all card copy above legacy dimming layers. */
+body.ik-hall-page #hallOfFlameGrid .hof-record-card,
+body.ik-hall-page #hallOfFlameGrid .hof-record-card * { opacity:1!important; filter:none!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-card { background:#30221b!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-card::before { opacity:0!important; background:none!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-card.has-boss-art::after { background:linear-gradient(90deg,rgba(38,26,19,.97) 0%,rgba(38,26,19,.9) 54%,rgba(38,26,19,.55) 100%)!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-boss-card-art { opacity:.28!important; filter:saturate(.95)!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-card-content { position:relative!important; z-index:5!important; color:#fff1e5!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-card-heading,
+body.ik-hall-page #hallOfFlameGrid .hof-card-heading h2 { color:#fff5eb!important; opacity:1!important; visibility:visible!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-card-leader { color:#e9cbb3!important; opacity:1!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-expand { color:#fff0de!important; font-size:.92rem!important; opacity:1!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-row,
+body.ik-hall-page #hallOfFlameGrid .hof-record-row span { color:#e9d5c3!important; }
+body.ik-hall-page #hallOfFlameGrid .hof-record-row strong { color:#fff5eb!important; }
