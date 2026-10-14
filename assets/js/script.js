@@ -2522,7 +2522,6 @@ function initArchiveControls(grid) {
   const buttons = [...document.querySelectorAll("[data-archive-filter]")];
   const search = document.getElementById("archiveSearch");
   const count = document.getElementById("archiveResultCount");
-  const reset = document.getElementById("archiveReset");
   let activeFilter = buttons.find(button => button.classList.contains("active"))?.dataset.archiveFilter || "all";
 
   const apply = () => {
@@ -2547,8 +2546,7 @@ function initArchiveControls(grid) {
       grid.appendChild(empty);
     }
 
-    if (count) count.textContent = `${visible} of ${cards.length} ${cards.length === 1 ? "event" : "events"}`;
-    if (reset) reset.hidden = activeFilter === "all" && !query;
+    if (count) count.textContent = `${visible} ${visible === 1 ? "event" : "events"}`;
   };
 
   buttons.forEach(button => button.addEventListener("click", () => {
@@ -2562,11 +2560,6 @@ function initArchiveControls(grid) {
   }));
   buttons.forEach(item => item.setAttribute("aria-pressed", item.dataset.archiveFilter === activeFilter ? "true" : "false"));
   search?.addEventListener("input", apply);
-  reset?.addEventListener("click", () => {
-    if (search) search.value = "";
-    buttons.find(button => button.dataset.archiveFilter === "all")?.click();
-    search?.focus();
-  });
   apply();
 }
 
@@ -2584,7 +2577,6 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
     grid.className = "archive-grid";
-    grid.setAttribute("aria-busy", "false");
     grid.innerHTML = "";
 
     if (!archive.length && !bingoArchive.length) {
@@ -2618,7 +2610,7 @@ async function loadArchivePage() {
             : entry.winner === "tie" ? "Tie" : "Not recorded";
         card.dataset.archiveSearch = `${entry.title || "Battleship Bingo"} bingo ${winner || ""}`.toLowerCase();
         card.innerHTML = `
-          <div class="archive-card-meta"><span class="archive-type-pill">Battleship Bingo</span><time>${dateText}</time></div>
+          <p class="eyebrow">Battleship Bingo · ${dateText}</p>
           <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
           <div class="archive-results-list">
@@ -2637,7 +2629,7 @@ async function loadArchivePage() {
         const title = displayEventTitle(entry.title, entry.type);
         card.dataset.archiveSearch = `${label} ${title} ${getArchiveWinnerText(entry)}`.toLowerCase();
         card.innerHTML = `
-          <div class="archive-card-meta"><span class="archive-type-pill">${escapeHtml(label)}</span><time>${dateText}</time></div>
+          <p class="eyebrow">${escapeHtml(label)} · ${dateText}</p>
           <h2>${escapeHtml(title)}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(getArchiveWinnerText(entry))}</p>
           <div class="archive-results-list">${renderArchivedTopFive(entry)}</div>
@@ -2646,23 +2638,6 @@ async function loadArchivePage() {
             ${entry.womCompetitionId ? `<a class="text-link" href="https://wiseoldman.net/competitions/${entry.womCompetitionId}" target="_blank" rel="noopener">View WOM →</a>` : ""}
             ${canDeleteArchive ? `<button class="btn secondary danger archive-delete-btn" type="button" data-archive-id="${entry.id}">Delete Archive</button>` : ""}
           </div>`;
-      }
-      // Keep the archive scannable: detailed standings and staff actions open on demand.
-      // Include any additional drop/result markup returned by renderArchivedDrops.
-      const results = card.querySelector(".archive-results-list");
-      if (results) {
-        const details = document.createElement("details");
-        details.className = "archive-card-details";
-        const summary = document.createElement("summary");
-        summary.textContent = "View full results";
-        details.appendChild(summary);
-        let sibling = results;
-        while (sibling) {
-          const next = sibling.nextElementSibling;
-          details.appendChild(sibling);
-          sibling = next;
-        }
-        card.appendChild(details);
       }
       grid.appendChild(card);
     });
@@ -2673,12 +2648,7 @@ async function loadArchivePage() {
 
     initArchiveControls(grid);
   } catch (error) {
-    grid.setAttribute("aria-busy", "false");
-    grid.innerHTML = `<article class="card archive-card archive-error"><h2>Couldn’t load the archive</h2><p>${escapeHtml(error.message)}</p><button class="btn secondary" type="button" id="archiveRetry">Try again</button></article>`;
-    document.getElementById("archiveRetry")?.addEventListener("click", () => {
-      grid.setAttribute("aria-busy", "true");
-      loadArchivePage();
-    });
+    grid.innerHTML = `<article class="card archive-card"><p>Could not load archive: ${escapeHtml(error.message)}</p></article>`;
   }
 }
 
@@ -2824,11 +2794,12 @@ function parseSpeedRecordRows(description) {
 function renderSpeedRecordCard(entry) {
   const rows = parseSpeedRecordRows(entry.description);
 
+  const leader = rows[0]?.text || "Awaiting first record";
   return `
     <article class="card flame-card hof-record-card${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
       ${entry.imageUrl || entry.thumbnailUrl ? `<img class="hof-boss-card-art" src="${escapeHtml(entry.imageUrl || entry.thumbnailUrl)}" alt="" loading="lazy" decoding="async">` : ""}
       <div class="hof-record-card-content">
-      <h2>${escapeHtml(entry.title)}</h2>
+      <div class="hof-card-heading"><span class="hof-card-kicker">Boss record board</span><h2>${escapeHtml(entry.title)}</h2><p class="hof-card-leader">${escapeHtml(leader)}</p></div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
 
       ${rows.length
         ? `
@@ -2845,7 +2816,7 @@ function renderSpeedRecordCard(entry) {
         : `<p class="admin-muted">No record holders listed yet.</p>`
       }
       <div class="hof-card-actions"><button class="hof-history-button" type="button" data-hof-history="${escapeHtml(entry.title)}">Record history →</button></div>
-      </div>
+      </div></div>
     </article>
   `;
 }
@@ -3024,7 +2995,9 @@ async function loadHallOfFlamePage() {
     const byName=new Map(discordRecords.map(entry=>[String(entry.title).trim().toLowerCase(),entry]));
     const managed=Array.isArray(bossData.bosses)?bossData.bosses:[];
     const records=(managed.length?managed.map(boss=>{const legacy=byName.get(String(boss.name).toLowerCase())||{};return {...legacy,title:boss.name,slug:boss.slug,description:legacy.description||"",imageUrl:boss.image_url||legacy.imageUrl||legacy.thumbnailUrl||"",thumbnailUrl:boss.image_url||legacy.thumbnailUrl||legacy.imageUrl||"",managed:true};}):discordRecords);
-    grid.innerHTML = `<section class="hof-section hof-section-wide"><div class="section-heading-row"><div><p class="eyebrow">Speed Records</p><h2>Record Boards</h2></div></div><div class="hof-record-grid">${records.length?records.map(renderSpeedRecordCard).join(""):`<article class="card"><p>No active Hall of Flame record boards yet.</p></article>`}</div></section>`;
+    window.__hofDisplayedRecords = records.map(entry=>({...entry, _holderCount:parseSpeedRecordRows(entry.description).length}));
+    hofSetupExplorer();
+    hofRenderRecordBoards();
     window.__hofBosses = managed.filter(b=>b.active!==false&&b.accept_submissions!==false).map(b=>b.name).sort((a,b)=>a.localeCompare(b));
     window.__hofBossConfigs = managed;
     await initHallOfFlameSubmissions();
@@ -3033,6 +3006,34 @@ async function loadHallOfFlamePage() {
   }
 }
 
+
+
+function hofRenderRecordBoards() {
+  const grid=document.getElementById("hallOfFlameGrid"); if(!grid)return;
+  const query=(document.getElementById("hofBoardSearch")?.value||"").trim().toLocaleLowerCase();
+  const sort=document.getElementById("hofBoardSort")?.value||"name";
+  const records=(window.__hofDisplayedRecords||[]).filter(entry=>`${entry.title} ${entry.description||""}`.toLocaleLowerCase().includes(query));
+  records.sort((a,b)=>sort==="leaders"?b._holderCount-a._holderCount||a.title.localeCompare(b.title):sort==="name-desc"?b.title.localeCompare(a.title):a.title.localeCompare(b.title));
+  grid.innerHTML=`<section class="hof-section hof-section-wide"><div class="hof-record-grid">${records.length?records.map(renderSpeedRecordCard).join(""):`<div class="hof-no-results"><h3>No matching boards</h3><p>Try another boss or player name.</p></div>`}</div></section>`;
+  const count=document.getElementById("hofBoardCount");if(count)count.textContent=`${records.length} of ${(window.__hofDisplayedRecords||[]).length} boards`;
+  const clear=document.getElementById("hofClearSearch");if(clear)clear.hidden=!query;
+  // The existing permission checks are re-applied after every render.
+  grid.querySelectorAll("[data-hof-row-admin]").forEach(button=>{button.hidden=!window.__hofAuth?.isStaff;});
+}
+
+function hofSetupExplorer() {
+  const search=document.getElementById("hofBoardSearch");if(!search||search.dataset.bound)return;
+  search.dataset.bound="true";
+  search.addEventListener("input",hofRenderRecordBoards);
+  document.getElementById("hofBoardSort")?.addEventListener("change",hofRenderRecordBoards);
+  document.getElementById("hofClearSearch")?.addEventListener("click",()=>{search.value="";hofRenderRecordBoards();search.focus();});
+  document.getElementById("hallOfFlameGrid")?.addEventListener("click",event=>{
+    const button=event.target.closest(".hof-expand");if(!button)return;
+    const details=button.closest(".hof-record-card")?.querySelector(".hof-card-details");if(!details)return;
+    details.hidden=!details.hidden;button.setAttribute("aria-expanded",String(!details.hidden));
+    button.innerHTML=details.hidden?'View standings <span aria-hidden="true">↓</span>':'Hide standings <span aria-hidden="true">↑</span>';
+  });
+}
 
 
 function hofDate(value) {

@@ -8,6 +8,7 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-manage-clean-v9" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
+  <link rel="stylesheet" href="/assets/css/hof-refined.css?v=20261014">
 </head>
 <body>
   <div id="siteNav"></div>
@@ -31,7 +32,11 @@
 
     <section id="hofRecentRecords" class="hof-recent-records" hidden></section>
 
-    <section id="hallOfFlameGrid" class="hall-grid">
+    <section class="hof-explore" aria-label="Explore record boards">
+      <div class="hof-explore-heading"><div><p class="eyebrow">The record vault</p><h2>Find your next challenge</h2><p>Explore clan bests, inspect proof, and chase a new record.</p></div><span id="hofBoardCount" class="hof-board-count" aria-live="polite"></span></div>
+      <div class="hof-explore-controls"><label class="hof-search-label" for="hofBoardSearch"><span>Search bosses or record holders</span><input id="hofBoardSearch" type="search" placeholder="Search the Hall of Flame…" autocomplete="off"></label><label class="hof-sort-label" for="hofBoardSort"><span>Sort boards</span><select id="hofBoardSort"><option value="name">Boss name A–Z</option><option value="leaders">Most record holders</option><option value="name-desc">Boss name Z–A</option></select></label><button id="hofClearSearch" class="hof-clear" type="button" hidden>Clear search</button></div>
+    </section>
+    <section id="hallOfFlameGrid" class="hall-grid" aria-live="polite">
       <article class="card">
         <p>Loading Hall of Flame...</p>
       </article>
