@@ -2794,12 +2794,26 @@ function parseSpeedRecordRows(description) {
 function renderSpeedRecordCard(entry) {
   const rows = parseSpeedRecordRows(entry.description);
 
-  const leader = rows[0]?.text || "Awaiting first record";
+  // Prefer the approved gold-medal record. For older unsorted data, use the
+  // fastest valid time; do not invent a champion if no valid time is available.
+  const getTime = row => {
+    const match = String(row.text || "").match(/(\d+(?::\d+){1,2}(?:[.,]\d+)?)\s*$/);
+    if (!match) return null;
+    const parts = match[1].replace(",", ".").split(":").map(Number);
+    if (parts.some(part => !Number.isFinite(part))) return null;
+    return { label: match[1], ms: parts.reduce((acc, part) => acc * 60 + part, 0) * 1000,
+      player: String(row.text).slice(0, match.index).trim() };
+  };
+  const timed = rows.map(row => ({ row, time: getTime(row) })).filter(item => item.time && item.time.player);
+  const gold = timed.find(item => item.row.medal === "🥇");
+  const champion = gold || timed.sort((a, b) => a.time.ms - b.time.ms)[0] || null;
+  const leader = champion?.row.text || rows[0]?.text || "Awaiting first record";
+  const hasChampion = Boolean(champion);
   return `
-    <article class="card flame-card hof-record-card${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
+    <article class="card flame-card hof-record-card${hasChampion ? " hof-champion-card" : ""}${entry.imageUrl || entry.thumbnailUrl ? " has-boss-art" : ""}">
       ${entry.imageUrl || entry.thumbnailUrl ? `<img class="hof-boss-card-art" src="${escapeHtml(entry.imageUrl || entry.thumbnailUrl)}" alt="" loading="lazy" decoding="async">` : ""}
       <div class="hof-record-card-content">
-      <div class="hof-card-heading"><h2>${escapeHtml(entry.title)}</h2><p class="hof-card-leader">${escapeHtml(leader)}</p></div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
+      <div class="hof-card-heading"><h2>${escapeHtml(entry.title)}</h2>${hasChampion ? `<div class="hof-champion-award"><span class="hof-champion-trophy" aria-hidden="true">🏆</span><div class="hof-champion-details"><span class="hof-champion-eyebrow">Reigning champion</span><strong class="hof-champion-name">${escapeHtml(champion.time.player)}</strong></div><span class="hof-champion-time">${escapeHtml(champion.time.label)}</span></div>` : `<p class="hof-card-leader hof-awaiting-record">${escapeHtml(leader)}</p>`}</div><button class="hof-expand" type="button" aria-expanded="false" aria-label="Show standings for ${escapeHtml(entry.title)}">View standings <span aria-hidden="true">↓</span></button><div class="hof-card-details" hidden>
 
       ${rows.length
         ? `

@@ -65,3 +65,17 @@ body.ik-hall-page #hallOfFlameGrid .hof-expand { color:#fff0de!important; font-s
 body.ik-hall-page #hallOfFlameGrid .hof-record-row,
 body.ik-hall-page #hallOfFlameGrid .hof-record-row span { color:#e9d5c3!important; }
 body.ik-hall-page #hallOfFlameGrid .hof-record-row strong { color:#fff5eb!important; }
+
+/* Champion spotlight: only cards with a verified listed record receive the award. */
+body.ik-hall-page #hallOfFlameGrid .hof-champion-card{border-color:#ad763b!important;border-left:3px solid #e9aa51!important;background:linear-gradient(140deg,#34251a,#231910 82%)!important;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-card:hover{box-shadow:0 12px 36px rgba(190,117,36,.20),0 0 0 1px rgba(250,190,96,.3)!important;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-card .hof-card-heading{min-height:110px;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-award{display:flex;align-items:center;gap:10px;max-width:100%;margin-top:14px;padding:11px 12px;border:1px solid rgba(239,180,83,.32);border-radius:11px;background:linear-gradient(100deg,rgba(132,84,26,.37),rgba(75,48,21,.22));box-shadow:inset 0 1px rgba(255,225,157,.08);}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-trophy{flex:none;font-size:1.45rem;line-height:1;filter:drop-shadow(0 0 7px rgba(247,181,65,.3))!important;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-details{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-eyebrow{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:900;color:#f5be69!important;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-name{font-size:1rem;font-weight:850;line-height:1.25;color:#fff4d6!important;overflow-wrap:anywhere;}
+body.ik-hall-page #hallOfFlameGrid .hof-champion-time{flex:none;align-self:center;font-size:1.06rem;font-weight:900;font-variant-numeric:tabular-nums;color:#ffd48c!important;text-shadow:0 1px 8px rgba(242,166,55,.18);}
+body.ik-hall-page #hallOfFlameGrid .hof-awaiting-record{font-style:italic;color:#d2b7a3!important;}
+@media(max-width:420px){body.ik-hall-page #hallOfFlameGrid .hof-champion-award{flex-wrap:wrap}body.ik-hall-page #hallOfFlameGrid .hof-champion-time{margin-left:auto}}
+@media(prefers-reduced-motion:reduce){body.ik-hall-page #hallOfFlameGrid .hof-champion-card{transition:none!important}}
