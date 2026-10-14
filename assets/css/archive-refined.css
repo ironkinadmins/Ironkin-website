@@ -53,3 +53,21 @@
 @media(max-width:900px){.archive-refined-page .archive-page-title{grid-template-columns:1fr}.archive-refined-page .archive-events-link{justify-self:start}.archive-refined-page .archive-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.archive-refined-page .archive-shell{width:calc(100% - 28px);padding-top:22px}.archive-refined-page .archive-page-title{padding:27px 22px;border-radius:17px}.archive-refined-page .archive-browser-heading>p{display:none}.archive-refined-page .archive-toolbar{align-items:stretch}.archive-refined-page .archive-filter-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}.archive-refined-page .archive-filter{padding-inline:5px}.archive-refined-page .archive-search{max-width:none;width:100%;flex-basis:100%;margin:0}.archive-refined-page .archive-result-count{text-align:left}.archive-refined-page .archive-card{padding:19px}}
 @media(prefers-reduced-motion:reduce){.archive-refined-page *{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.archive-refined-page .archive-card:hover{transform:none}}
+
+/* Compact archive gallery: show a concise event summary until results are requested. */
+.archive-refined-page .archive-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:stretch;gap:14px}
+.archive-refined-page .archive-card{padding:19px!important;min-height:205px;align-self:stretch}
+.archive-refined-page .archive-card h2{font-size:1.12rem;line-height:1.35;margin-bottom:12px}
+.archive-refined-page .archive-card-meta{margin-bottom:13px}
+.archive-refined-page .archive-card-details{margin-top:auto;padding-top:17px}
+.archive-refined-page .archive-card-details summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border:1px solid rgba(255,138,42,.22);border-radius:9px;background:rgba(255,138,42,.07);color:#ffa25b;font-size:.82rem;font-weight:800;cursor:pointer;list-style:none;transition:background .2s,border-color .2s}
+.archive-refined-page .archive-card-details summary::-webkit-details-marker{display:none}
+.archive-refined-page .archive-card-details summary::after{content:'+';font-size:1.15rem;line-height:1}
+.archive-refined-page .archive-card-details[open] summary::after{content:'−'}
+.archive-refined-page .archive-card-details summary:hover{background:rgba(255,138,42,.14);border-color:rgba(255,138,42,.4)}
+.archive-refined-page .archive-card-details summary:focus-visible{outline:2px solid #ffa25b;outline-offset:3px}
+.archive-refined-page .archive-card-details .archive-results-list{margin-top:12px}
+.archive-refined-page .archive-card-details .archive-result-row{min-height:35px;padding:7px 0}
+.archive-refined-page .archive-card-details .archive-card-actions{margin-top:12px;padding-top:12px;flex-wrap:wrap;gap:10px}
+@media(max-width:1050px){.archive-refined-page .archive-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:680px){.archive-refined-page .archive-grid{grid-template-columns:minmax(0,1fr)!important}.archive-refined-page .archive-card{min-height:185px}}

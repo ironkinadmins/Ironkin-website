@@ -2647,6 +2647,23 @@ async function loadArchivePage() {
             ${canDeleteArchive ? `<button class="btn secondary danger archive-delete-btn" type="button" data-archive-id="${entry.id}">Delete Archive</button>` : ""}
           </div>`;
       }
+      // Keep the archive scannable: detailed standings and staff actions open on demand.
+      // Include any additional drop/result markup returned by renderArchivedDrops.
+      const results = card.querySelector(".archive-results-list");
+      if (results) {
+        const details = document.createElement("details");
+        details.className = "archive-card-details";
+        const summary = document.createElement("summary");
+        summary.textContent = "View full results";
+        details.appendChild(summary);
+        let sibling = results;
+        while (sibling) {
+          const next = sibling.nextElementSibling;
+          details.appendChild(sibling);
+          sibling = next;
+        }
+        card.appendChild(details);
+      }
       grid.appendChild(card);
     });
 
