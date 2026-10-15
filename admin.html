@@ -47,6 +47,20 @@
 #adminTab-profiles .admin-profile-results{margin:14px 0}
 #adminTab-profiles .discord-sync-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 @media(max-width:760px){#adminTab-profiles .ik-member-workspace{padding:14px}#adminTab-profiles .ik-member-panel{padding:15px}#adminTab-profiles .discord-sync-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Phase 5: on-demand diagnostics, no extra admin application */
+.ik-health-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.ik-health-check{border:1px solid #60402d;background:linear-gradient(135deg,#281c16,#191411);border-radius:14px;padding:20px;min-width:0}
+.ik-health-check-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ik-health-check h3{margin:0;font-size:17px;color:#f7e3cd}
+.ik-health-check p{font-size:13px;line-height:1.5;color:#c5ae9a}
+.ik-health-status{flex-shrink:0;border:1px solid #72533c;border-radius:20px;padding:5px 9px;font-size:11px;color:#e4c09a}
+.ik-health-status[data-state="ok"]{border-color:#507b5e;color:#a3e6b4}
+.ik-health-status[data-state="error"]{border-color:#9e5b51;color:#f5b1a4}
+.ik-health-status[data-state="checking"]{border-color:#b58b4e;color:#f6d49a}
+.ik-health-result{overflow-wrap:anywhere;min-height:18px;margin-bottom:0}
+.ik-health-note{font-size:12px;color:#bda68f;margin-top:16px}
+@media(max-width:700px){.ik-health-grid{grid-template-columns:1fr}.ik-health-check-top{flex-wrap:wrap}}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -62,6 +76,7 @@
 <button class="ik-top" data-ik-main="guess-kc" type="button">Guess the KC</button>
 <button class="ik-top" data-ik-main="members" type="button">Members</button>
 <button class="ik-top" data-ik-main="handbook" type="button">Staff Handbook</button>
+<button class="ik-top" data-ik-main="health" type="button">System Health</button>
 <button class="ik-top" data-ik-main="maintenance" type="button">Advanced Tools</button>
 </nav><div aria-hidden="true" class="ik-legacy-hooks">
 <button class="event-subtab-btn" data-event-subtab="standard" type="button"></button>
@@ -491,6 +506,19 @@
 </section>
 </div>
 </div>
+
+<div class="admin-tab-panel" id="adminTab-health" hidden>
+ <section class="admin-card ik-health">
+  <div class="admin-section-header"><p class="eyebrow">SYSTEM HEALTH</p><h2>Integration Diagnostics</h2><p class="admin-muted">Checks run only when requested. A successful API response confirms that specific endpoint, not every feature of an integration.</p></div>
+  <div class="ik-health-grid">
+   <article class="ik-health-check" data-health-check="events"><div class="ik-health-check-top"><h3>Event Storage</h3><span class="ik-health-status" id="ikHealthEventsStatus" role="status">Not checked</span></div><p>Verify the existing staff event-list endpoint is reachable.</p><button class="btn secondary" type="button" id="ikHealthEventsBtn">Check event API</button><p class="ik-health-result" id="ikHealthEventsResult" aria-live="polite"></p></article>
+   <article class="ik-health-check" data-health-check="discord"><div class="ik-health-check-top"><h3>Discord Emoji Access</h3><span class="ik-health-status" id="ikHealthDiscordStatus" role="status">Not checked</span></div><p>Check whether the staff Discord emoji endpoint responds. Member sync is not triggered.</p><button class="btn secondary" type="button" id="ikHealthDiscordBtn">Check Discord API</button><p class="ik-health-result" id="ikHealthDiscordResult" aria-live="polite"></p></article>
+   <article class="ik-health-check"><div class="ik-health-check-top"><h3>Supabase</h3><span class="ik-health-status" id="ikHealthSupabaseStatus" role="status">Not checked</span></div><p>The existing diagnostic performs a temporary database write and cleanup. Run only when needed.</p><button class="btn secondary" type="button" id="ikHealthSupabaseBtn">Run database diagnostic…</button><p class="ik-health-result" id="ikHealthSupabaseResult" aria-live="polite"></p></article>
+   <article class="ik-health-check"><div class="ik-health-check-top"><h3>Wise Old Man &amp; RuneLite</h3><span class="ik-health-status">Not checked</span></div><p>Use the existing event Tracking and Items tools to investigate WOM IDs, item tracking and submission issues. No new background refreshes are added.</p><button class="btn secondary" type="button" data-ik-health-open="events">Open Event Manager</button></article>
+  </div>
+  <p class="ik-health-note">All checks use your existing staff-protected endpoints. A failed request displays its HTTP status or returned error; no credentials are displayed.</p>
+ </section>
+</div>
 <div class="admin-tab-panel" id="adminTab-maintenance"><div class="ik-section-intro"><h2>Advanced Maintenance</h2><p>Historical imports and repair operations. Use only when needed.</p></div><section class="admin-card" id="historicalDropImportCard">
 <div class="admin-section-header">
 <p class="eyebrow">Historical Drops</p>
@@ -656,7 +684,7 @@
    else if(which==='maintenance'){
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
-   const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',maintenance:'maintenance'}[which];
+   const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',health:'health',maintenance:'maintenance'}[which];
    $$('.admin-tab-panel').forEach(p=>{
      const visible=p.id==='adminTab-'+panelName;
      p.classList.toggle('active',visible);
@@ -719,5 +747,43 @@
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
 <script src="/assets/js/admin.js?v=20261015-member-handler-restore"></script>
 <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
+
+<script>
+/* Isolated System Health checks: do not alter existing admin handlers. */
+(function(){
+ const $=id=>document.getElementById(id);
+ async function requestCheck(url,statusId,resultId,buttonId){
+   const status=$(statusId),result=$(resultId),button=$(buttonId);
+   if(!status||!result||!button)return;
+   status.textContent='Checking…';status.dataset.state='checking';result.textContent='';button.disabled=true;
+   try{
+     const controller=new AbortController();
+     const timeout=setTimeout(()=>controller.abort(),12000);
+     let response;
+     try{response=await fetch(url,{credentials:'same-origin',cache:'no-store',signal:controller.signal});}
+     finally{clearTimeout(timeout);}
+     const data=await response.json().catch(()=>null);
+     if(!response.ok||data?.ok===false){
+       const error=typeof data?.error==='string'?data.error:`HTTP ${response.status}`;
+       throw new Error(`HTTP ${response.status}: ${error}`);
+     }
+     status.textContent='Endpoint reachable';status.dataset.state='ok';
+     result.textContent=`Checked ${new Date().toLocaleTimeString()}. This confirms the endpoint responded, not full integration health.`;
+   }catch(error){
+     status.textContent='Check failed';status.dataset.state='error';
+     result.textContent=error?.name==='AbortError'?'Request timed out.':String(error?.message||'Request failed.');
+   }finally{button.disabled=false;}
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+   $('ikHealthEventsBtn')?.addEventListener('click',()=>requestCheck('/api/admin/events/list','ikHealthEventsStatus','ikHealthEventsResult','ikHealthEventsBtn'));
+   $('ikHealthDiscordBtn')?.addEventListener('click',()=>requestCheck('/api/admin/discord/emojis','ikHealthDiscordStatus','ikHealthDiscordResult','ikHealthDiscordBtn'));
+   $('ikHealthSupabaseBtn')?.addEventListener('click',()=>{
+     if(!confirm('The existing Supabase diagnostic performs a temporary database write and cleanup. Run this check now?'))return;
+     requestCheck('/api/admin/supabase-diagnostic','ikHealthSupabaseStatus','ikHealthSupabaseResult','ikHealthSupabaseBtn');
+   });
+   document.querySelector('[data-ik-health-open="events"]')?.addEventListener('click',()=>document.querySelector('[data-ik-main="events"]')?.click());
+ });
+})();
+</script>
 </body>
 </html>
