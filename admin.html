@@ -144,6 +144,7 @@
 .ik-activity-content{padding-top:12px}
 #ikActivityList{list-style:none;margin:12px 0 0;padding:0;max-height:300px;overflow:auto}
 #ikActivityList li{padding:9px 0;border-bottom:1px solid #423024;color:#e5d3bf;font-size:13px}
+.admin-advanced-settings{margin-top:12px}.admin-advanced-settings-body{display:grid;gap:12px}.ik-status-details{padding:9px 12px;opacity:.8}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -211,7 +212,6 @@
 <button data-ik-stage="results" type="button"><span>04</span> Results</button>
 <button data-ik-stage="archive" type="button"><span>05</span> Finish</button>
 <button data-ik-stage="tracking" type="button"><span>•</span> Diagnostics</button></nav>
-<details class="ik-guidance"><summary>First time managing an event?</summary><p>1. Choose an event in Details. 2. Check its WOM competition and rewards. 3. Add items only if needed. 4. Review results after the event ends, then finish it. Your selection carries across all sections.</p></details>
 <div class="ik-stage" data-ik-panel="setup"><section class="admin-card">
 <div id="standardEventEditor">
 <div class="admin-form-grid admin-event-setup-simple">
@@ -254,11 +254,9 @@
 <button type="button" class="btn secondary" id="ikTemplateApply">Use This Configuration</button>
 </div>
 </details>
-<details class="admin-advanced-settings admin-field-wide">
-<summary>Advanced Settings</summary>
+<div class="admin-advanced-settings admin-field-wide">
 <div class="admin-advanced-settings-body">
-<details class="ik-status-details admin-field-wide"><summary>Automatic event status</summary>
-<div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></details>
+<div class="ik-status-details admin-field-wide"><div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></div>
 <div class="admin-field">
 <label for="eventPasswordInput">Event password</label>
 <input autocomplete="off" id="eventPasswordInput" maxlength="128" placeholder="Optional clan plugin password" type="text"/>
@@ -269,7 +267,7 @@
 </div>
 <div class="ik-automatic-fields" hidden aria-hidden="true"><input id="eventActiveInput" type="checkbox" tabindex="-1"/><input id="eventFeaturedInput" type="checkbox" tabindex="-1"/><input id="eventDropsInput" type="checkbox" tabindex="-1"/></div>
 </div>
-</details>
+</div>
 
 
 </div>
