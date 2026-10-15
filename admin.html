@@ -157,6 +157,12 @@
 .ik-queue-entry button{width:auto;margin:0;white-space:nowrap}
 .ik-status-inline{padding:8px 0;border:0;background:transparent!important;opacity:.8;font-size:12px}
 .ik-template-reuse{margin:14px 0 12px}
+.ik-approval-summary{padding:12px 15px;border:1px solid #694a2f;border-radius:9px;background:#241a14;color:#f2c18e;margin:12px 0}
+.ik-approval-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.ik-approval-source{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #58402d;border-radius:10px;background:#241b15}
+.ik-approval-source>div{display:grid;gap:5px}.ik-approval-source strong{color:#f1d8bd}.ik-approval-source small{color:#c8b09a}
+.ik-approval-source .btn{white-space:nowrap}
+@media(max-width:700px){.ik-approval-sources{grid-template-columns:1fr}}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -197,17 +203,17 @@
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
 </section>
 <section id="ik-approvals" class="ik-command-page" hidden aria-label="Approvals">
-<div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>Approvals</h2><p>One starting point for existing proof and submission review tools.</p></div></div>
-<section class="ik-games-review" aria-label="Ironkin Games pending submissions">
-<div class="ik-games-review-head"><div><h3>Ironkin Games <span id="ikGamesReviewCount"></span></h3><p>Pending team submissions — review proof, points, and placement here.</p></div><button type="button" id="ikGamesReviewRefresh" class="btn secondary">Refresh</button></div>
-<div id="ikGamesReviewList" aria-live="polite"><p class="admin-muted">Open Approvals to load pending Games submissions.</p></div>
+<div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>All Approvals</h2><p>Pending submissions from across Ironkin, in one place.</p></div>
+<button type="button" id="ikApprovalsRefresh" class="btn secondary">Refresh</button></div>
+<div class="ik-approval-summary" id="ikApprovalSummary" role="status">Loading pending submissions…</div>
+<div class="ik-approval-sources" id="ikApprovalSources"></div>
+<section class="ik-games-review" aria-label="Pending team submissions">
+<div class="ik-games-review-head"><div><h3>Team Challenge Submissions <span id="ikGamesReviewCount"></span></h3>
+<p>Review proof, points and placement.</p></div></div>
+<div id="ikGamesReviewList" aria-live="polite"><p class="admin-muted">Loading pending team submissions…</p></div>
 </section>
-<div class="ik-action-grid">
-<a href="/ironkin-games-admin.html"><strong>All Ironkin Games submissions ↗</strong><small>Review team challenge proofs and results in the existing Games admin</small></a>
-<button type="button" data-ik-go="bingo"><strong>Battleship Bingo proofs →</strong><small>Review attacks and proof decisions</small></button>
-<button type="button" data-ik-go="events:tracking"><strong>Event tracking →</strong><small>Inspect event drops and submission tracking</small></button>
-<button type="button" data-ik-go="events:results"><strong>Event results →</strong><small>Preview and publish event outcomes</small></button>
-</div><p class="ik-command-note">Review actions remain in their existing secure workflows. This page does not claim to combine or count unverified submission queues.</p></section>
+<p class="ik-command-note">All sources are counted here. Team challenges can be approved below; other review types open their existing secure approval screens.</p>
+</section>
 <section id="ik-tools" class="ik-command-page" hidden aria-label="Settings and tools"><div class="ik-command-heading"><div><p class="eyebrow">ADMINISTRATION</p><h2>Settings &amp; Tools</h2><p>Specialist tools stay available without cluttering the main navigation.</p></div></div>
 <div class="ik-action-grid">
 <button type="button" data-ik-go="bingo"><strong>Battleship Bingo →</strong><small>Boards, attacks, and proof management</small></button>
@@ -833,7 +839,7 @@
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
    const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',health:'health',maintenance:'maintenance'}[which];
-   if(which==='approvals')ikLoadGamesReviews();
+   if(which==='approvals'){ikLoadGamesReviews();ikLoadUnifiedApprovals();}
    for(const [id,visible] of [['ik-overview',which==='overview'],['ik-approvals',which==='approvals'],['ik-tools',which==='tools']]){
      const page=document.getElementById(id);if(page)page.hidden=!visible;
    }
@@ -844,6 +850,54 @@
      p.style.display=visible?'block':'none';
    });
  }
+
+ async function ikLoadUnifiedApprovals(){
+   const summary=document.getElementById('ikApprovalSummary');
+   const list=document.getElementById('ikApprovalSources');
+   if(!summary||!list)return;
+   summary.textContent='Loading pending approvals…';
+   list.replaceChildren();
+   try{
+     const response=await fetch('/api/admin/pending-submissions',{cache:'no-store'});
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok)throw Error(data.error||'Could not load approvals.');
+     summary.textContent=data.complete
+       ? `${data.total} pending submission${data.total===1?'':'s'} across all systems`
+       : `${data.knownCount}+ pending submissions · some sources could not be checked`;
+     const routes={
+       'ironkin-games':{label:'Team challenges',href:'/ironkin-games-admin.html'},
+       'games-location':{label:'Trivia and location proofs',href:'/ironkin-games-admin.html'},
+       'hall-of-flame':{label:'Hall of Flame',href:'/hall-of-flame.html'},
+       'event-drops':{label:'Event drop submissions',destination:'events:tracking'}
+     };
+     (data.sources||[]).forEach(source=>{
+       const route=routes[source.id]||{};
+       const card=document.createElement('div');card.className='ik-approval-source';
+       const details=document.createElement('div');
+       const title=document.createElement('strong');title.textContent=route.label||source.label||source.id;
+       const info=document.createElement('small');
+       info.textContent=source.status==='ok'
+         ? `${source.count} pending`
+         : source.status==='restricted'?'Access restricted':'Count unavailable';
+       details.append(title,info);card.append(details);
+       if(source.status==='ok' && source.count>0 && route.destination){
+         const button=document.createElement('button');button.type='button';button.className='btn secondary';
+         button.textContent='Review →';
+         button.addEventListener('click',()=>document.querySelector(`[data-ik-go="${route.destination}"]`)?.click());
+         card.append(button);
+       }else if(source.status==='ok' && source.count>0 && route.href){
+         const link=document.createElement('a');link.className='btn secondary';link.href=route.href;
+         link.textContent='Open reviews ↗';card.append(link);
+       }
+       list.append(card);
+     });
+   }catch(error){summary.textContent=error.message||'Unable to load pending submissions.';}
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+   document.getElementById('ikApprovalsRefresh')?.addEventListener('click',()=>{
+     ikLoadUnifiedApprovals();ikLoadGamesReviews();
+   });
+ });
 
  // Games reviews use the same authenticated endpoints as the Games Admin page.
  // Only pending entries are shown; decisions update the existing scoring backend.
