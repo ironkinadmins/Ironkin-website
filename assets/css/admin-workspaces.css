@@ -1,0 +1,18 @@
+/* Admin Event Manager: focused presentation; backend/admin.js unchanged. */
+#eventSubtab-standard .admin-workspace-hidden { display: none !important; }
+.admin-workspace { border:1px solid rgba(221,147,70,.3); border-radius:18px; background:linear-gradient(125deg,rgba(59,35,23,.9),rgba(22,17,15,.96)); padding:22px; margin:0 0 18px; color:#f7e8d6; }
+.admin-workspace-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; }
+.admin-workspace-heading h2 { margin:5px 0; font-size:1.5rem; color:#fff0df; }
+.admin-workspace-heading p { margin:0; color:#c8b6a6; font-size:.91rem; }
+.admin-workspace-kicker { letter-spacing:.13em; font-weight:800; color:#f5ad5c; font-size:.68rem; }
+.admin-workspace-hint { color:#d7ae7f; font-size:.78rem; white-space:nowrap; }
+.admin-workspace-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.admin-workspace-tab { text-align:left; display:flex; flex-direction:column; gap:5px; padding:14px; border-radius:12px; border:1px solid rgba(222,167,111,.2); background:#261d18; color:#c9a77f; cursor:pointer; font:inherit; transition:background .18s,border-color .18s,transform .18s; }
+.admin-workspace-tab strong { font-size:.9rem; color:#f0dfca; }
+.admin-workspace-tab small { font-size:.74rem; color:#bca796; }
+.admin-workspace-tab:hover { background:#3a291f; border-color:#b87838; transform:translateY(-1px); }
+.admin-workspace-tab.is-active { background:linear-gradient(140deg,#704321,#432a1d); border-color:#f2b468; box-shadow:inset 0 0 0 1px rgba(242,180,104,.16); color:#ffd08c; }
+.admin-workspace-tab:focus-visible { outline:3px solid #f2b468; outline-offset:3px; }
+@media(max-width:900px){ .admin-workspace-tabs {grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media(max-width:540px){ .admin-workspace {padding:14px;} .admin-workspace-heading {align-items:flex-start;} .admin-workspace-hint {display:none;} .admin-workspace-tab {padding:11px;} }
+@media(prefers-reduced-motion:reduce){.admin-workspace-tab{transition:none;}}

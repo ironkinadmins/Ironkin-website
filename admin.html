@@ -84,7 +84,17 @@
     <div class="admin-tab-panel active" id="adminTab-events">
 
       <div class="event-subtab-panel active" id="eventSubtab-standard">
-    <section class="admin-card">
+      <div class="admin-workspace" id="adminEventWorkspace" aria-label="Event management workspaces">
+        <div class="admin-workspace-heading"><div><span class="admin-workspace-kicker">EVENT OPERATIONS</span><h2>Manage Events</h2><p>Choose a task to focus on. All existing event controls are retained.</p></div><span class="admin-workspace-hint">One workspace at a time</span></div>
+        <div class="admin-workspace-tabs" role="tablist" aria-label="Event management tools">
+          <button type="button" role="tab" aria-selected="true" class="admin-workspace-tab is-active" data-workspace="setup">01 <strong>Setup &amp; Rewards</strong><small>Configure and save</small></button>
+          <button type="button" role="tab" aria-selected="false" class="admin-workspace-tab" data-workspace="results">02 <strong>Results &amp; Publishing</strong><small>Review Discord posts</small></button>
+          <button type="button" role="tab" aria-selected="false" class="admin-workspace-tab" data-workspace="items">03 <strong>Items &amp; Drops</strong><small>Manage event loot</small></button>
+          <button type="button" role="tab" aria-selected="false" class="admin-workspace-tab" data-workspace="import">04 <strong>Import Items</strong><small>Bulk Excel / CSV</small></button>
+        </div>
+      </div>
+
+    <section class="admin-card" data-admin-workspace-panel="setup">
       <div id="standardEventEditor">
       <div class="admin-form-grid admin-event-setup-simple">
         <div class="admin-field admin-field-wide">
@@ -199,7 +209,7 @@
       </div>
     </section>
 
-    <section class="admin-card results-publishing-card" id="resultsPublishingCard">
+    <section class="admin-card results-publishing-card" id="resultsPublishingCard" data-admin-workspace-panel="results">
       <div class="results-publishing-head">
         <div>
           <p class="eyebrow">Discord Automation</p>
@@ -296,7 +306,7 @@
       </div>
     </section>
 
-    <section class="admin-card" id="standardDropsEditor">
+    <section class="admin-card" id="standardDropsEditor" data-admin-workspace-panel="items">
       <div class="admin-section-header">
         <h2>Event Drops</h2>
         <p>These drops are saved only for the selected event.</p>
@@ -343,7 +353,7 @@
       <div id="adminDropsList" class="admin-drops-list">Loading...</div>
     </section>
 
-    <section class="admin-card" id="bountiesEditor" style="display:none">
+    <section class="admin-card" id="bountiesEditor" data-admin-workspace-panel="items" style="display:none">
       <div class="admin-section-header">
         <h2>Bounty Items</h2>
         <p>Select OSRS items from the Wiki, assign an Ember reward, and track how many the clan receives.</p>
@@ -385,7 +395,7 @@
       <div id="adminBountiesList" class="admin-drops-list">Loading...</div>
     </section>
 
-    <section class="admin-card" id="eventItemImportCard">
+    <section class="admin-card" id="eventItemImportCard" data-admin-workspace-panel="import">
       <div class="admin-section-header">
         <h2>Import Event Items</h2>
         <p>Import a Supabase <code>ironkin_event_items</code> export from Excel or CSV. Existing items are updated; new items are added with a starting count of 0.</p>
@@ -722,10 +732,12 @@
 
   </main>
 
+  <link rel="stylesheet" href="/assets/css/admin-workspaces.css?v=20261015" />
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
   <script src="assets/js/admin.js?v=20260913-hub-ux-v1-20260913-secondary-botw-wom"></script>
+  <script src="/assets/js/admin-workspaces.js?v=20261015" defer></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
   <script src="/assets/js/admin-command-center.js?v=20261015-compact2"></script>
 </body>
