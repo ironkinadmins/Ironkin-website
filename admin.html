@@ -32,7 +32,7 @@
 #ikSaveRewards{margin-top:16px}.ik-archive-actions{margin-top:22px}.ik-archive-actions button{max-width:100%}
 #adminTab-maintenance>.admin-card{margin-top:18px}
 @media(max-width:760px){.admin-page{padding:15px 12px 70px}.ik-admin-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ik-top{white-space:normal}.ik-event-head{display:block}.ik-event-picker{margin-top:16px}.ik-stage-nav button{min-width:100px}}
-</style></head>
+.ik-overview{display:none;margin:24px 0}.ik-overview.is-active{display:block}.ik-overview-heading{margin-bottom:22px}.ik-overview-heading h2{font-size:30px;margin:6px 0}.ik-overview-heading p:last-child{color:#bca794}.ik-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ik-overview-grid>a,.ik-overview-grid>button{min-height:138px;padding:22px;border:1px solid #66452c;border-radius:15px;background:linear-gradient(145deg,#302016,#17110e);color:#fbe6cd;text-align:left;text-decoration:none;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:12px;transition:border-color .2s,transform .2s}.ik-overview-grid>a:hover,.ik-overview-grid>button:hover,.ik-overview-grid>a:focus-visible,.ik-overview-grid>button:focus-visible{border-color:#f0ad62;transform:translateY(-2px)}.ik-overview-grid strong{font-size:17px}.ik-overview-grid span{font-size:13px;color:#c6ad96;line-height:1.5}@media(max-width:850px){.ik-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ik-overview-grid{grid-template-columns:1fr}}</style></head>
 <body>
 <div id="siteNav"></div>
 <main class="admin-page">
@@ -41,7 +41,7 @@
 <h1>Admin Dashboard</h1>
 <p>Manage Ironkin events, WOM tracking, rewards, and admin tools.</p>
 </section><nav aria-label="Admin tools" class="ik-admin-nav">
-<button class="ik-top active" data-ik-main="events" type="button">Events</button>
+<button class="ik-top active" data-ik-main="overview" type="button">Overview</button><button class="ik-top" data-ik-main="events" type="button">Events</button>
 <a class="ik-top" href="/ironkin-games-admin.html">Ironkin Games ↗</a>
 <button class="ik-top" data-ik-main="bingo" type="button">Battleship Bingo</button>
 <button class="ik-top" data-ik-main="guess-kc" type="button">Guess the KC</button>
@@ -57,7 +57,7 @@
 <button class="admin-tab-btn" data-admin-tab="handbook" type="button"></button>
 </div>
 
-<div class="admin-tab-panel active" id="adminTab-events">
+<section id="ikAdminOverview" class="ik-overview is-active" aria-label="Admin overview"><div class="ik-overview-heading"><p class="eyebrow">IRONKIN OPERATIONS</p><h2>Admin Overview</h2><p>Choose a workspace. No duplicate settings or controls.</p></div><div class="ik-overview-grid"><button type="button" data-ik-go="events"><strong>⚔ Event Manager</strong><span>Setup, rewards, results, drops, tracking and archive</span></button><a href="/ironkin-games-admin.html"><strong>🏆 Ironkin Games ↗</strong><span>Challenges, teams and proofs</span></a><button type="button" data-ik-go="bingo"><strong>▦ Battleship Bingo</strong><span>Manage the Bingo event</span></button><button type="button" data-ik-go="guess-kc"><strong>◎ Guess the KC</strong><span>Manage the guessing event</span></button><button type="button" data-ik-go="members"><strong>♜ Member Management</strong><span>Directory, ranks and profile overrides</span></button><button type="button" data-ik-go="maintenance"><strong>⚙ Advanced Tools</strong><span>Backfills and exceptional maintenance</span></button><button type="button" data-ik-go="handbook"><strong>▤ Staff Handbook</strong><span>Manage staff documentation</span></button></div></section><div class="admin-tab-panel active" id="adminTab-events">
 <div class="event-subtab-panel active" id="eventSubtab-standard"><div class="ik-event-shell">
 <header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>One workflow. Select an event, then choose what to work on.</p></div><div class="ik-event-picker"><div class="admin-field admin-field-wide">
 <label for="adminEventSelect">Event</label>
@@ -633,8 +633,10 @@
  const $=(q,r=document)=>r.querySelector(q), $$=(q,r=document)=>Array.from(r.querySelectorAll(q));
  function main(which){
    $$('.ik-top[data-ik-main]').forEach(b=>b.classList.toggle('active',b.dataset.ikMain===which));
+   $('#ikAdminOverview')?.classList.toggle('is-active',which==='overview');
+   if(which==='overview'){$$('.admin-tab-panel').forEach(p=>p.classList.remove('active'));return;}
    const click=(q)=>$(q)?.click();
-   if(which==='events')click('[data-event-subtab="standard"].event-subtab-btn');
+   if(which==='events'){ $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-events')); click('[data-event-subtab="standard"].event-subtab-btn'); }
    else if(which==='bingo'||which==='guess-kc')click('[data-event-subtab="'+which+'"].event-subtab-btn');
    else if(which==='members')click('[data-admin-tab="profiles"].admin-tab-btn');
    else if(which==='handbook')click('[data-admin-tab="handbook"].admin-tab-btn');
@@ -668,6 +670,7 @@
  }
  document.addEventListener('DOMContentLoaded',()=>{
    $$('.ik-top[data-ik-main]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikMain)));
+   $$('[data-ik-go]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikGo)));
    $$('.ik-stage-nav button').forEach(b=>b.addEventListener('click',()=>stage(b.dataset.ikStage)));
    $$('[data-ik-item]').forEach(b=>b.addEventListener('click',()=>item(b.dataset.ikItem)));
    $('#ikSaveRewards')?.addEventListener('click',()=>$('#saveEventBtn')?.click());
@@ -679,6 +682,7 @@
      $(target)?.scrollIntoView({behavior:'smooth',block:'center'});
    }));
    setTimeout(adapt,350);
+   main('overview');
  });
 })();
 </script></body>
