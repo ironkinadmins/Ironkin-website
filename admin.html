@@ -230,13 +230,6 @@
 <div id="ikPublishQueue" class="ik-publish-queue" hidden><h3>Events waiting for Discord results</h3>
 <div id="ikPublishList" role="list"><p class="admin-muted">Loading ended events…</p></div></div>
 <p class="ik-command-note" id="ikOverviewStatus" role="status">Checking events and pending submissions…</p>
-<details class="ik-activity-box" id="ikHealthPanel">
-<summary>Website health</summary>
-<div class="ik-activity-content">
-<p class="admin-muted">Checks Supabase access, Ironkin Games storage, and Discord configuration. This does not test Discord message delivery or WOM refresh.</p>
-<button class="btn secondary compact" type="button" id="ikHealthRefresh">Check now</button>
-<div id="ikHealthResults" role="status" aria-live="polite">Open to check services.</div>
-</div></details>
 <details class="ik-activity-box"><summary>Recent admin activity</summary>
 <div class="ik-activity-content"><button class="btn secondary compact" id="ikActivityRefresh" type="button">Refresh history</button>
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
@@ -720,6 +713,7 @@
  <section class="admin-card ik-health">
   <div class="admin-section-header"><p class="eyebrow">SYSTEM HEALTH</p><h2>Integration Diagnostics</h2><p class="admin-muted">Checks run only when requested. A successful API response confirms that specific endpoint, not every feature of an integration.</p></div>
   <div class="ik-health-grid">
+   <article class="ik-health-check"><div class="ik-health-check-top"><h3>Quick Service Check</h3><span class="ik-health-status" id="ikQuickHealthStatus" role="status">Not checked</span></div><p>Read-only checks for Supabase connectivity, Ironkin Games storage and Discord configuration. Does not send Discord messages or refresh WOM.</p><button class="btn secondary" type="button" id="ikQuickHealthBtn">Check services</button><div class="ik-health-result" id="ikQuickHealthResults" aria-live="polite"></div></article>
    <article class="ik-health-check" data-health-check="events"><div class="ik-health-check-top"><h3>Event Storage</h3><span class="ik-health-status" id="ikHealthEventsStatus" role="status">Not checked</span></div><p>Verify the existing staff event-list endpoint is reachable.</p><button class="btn secondary" type="button" id="ikHealthEventsBtn">Check event API</button><p class="ik-health-result" id="ikHealthEventsResult" aria-live="polite"></p></article>
    <article class="ik-health-check" data-health-check="discord"><div class="ik-health-check-top"><h3>Discord Emoji Access</h3><span class="ik-health-status" id="ikHealthDiscordStatus" role="status">Not checked</span></div><p>Check whether the staff Discord emoji endpoint responds. Member sync is not triggered.</p><button class="btn secondary" type="button" id="ikHealthDiscordBtn">Check Discord API</button><p class="ik-health-result" id="ikHealthDiscordResult" aria-live="polite"></p></article>
    <article class="ik-health-check"><div class="ik-health-check-top"><h3>Supabase</h3><span class="ik-health-status" id="ikHealthSupabaseStatus" role="status">Not checked</span></div><p>The existing diagnostic performs a temporary database write and cleanup. Run only when needed.</p><button class="btn secondary" type="button" id="ikHealthSupabaseBtn">Run database diagnostic…</button><p class="ik-health-result" id="ikHealthSupabaseResult" aria-live="polite"></p></article>
@@ -1319,29 +1313,29 @@
 </script>
 <script>
 (function(){
-  const panel=document.getElementById("ikHealthPanel");
-  const button=document.getElementById("ikHealthRefresh");
-  const target=document.getElementById("ikHealthResults");
-  let loaded=false;
-  async function checkHealth(){
-    if(!target||!button)return;
-    button.disabled=true;target.textContent="Checking services…";
-    try{
-      const response=await fetch("/api/admin/site-health",{cache:"no-store"});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok||!Array.isArray(data.checks))throw Error(data.error||"Health check unavailable.");
-      target.replaceChildren();
-      for(const check of data.checks){
-        const row=document.createElement("p");
-        row.textContent=`${check.name}: ${check.status==="ok"?"OK":check.status==="not-configured"?"Not configured":"Unavailable"}${check.status==="ok"?` (${check.latencyMs} ms)`:""}`;
-        target.append(row);
-      }
-      loaded=true;
-    }catch(error){target.textContent=error.message||"Unable to check services.";}
-    finally{button.disabled=false;}
-  }
-  panel?.addEventListener("toggle",()=>{if(panel.open&&!loaded)checkHealth();});
-  button?.addEventListener("click",checkHealth);
+ const button=document.getElementById('ikQuickHealthBtn');
+ const target=document.getElementById('ikQuickHealthResults');
+ const badge=document.getElementById('ikQuickHealthStatus');
+ if(!button||!target||!badge)return;
+ button.addEventListener('click',async()=>{
+   button.disabled=true;badge.textContent='Checking';badge.dataset.state='checking';target.textContent='Checking services…';
+   try{
+     const response=await fetch('/api/admin/site-health',{cache:'no-store'});
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok||!Array.isArray(data.checks))throw Error(data.error||'Service check unavailable');
+     target.replaceChildren();
+     let issues=0;
+     for(const check of data.checks){
+       const row=document.createElement('p');
+       const ok=check.status==='ok';if(!ok)issues++;
+       row.textContent=`${check.name}: ${ok?'OK':check.status==='not-configured'?'Not configured':'Unavailable'}${ok?` (${check.latencyMs} ms)`:''}`;
+       target.append(row);
+     }
+     badge.textContent=issues?`${issues} need attention`:'All checks passed';
+     badge.dataset.state=issues?'error':'ok';
+   }catch(error){badge.textContent='Unavailable';badge.dataset.state='error';target.textContent=error.message||'Could not run checks';}
+   finally{button.disabled=false;}
+ });
 })();
 </script></body>
 </html>
