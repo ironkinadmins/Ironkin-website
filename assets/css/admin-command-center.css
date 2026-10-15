@@ -1,25 +1,16 @@
-/* Admin presentation-only cleanup */
+/* One navigation system: the original working admin tabs, compacted. */
 .admin-page{max-width:1320px;margin-inline:auto}
-.ik-command-overview,.ik-event-toolbar,.ik-workspace-intro{border:1px solid rgba(226,151,74,.25);background:linear-gradient(135deg,#291c15,#17110e);border-radius:18px;padding:24px;margin:0 0 22px;color:#f5e5d5}
-.ik-overview-head{display:flex;justify-content:space-between;align-items:start;gap:16px}
-.ik-overview-head h2,.ik-workflow-title h2,.ik-workspace-intro h2{margin:5px 0 6px;font-size:clamp(20px,2vw,27px)}
-.ik-overview-head p,.ik-workflow-title p,.ik-workspace-intro p{color:#c3aa95;margin:0}
-.ik-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
-.ik-quick-grid>a,.ik-quick-grid>button{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left;text-decoration:none;cursor:pointer;color:#f9e4ce;background:#38261c;border:1px solid #68452b;border-radius:12px;padding:16px;font:inherit;min-height:112px;transition:background .2s,border-color .2s,transform .2s}
-.ik-quick-grid>a:hover,.ik-quick-grid>button:hover{background:#4a3020;border-color:#e6a35b;transform:translateY(-2px)}
-.ik-quick-grid small{font-size:12px;color:#cbb09a}
-.ik-small-btn,.ik-advanced-toggle{background:#3a281e;color:#f4d1a8;border:1px solid #805332;border-radius:9px;padding:9px 13px;cursor:pointer}
-.ik-overview-collapsed .ik-quick-grid{display:none}.ik-overview-collapsed{padding-bottom:18px}
-.admin-command-nav.ik-nav-compact{margin-bottom:24px}
-.ik-nav-compact .admin-nav-group-head p,.ik-nav-compact .admin-nav-copy small,.ik-nav-compact .admin-nav-chevron,.ik-nav-compact .admin-nav-group-count{display:none}
-.ik-nav-compact .admin-nav-group{min-width:0}.ik-nav-compact .admin-nav-actions{gap:8px}
-.ik-nav-compact .admin-nav-btn{min-height:56px;padding:10px 12px}.ik-nav-compact .admin-nav-copy strong{font-size:13px}
-.ik-event-toolbar{margin-bottom:16px}
-.ik-workflow-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:19px}
-.ik-workflow-tabs button{border:1px solid #755035;background:#302119;color:#e5c9ad;border-radius:10px;padding:12px 16px;cursor:pointer;font:inherit;font-weight:700}
-.ik-workflow-tabs button:hover,.ik-workflow-tabs button.active{background:#784824;border-color:#e9a660;color:#fff0d9}
-#eventSubtab-standard>.admin-card.ik-stage-hidden{display:none!important}
-.ik-maintenance-note{font-size:12px;color:#e4b77e;margin:0 0 15px}
-.ik-workspace-intro{margin-bottom:16px}.ik-advanced-toggle{width:100%;text-align:left;margin:12px 0}.ik-advanced-hidden{display:none!important}
-@media(max-width:850px){.ik-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ik-nav-compact .admin-nav-actions{display:flex;flex-wrap:wrap}.ik-event-toolbar,.ik-command-overview{padding:18px}}
-@media(max-width:520px){.ik-quick-grid{grid-template-columns:1fr}.ik-overview-head{flex-direction:column}.ik-workflow-tabs button{flex:1 1 45%;font-size:12px}.ik-quick-grid>a,.ik-quick-grid>button{min-height:80px}}
+.admin-command-nav.ik-nav-compact{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:20px;padding:12px 14px;background:linear-gradient(135deg,#211811,#15110f);border:1px solid rgba(226,151,74,.25);border-radius:14px}
+.ik-nav-compact .admin-nav-group{min-width:0;padding:0;background:transparent;border:0;box-shadow:none}
+.ik-nav-compact .admin-nav-group-head{margin:0 0 7px;padding:0}
+.ik-nav-compact .admin-nav-group-head p,.ik-nav-compact .admin-nav-copy small,.ik-nav-compact .admin-nav-chevron,.ik-nav-compact .admin-nav-group-count{display:none!important}
+.ik-nav-compact .admin-nav-group-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.ik-nav-compact .admin-nav-actions{display:flex;flex-wrap:wrap;gap:7px}
+.ik-nav-compact .admin-nav-btn{min-height:42px;padding:8px 11px;flex:1 1 135px;max-width:none;gap:8px;border-radius:9px}
+.ik-nav-compact .admin-nav-icon{width:27px;height:27px;min-width:27px;font-size:10px}
+.ik-nav-compact .admin-nav-copy strong{font-size:12px;white-space:nowrap}
+.ik-advanced-toggle{display:block;width:100%;text-align:left;background:#302119;color:#f4d1a8;border:1px solid #805332;border-radius:9px;padding:11px 14px;margin:12px 0;cursor:pointer;font:inherit}
+.ik-advanced-toggle:hover{background:#443022}
+.ik-advanced-hidden{display:none!important}
+@media(min-width:1050px){.admin-command-nav.ik-nav-compact{grid-template-columns:minmax(0,4fr) minmax(0,3fr);gap:18px}.ik-nav-compact .admin-nav-group-head{margin-bottom:8px}}
+@media(max-width:580px){.admin-command-nav.ik-nav-compact{padding:10px}.ik-nav-compact .admin-nav-btn{flex:1 1 125px}}
