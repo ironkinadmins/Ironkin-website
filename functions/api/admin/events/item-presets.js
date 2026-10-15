@@ -15,6 +15,8 @@ export async function onRequestGet({ request, env }) {
         key: String(entry.id || entry.archiveRequestId || index),
         title: String(entry.title || entry.label || entry.type || "Previous event"),
         date: String(entry.endDate || entry.endedAt || "").slice(0, 10),
+        eventId: String(entry.eventId || ""),
+        eventType: String(entry.type || ""),
         drops: (Array.isArray(entry.drops) ? entry.drops : (Array.isArray(entry.snapshot?.drops) ? entry.snapshot.drops : []))
           .filter(item => item && item.name)
           .map(item => ({
@@ -27,7 +29,6 @@ export async function onRequestGet({ request, env }) {
             boss: String(item.boss || "")
           }))
       }))
-      .filter(entry => entry.drops.length)
       .reverse()
       .map(entry => ({ ...entry, count: entry.drops.length }));
     return Response.json({ presets }, { headers: { "Cache-Control": "no-store" } });

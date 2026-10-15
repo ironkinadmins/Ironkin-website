@@ -2081,7 +2081,7 @@ function populateDropPresetSources() {
   const previous = select.value;
   select.replaceChildren(new Option("Choose an archived event…", ""));
   ikArchivedItemPresets.forEach(preset => {
-    select.add(new Option(`${preset.title} · archived ${preset.date || ""} (${preset.count} items)`, `archive:${preset.key}`));
+    select.add(new Option(`${preset.title} · ${preset.date || "archived"} · ${preset.count ? `${preset.count} items` : "no saved items"}`, `archive:${preset.key}`));
   });
 
   if ([...select.options].some(option => option.value === previous)) select.value = previous;
@@ -2110,7 +2110,7 @@ async function ikPreviewPreset() {
     const items = ikArchivedItemPresets.find(p => `archive:${p.key}` === source)?.drops || [];
     ikPresetPreviewItems = items.filter(item => String(item?.name || "").trim());
     if (!ikPresetPreviewItems.length) {
-      ikPresetStatus("No reusable items found for this event. Older archived event lists may no longer be stored.");
+      ikPresetStatus("This archived event has no saved tracked items. The archive is available, but there is nothing to copy.");
       return;
     }
     const heading = document.createElement("strong");
@@ -2176,8 +2176,12 @@ async function ikLoadArchivedPresets() {
     if (!response.ok) throw new Error("Archived presets unavailable");
     const data = await response.json();
     ikArchivedItemPresets = Array.isArray(data.presets) ? data.presets : [];
+    ikPresetStatus(ikArchivedItemPresets.length
+      ? "Choose an archived event to preview its saved items."
+      : "No archived events were returned. Refresh after archiving an event.");
   } catch(error) {
     ikArchivedItemPresets = [];
+    ikPresetStatus("Could not load archived events. Check that the item-presets API file was deployed, then refresh.");
     console.warn("Archived event item presets unavailable:",error?.message);
   }
   populateDropPresetSources();
