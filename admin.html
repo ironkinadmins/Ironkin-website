@@ -138,8 +138,7 @@
 <label for="adminEventSelect">Event</label>
 <select id="adminEventSelect"></select>
 </div>
-<details class="ik-status-details admin-field-wide"><summary>Automatic event status <span class="ik-muted-inline">(view details)</span></summary>
-<div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></details>
+
 
 <div class="admin-field">
 <label for="eventWomInput">Competition ID <span class="ik-muted-inline">(Wise Old Man)</span></label>
@@ -149,9 +148,7 @@
 </div>
 <small class="admin-wom-confirm" id="primaryWomCompactStatus">Enter a WOM competition ID.</small>
 </div>
-<div class="admin-field admin-field-wide">
-<div class="admin-info-box admin-info-compact" id="botwTierNotice" style="display:none"></div>
-</div>
+
 <div class="admin-field" id="secondaryWomSection" style="display:none">
 <label for="eventSecondaryWomInput">Second competition ID <span class="admin-muted">(optional — BOTW only)</span></label>
 <div class="admin-inline-row">
@@ -170,6 +167,8 @@
 <details class="admin-advanced-settings admin-field-wide">
 <summary>Advanced Settings</summary>
 <div class="admin-advanced-settings-body">
+<details class="ik-status-details admin-field-wide"><summary>Automatic event status</summary>
+<div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></details>
 <div class="admin-field">
 <label for="eventPasswordInput">Event password</label>
 <input autocomplete="off" id="eventPasswordInput" maxlength="128" placeholder="Optional clan plugin password" type="text"/>
@@ -317,21 +316,21 @@
 </div>
 </div>
 </section></div>
-<div class="ik-stage" data-ik-panel="items" hidden=""><div class="ik-section-intro"><h3>Item &amp; Drop Manager</h3><p>Manage tracked drops, bounty items, and bulk imports in one place.</p></div><nav aria-label="Item tools" class="ik-subnav"><button class="active" data-ik-item="drops" type="button">Tracked Drops</button><button data-ik-item="bounties" type="button">Bounty Items</button><button data-ik-item="import" type="button">Import CSV / Excel</button></nav><div data-ik-item-panel="drops"><section class="admin-card" id="standardDropsEditor">
+<div class="ik-stage" data-ik-panel="items" hidden=""><div class="ik-section-intro"><h3>Item &amp; Drop Manager</h3><p>Manage the selected event’s items or import a list.</p></div><nav aria-label="Item tools" class="ik-subnav"><button class="active" data-ik-item="drops" type="button">Items</button><button data-ik-item="import" type="button">Import CSV / Excel</button></nav><div data-ik-item-panel="drops"><section class="admin-card" id="standardDropsEditor">
 <div class="admin-section-header">
-<h2>Event Drops</h2>
-<p>These drops are saved only for the selected event.</p>
+<h2>Event Items</h2>
+<p>Items belong only to the selected event.</p>
 </div>
 <div class="ik-preset-box" id="ikDropPresets">
-  <div class="ik-preset-title"><strong>Reuse items from an event</strong><span>Optional</span></div>
+  <div class="ik-preset-title"><strong>Reuse items from an archived event</strong><span>Optional</span></div>
   <div class="ik-preset-controls">
-    <label class="ik-preset-select">Previous event
+    <label class="ik-preset-select">Archived event
       <select id="ikPresetSource"><option value="">Choose an event…</option></select>
     </label>
     <button class="btn secondary" id="ikPresetPreview" type="button">Preview items</button>
   </div>
   <div class="ik-preset-preview" id="ikPresetPreviewBody" hidden></div>
-  <p class="admin-muted ik-preset-message" id="ikPresetMessage" role="status" aria-live="polite">Select a previous event to copy its tracked items.</p>
+  <p class="admin-muted ik-preset-message" id="ikPresetMessage" role="status" aria-live="polite">Select an archived event to reuse its item list.</p>
 </div>
 <details class="ik-manual-items"><summary>+ Add items manually</summary><div class="ik-manual-items-body">
 <div class="admin-field admin-field-wide">
@@ -373,7 +372,7 @@
 </div></details>
 <div class="admin-divider"></div>
 <div class="admin-drops-list" id="adminDropsList">Loading...</div>
-</section></div><div data-ik-item-panel="bounties" hidden=""><section class="admin-card" id="bountiesEditor" style="display:none">
+</section><section class="admin-card" id="bountiesEditor" style="display:none">
 <div class="admin-section-header">
 <h2>Bounty Items</h2>
 <p>Select OSRS items from the Wiki, assign an Ember reward, and track how many the clan receives.</p>
@@ -759,8 +758,8 @@
    const active=$('.ik-stage-nav button.active');if(active?.hidden)stage('setup');
    // The backend controls which editor is displayed for the chosen event.
    const drop=$('#standardDropsEditor'), bount=$('#bountiesEditor');
-   if(bounty && bount){item('bounties');}
-   else if(!bounty && drop && $('[data-ik-item="bounties"].active'))item('drops');
+   // The existing event-specific editor toggles the correct item form.
+   if($('[data-ik-item="drops"]')?.classList.contains('active'))item('drops');
  }
  document.addEventListener('DOMContentLoaded',()=>{
    $$('.ik-top[data-ik-main]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikMain)));

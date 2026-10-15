@@ -12,11 +12,11 @@ export async function onRequestGet({ request, env }) {
     const archive = raw ? JSON.parse(raw) : [];
     const presets = (Array.isArray(archive) ? archive : [])
       .map((entry, index) => ({
-        key: String(index),
+        key: String(entry.id || entry.archiveRequestId || index),
         title: String(entry.title || entry.label || entry.type || "Previous event"),
         date: String(entry.endDate || entry.endedAt || "").slice(0, 10),
-        drops: (Array.isArray(entry.drops) ? entry.drops : [])
-          .filter(item => item && item.name && Number(item.itemId) > 0)
+        drops: (Array.isArray(entry.drops) ? entry.drops : (Array.isArray(entry.snapshot?.drops) ? entry.snapshot.drops : []))
+          .filter(item => item && item.name)
           .map(item => ({
             name: String(item.name),
             itemId: Number(item.itemId),

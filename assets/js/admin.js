@@ -1468,14 +1468,6 @@ function populateEventFields() {
   normalizeRewards(event);
   normalizeResultsAnnouncement(event);
 
-  const botwTierNotice = document.getElementById("botwTierNotice");
-  if (botwTierNotice) {
-    const tier = getBotwTierLabel(event);
-    botwTierNotice.style.display = event.type === "botw" ? "block" : "none";
-    botwTierNotice.innerHTML = tier
-      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> A second WOM competition is optional. Add its ID in the field directly below; both competitions contribute to the same event.`
-      : `<strong>Editing BOTW.</strong> This event is separated from other BOTW tiers.`;
-  }
 
   document.getElementById("eventDescriptionInput").value = event.description || "";
   document.getElementById("eventWomInput").value = event.womCompetitionId || "";
@@ -2087,14 +2079,11 @@ function populateDropPresetSources() {
   const select = document.getElementById("ikPresetSource");
   if (!select) return;
   const previous = select.value;
-  select.replaceChildren(new Option("Choose an event…", ""));
+  select.replaceChildren(new Option("Choose an archived event…", ""));
   ikArchivedItemPresets.forEach(preset => {
     select.add(new Option(`${preset.title} · archived ${preset.date || ""} (${preset.count} items)`, `archive:${preset.key}`));
   });
-  (Array.isArray(allEvents) ? allEvents : []).forEach(event => {
-    if (!event?.id || event.id === selectedEventId) return;
-    select.add(new Option(getAdminEventOptionText(event), event.id));
-  });
+
   if ([...select.options].some(option => option.value === previous)) select.value = previous;
 }
 function ikPresetStatus(message) {
@@ -2114,14 +2103,12 @@ async function ikPreviewPreset() {
   preview.hidden = true;
   preview.replaceChildren();
   ikPresetPreviewItems = [];
-  if (!source || !selectedEventId) { ikPresetStatus("Choose a previous event first."); return; }
+  if (!source || !selectedEventId) { ikPresetStatus("Choose an archived event first."); return; }
   if (source === selectedEventId) { ikPresetStatus("Choose a different event."); return; }
   ikPresetStatus("Loading items…");
   try {
-    const items = source.startsWith("archive:")
-      ? (ikArchivedItemPresets.find(p => `archive:${p.key}` === source)?.drops || [])
-      : await ikFetchDropList(source);
-    ikPresetPreviewItems = items.filter(item => item?.name && Number(item.itemId) > 0);
+    const items = ikArchivedItemPresets.find(p => `archive:${p.key}` === source)?.drops || [];
+    ikPresetPreviewItems = items.filter(item => String(item?.name || "").trim());
     if (!ikPresetPreviewItems.length) {
       ikPresetStatus("No reusable items found for this event. Older archived event lists may no longer be stored.");
       return;
@@ -2131,7 +2118,7 @@ async function ikPreviewPreset() {
     const list = document.createElement("ul");
     ikPresetPreviewItems.slice(0,30).forEach(item => {
       const li=document.createElement("li");
-      li.textContent = `${item.name} (#${item.itemId})`;
+      li.textContent = `${item.name}${Number(item.itemId) > 0 ? ` (#${item.itemId})` : ""}`;
       list.append(li);
     });
     if(ikPresetPreviewItems.length>30) {
@@ -2166,7 +2153,7 @@ async function ikApplyPreset() {
     let added=0,failed=0;
     for(const item of items) {
       const id=Number(item.itemId), name=String(item.name||"").trim();
-      if(!name || !Number.isInteger(id) || id<=0 || existingIds.has(id) || existingNames.has(name.toLowerCase())) continue;
+      if(!name || (id>0 && existingIds.has(id)) || existingNames.has(name.toLowerCase())) continue;
       const response=await fetch("/api/drops/add",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
@@ -2175,7 +2162,7 @@ async function ikApplyPreset() {
           boss:item.boss||""
         })
       });
-      if(response.ok){added++;existingIds.add(id);existingNames.add(name.toLowerCase());}
+      if(response.ok){added++;if(id>0)existingIds.add(id);existingNames.add(name.toLowerCase());}
       else failed++;
     }
     ikPresetStatus(`${added} item${added===1?"":"s"} added. ${failed ? `${failed} could not be saved. ` : ""}Existing items were preserved.`);
@@ -2201,7 +2188,7 @@ function ikInitPresets() {
     const preview=document.getElementById("ikPresetPreviewBody");
     if(preview) preview.hidden=true;
     ikPresetPreviewItems=[];
-    ikPresetStatus("Select Preview items to see what will be copied.");
+    ikPresetStatus("Preview the archived item list before copying.");
   });
 }
 
