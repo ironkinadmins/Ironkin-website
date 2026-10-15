@@ -857,6 +857,12 @@ function setupGlobalSearch() {
 async function loadDiscordUser() {
   const loginBtn = document.getElementById("discordLoginBtn");
   const logoutBtn = document.getElementById("discordLogoutBtn");
+  const accountMenu = document.getElementById("ikAccountMenu");
+  const accountToggle = document.getElementById("ikAccountToggle");
+  const accountDropdown = document.getElementById("ikAccountDropdown");
+  const accountAdmin = document.getElementById("ikAccountAdmin");
+  const profileTile = document.getElementById("ikProfileTile");
+  const profileTileLabel = document.getElementById("ikProfileTileLabel");
   const adminNavLink = document.getElementById("adminNavLink");
   const staffHandbookNavLink = document.getElementById("staffHandbookNavLink");
   const profileNavLink = document.getElementById("profileNavLink");
@@ -869,8 +875,30 @@ async function loadDiscordUser() {
 
     if (!data.signedIn) return;
 
-    loginBtn.textContent = "View Profile";
-    loginBtn.href = "profile.html";
+    loginBtn.hidden = true;
+    loginBtn.style.display = "none";
+    if (accountMenu) accountMenu.hidden = false;
+    if (profileTile) profileTile.href = "/profile.html";
+    if (profileTileLabel) profileTileLabel.innerHTML = "View your profile<small>Embers, ranks and badges</small>";
+    if (accountToggle && accountDropdown) {
+      accountToggle.addEventListener("click", () => {
+        const opening = accountDropdown.hidden;
+        accountDropdown.hidden = !opening;
+        accountToggle.setAttribute("aria-expanded", String(opening));
+      });
+      document.addEventListener("click", event => {
+        if (accountMenu && !accountMenu.contains(event.target)) {
+          accountDropdown.hidden = true;
+          accountToggle.setAttribute("aria-expanded", "false");
+        }
+      });
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+          accountDropdown.hidden = true;
+          accountToggle.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
 
     if (data.user.inGuild) {
       loginBtn.title = "View your Ironkin member profile";
@@ -885,11 +913,10 @@ async function loadDiscordUser() {
     if (isStaffUser(data.user)) {
       if (staffHandbookNavLink) staffHandbookNavLink.style.display = "";
       if (adminNavLink) adminNavLink.style.display = "";
+      if (accountAdmin) accountAdmin.hidden = false;
     }
 
-    if (logoutBtn) {
-      logoutBtn.style.display = "";
-    }
+
   } catch {
     // Leave sign-in button as-is if auth check fails
   }

@@ -1,0 +1,16 @@
+/* Modern Ironkin navigation — shared across pages via nav.html */
+.site-header.premium-header{background:rgba(13,11,10,.96)!important;border-bottom:1px solid rgba(242,136,50,.22)!important;box-shadow:0 8px 28px rgba(0,0,0,.22)!important;padding:0!important}
+.site-header .premium-nav{width:min(100% - 44px,1560px)!important;max-width:1560px!important;min-height:74px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:auto!important;padding:8px 0!important}
+.site-header .premium-brand{margin-right:22px!important}
+.site-header .premium-nav-links{gap:5px!important}
+.site-header .premium-nav-links>a:not(.nav-discord-btn),.site-header .nav-dropdown-toggle{font-size:.86rem!important;min-height:43px!important;padding:0 13px!important;border-radius:7px!important;color:#e4d7c9!important}
+.site-header .premium-nav-links>a.active{background:rgba(245,125,31,.1)!important;box-shadow:inset 0 -3px #f78b30!important}
+.site-header .nav-global-search-trigger{border-radius:7px!important}
+.site-header .ik-signin,.site-header .ik-account-toggle{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#ef7d24!important;color:#180e08!important;font-weight:850!important;border:1px solid #f59a4c!important;border-radius:8px!important;min-height:43px!important;padding:0 20px!important;white-space:nowrap;cursor:pointer;text-decoration:none}
+.site-header .ik-signin:hover,.site-header .ik-account-toggle:hover{background:#ffa451!important}
+.site-header .ik-account-menu{position:relative;flex-shrink:0}
+.site-header .ik-account-menu[hidden],.site-header .ik-account-dropdown[hidden],.site-header .ik-account-dropdown [hidden]{display:none!important}
+.site-header .ik-account-dropdown{position:absolute;z-index:999;top:calc(100% + 10px);right:0;min-width:208px;background:#17110e;border:1px solid #75502f;border-radius:12px;box-shadow:0 15px 35px #0009;padding:7px}
+.site-header .ik-account-dropdown a{display:block;padding:12px 13px;border-radius:7px;text-decoration:none;color:#f4e9dd;font-size:.84rem;font-weight:650}
+.site-header .ik-account-dropdown a:hover{background:#3a2517;color:#fff}
+@media(max-width:900px){.site-header .premium-nav{width:calc(100% - 28px)!important}.site-header .premium-nav-links{padding:14px!important}.site-header .ik-account-menu{width:100%}.site-header .ik-account-toggle{width:100%}.site-header .ik-account-dropdown{position:static;margin-top:6px;box-shadow:none}.site-header .ik-signin{width:100%}}
