@@ -95,23 +95,43 @@
 .ik-manual-items summary{padding:13px 15px}
 .ik-manual-items-body{padding:12px 15px 16px}
 @media(max-width:620px){.ik-preset-controls{display:grid;grid-template-columns:1fr}.ik-preset-select{min-width:0}}
+
+/* 2026 Control Center: fewer navigation choices, actionable overview */
+.ik-command-page[hidden]{display:none!important}
+.ik-command-page{margin:0 0 26px;padding:24px;background:linear-gradient(145deg,#211912,#14110f);border:1px solid #62452e;border-radius:17px}
+.ik-command-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:22px}
+.ik-command-heading h2{margin:2px 0 6px;font-size:25px;color:#f7dfc4}
+.ik-command-heading p{color:#c7b29d;margin:0}
+.ik-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.ik-summary-grid>div{background:#2b211a;border:1px solid #57402c;border-radius:12px;padding:17px;display:grid;gap:5px}
+.ik-summary-grid strong{font-size:29px;color:#f2ae6a}.ik-summary-grid span{color:#d1bca7;font-size:12px}
+.ik-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ik-action-grid button,.ik-action-grid a{display:grid;gap:8px;text-align:left;background:#261d17;border:1px solid #60432e;border-radius:12px;padding:19px;color:#f4dbc0;text-decoration:none;cursor:pointer;font:inherit}
+.ik-action-grid button:hover,.ik-action-grid a:hover{background:#38271c;border-color:#e99d51}
+.ik-action-grid strong{font-size:15px}.ik-action-grid small{font-size:12px;color:#bfa995;line-height:1.5}
+.ik-command-note{margin:17px 0 0;color:#a99582;font-size:12px}
+.ik-admin-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.ik-admin-nav .ik-top{min-width:0;white-space:normal}
+.ik-guidance{margin:0 0 14px;border:1px solid #513b29;border-radius:10px;padding:12px 15px;color:#d6bda4}
+.ik-guidance summary{cursor:pointer;font-weight:700;color:#e8b17d}
+.ik-guidance p{margin:10px 0 0;line-height:1.6;font-size:13px}
+@media(max-width:900px){.ik-admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.ik-command-page{padding:15px}.ik-command-heading{display:grid}.ik-summary-grid{gap:6px}.ik-summary-grid>div{padding:10px}.ik-summary-grid strong{font-size:23px}.ik-action-grid{grid-template-columns:1fr}.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head>
 <body>
 <div id="siteNav"></div>
 <main class="admin-page">
 <section class="admin-hero">
 <p class="eyebrow">Ironkin Admin</p>
-<h1>Admin Dashboard</h1>
-<p>Manage Ironkin events, WOM tracking, rewards, and admin tools.</p>
+<h1>Ironkin Control Center</h1>
+<p>Everything your staff needs, without the clutter.</p>
 </section><nav aria-label="Admin tools" class="ik-admin-nav">
-<button class="ik-top active" data-ik-main="events" type="button">Events</button>
+<button class="ik-top active" data-ik-main="overview" type="button">Overview</button>
+<button class="ik-top" data-ik-main="events" type="button">Events</button>
 <a class="ik-top" href="/ironkin-games-admin.html">Ironkin Games ↗</a>
-<button class="ik-top" data-ik-main="bingo" type="button">Battleship Bingo</button>
-<button class="ik-top" data-ik-main="guess-kc" type="button">Guess the KC</button>
+<button class="ik-top" data-ik-main="approvals" type="button">Approvals</button>
 <button class="ik-top" data-ik-main="members" type="button">Members</button>
-<button class="ik-top" data-ik-main="handbook" type="button">Staff Handbook</button>
-<button class="ik-top" data-ik-main="health" type="button">System Health</button>
-<button class="ik-top" data-ik-main="maintenance" type="button">Advanced Tools</button>
+<button class="ik-top" data-ik-main="tools" type="button">Settings &amp; Tools</button>
 </nav><div aria-hidden="true" class="ik-legacy-hooks">
 <button class="event-subtab-btn" data-event-subtab="standard" type="button"></button>
 <button class="event-subtab-btn" data-event-subtab="bingo" type="button"></button>
@@ -121,16 +141,42 @@
 <button class="admin-tab-btn" data-admin-tab="handbook" type="button"></button>
 </div>
 
+<section id="ik-overview" class="ik-command-page" aria-label="Admin overview">
+<div class="ik-command-heading"><div><p class="eyebrow">TODAY AT IRONKIN</p><h2>What needs your attention?</h2><p>Start here. Open a workspace only when you need it.</p></div><button class="btn primary" type="button" data-ik-go="events:setup">Manage an Event →</button></div>
+<div class="ik-summary-grid"><div><strong id="ikLiveCount">—</strong><span>Active events</span></div><div><strong id="ikFinishedCount">—</strong><span>Ended events</span></div><div><strong id="ikArchiveCount">—</strong><span>Archived events</span></div></div>
+<div class="ik-action-grid">
+<button type="button" data-ik-go="events:setup"><strong>Manage events →</strong><small>Create or edit event details and WOM competitions</small></button>
+<button type="button" data-ik-go="events:items"><strong>Configure items →</strong><small>Reuse archived item lists and manage tracked drops</small></button>
+<button type="button" data-ik-go="events:results"><strong>Review results →</strong><small>Preview standings before publishing</small></button>
+<button type="button" data-ik-go="approvals"><strong>Review submissions →</strong><small>Find proof reviews for games and competitions</small></button>
+</div><p class="ik-command-note" id="ikOverviewStatus" role="status">Loading your event summary…</p></section>
+<section id="ik-approvals" class="ik-command-page" hidden aria-label="Approvals">
+<div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>Approvals</h2><p>One starting point for existing proof and submission review tools.</p></div></div>
+<div class="ik-action-grid">
+<a href="/ironkin-games-admin.html"><strong>Ironkin Games submissions ↗</strong><small>Review team challenge proofs and results in the existing Games admin</small></a>
+<button type="button" data-ik-go="bingo"><strong>Battleship Bingo proofs →</strong><small>Review attacks and proof decisions</small></button>
+<button type="button" data-ik-go="events:tracking"><strong>Event tracking →</strong><small>Inspect event drops and submission tracking</small></button>
+<button type="button" data-ik-go="events:results"><strong>Event results →</strong><small>Preview and publish event outcomes</small></button>
+</div><p class="ik-command-note">Review actions remain in their existing secure workflows. This page does not claim to combine or count unverified submission queues.</p></section>
+<section id="ik-tools" class="ik-command-page" hidden aria-label="Settings and tools"><div class="ik-command-heading"><div><p class="eyebrow">ADMINISTRATION</p><h2>Settings &amp; Tools</h2><p>Specialist tools stay available without cluttering the main navigation.</p></div></div>
+<div class="ik-action-grid">
+<button type="button" data-ik-go="bingo"><strong>Battleship Bingo →</strong><small>Boards, attacks, and proof management</small></button>
+<button type="button" data-ik-go="guess-kc"><strong>Guess the KC →</strong><small>Manage guesses and outcomes</small></button>
+<button type="button" data-ik-go="handbook"><strong>Staff Handbook →</strong><small>Update staff documentation</small></button>
+<button type="button" data-ik-go="health"><strong>System Health →</strong><small>Run checks only when needed</small></button>
+<button type="button" data-ik-go="maintenance"><strong>Advanced Maintenance →</strong><small>Historical imports and repair operations</small></button>
+</div></section>
 <div class="admin-tab-panel active" id="adminTab-events">
 <div class="event-subtab-panel active" id="eventSubtab-standard"><div class="ik-event-shell">
-<header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>One workflow. Select an event, then choose what to work on.</p></div></header>
+<header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>Choose your event once, then open what you need.</p></div></header>
 <nav aria-label="Event workflow" class="ik-stage-nav">
-<button class="active" data-ik-stage="setup" type="button"><span>01</span> Setup</button>
+<button class="active" data-ik-stage="setup" type="button"><span>01</span> Details</button>
 <button data-ik-stage="rewards" type="button"><span>02</span> Rewards</button>
-<button data-ik-stage="items" type="button"><span>03</span> Items &amp; Drops</button>
+<button data-ik-stage="items" type="button"><span>03</span> Items</button>
 <button data-ik-stage="results" type="button"><span>04</span> Results</button>
-<button data-ik-stage="archive" type="button"><span>05</span> Archive</button>
-<button data-ik-stage="tracking" type="button"><span>06</span> Tracking</button></nav>
+<button data-ik-stage="archive" type="button"><span>05</span> Finish</button>
+<button data-ik-stage="tracking" type="button"><span>•</span> Diagnostics</button></nav>
+<details class="ik-guidance"><summary>First time managing an event?</summary><p>1. Choose an event in Details. 2. Check its WOM competition and rewards. 3. Add items only if needed. 4. Review results after the event ends, then finish it. Your selection carries across all sections.</p></details>
 <div class="ik-stage" data-ik-panel="setup"><section class="admin-card">
 <div id="standardEventEditor">
 <div class="admin-form-grid admin-event-setup-simple">
@@ -730,6 +776,9 @@
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
    const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',health:'health',maintenance:'maintenance'}[which];
+   for(const [id,visible] of [['ik-overview',which==='overview'],['ik-approvals',which==='approvals'],['ik-tools',which==='tools']]){
+     const page=document.getElementById(id);if(page)page.hidden=!visible;
+   }
    $$('.admin-tab-panel').forEach(p=>{
      const visible=p.id==='adminTab-'+panelName;
      p.classList.toggle('active',visible);
@@ -763,6 +812,11 @@
  }
  document.addEventListener('DOMContentLoaded',()=>{
    $$('.ik-top[data-ik-main]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikMain)));
+   main('overview');
+   $$('[data-ik-go]').forEach(b=>b.addEventListener('click',()=>{
+     const [destination,sub]=b.dataset.ikGo.split(':');main(destination);if(sub)stage(sub);
+     window.scrollTo({top:0,behavior:'smooth'});
+   }));
    $$('.ik-stage-nav button').forEach(b=>b.addEventListener('click',()=>stage(b.dataset.ikStage)));
    $$('[data-ik-item]').forEach(b=>b.addEventListener('click',()=>item(b.dataset.ikItem)));
    $('#ikSaveRewards')?.addEventListener('click',()=>$('#saveEventBtn')?.click());
@@ -829,6 +883,35 @@
    });
    document.querySelector('[data-ik-health-open="events"]')?.addEventListener('click',()=>document.querySelector('[data-ik-main="events"]')?.click());
  });
+})();
+</script>
+<script>
+/* Read-only dashboard counts. Does not modify event state or create new polling. */
+(function(){
+ async function refreshOverview(){
+  const status=document.getElementById('ikOverviewStatus');
+  try{
+   const [ev,archive]=await Promise.all([
+    fetch('/api/admin/events/list',{cache:'no-store'}).then(async r=>{if(!r.ok)throw new Error('Events unavailable');return r.json()}),
+    fetch('/api/admin/events/item-presets',{cache:'no-store'}).then(async r=>r.ok?r.json():{presets:[]}).catch(()=>({presets:[]}))
+   ]);
+   const events=Array.isArray(ev)?ev:Array.isArray(ev.events)?ev.events:[];
+   const now=Date.now();let active=0,finished=0;
+   events.forEach(e=>{
+    const start=Date.parse(e.startDate||e.start||'');
+    const end=Date.parse(e.endDate||e.end||'');
+    if(Number.isFinite(start)&&Number.isFinite(end)){
+      if(start<=now&&now<=end)active++;
+      else if(end<now)finished++;
+    }
+   });
+   document.getElementById('ikLiveCount').textContent=String(active);
+   document.getElementById('ikFinishedCount').textContent=String(finished);
+   document.getElementById('ikArchiveCount').textContent=Array.isArray(archive.presets)?String(archive.presets.length):'—';
+   if(status)status.textContent='Counts reflect available event dates. Events with missing dates are excluded.';
+  }catch(err){if(status)status.textContent='Summary unavailable. Event tools remain accessible.';}
+ }
+ document.addEventListener('DOMContentLoaded',refreshOverview);
 })();
 </script>
 </body>
