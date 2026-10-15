@@ -46,7 +46,51 @@ body.records-no-pulse .ik-data-viz{display:none!important}
 .records-publish-note{font-size:.8rem;color:#c9ad95}.records-publish-preview>div{display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid #65432b}.records-publish-preview>p{font-size:.84rem;color:#e2c6a9}.records-publish-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .records-publish-actions button:disabled{opacity:.5;cursor:wait}
 
-/* Keep historical event records and milestones confined to their chapter. */
-.records-page #recordsMilestonesPanel[hidden],
-.records-page #recordsMilestonesPanel[hidden] #recordsGrid { display:none!important; }
-.records-page #recordsMilestonesPanel:not([hidden]) { display:block; }
+/* Accessible achievement badge explanations */
+.records-profile-dialog .records-badge{position:relative;cursor:help;font-family:inherit;line-height:1.35;appearance:none;transition:background .18s,border-color .18s,transform .18s}
+.records-profile-dialog .records-badge:hover,.records-profile-dialog .records-badge:focus-visible,.records-profile-dialog .records-badge.is-tooltip-open{background:#745025;border-color:#f6bc68;transform:translateY(-1px)}
+.records-profile-dialog .records-badge::after{content:attr(data-badge-description);position:absolute;z-index:30;left:50%;bottom:calc(100% + 10px);width:max-content;max-width:min(290px,75vw);min-width:190px;box-sizing:border-box;transform:translate(-50%,5px);padding:11px 13px;border:1px solid #c38a4c;border-radius:10px;background:#16100d;color:#fff0d9;box-shadow:0 12px 28px #000b;white-space:normal;text-align:left;font-size:.79rem;font-weight:500;line-height:1.5;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,transform .15s,visibility .15s}
+.records-profile-dialog .records-badge:hover::after,.records-profile-dialog .records-badge:focus-visible::after,.records-profile-dialog .records-badge.is-tooltip-open::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
+@media(max-width:600px){.records-profile-dialog .records-badge::after{left:0;transform:translateY(5px)}.records-profile-dialog .records-badge:hover::after,.records-profile-dialog .records-badge:focus-visible::after,.records-profile-dialog .records-badge.is-tooltip-open::after{transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.records-profile-dialog .records-badge,.records-profile-dialog .records-badge::after{transition:none}}
+
+/* Achievement collection: all available badges, with earned/locked status. */
+.records-profile-dialog:has(.records-profile-layout){width:min(980px,calc(100% - 24px));max-width:980px}
+.records-profile-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,290px);gap:22px;align-items:start}
+.records-profile-main{min-width:0}
+.records-badge-sidebar{background:linear-gradient(155deg,#322218,#211711);border:1px solid #78502e;border-radius:14px;padding:16px;min-width:0}
+.records-badge-sidebar-heading h3{margin:5px 0 2px;color:#ffdfaa;font-size:1.05rem}
+.records-badge-sidebar-heading p{margin:0 0 14px;color:#d2b39b;font-size:.8rem}
+.records-badge-catalog{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.records-catalog-badge{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:10px;border:1px solid #634127;border-radius:10px;background:#3d291b}
+.records-catalog-badge.is-locked{background:#281e19;border-color:#4c3b30;opacity:.73}
+.records-catalog-icon{color:#f4b75b;font-size:1.2rem;line-height:1.1}
+.records-catalog-badge.is-locked .records-catalog-icon{color:#a78d79}
+.records-catalog-copy{min-width:0;display:grid;gap:4px}
+.records-catalog-copy strong{color:#ffe1b0;font-size:.82rem;line-height:1.25}
+.records-catalog-copy small{color:#d6bda5;font-size:.73rem;line-height:1.45}
+.records-catalog-status{grid-column:2;color:#efb96e;font-size:.7rem;font-weight:800}
+.records-catalog-badge.is-locked .records-catalog-status{color:#ac9788}
+@media(max-width:720px){.records-profile-layout{grid-template-columns:1fr}.records-badge-sidebar{margin-top:4px}.records-badge-catalog{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.records-badge-catalog{grid-template-columns:1fr}}
+
+/* Achievement rarity and collection progression. Tiers reflect requirements, not live scarcity. */
+.records-badge-progress{height:9px;overflow:hidden;background:#130e0b;border:1px solid #78502e;border-radius:999px;margin:9px 0 13px}
+.records-badge-progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#b96a26,#ffcf76);transition:width .35s ease}
+.records-rarity-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.records-rarity-legend span,.records-badge-rarity{display:inline-block;font-size:.64rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.records-rarity-legend span{padding:3px 6px;border:1px solid currentColor;border-radius:6px}
+.records-catalog-badge{border-left-width:3px}
+.records-catalog-badge.rarity-common{border-left-color:#c1a98d}
+.records-catalog-badge.rarity-rare{border-left-color:#75b8eb}
+.records-catalog-badge.rarity-epic{border-left-color:#c39afa}
+.records-catalog-badge.rarity-legendary{border-left-color:#f6c45c}
+.records-catalog-badge.is-unlocked.rarity-legendary{background:linear-gradient(120deg,#51351c,#302115);box-shadow:inset 0 0 16px #ffbc4412}
+.records-catalog-badge.is-unlocked.rarity-epic{background:linear-gradient(120deg,#35243b,#302219)}
+.records-catalog-badge.is-locked{opacity:.75}
+.records-catalog-badge.is-locked .records-badge-rarity{opacity:.85}
+.rarity-common .records-badge-rarity,.records-rarity-legend .rarity-common{color:#d5c0aa}
+.rarity-rare .records-badge-rarity,.records-rarity-legend .rarity-rare{color:#8fd0ff}
+.rarity-epic .records-badge-rarity,.records-rarity-legend .rarity-epic{color:#d2a8ff}
+.rarity-legendary .records-badge-rarity,.records-rarity-legend .rarity-legendary{color:#ffd477}
+@media(prefers-reduced-motion:reduce){.records-badge-progress>span{transition:none}}

@@ -2,7 +2,6 @@
   const grid = document.getElementById('recordsGrid');
   const host = document.getElementById('recordsLegends');
   const dialog = document.getElementById('recordsProfileDialog');
-  const milestonesPanel = document.getElementById('recordsMilestonesPanel');
   if (!grid || !host) return;
   const escape = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const key = v => String(v || '').trim().toLocaleLowerCase();
@@ -14,7 +13,6 @@
     const sections = [...host.querySelectorAll(':scope > .records-feature')];
     sections.forEach((section,i) => { section.hidden = chapters[i] !== active; });
     host.hidden = active === 'milestones';
-    if (milestonesPanel) milestonesPanel.hidden = active !== 'milestones';
     grid.hidden = active !== 'milestones';
     grid.setAttribute('aria-busy', String(!!grid.querySelector('.records-loading')));
     tabs.forEach(tab => {const on = tab.dataset.recordChapter === active;tab.setAttribute('aria-selected',String(on));tab.tabIndex = on ? 0 : -1;});
@@ -41,23 +39,83 @@
   const ensure = name => {
     const id = key(name);
     if (!id) return null;
-    if (!players.has(id)) players.set(id, {name:String(name).trim(), wins:0, podiums:0, events:[], titles:new Set(), badges:[]});
+    if (!players.has(id)) players.set(id, {name:String(name).trim(), wins:0, podiums:0, events:[], titles:new Set(), badges:[], categories:new Set(), legacyWins:0});
     return players.get(id);
   };
+  const badgeNames = ['First Podium','First Champion','Three-Time Champion','Five-Time Champion','Ten-Time Champion','Five Podiums','Ten Podiums','SOTW Champion','BOTW Champion','Versatile Champion','Archive Veteran','Legacy Legend','Most Decorated Champion','Podium Leader'];
+  // Rarity is a fixed achievement tier, not a claim about live unlock frequency.
+  const badgeRarity = {
+    'First Podium':'common', 'First Champion':'common',
+    'Three-Time Champion':'rare', 'Five-Time Champion':'epic', 'Ten-Time Champion':'legendary',
+    'Five Podiums':'rare', 'Ten Podiums':'epic',
+    'SOTW Champion':'rare', 'BOTW Champion':'rare', 'Versatile Champion':'epic',
+    'Archive Veteran':'rare', 'Legacy Legend':'epic',
+    'Most Decorated Champion':'legendary', 'Podium Leader':'legendary'
+  };
+  const rarityLabels = {common:'Common',rare:'Rare',epic:'Epic',legendary:'Legendary'};
+  function eventCategory(value) {
+    const v = String(value || '').toLowerCase();
+    if (/\bsotw\b|skill of the week/.test(v)) return 'sotw';
+    if (/\bbotw\b|boss of the week/.test(v)) return 'botw';
+    return '';
+  }
   function badges(p, mostWins, mostPodiums) {
     const out = [];
+    if (p.podiums >= 1) out.push('First Podium');
     if (p.wins >= 1) out.push('First Champion');
     if (p.wins >= 3) out.push('Three-Time Champion');
     if (p.wins >= 5) out.push('Five-Time Champion');
+    if (p.wins >= 10) out.push('Ten-Time Champion');
     if (p.podiums >= 5) out.push('Five Podiums');
+    if (p.podiums >= 10) out.push('Ten Podiums');
+    if (p.categories.has('sotw')) out.push('SOTW Champion');
+    if (p.categories.has('botw')) out.push('BOTW Champion');
+    if (p.categories.has('sotw') && p.categories.has('botw')) out.push('Versatile Champion');
+    if (p.events.length >= 10) out.push('Archive Veteran');
+    if (p.legacyWins >= 3) out.push('Legacy Legend');
     if (p.wins > 0 && p.wins === mostWins) out.push('Most Decorated Champion');
     if (p.podiums > 0 && p.podiums === mostPodiums) out.push('Podium Leader');
     return out;
   }
+  let mostWinsSeen = 0, mostPodiumsSeen = 0;
+  function badgeDescription(name, player, maxWins, maxPodiums) {
+    const descriptions = {
+      'First Podium': `Place in the top 3 of at least 1 recorded event. ${player.name} has ${player.podiums} podium(s).`,
+      'First Champion': `Win at least 1 recorded clan event. ${player.name} has ${player.wins} win(s).`,
+      'Three-Time Champion': `Win at least 3 recorded clan events. ${player.name} has ${player.wins} wins.`,
+      'Five-Time Champion': `Win at least 5 recorded clan events. ${player.name} has ${player.wins} wins.`,
+      'Ten-Time Champion': `Win at least 10 recorded events. ${player.name} has ${player.wins} wins.`,
+      'Five Podiums': `Finish in the top 3 of at least 5 recorded events. ${player.name} has ${player.podiums} podium finishes.`,
+      'Ten Podiums': `Earn 10 recorded top-three finishes. ${player.name} has ${player.podiums} podiums.`,
+      'SOTW Champion': 'Win at least one Skill of the Week event identified as SOTW in the archive.',
+      'BOTW Champion': 'Win at least one Boss of the Week event identified as BOTW in the archive.',
+      'Versatile Champion': 'Win at least one SOTW and one BOTW event.',
+      'Archive Veteran': `Appear in at least 10 recorded event results. ${player.name} has ${player.events.length} recorded appearances.`,
+      'Legacy Legend': `Win at least 3 legacy competitions not already counted in the dated archive. ${player.name} has ${player.legacyWins} such wins.`,
+      'Most Decorated Champion': `Share the highest recorded event-win total in the clan (${maxWins} wins). Ties qualify.`,
+      'Podium Leader': `Share the highest recorded top-three finish total in the clan (${maxPodiums} podiums). Ties qualify.`
+    };
+    return descriptions[name] || 'Earned from recorded clan event results.';
+  }
+  dialog?.addEventListener('click', e => {
+    const badge = e.target.closest('.records-badge');
+    if (!badge) return;
+    const wasOpen = badge.classList.contains('is-tooltip-open');
+    dialog.querySelectorAll('.records-badge.is-tooltip-open').forEach(el=>el.classList.remove('is-tooltip-open'));
+    if (!wasOpen) badge.classList.add('is-tooltip-open');
+  });
   function showProfile(id) {
     const p = players.get(id); if (!p || !dialog) return;
     const body = dialog.querySelector('#recordsProfileContent');
-    body.innerHTML = `<p class="eyebrow">IRONKIN LEGEND</p><h2 id="recordsProfileTitle">${escape(p.name)}</h2><div class="records-profile-stats"><span><b>${p.wins}</b> event wins</span><span><b>${p.podiums}</b> podiums</span><span><b>${p.events.length}</b> recorded appearances</span></div><div class="records-badges">${p.badges.map(b=>`<span class="records-badge">✦ ${escape(b)}</span>`).join('') || '<span class="admin-muted">No unlocked badges yet</span>'}</div><h3>Event history</h3><div class="records-profile-events">${p.events.length ? p.events.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>`<div><strong>${escape(e.title)}</strong><span>${escape(e.result)}${e.date ? ' · '+escape(String(e.date).slice(0,10)) : ''}</span></div>`).join('') : '<p>No archived appearances yet.</p>'}</div><p class="records-profile-note">Achievements reflect the available event archive. Legacy winner records without dates may not appear in the timeline.</p>`;
+    const allBadges = badgeNames;
+    const badgeCatalog = allBadges.map(name => {
+      const unlocked = p.badges.includes(name);
+      const description = badgeDescription(name,p,mostWinsSeen,mostPodiumsSeen);
+      const rarity = badgeRarity[name] || 'common';
+      return `<li class="records-catalog-badge rarity-${rarity} ${unlocked ? 'is-unlocked' : 'is-locked'}"><span class="records-catalog-icon" aria-hidden="true">${unlocked ? '✦' : '◇'}</span><span class="records-catalog-copy"><strong>${escape(name)}</strong><span class="records-badge-rarity">${rarityLabels[rarity]}</span><small>${escape(description)}</small></span><span class="records-catalog-status">${unlocked ? 'Earned' : 'Locked'}</span></li>`;
+    }).join('');
+    const completion = Math.round((p.badges.length / allBadges.length) * 100);
+    body.innerHTML = `<div class="records-profile-layout"><div class="records-profile-main"><p class="eyebrow">IRONKIN LEGEND</p><h2 id="recordsProfileTitle">${escape(p.name)}</h2><div class="records-profile-stats"><span><b>${p.wins}</b> event wins</span><span><b>${p.podiums}</b> podiums</span><span><b>${p.events.length}</b> recorded appearances</span></div><h3>Event history</h3><div class="records-profile-events">${p.events.length ? p.events.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(e=>`<div><strong>${escape(e.title)}</strong><span>${escape(e.result)}${e.date ? ' · '+escape(String(e.date).slice(0,10)) : ''}</span></div>`).join('') : '<p>No archived appearances yet.</p>'}</div><p class="records-profile-note">Achievements reflect the available event archive. Legacy winner records without dates may not appear in the timeline.</p></div><aside class="records-badge-sidebar" aria-label="Achievement badge collection"><div class="records-badge-sidebar-heading"><span class="eyebrow">ACHIEVEMENTS</span><h3>Badge collection</h3><p>${p.badges.length} of ${allBadges.length} unlocked · ${completion}% complete</p><div class="records-badge-progress" role="progressbar" aria-label="Badge collection completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${completion}"><span style="width:${completion}%"></span></div><div class="records-rarity-legend" aria-label="Achievement rarity tiers"><span class="rarity-common">Common</span><span class="rarity-rare">Rare</span><span class="rarity-epic">Epic</span><span class="rarity-legendary">Legendary</span></div></div><ul class="records-badge-catalog">${badgeCatalog}</ul></aside></div>`;
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open','');
   }
   host.addEventListener('click', e => { const btn=e.target.closest('[data-record-player]'); if(btn) showProfile(btn.dataset.recordPlayer); });
@@ -83,6 +141,8 @@
         const p=ensure(winner);
         if(p) {
           p.wins++;
+          const category=eventCategory(`${e.type || ''} ${title}`);
+          if(category) p.categories.add(category);
           if(!seenPodiums.has(key(winner))) { p.podiums++; p.events.push({title,date,result:'Champion'}); }
           else { const item=p.events.find(x=>x.title===title && x.date===date); if(item) item.result='Champion'; }
           p.titles.add(eventKey);
@@ -104,12 +164,15 @@
       if(row.source === 'archive') return;
       // A matching archive winner is already counted. Prefer its dated entry.
       if(archiveKeys.has(k) || archive.some(e => key(e?.winner?.name)===key(row.winner) && normalizeEvent(e.metric || e.title).includes(normalizeEvent(row.eventName)))) return;
-      p.wins++; p.podiums++;
+      p.wins++; p.podiums++; p.legacyWins++;
+      const category = (detail.sotwChampions || []).includes(row) ? 'sotw' : 'botw';
+      p.categories.add(category);
       p.events.push({title:row.eventName || 'Legacy champion',date:'',result:'Legacy champion',url:row.url || ''});
     });
     const ranking = [...players.values()].sort((a,b)=>b.wins-a.wins || b.podiums-a.podiums || a.name.localeCompare(b.name));
     const maxWins=Math.max(0,...ranking.map(p=>p.wins));
     const maxPodiums=Math.max(0,...ranking.map(p=>p.podiums));
+    mostWinsSeen = maxWins; mostPodiumsSeen = maxPodiums;
     ranking.forEach(p=>p.badges=badges(p,maxWins,maxPodiums));
     const featured=ranking.filter(p=>p.wins>0).slice(0,3);
     host.innerHTML=`<section class="records-feature"><div class="records-feature-head"><div><p class="eyebrow">THE HALL OF LEGENDS</p><h2>Ironkin Legends</h2><p>Champions who left their mark on the clan.</p></div><span class="records-count">${ranking.filter(p=>p.wins).length} archive champions</span></div><div class="records-legends-grid">${featured.length ? featured.map((p,i)=>`<button class="records-legend ${i===0?'is-king':''}" type="button" data-record-player="${escape(key(p.name))}"><span class="records-legend-medal">${['♛','🥈','🥉'][i]}</span><small>${['MOST DECORATED','RUNNER-UP','THIRD PLACE'][i]}</small><strong>${escape(p.name)}</strong><span>${p.wins} wins · ${p.podiums} podiums</span><span class="records-legend-cta">View achievements ↗</span></button>`).join('') : '<p class="admin-muted">No archived champions yet.</p>'}</div></section><section class="records-feature"><div class="records-feature-head"><div><p class="eyebrow">ALL-TIME STANDINGS</p><h2>Champions Leaderboard</h2></div><label class="records-search-label">Find a member <input id="recordsMemberSearch" type="search" placeholder="Search players…" autocomplete="off"></label></div><div class="records-ranking" id="recordsRanking"></div></section><section class="records-feature"><div class="records-feature-head"><div><p class="eyebrow">THROUGH THE YEARS</p><h2>Clan History Timeline</h2></div><label class="records-search-label">Year <select id="recordsYearFilter"><option value="all">All years</option>${[...new Set(events.map(e=>String(e.date).slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}</select></label></div><div id="recordsTimeline" class="records-timeline"></div></section>`;
