@@ -2080,9 +2080,11 @@ function populateDropPresetSources() {
   if (!select) return;
   const previous = select.value;
   select.replaceChildren(new Option("Choose an archived event…", ""));
-  ikArchivedItemPresets.forEach(preset => {
-    select.add(new Option(`${preset.title} · ${preset.date || "archived"} · ${preset.count ? `${preset.count} items` : "no saved items"}`, `archive:${preset.key}`));
-  });
+  [...ikArchivedItemPresets]
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), undefined, { numeric: true }))
+    .forEach(preset => {
+      select.add(new Option(String(preset.title || "Archived event"), `archive:${preset.key}`));
+    });
 
   if ([...select.options].some(option => option.value === previous)) select.value = previous;
 }
