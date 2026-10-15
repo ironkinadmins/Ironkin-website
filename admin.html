@@ -187,6 +187,13 @@
 #ik-approvals .ik-games-review p.admin-muted{font-size:12px;color:#9d8977}
 #ik-approvals .ik-games-review-list,#ik-approvals #ikGamesReviewList{background:transparent}
 #ik-approvals .ik-approval-group-heading span{font-size:12px}
+
+.ik-inline-review-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid #493524}
+.ik-inline-review-info{display:grid;gap:4px;min-width:0}
+.ik-inline-review-info strong{color:#e8d4bf}.ik-inline-review-info small{color:#bea68d}
+.ik-inline-review-info a{color:#eda55f;font-size:12px}
+.ik-inline-review-actions{display:flex;gap:8px}
+@media(max-width:600px){.ik-inline-review-row{align-items:flex-start;flex-direction:column}}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -234,6 +241,7 @@
 <section class="ik-approval-group" aria-label="Ironkin Games approvals">
 <div class="ik-approval-group-heading"><h3>Ironkin Games</h3><span id="ikGamesGroupCount">—</span></div>
 <div class="ik-approval-sources" id="ikGamesApprovalSources"></div>
+<div id="ikLocationReviewList" class="ik-inline-approval-list"></div>
 <div class="ik-games-review" aria-label="Pending team submissions">
 <div class="ik-games-review-head"><div><h4>Team Challenge Proofs <span id="ikGamesReviewCount"></span></h4>
 </div></div>
@@ -243,10 +251,12 @@
 <section class="ik-approval-group" aria-label="Hall of Flame approvals">
 <div class="ik-approval-group-heading"><h3>Hall of Flame</h3><span id="ikHofGroupCount">—</span></div>
 <div class="ik-approval-sources" id="ikHofApprovalSources"></div>
+<div id="ikHofReviewList" class="ik-inline-approval-list"></div>
 </section>
 <section class="ik-approval-group" aria-label="Event submissions">
 <div class="ik-approval-group-heading"><h3>Event Submissions</h3><span id="ikEventsGroupCount">—</span></div>
 <div class="ik-approval-sources" id="ikEventsApprovalSources"></div>
+<div id="ikEventReviewList" class="ik-inline-approval-list"></div>
 </section>
 </div>
 
@@ -876,7 +886,7 @@
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
    const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',health:'health',maintenance:'maintenance'}[which];
-   if(which==='approvals'){ikLoadGamesReviews();ikLoadUnifiedApprovals();}
+   if(which==='approvals'){ikLoadGamesReviews();ikLoadUnifiedApprovals();ikLoadInlineReviews();}
    for(const [id,visible] of [['ik-overview',which==='overview'],['ik-approvals',which==='approvals'],['ik-tools',which==='tools']]){
      const page=document.getElementById(id);if(page)page.hidden=!visible;
    }
@@ -926,9 +936,11 @@
        if(key==='games'){
          // Team proofs are listed with approve/reject controls directly below.
          const location=entries.find(s=>s.id==='games-location');
-         if(location)ikAppendApprovalSource(groups[key],location,routes['games-location']);
+         if(location && location.status!=='ok')ikAppendApprovalSource(groups[key],location,routes['games-location']);
        }else{
-         entries.forEach(source=>ikAppendApprovalSource(groups[key],source,routes[source.id]||{}));
+         entries.forEach(source=>{
+           if(source.status!=='ok')ikAppendApprovalSource(groups[key],source,routes[source.id]||{});
+         });
        }
      });
    }catch(error){
@@ -961,9 +973,97 @@
  }
  document.addEventListener('DOMContentLoaded',()=>{
    document.getElementById('ikApprovalsRefresh')?.addEventListener('click',()=>{
-     ikLoadUnifiedApprovals();ikLoadGamesReviews();
+     ikLoadUnifiedApprovals();ikLoadGamesReviews();ikLoadInlineReviews();
    });
  });
+
+
+ // Review using the existing authenticated, source-specific endpoints.
+ // No generic approval endpoint is introduced; each system keeps its own rules.
+ function ikReviewRow(target, name, detail, proof, decide){
+   const row=document.createElement('article');row.className='ik-inline-review-row';
+   const info=document.createElement('div');info.className='ik-inline-review-info';
+   const heading=document.createElement('strong');heading.textContent=name||'Submission';info.append(heading);
+   const meta=document.createElement('small');meta.textContent=detail||'';info.append(meta);
+   if(proof && /^https?:\/\//i.test(proof)){
+     const a=document.createElement('a');a.textContent='View proof ↗';a.href=proof;a.target='_blank';a.rel='noopener noreferrer';info.append(a);
+   }
+   const actions=document.createElement('div');actions.className='ik-inline-review-actions';
+   for(const [action,label] of [['approve','Approve'],['reject','Reject']]){
+     const button=document.createElement('button');button.type='button';button.className=action==='approve'?'btn primary':'btn secondary';button.textContent=label;
+     button.addEventListener('click',async()=>{
+       if(!confirm(`${label} this submission?`))return;
+       actions.querySelectorAll('button').forEach(b=>b.disabled=true);
+       try{await decide(action);row.remove();ikLoadUnifiedApprovals();ikLoadInlineReviews();}
+       catch(err){alert(err.message||'Review failed.');actions.querySelectorAll('button').forEach(b=>b.disabled=false);}
+     });
+     actions.append(button);
+   }
+   row.append(info,actions);target.append(row);
+ }
+ async function ikReviewPost(url,body){
+   const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+   const payload=await response.json().catch(()=>({}));
+   if(!response.ok || payload.ok===false)throw Error(payload.error||'Could not complete review.');
+ }
+ async function ikLoadInlineReviews(){
+   const location=document.getElementById('ikLocationReviewList');
+   const hof=document.getElementById('ikHofReviewList');
+   const events=document.getElementById('ikEventReviewList');
+   if(!location||!hof||!events)return;
+   for(const node of [location,hof,events])node.replaceChildren();
+   const error=(node,message)=>{const p=document.createElement('p');p.className='admin-muted';p.textContent=message;node.append(p);};
+   await Promise.all([
+     (async()=>{
+       try{
+         const response=await fetch('/api/admin/ironkin-games/location-hunt-review',{cache:'no-store'});
+         const data=await response.json().catch(()=>({}));
+         if(!response.ok)throw Error(data.error||'Location review unavailable');
+         const rows=Array.isArray(data.submissions)?data.submissions:[];
+         for(const item of rows){
+           ikReviewRow(location,'Trivia / Location Proof',
+             [item.submitted_name||item.team_id,item.challenge_id,item.location_id].filter(Boolean).join(' · '),
+             item.proof_url,action=>ikReviewPost('/api/admin/ironkin-games/location-hunt-review',
+             {id:item.id,status:action==='approve'?'approved':'rejected'}));
+         }
+       }catch(e){error(location,e.message||'Location proofs unavailable.');}
+     })(),
+     (async()=>{
+       try{
+         const response=await fetch('/api/hall-of-flame/submissions?scope=staff&status=pending',{cache:'no-store'});
+         const data=await response.json().catch(()=>({}));
+         if(!response.ok)throw Error(data.error||'Hall of Flame reviews unavailable');
+         const rows=Array.isArray(data.submissions)?data.submissions:[];
+         for(const item of rows){
+           ikReviewRow(hof,item.boss||'Hall of Flame',
+             [item.display_name,item.time_text].filter(Boolean).join(' · '),
+             item.proof_url,action=>ikReviewPost('/api/hall-of-flame/review',{id:item.id,action}));
+         }
+       }catch(e){error(hof,e.message||'Hall of Flame submissions unavailable.');}
+     })(),
+     (async()=>{
+       try{
+         const response=await fetch('/api/admin/event-submissions/pending',{cache:'no-store'});
+         const data=await response.json().catch(()=>({}));
+         if(!response.ok)throw Error(data.error||'Event submissions unavailable');
+         const rows=Array.isArray(data.submissions)?data.submissions:[];
+         for(const item of rows){
+           const row=document.createElement('article');row.className='ik-inline-review-row';
+           const info=document.createElement('div');info.className='ik-inline-review-info';
+           const title=document.createElement('strong');title.textContent=item.item_name||'Tracked drop';info.append(title);
+           const desc=document.createElement('small');
+           desc.textContent=[item.player_name,item.website_event_id,item.quantity?`Qty ${item.quantity}`:''].filter(Boolean).join(' · ');
+           info.append(desc);
+           if(item.proof_url && /^https?:\/\//i.test(item.proof_url)){
+             const a=document.createElement('a');a.href=item.proof_url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='View proof ↗';info.append(a);
+           }
+           const note=document.createElement('small');note.textContent='Review status managed by event tracking';info.append(note);
+           row.append(info);events.append(row);
+         }
+       }catch(e){error(events,e.message||'Event submissions unavailable.');}
+     })()
+   ]);
+ }
 
  // Games reviews use the same authenticated endpoints as the Games Admin page.
  // Only pending entries are shown; decisions update the existing scoring backend.

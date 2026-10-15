@@ -2,6 +2,8 @@ import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
 import { approvedForBoss, bossMessage, getSubmission, mergeBoard, parseDiscordBoard, projectedPlacement, syncDiscordBoard, updateHallOfFlameReviewNotification } from "./_records.js";
 
+import { appendAdminAudit } from "../_adminAudit.js";
+
 const noStore = { "Cache-Control":"no-store" };
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
@@ -59,5 +61,6 @@ export async function onRequestPost({ request, env }) {
   }
   let reviewMessage={updated:false};
   try { reviewMessage=await updateHallOfFlameReviewNotification(env, submission, { status, reviewedBy:reviewerName, finalPlacement:placement }); } catch (error) { reviewMessage={updated:false,error:String(error?.message||error)}; }
+  await appendAdminAudit(env, session, `hof.${status}`, `${reviewerName} ${status} ${submission.display_name || "submission"} · ${submission.boss}`, id);
   return Response.json({ ok:true, status, finalPlacement:placement, discord, reviewMessage }, { headers:noStore });
 }

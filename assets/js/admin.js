@@ -1,3 +1,40 @@
+
+// Guard against losing unsaved event details when switching events or leaving the page.
+// This only tracks user edits in the Details form; item edits have their own save actions.
+let ikDetailsDirty = false;
+function ikResetDetailsDirty() { ikDetailsDirty = false; }
+function ikInitDetailsGuard() {
+  const select = document.getElementById("adminEventSelect");
+  const save = document.getElementById("saveEventBtn");
+  const details = document.querySelector('[data-ik-panel="setup"]');
+  if (!select || !details) return;
+  details.addEventListener("input", event => {
+    if (event.target?.matches("input,textarea,select")) ikDetailsDirty = true;
+  });
+  details.addEventListener("change", event => {
+    if (event.target?.matches("input,textarea,select")) ikDetailsDirty = true;
+  });
+  // Capture the old selection even though the select's native value has changed.
+  let previous = select.value;
+  select.addEventListener("focus", () => { previous = select.value; });
+  select.addEventListener("change", event => {
+    if (ikDetailsDirty && !confirm("Discard unsaved event details?")) {
+      event.stopImmediatePropagation();
+      select.value = previous;
+      return;
+    }
+    previous = select.value;
+    ikResetDetailsDirty();
+  }, true);
+  window.addEventListener("beforeunload", event => {
+    if (!ikDetailsDirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  // Save errors must leave the dirty flag intact.
+  save?.addEventListener("click", () => {}, false);
+}
+
 let selectedEventId = null;
 let allEvents = [];
 let generatedResultsDraft = "";
@@ -2324,6 +2361,7 @@ async function loadAdmin() {
     populateEventFields();
     loadAdminDrops();
 
+    ikInitDetailsGuard();
     eventSelect.addEventListener("change", () => {
       selectedEventId = eventSelect.value;
       populateEventFields();
@@ -2416,6 +2454,7 @@ async function saveSelectedEvent() {
   }
 
   if (Array.isArray(data.events)) {
+    ikResetDetailsDirty();
     const keepSelectedId = selectedEventId;
     allEvents = data.events;
     try {
