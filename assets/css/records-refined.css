@@ -13,3 +13,28 @@
 /* Hide legacy auto-generated Clan Pulse visualization only on Records. */
 body.records-no-pulse .ik-data-viz{display:none!important}
 @media(max-width:850px){.records-page #recordsLegends.records-legends,.records-page .records-grid{grid-template-columns:1fr!important}.records-page #recordsLegends>.records-feature:first-child{grid-column:auto}}
+
+/* Record book chapters: a single intentional stage rather than stacked panels. */
+.records-page .records-content{margin-top:20px}
+.records-page .records-chapter-nav{display:flex;align-items:center;gap:12px;padding:10px;background:linear-gradient(120deg,#322017,#1b1411);border:1px solid #80512f;border-radius:16px}
+.records-page .records-chapter-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));flex:1;gap:7px}
+.records-page .records-chapter-tabs button{border:1px solid transparent;border-radius:11px;padding:14px 8px;background:transparent;color:#dcc5af;font:inherit;font-weight:800;cursor:pointer;transition:background .22s,transform .22s,border-color .22s,color .22s}
+.records-page .records-chapter-tabs button:hover{background:#4c2d1e;color:#fff4df}
+.records-page .records-chapter-tabs button[aria-selected="true"]{background:linear-gradient(135deg,#87502a,#54301d);color:#fff2d9;border-color:#d59a57;box-shadow:0 4px 20px #0005}
+.records-page .records-chapter-arrow{flex:0 0 42px;height:44px;border:1px solid #94613b;border-radius:10px;background:#3b261b;color:#ffd09b;font-size:2rem;line-height:1;cursor:pointer;transition:transform .2s,background .2s}
+.records-page .records-chapter-arrow:hover{background:#694024;transform:scale(1.04)}
+.records-page .records-chapter-heading{display:flex;align-items:end;justify-content:space-between;gap:14px;padding:22px 4px 14px}
+.records-page .records-chapter-heading h2{color:#fff0dd;margin:3px 0 0;font-size:clamp(1.5rem,3vw,2.1rem)}
+.records-page #recordsChapterCounter{color:#e5aa6e;font-size:.85rem;font-weight:900;letter-spacing:.15em;white-space:nowrap}
+.records-page #recordsLegends.records-legends{display:block!important;margin:0}
+.records-page #recordsLegends>.records-feature{margin:0;animation:records-chapter-enter .28s ease both}
+.records-page #recordsLegends>.records-feature[hidden],.records-page #recordsGrid[hidden]{display:none!important}
+.records-page #recordsLegends .records-ranking,.records-page #recordsLegends .records-timeline{height:auto;max-height:none;overflow:visible}
+.records-page #recordsGrid.records-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;animation:records-chapter-enter .28s ease both}
+.records-page #recordsGrid>.records-wide{grid-column:1/-1}
+.records-page #recordsLegends .records-legends-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.records-page .records-chapter-nav button:focus-visible{outline:2px solid #ffd08e;outline-offset:3px}
+@keyframes records-chapter-enter{from{opacity:.45;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:750px){.records-page .records-chapter-nav{gap:5px;padding:6px}.records-page .records-chapter-tabs{gap:2px}.records-page .records-chapter-tabs button{padding:11px 3px;font-size:.8rem}.records-page .records-chapter-arrow{flex-basis:30px;height:38px;font-size:1.5rem}.records-page #recordsGrid.records-grid{grid-template-columns:1fr!important}.records-page #recordsLegends .records-legends-grid{grid-template-columns:1fr}}
+@media(max-width:440px){.records-page .records-chapter-tabs button span{display:block;font-size:.65rem}.records-page .records-chapter-tabs button{font-size:1rem}.records-page .records-chapter-heading{padding-top:16px}}
+@media(prefers-reduced-motion:reduce){.records-page #recordsLegends>.records-feature,.records-page #recordsGrid.records-grid{animation:none!important}}

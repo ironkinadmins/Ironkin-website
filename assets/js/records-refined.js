@@ -5,24 +5,35 @@
   if (!grid || !host) return;
   const escape = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const key = v => String(v || '').trim().toLocaleLowerCase();
-  const tabs = [...document.querySelectorAll('[data-record-filter]')];
-  let active = 'all';
+  const chapters = ['legends','champions','timeline','milestones'];
+  const labels = {legends:['THE HALL OF LEGENDS','Ironkin Legends'],champions:['ALL-TIME STANDINGS','Champions Leaderboard'],timeline:['THROUGH THE YEARS','Clan History Timeline'],milestones:['THE RECORD BOOKS','Clan Milestones']};
+  const tabs = [...document.querySelectorAll('[data-record-chapter]')];
+  let active = 'legends';
   function classify() {
-    [...grid.children].forEach(card => {
-      if (card.classList.contains('records-loading')) return;
-      const category = card.classList.contains('records-champions-section') ? 'champions' : 'milestones';
-      card.dataset.recordCategory = category;
-      card.hidden = active !== 'all' && category !== active;
-    });
+    const sections = [...host.querySelectorAll(':scope > .records-feature')];
+    sections.forEach((section,i) => { section.hidden = chapters[i] !== active; });
     host.hidden = active === 'milestones';
+    grid.hidden = active !== 'milestones';
     grid.setAttribute('aria-busy', String(!!grid.querySelector('.records-loading')));
+    tabs.forEach(tab => {const on = tab.dataset.recordChapter === active;tab.setAttribute('aria-selected',String(on));tab.tabIndex = on ? 0 : -1;});
+    const [kicker,title] = labels[active];
+    document.getElementById('recordsChapterKicker').textContent=kicker;
+    document.getElementById('recordsChapterTitle').textContent=title;
+    document.getElementById('recordsChapterCounter').textContent=String(chapters.indexOf(active)+1).padStart(2,'0')+' / 04';
   }
-  tabs.forEach(tab => tab.addEventListener('click', () => {
-    active = tab.dataset.recordFilter;
-    tabs.forEach(item => { const on = item === tab; item.classList.toggle('is-active', on); item.setAttribute('aria-pressed', String(on)); });
+  function selectChapter(chapter, focus=false) {
+    if (!chapters.includes(chapter)) return;
+    active=chapter;
     classify();
-  }));
-  new MutationObserver(classify).observe(grid, {childList:true});
+    if (focus) tabs.find(t=>t.dataset.recordChapter===active)?.focus();
+  }
+  tabs.forEach(tab=>{
+    tab.addEventListener('click',()=>selectChapter(tab.dataset.recordChapter));
+    tab.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const i=chapters.indexOf(active);selectChapter(e.key==='Home'?chapters[0]:e.key==='End'?chapters[3]:chapters[(i+(e.key==='ArrowRight'?1:3))%4],true);}});
+  });
+  document.getElementById('recordsChapterPrev')?.addEventListener('click',()=>selectChapter(chapters[(chapters.indexOf(active)+3)%4]));
+  document.getElementById('recordsChapterNext')?.addEventListener('click',()=>selectChapter(chapters[(chapters.indexOf(active)+1)%4]));
+  new MutationObserver(classify).observe(grid,{childList:true});
   classify();
   const players = new Map();
   const ensure = name => {

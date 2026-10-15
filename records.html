@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-pb-v1" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
-  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261014-compact2" />
+  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261014-chapters1" />
 </head>
 <body class="records-no-pulse">
   <div id="siteNav"></div>
@@ -24,14 +24,17 @@
       <div class="records-hero-actions"><a href="/archive" class="records-hero-link">Event Archive <span aria-hidden="true">↗</span></a></div>
     </header>
     <section class="records-content" aria-label="Clan achievements">
-      <div class="records-toolbar">
-        <div><p class="eyebrow">THE IRONKIN LEGACY</p><h2>Hall of achievements</h2></div>
-        <div class="records-tabs" role="group" aria-label="Filter record categories">
-          <button type="button" class="records-tab is-active" data-record-filter="all" aria-pressed="true">All records</button>
-          <button type="button" class="records-tab" data-record-filter="champions" aria-pressed="false">Champions</button>
-          <button type="button" class="records-tab" data-record-filter="milestones" aria-pressed="false">Milestones</button>
+      <div class="records-chapter-nav" aria-label="Browse record book chapters">
+        <button type="button" class="records-chapter-arrow" id="recordsChapterPrev" aria-label="Previous chapter">‹</button>
+        <div class="records-chapter-tabs" role="tablist" aria-label="Record book chapters">
+          <button type="button" role="tab" id="recordsTabLegends" aria-controls="recordsPanelLegends" data-record-chapter="legends" aria-selected="true" tabindex="0">♛ <span>Legends</span></button>
+          <button type="button" role="tab" id="recordsTabChampions" aria-controls="recordsPanelChampions" data-record-chapter="champions" aria-selected="false" tabindex="-1">🏆 <span>Champions</span></button>
+          <button type="button" role="tab" id="recordsTabTimeline" aria-controls="recordsPanelTimeline" data-record-chapter="timeline" aria-selected="false" tabindex="-1">⌛ <span>Timeline</span></button>
+          <button type="button" role="tab" id="recordsTabMilestones" aria-controls="recordsPanelMilestones" data-record-chapter="milestones" aria-selected="false" tabindex="-1">✦ <span>Milestones</span></button>
         </div>
+        <button type="button" class="records-chapter-arrow" id="recordsChapterNext" aria-label="Next chapter">›</button>
       </div>
+      <div class="records-chapter-heading"><div><p class="eyebrow" id="recordsChapterKicker">THE HALL OF LEGENDS</p><h2 id="recordsChapterTitle">Ironkin Legends</h2></div><span id="recordsChapterCounter">01 / 04</span></div>
       <div id="recordsLegends" class="records-legends" aria-live="polite"></div>
       <section id="recordsGrid" class="records-grid" aria-live="polite" aria-busy="true">
         <div class="records-loading"><span class="records-loading-icon" aria-hidden="true">✦</span> Retrieving clan records…</div>
@@ -41,7 +44,7 @@
   <dialog id="recordsProfileDialog" class="records-profile-dialog" aria-labelledby="recordsProfileTitle"><div id="recordsProfileContent"></div><button type="button" class="records-modal-close" aria-label="Close player achievements">✕</button></dialog>
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
   <script src="/assets/js/script.js?v=20261001-hof-pb-v1"></script>
-  <script src="/assets/js/records-refined.js?v=20261014-compact2" defer></script>
+  <script src="/assets/js/records-refined.js?v=20261014-chapters1" defer></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
