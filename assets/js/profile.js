@@ -1,4 +1,49 @@
 
+// Ember history is read-only and always scoped by the authenticated Discord session.
+const ikWalletState={filter:"all",cursor:null,loading:false,loaded:false,rows:[]};
+function ikWalletLabel(kind){return String(kind||"transaction").replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());}
+function ikRenderWallet(){
+ const mount=document.getElementById("ikWalletTransactions");if(!mount)return;
+ mount.replaceChildren();
+ if(!ikWalletState.rows.length){const p=document.createElement("p");p.className="admin-muted";p.textContent="No Ember transactions found for this filter.";mount.append(p);return;}
+ for(const tx of ikWalletState.rows){
+  const row=document.createElement("div");row.className="ik-wallet-tx";
+  const detail=document.createElement("div");
+  const title=document.createElement("strong");title.textContent=tx.reason||ikWalletLabel(tx.kind);detail.append(title);
+  const meta=document.createElement("small");const date=tx.createdAt?new Date(tx.createdAt):null;
+  meta.textContent=[ikWalletLabel(tx.kind),date&&!Number.isNaN(date.getTime())?date.toLocaleString():"",`Balance after: ${Number(tx.balanceAfter).toLocaleString()}`].filter(Boolean).join(" · ");detail.append(meta);
+  const amount=document.createElement("span");amount.className="ik-wallet-tx-amount "+(tx.delta>=0?"positive":"negative");amount.textContent=(tx.delta>0?"+":"")+Number(tx.delta).toLocaleString();
+  row.append(detail,amount);mount.append(row);
+ }
+}
+async function ikLoadWallet({more=false}={}){
+ if(ikWalletState.loading)return;
+ const mount=document.getElementById("ikWalletTransactions"),moreButton=document.getElementById("ikWalletMore");if(!mount)return;
+ ikWalletState.loading=true;if(moreButton)moreButton.disabled=true;
+ if(!more)mount.textContent="Loading Ember transactions…";
+ try{
+  const query=new URLSearchParams({type:ikWalletState.filter});
+  if(more&&ikWalletState.cursor)query.set("before",String(ikWalletState.cursor));
+  const response=await fetch("/api/embers/history?"+query,{cache:"no-store"});const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(data.error||"Unable to load Ember history.");
+  ikWalletState.rows=more?[...ikWalletState.rows,...data.transactions]:data.transactions;
+  ikWalletState.cursor=data.nextCursor;ikWalletState.loaded=true;
+  const balance=document.getElementById("ikWalletBalance");if(balance&&data.balance!==null&&data.balance!==undefined)balance.textContent=Number(data.balance).toLocaleString()+" Embers";
+  if(moreButton)moreButton.hidden=!data.hasMore;
+  ikRenderWallet();
+ }catch(error){if(!more)ikWalletState.loaded=false;mount.textContent=error.message||"Could not load Ember history.";}
+ finally{ikWalletState.loading=false;if(moreButton)moreButton.disabled=false;}
+}
+function ikInitWallet(){
+ document.querySelectorAll("[data-wallet-filter]").forEach(button=>button.addEventListener("click",()=>{
+  ikWalletState.filter=button.dataset.walletFilter;ikWalletState.cursor=null;ikWalletState.rows=[];
+  document.querySelectorAll("[data-wallet-filter]").forEach(b=>b.classList.toggle("is-active",b===button));ikLoadWallet();
+ }));
+ document.getElementById("ikWalletMore")?.addEventListener("click",()=>ikLoadWallet({more:true}));
+ document.getElementById("ikWalletRefresh")?.addEventListener("click",()=>{ikWalletState.cursor=null;ikLoadWallet();});
+}
+
+
 let ikAchievementFilter='all';
 let ikAchievementCatalog=[];
 let ikClanAchievementCatalog=[];
@@ -434,7 +479,11 @@ async function loadProfile() {
     }
 
     renderProfile(data.profile);
-    if(data.profile?.isOwnProfile)profileLoadSubmissions();
+    if(data.profile?.isOwnProfile){
+      profileLoadSubmissions();
+      const wallet=document.getElementById("profileEmberWallet");if(wallet)wallet.style.display="";
+      ikLoadWallet();
+    }
   } catch (error) {
     if (hero) {
       hero.innerHTML = `
@@ -570,6 +619,7 @@ function ikInitProfileTabs(){
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  ikInitWallet();
   ikInitProfileTabs();
   const badgeCount=document.getElementById('profileAchievementCount');
   const tabCount=document.getElementById('profileTabAchievementCount');

@@ -230,6 +230,14 @@
 <div id="ikPublishQueue" class="ik-publish-queue" hidden><h3>Events waiting for Discord results</h3>
 <div id="ikPublishList" role="list"><p class="admin-muted">Loading ended events…</p></div></div>
 <p class="ik-command-note" id="ikOverviewStatus" role="status">Checking events and pending submissions…</p>
+<details class="ik-activity-box" id="ikAdminEmberLedger">
+<summary>Ember Transaction Lookup</summary>
+<div class="ik-activity-content">
+<p class="admin-muted">Read-only transactions from the Discord bot. Enter a member's Discord ID.</p>
+<div class="ik-wallet-admin-controls"><label for="ikAdminEmberUser">Discord ID</label><input id="ikAdminEmberUser" inputmode="numeric" maxlength="22" placeholder="Member Discord ID"/><button class="btn secondary compact" id="ikAdminEmberSearch" type="button">Search</button></div>
+<div id="ikAdminEmberResults" role="status" aria-live="polite"></div>
+<button class="btn secondary compact" id="ikAdminEmberMore" type="button" hidden>Load more</button>
+</div></details>
 <details class="ik-activity-box"><summary>Recent admin activity</summary>
 <div class="ik-activity-content"><button class="btn secondary compact" id="ikActivityRefresh" type="button">Refresh history</button>
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
@@ -1337,5 +1345,35 @@
    finally{button.disabled=false;}
  });
 })();
-</script></body>
+</script><style>.ik-wallet-admin-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}.ik-wallet-admin-controls input{min-width:230px;max-width:100%}.ik-wallet-admin-row{display:flex;justify-content:space-between;gap:15px;padding:10px 0;border-bottom:1px solid #513d2b}.ik-wallet-admin-row small{display:block;color:#bea48a}</style>
+<script>
+(()=>{
+ let userId="",cursor=null,loading=false;
+ const field=document.getElementById("ikAdminEmberUser"),search=document.getElementById("ikAdminEmberSearch"),more=document.getElementById("ikAdminEmberMore"),results=document.getElementById("ikAdminEmberResults");
+ async function load(append=false){
+  if(loading||!results)return;
+  const value=append?userId:String(field?.value||"").trim();
+  if(!/^\d{15,22}$/.test(value)){results.textContent="Enter a valid Discord ID.";return;}
+  loading=true;search.disabled=true;more.disabled=true;
+  if(!append){userId=value;cursor=null;results.textContent="Loading transactions…";}
+  try{
+   const query=new URLSearchParams({userId});if(append&&cursor)query.set("before",String(cursor));
+   const response=await fetch("/api/embers/history?"+query,{cache:"no-store"});const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(data.error||"Transaction lookup failed.");
+   if(!append)results.replaceChildren();
+   if(!data.transactions.length&&!append)results.textContent="No recorded transactions for this member.";
+   for(const tx of data.transactions){
+    const row=document.createElement("div");row.className="ik-wallet-admin-row";
+    const description=document.createElement("div");const title=document.createElement("strong");title.textContent=tx.reason||String(tx.kind).replaceAll("_"," ");description.append(title);
+    const meta=document.createElement("small");meta.textContent=[tx.createdAt?new Date(tx.createdAt).toLocaleString():"",`Balance after ${tx.balanceAfter}`,tx.kind].filter(Boolean).join(" · ");description.append(meta);
+    const amount=document.createElement("strong");amount.textContent=(tx.delta>0?"+":"")+Number(tx.delta).toLocaleString();row.append(description,amount);results.append(row);
+   }
+   cursor=data.nextCursor;more.hidden=!data.hasMore;
+  }catch(error){if(!append)results.textContent=error.message||"Unable to load transactions.";else alert(error.message||"Unable to load more transactions.");}
+  finally{loading=false;search.disabled=false;more.disabled=false;}
+ }
+ search?.addEventListener("click",()=>load(false));more?.addEventListener("click",()=>load(true));field?.addEventListener("keydown",event=>{if(event.key==="Enter")load(false);});
+})();
+</script>
+</body>
 </html>

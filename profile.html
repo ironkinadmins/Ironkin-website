@@ -76,6 +76,10 @@
 .ik-hero-earned-badge{border:1px solid #9b6933;background:#382617;color:#f7c78c;border-radius:7px;padding:6px 9px;font-size:12px;font-weight:700}
 .ik-hero-earned-badge[hidden]{display:none}
 .ik-hero-badges-toggle{background:transparent;border:1px solid #6b4c30;color:#eab77e;border-radius:7px;padding:6px 9px;cursor:pointer;font:inherit;font-size:12px}
+
+.ik-wallet-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0}.ik-wallet-top>div{display:grid;gap:3px}.ik-wallet-top small{color:#c6a98e}.ik-wallet-top strong{font-size:25px;color:#f1b978}
+.ik-wallet-tx{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid rgba(195,144,89,.23);padding:12px 0}.ik-wallet-tx>div{display:grid;gap:4px;min-width:0}.ik-wallet-tx small{color:#bba18b}.ik-wallet-tx strong{overflow-wrap:anywhere}.ik-wallet-tx-amount{white-space:nowrap;font-weight:700}.ik-wallet-tx-amount.positive{color:#a7dfa4}.ik-wallet-tx-amount.negative{color:#f0afa5}.ik-wallet-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+@media(max-width:540px){.ik-wallet-tx{align-items:flex-start}.ik-wallet-top strong{font-size:22px}}
 </style>
 </head>
 <body>
@@ -151,6 +155,17 @@
         <button type="button" class="btn secondary" id="profileActivityRefresh">Refresh</button>
       </div>
 
+      <section class="profile-panel" id="profileEmberWallet" style="display:none" aria-label="Ember transaction history">
+        <div class="profile-section-header"><p class="eyebrow">DISCORD ECONOMY</p><h2>Ember Wallet</h2><p class="admin-muted">Read-only history from the Ironkin Discord bot. Ember balances are managed in Discord.</p></div>
+        <div class="ik-wallet-top"><div><small>Current balance</small><strong id="ikWalletBalance">—</strong></div><a class="btn secondary" href="/ember-leaderboard.html">Leaderboard ↗</a></div>
+        <div class="ik-profile-status-filters" role="group" aria-label="Ember transaction filter">
+          <button type="button" class="btn secondary is-active" data-wallet-filter="all">All</button>
+          <button type="button" class="btn secondary" data-wallet-filter="earned">Earned</button>
+          <button type="button" class="btn secondary" data-wallet-filter="spent">Spent</button>
+        </div>
+        <div id="ikWalletTransactions" aria-live="polite">Open My Tools to load your Ember history.</div>
+        <div class="ik-wallet-actions"><button type="button" class="btn secondary" id="ikWalletMore" hidden>Load more</button><button type="button" class="btn secondary" id="ikWalletRefresh">Refresh</button></div>
+      </section>
       <div class="profile-panel profile-hub-card" id="profileHubCard">
         <div class="profile-section-header">
           <p class="eyebrow">Clan Hub</p>
