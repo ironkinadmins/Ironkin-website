@@ -53,6 +53,24 @@
 .profile-hero-facts{gap:14px}
 @media(max-width:800px){.ik-profile-achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ik-profile-tools{grid-template-columns:1fr}}
 @media(max-width:580px){.profile-page{padding:14px 12px 55px}.profile-page .profile-identity-card{padding:18px}.ik-profile-achievement-grid{grid-template-columns:1fr}.ik-profile-nav a{flex:1;text-align:center;padding:10px 7px}.ik-profile-section-heading{align-items:flex-start}.ik-profile-tools{display:flex;flex-direction:column}}
+
+/* Interactive profile: keep identity visible, show one full-size workspace at a time. */
+.profile-page .profile-grid{gap:18px}
+.profile-page .profile-grid [role="tabpanel"][hidden]{display:none!important}
+.profile-page .ik-profile-nav{display:flex;flex-wrap:nowrap;gap:6px;position:sticky;top:8px;z-index:12;background:#15110e;padding:8px;border:1px solid #4a3222;box-shadow:0 8px 26px #0009;overflow-x:auto;scrollbar-width:thin}
+.profile-page .ik-profile-nav button{appearance:none;border:0;background:transparent;cursor:pointer;color:#c9ad91;font:inherit;font-size:14px;font-weight:750;padding:13px 20px;border-radius:9px;white-space:nowrap;min-height:44px;transition:background .15s,color .15s}
+.profile-page .ik-profile-nav button:hover{background:#302116;color:#ffe0ad}
+.profile-page .ik-profile-nav button[aria-selected="true"]{background:#654021;color:#ffdda9;box-shadow:inset 0 -2px #efa84e}
+.profile-page .ik-profile-nav button:focus-visible{outline:2px solid #f5ae5b;outline-offset:-2px}
+.profile-page .ik-profile-tab-count{font-size:11px;opacity:.8;margin-left:4px}
+.profile-page [role="tabpanel"]{min-height:320px;animation:ik-profile-reveal .18s ease-out}
+.profile-page [role="tabpanel"]:focus{outline:none}
+.profile-page #profileAchievements{scroll-margin-top:90px}
+.profile-page .ik-profile-achievement-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@keyframes ik-profile-reveal{from{opacity:.65;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:800px){.profile-page .ik-profile-achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:580px){.profile-page .ik-profile-nav{top:0;margin:0 -12px;border-radius:0;padding:6px 12px}.profile-page .ik-profile-nav button{padding:12px 14px}.profile-page .ik-profile-achievement-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.profile-page [role="tabpanel"]{animation:none}}
 </style>
 </head>
 <body>
@@ -67,10 +85,13 @@
     </section>
 
     <section class="profile-grid" id="profileGrid" style="display:none;">
-      <nav class="ik-profile-nav" aria-label="Profile sections">
-        <a href="#profileOverview">Overview</a><a href="#profileAchievements">Achievements</a><a href="#profileEventHistory">Event History</a><a href="#profileTools" id="profileToolsLink">My Tools</a>
+      <nav class="ik-profile-nav" aria-label="Profile sections" role="tablist">
+        <button type="button" id="profileTabOverview" role="tab" aria-controls="profileOverview" aria-selected="true" tabindex="0" data-profile-tab="overview">Overview</button>
+        <button type="button" id="profileTabAchievements" role="tab" aria-controls="profileAchievements" aria-selected="false" tabindex="-1" data-profile-tab="achievements">Achievements <span id="profileTabAchievementCount" class="ik-profile-tab-count"></span></button>
+        <button type="button" id="profileTabHistory" role="tab" aria-controls="profileEventHistory" aria-selected="false" tabindex="-1" data-profile-tab="history">Event History</button>
+        <button type="button" id="profileToolsLink" role="tab" aria-controls="profileTools" aria-selected="false" tabindex="-1" data-profile-tab="tools">My Tools</button>
       </nav>
-      <div class="ik-profile-overview" id="profileOverview"><div class="ik-profile-overview-title"><p class="eyebrow">AT A GLANCE</p><h2>Member Overview</h2></div>
+      <div class="ik-profile-overview" id="profileOverview" role="tabpanel" aria-labelledby="profileTabOverview"><div class="ik-profile-overview-title"><p class="eyebrow">AT A GLANCE</p><h2>Member Overview</h2></div>
       <div class="profile-panel profile-main-stats">
         <div class="profile-section-header">
           <p class="eyebrow">OSRS Stats</p>
@@ -89,7 +110,7 @@
       </div>
 
       </div>
-      <section class="profile-panel ik-profile-achievements" id="profileAchievements">
+      <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
         <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Clan badges earned from recorded event results, alongside your profile recognition.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
         <div id="profileFeaturedAchievements" class="ik-profile-featured"></div>
         <div class="ik-profile-status-filters" role="group" aria-label="Achievement status">
@@ -99,7 +120,7 @@
         </div>
         <div id="profileAchievementsList" class="ik-profile-achievement-grid" aria-live="polite"><p class="admin-muted">Loading clan achievements…</p></div>
       </section>
-      <div class="profile-panel profile-events-card" id="profileEventHistory">
+      <div class="profile-panel profile-events-card" id="profileEventHistory" role="tabpanel" aria-labelledby="profileTabHistory" hidden>
         <div class="profile-section-header">
           <p class="eyebrow">Clan Record</p>
           <h2>Clan Achievements</h2>
@@ -107,7 +128,7 @@
         <div id="profileEventRecord"></div>
       </div>
 
-      <div class="ik-profile-tools" id="profileTools">
+      <div class="ik-profile-tools" id="profileTools" role="tabpanel" aria-labelledby="profileTabTools" hidden>
       <div class="profile-panel profile-activity-card" id="profileActivityCard" style="display:none;">
         <div class="profile-section-header">
           <p class="eyebrow">My Activity</p>
@@ -191,7 +212,7 @@
   </main>
 
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
-  <script src="assets/js/profile.js?v=20261015-profile-refresh-v2"></script>
+  <script src="assets/js/profile.js?v=20261015-interactive-tabs-v2"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

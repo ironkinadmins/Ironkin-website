@@ -339,6 +339,7 @@ function renderProfile(profile) {
   renderPluginApiKey(profile);
   const toolsLink=document.getElementById('profileToolsLink');
   if(toolsLink)toolsLink.hidden=profile.isOwnProfile===false;
+  ikSelectProfileTab(ikProfileActiveTab,{updateHash:false});
   const hub=document.getElementById('profileHubCard');
   if(hub)hub.style.display=profile.isOwnProfile===false?'none':'';
   const activity=document.getElementById('profileActivityCard');
@@ -463,7 +464,58 @@ async function profileLoadSubmissions() {
   }
 }
 
+
+const ikProfileTabs = ["overview","achievements","history","tools"];
+let ikProfileActiveTab = "overview";
+function ikSelectProfileTab(name,{focus=false,updateHash=true}={}) {
+  if(!ikProfileTabs.includes(name)) name="overview";
+  const toolTab=document.querySelector('[data-profile-tab="tools"]');
+  if(name==="tools" && toolTab?.hidden) name="overview";
+  ikProfileActiveTab=name;
+  const ids={overview:"profileOverview",achievements:"profileAchievements",history:"profileEventHistory",tools:"profileTools"};
+  document.querySelectorAll('[data-profile-tab]').forEach(button=>{
+    const selected=button.dataset.profileTab===name;
+    button.setAttribute('aria-selected',String(selected));
+    button.tabIndex=selected?0:-1;
+    if(selected && focus)button.focus();
+  });
+  for(const [key,id] of Object.entries(ids)){
+    const panel=document.getElementById(id);
+    if(panel)panel.hidden=key!==name;
+  }
+  if(updateHash && history.replaceState)history.replaceState(null,'',`#${name}`);
+}
+function ikInitProfileTabs(){
+  const tabs=[...document.querySelectorAll('[data-profile-tab]')];
+  for(const tab of tabs){
+    tab.addEventListener('click',()=>ikSelectProfileTab(tab.dataset.profileTab));
+    tab.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();
+      const visible=tabs.filter(item=>!item.hidden);
+      const index=visible.indexOf(tab);
+      const next=event.key==='Home'?0:event.key==='End'?visible.length-1:
+        (index+(event.key==='ArrowRight'?1:-1)+visible.length)%visible.length;
+      ikSelectProfileTab(visible[next].dataset.profileTab,{focus:true});
+    });
+  }
+  const hash=location.hash.slice(1).toLowerCase();
+  ikSelectProfileTab(ikProfileTabs.includes(hash)?hash:'overview',{updateHash:false});
+  window.addEventListener('hashchange',()=>{
+    const hash=location.hash.slice(1).toLowerCase();
+    if(ikProfileTabs.includes(hash))ikSelectProfileTab(hash,{updateHash:false});
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  ikInitProfileTabs();
+  const badgeCount=document.getElementById('profileAchievementCount');
+  const tabCount=document.getElementById('profileTabAchievementCount');
+  if(badgeCount && tabCount){
+    const update=()=>{tabCount.textContent=badgeCount.textContent && badgeCount.textContent!=='—'?`(${badgeCount.textContent.trim()})`:'';};
+    new MutationObserver(update).observe(badgeCount,{childList:true,characterData:true,subtree:true});
+    update();
+  }
   document.querySelectorAll('[data-achievement-filter]').forEach(button=>button.addEventListener('click',()=>{
     ikAchievementFilter=button.dataset.achievementFilter;ikRenderAchievements();
   }));
