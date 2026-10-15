@@ -230,6 +230,13 @@
 <div id="ikPublishQueue" class="ik-publish-queue" hidden><h3>Events waiting for Discord results</h3>
 <div id="ikPublishList" role="list"><p class="admin-muted">Loading ended events…</p></div></div>
 <p class="ik-command-note" id="ikOverviewStatus" role="status">Checking events and pending submissions…</p>
+<details class="ik-activity-box" id="ikHealthPanel">
+<summary>Website health</summary>
+<div class="ik-activity-content">
+<p class="admin-muted">Checks Supabase access, Ironkin Games storage, and Discord configuration. This does not test Discord message delivery or WOM refresh.</p>
+<button class="btn secondary compact" type="button" id="ikHealthRefresh">Check now</button>
+<div id="ikHealthResults" role="status" aria-live="polite">Open to check services.</div>
+</div></details>
 <details class="ik-activity-box"><summary>Recent admin activity</summary>
 <div class="ik-activity-content"><button class="btn secondary compact" id="ikActivityRefresh" type="button">Refresh history</button>
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
@@ -1310,5 +1317,31 @@
  document.addEventListener("DOMContentLoaded",refresh);
 })();
 </script>
-</body>
+<script>
+(function(){
+  const panel=document.getElementById("ikHealthPanel");
+  const button=document.getElementById("ikHealthRefresh");
+  const target=document.getElementById("ikHealthResults");
+  let loaded=false;
+  async function checkHealth(){
+    if(!target||!button)return;
+    button.disabled=true;target.textContent="Checking services…";
+    try{
+      const response=await fetch("/api/admin/site-health",{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||!Array.isArray(data.checks))throw Error(data.error||"Health check unavailable.");
+      target.replaceChildren();
+      for(const check of data.checks){
+        const row=document.createElement("p");
+        row.textContent=`${check.name}: ${check.status==="ok"?"OK":check.status==="not-configured"?"Not configured":"Unavailable"}${check.status==="ok"?` (${check.latencyMs} ms)`:""}`;
+        target.append(row);
+      }
+      loaded=true;
+    }catch(error){target.textContent=error.message||"Unable to check services.";}
+    finally{button.disabled=false;}
+  }
+  panel?.addEventListener("toggle",()=>{if(panel.open&&!loaded)checkHealth();});
+  button?.addEventListener("click",checkHealth);
+})();
+</script></body>
 </html>

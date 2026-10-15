@@ -8,6 +8,20 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20260823-profile-rank-fix-v2" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-hub-ux-v1">
+<style>
+.ik-profile-links{display:flex;flex-wrap:wrap;gap:9px}
+.ik-profile-status-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.ik-profile-status-filters .is-active{border-color:#df9750;color:#f5c18b;background:rgba(210,132,53,.15)}
+.ik-profile-summary{color:#c9ac8b;font-size:13px;margin:8px 0 12px}
+.ik-profile-entry{display:flex;justify-content:space-between;gap:14px;align-items:center;border-top:1px solid rgba(200,154,102,.18);padding:13px 0}
+.ik-profile-entry-main{display:grid;gap:4px;min-width:0}
+.ik-profile-entry-main small{color:#bda48e}
+.ik-profile-entry-status{font-size:12px;text-transform:capitalize;border:1px solid #725039;border-radius:16px;padding:4px 9px}
+.ik-profile-entry-status[data-status="approved"]{color:#b2e1b1;border-color:#487b48}
+.ik-profile-entry-status[data-status="rejected"]{color:#eab4aa;border-color:#955c53}
+.ik-profile-entry-status[data-status="pending"]{color:#f2d09d}
+@media(max-width:520px){.ik-profile-entry{align-items:flex-start;flex-direction:column}}
+</style>
 </head>
 <body>
   <div id="siteNav"></div>
@@ -46,6 +60,35 @@
         <div id="profileEventRecord"></div>
       </div>
 
+      <div class="profile-panel profile-activity-card" id="profileActivityCard" style="display:none;">
+        <div class="profile-section-header">
+          <p class="eyebrow">My Activity</p>
+          <h2>Submission Tracker</h2>
+          <p class="admin-muted">Track your Hall of Flame proofs. Only you can see this section.</p>
+        </div>
+        <div class="ik-profile-status-filters" role="group" aria-label="Submission status">
+          <button type="button" class="btn secondary is-active" data-profile-filter="all">All</button>
+          <button type="button" class="btn secondary" data-profile-filter="pending">Pending</button>
+          <button type="button" class="btn secondary" data-profile-filter="approved">Approved</button>
+          <button type="button" class="btn secondary" data-profile-filter="rejected">Rejected</button>
+        </div>
+        <div id="profileActivitySummary" class="ik-profile-summary"></div>
+        <div id="profileActivityList" aria-live="polite"><p class="admin-muted">Loading submissions…</p></div>
+        <button type="button" class="btn secondary" id="profileActivityRefresh">Refresh</button>
+      </div>
+
+      <div class="profile-panel profile-hub-card" id="profileHubCard">
+        <div class="profile-section-header">
+          <p class="eyebrow">Clan Hub</p>
+          <h2>Quick Access</h2>
+        </div>
+        <div class="ik-profile-links">
+          <a class="btn secondary" href="/events.html">Events Calendar →</a>
+          <a class="btn secondary" href="/hall-of-flame.html">Hall of Flame →</a>
+          <a class="btn secondary" href="/ironkin-games.html">Ironkin Games →</a>
+          <a class="btn secondary" href="/ember-leaderboard.html">Ember Leaderboard →</a>
+        </div>
+      </div>
       <div class="profile-panel profile-plugin-card" id="profilePluginCard" style="display:none;">
           <div class="profile-section-header">
             <p class="eyebrow">Clan Plugin</p>
@@ -99,7 +142,7 @@
   </main>
 
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
-  <script src="assets/js/profile.js?v=20260913-hub-ux-v1"></script>
+  <script src="assets/js/profile.js?v=20261015-member-hub-v1"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

@@ -361,7 +361,64 @@ async function saveProfile() {
   renderProfile(data.profile);
 }
 
+
+let profileSubmissionFilter = "all";
+let profileSubmissionRows = [];
+function profileRenderSubmissionTracker() {
+  const list = document.getElementById("profileActivityList");
+  const summary = document.getElementById("profileActivitySummary");
+  if (!list) return;
+  const counts = { pending:0, approved:0, rejected:0 };
+  profileSubmissionRows.forEach(row => {
+    const key = String(row.status || "").toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(counts,key)) counts[key]++;
+  });
+  if (summary) summary.textContent = `${counts.pending} pending · ${counts.approved} approved · ${counts.rejected} rejected`;
+  document.querySelectorAll("[data-profile-filter]").forEach(button=>{
+    const selected=button.dataset.profileFilter===profileSubmissionFilter;
+    button.classList.toggle("is-active",selected);
+    button.setAttribute("aria-pressed",String(selected));
+  });
+  const rows = profileSubmissionRows.filter(row=>profileSubmissionFilter==="all" || row.status===profileSubmissionFilter);
+  if (!rows.length) {list.innerHTML='<p class="admin-muted">No submissions in this category.</p>';return;}
+  list.innerHTML=rows.map(row=>{
+    const date = row.created_at ? new Date(row.created_at) : null;
+    const when = date && Number.isFinite(date.getTime()) ? date.toLocaleDateString("en-CA") : "";
+    const proof = /^https:\/\//i.test(String(row.proof_url||""))
+      ? `<a href="${profileEscapeHtml(row.proof_url)}" target="_blank" rel="noopener noreferrer">View proof ↗</a>` : "";
+    return `<div class="ik-profile-entry"><div class="ik-profile-entry-main">
+      <strong>${profileEscapeHtml(row.boss||"Hall of Flame")}</strong>
+      <small>${profileEscapeHtml(row.time_text||"")} · ${profileEscapeHtml(when)} · Hall of Flame</small>
+      ${proof}</div><span class="ik-profile-entry-status" data-status="${profileEscapeHtml(row.status)}">${profileEscapeHtml(row.status)}</span></div>`;
+  }).join("");
+}
+async function profileLoadSubmissions() {
+  const card=document.getElementById("profileActivityCard");
+  if (!card || !currentProfile?.isOwnProfile) return;
+  card.style.display="";
+  const list=document.getElementById("profileActivityList");
+  if (list) list.innerHTML='<p class="admin-muted">Loading submissions…</p>';
+  try {
+    const response=await fetch("/api/hall-of-flame/submissions",{cache:"no-store"});
+    const data=await response.json().catch(()=>({}));
+    if (!response.ok || !Array.isArray(data.submissions)) throw new Error(data.error||"Could not load submissions.");
+    // The API scopes non-staff submissions to the authenticated Discord user.
+    // Staff accounts must not accidentally show every member's submissions here.
+    profileSubmissionRows=data.submissions.filter(row=>String(row.discord_id)===String(currentProfile.discordId))
+      .map(row=>({...row,status:String(row.status||"pending").toLowerCase()}));
+    profileRenderSubmissionTracker();
+  } catch(error) {
+    if(list)list.textContent=error.message||"Submission history unavailable. Try refreshing.";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-profile-filter]").forEach(button=>button.addEventListener("click",()=>{
+    profileSubmissionFilter=button.dataset.profileFilter;
+    profileRenderSubmissionTracker();
+  }));
+  document.getElementById("profileActivityRefresh")?.addEventListener("click",profileLoadSubmissions);
+
   const saveBtn = document.getElementById("saveProfileBtn");
   if (saveBtn) saveBtn.addEventListener("click", saveProfile);
 
