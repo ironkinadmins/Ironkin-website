@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-pb-v1" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
-  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261015-milestones-only2" />
+  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261015-legacy1" />
 </head>
 <body class="records-no-pulse">
   <div id="siteNav"></div>
@@ -31,10 +31,11 @@
           <button type="button" role="tab" id="recordsTabChampions" aria-controls="recordsPanelChampions" data-record-chapter="champions" aria-selected="false" tabindex="-1">🏆 <span>Champions</span></button>
           <button type="button" role="tab" id="recordsTabTimeline" aria-controls="recordsPanelTimeline" data-record-chapter="timeline" aria-selected="false" tabindex="-1">⌛ <span>Timeline</span></button>
           <button type="button" role="tab" id="recordsTabMilestones" aria-controls="recordsPanelMilestones" data-record-chapter="milestones" aria-selected="false" tabindex="-1">✦ <span>Milestones</span></button>
+          <button type="button" role="tab" id="recordsTabAchievements" aria-controls="recordsAchievementsPanel" data-record-chapter="achievements" aria-selected="false" tabindex="-1">✧ <span>Achievements</span></button>
         </div>
         <button type="button" class="records-chapter-arrow" id="recordsChapterNext" aria-label="Next chapter">›</button>
       </div>
-      <div class="records-chapter-heading"><div><p class="eyebrow" id="recordsChapterKicker">THE HALL OF LEGENDS</p><h2 id="recordsChapterTitle">Ironkin Legends</h2></div><span id="recordsChapterCounter">01 / 04</span></div>
+      <div class="records-chapter-heading"><div><p class="eyebrow" id="recordsChapterKicker">THE HALL OF LEGENDS</p><h2 id="recordsChapterTitle">Ironkin Legends</h2></div><span id="recordsChapterCounter">01 / 05</span></div>
       <div class="records-discord-publish" id="recordsDiscordPublish" hidden>
         <button type="button" id="recordsPreviewPublish">Preview Discord embeds</button>
         <span class="records-publish-note">Staff only · SOTW and BOTW · No automatic posting</span>
@@ -47,17 +48,15 @@
         <div class="records-publish-actions"><button type="button" id="recordsConfirmPublish">Publish SOTW &amp; BOTW</button><button type="button" id="recordsCancelPublish">Cancel</button></div>
       </dialog>
       <div id="recordsLegends" class="records-legends" aria-live="polite"></div>
-      <div id="recordsMilestonesPanel" role="tabpanel" aria-labelledby="recordsTabMilestones" hidden>
       <section id="recordsGrid" class="records-grid" aria-live="polite" aria-busy="true">
         <div class="records-loading"><span class="records-loading-icon" aria-hidden="true">✦</span> Retrieving clan records…</div>
       </section>
-      </div>
     </section>
   </main>
   <dialog id="recordsProfileDialog" class="records-profile-dialog" aria-labelledby="recordsProfileTitle"><div id="recordsProfileContent"></div><button type="button" class="records-modal-close" aria-label="Close player achievements">✕</button></dialog>
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
   <script src="/assets/js/script.js?v=20261015-records-legacy1"></script>
-  <script src="/assets/js/records-refined.js?v=20261015-milestones-only2" defer></script>
+  <script src="/assets/js/records-refined.js?v=20261015-legacy1" defer></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

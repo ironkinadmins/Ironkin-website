@@ -94,3 +94,29 @@ body.records-no-pulse .ik-data-viz{display:none!important}
 .rarity-epic .records-badge-rarity,.records-rarity-legend .rarity-epic{color:#d2a8ff}
 .rarity-legendary .records-badge-rarity,.records-rarity-legend .rarity-legendary{color:#ffd477}
 @media(prefers-reduced-motion:reduce){.records-badge-progress>span{transition:none}}
+
+/* Five-chapter record book and dedicated personal achievements. */
+.records-page .records-chapter-tabs{grid-template-columns:repeat(5,minmax(0,1fr));display:grid;min-width:0}
+.records-page [hidden]{display:none!important}
+.records-page .records-achievements-panel{animation:records-chapter-enter .28s ease both}
+.records-achievements-overview{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px;background:#342317;border:1px solid #77512f;border-radius:15px}
+.records-achievements-overview h3{margin:4px 0 8px;color:#ffe1b3}
+.records-achievements-overview>strong{font-size:2rem;color:#ffcc79}
+.records-achievements-notice{margin:0;color:#ddc2a7;line-height:1.5}
+.records-achievement-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+.records-achievement-card{position:relative;padding:17px;border:1px solid #725037;border-left:4px solid #bda48d;border-radius:14px;background:linear-gradient(145deg,#39271d,#261b16);min-width:0}
+.records-achievement-card.rarity-rare{border-left-color:#8fd0ff}.records-achievement-card.rarity-epic{border-left-color:#d2a8ff}.records-achievement-card.rarity-legendary{border-left-color:#ffd477}
+.records-achievement-card.is-locked{opacity:.72}.records-achievement-card.is-unlocked{box-shadow:inset 0 0 24px #ffbd4510}
+.records-achievement-card-top{display:flex;justify-content:space-between;gap:10px;color:#f2bb79;font-size:.7rem;font-weight:800;letter-spacing:.06em}
+.records-achievement-card p{font-size:.8rem;line-height:1.55;color:#e5cbb4;margin:10px 0 0}
+.records-achievement-badge{position:relative;display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;margin:9px 0 0;padding:6px 9px;border:1px solid #af7c45;border-radius:9px;background:#59371f;color:#ffdfae;font:inherit;font-weight:700;cursor:help;max-width:100%}
+.records-achievement-badge small{font-size:.66rem;text-transform:uppercase;color:#e3b77e}
+.records-achievement-badge::after{content:attr(data-badge-description);position:absolute;z-index:50;left:0;bottom:calc(100% + 8px);width:max-content;max-width:min(300px,75vw);min-width:180px;box-sizing:border-box;padding:11px;border:1px solid #d19b59;border-radius:9px;background:#17100c;color:#fff2dd;white-space:normal;font-size:.78rem;font-weight:500;line-height:1.45;box-shadow:0 10px 25px #0009;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s}
+.records-achievement-badge:hover::after,.records-achievement-badge:focus-visible::after,.records-achievement-badge.is-tooltip-open::after{opacity:1;visibility:visible}
+.records-achievement-badge:focus-visible{outline:2px solid #ffce83;outline-offset:2px}
+.records-achievement-badge.rarity-rare{border-color:#8fd0ff}.records-achievement-badge.rarity-epic{border-color:#d2a8ff}.records-achievement-badge.rarity-legendary{border-color:#ffd477}
+.records-ranking-row .records-achievement-badge{font-size:.68rem;margin:3px 3px 0 0;padding:3px 5px}
+.records-page .records-profile-dialog:has(.records-profile-main){width:min(660px,calc(100% - 24px))}
+@media(max-width:850px){.records-achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.records-achievement-grid{grid-template-columns:1fr}.records-page .records-chapter-tabs button{font-size:.72rem;padding:9px 2px}.records-page .records-chapter-tabs button span{font-size:.62rem}.records-achievements-overview{padding:14px}}
+@media(prefers-reduced-motion:reduce){.records-page .records-achievements-panel,.records-achievement-badge::after{animation:none;transition:none}}
