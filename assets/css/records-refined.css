@@ -45,3 +45,8 @@ body.records-no-pulse .ik-data-viz{display:none!important}
 .records-discord-publish button:hover,.records-publish-actions button:hover{background:#774522}
 .records-publish-note{font-size:.8rem;color:#c9ad95}.records-publish-preview>div{display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid #65432b}.records-publish-preview>p{font-size:.84rem;color:#e2c6a9}.records-publish-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 .records-publish-actions button:disabled{opacity:.5;cursor:wait}
+
+/* Keep historical event records and milestones confined to their chapter. */
+.records-page #recordsMilestonesPanel[hidden],
+.records-page #recordsMilestonesPanel[hidden] #recordsGrid { display:none!important; }
+.records-page #recordsMilestonesPanel:not([hidden]) { display:block; }

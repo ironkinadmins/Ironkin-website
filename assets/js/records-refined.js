@@ -2,6 +2,7 @@
   const grid = document.getElementById('recordsGrid');
   const host = document.getElementById('recordsLegends');
   const dialog = document.getElementById('recordsProfileDialog');
+  const milestonesPanel = document.getElementById('recordsMilestonesPanel');
   if (!grid || !host) return;
   const escape = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const key = v => String(v || '').trim().toLocaleLowerCase();
@@ -13,6 +14,7 @@
     const sections = [...host.querySelectorAll(':scope > .records-feature')];
     sections.forEach((section,i) => { section.hidden = chapters[i] !== active; });
     host.hidden = active === 'milestones';
+    if (milestonesPanel) milestonesPanel.hidden = active !== 'milestones';
     grid.hidden = active !== 'milestones';
     grid.setAttribute('aria-busy', String(!!grid.querySelector('.records-loading')));
     tabs.forEach(tab => {const on = tab.dataset.recordChapter === active;tab.setAttribute('aria-selected',String(on));tab.tabIndex = on ? 0 : -1;});
