@@ -152,6 +152,9 @@
 .ik-publish-queue button:hover{border-color:#ed9b4a;background:#372719}
 .ik-publish-queue button small{color:#c6ad92}
 .ik-dashboard-actions strong span{color:#f5b575}
+.ik-queue-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid #4c3628}
+.ik-queue-entry div{display:grid;gap:4px}.ik-queue-entry small{color:#bfa88f}
+.ik-queue-entry button{width:auto;margin:0;white-space:nowrap}
 .ik-status-inline{padding:8px 0;border:0;background:transparent!important;opacity:.8;font-size:12px}
 .ik-template-reuse{margin:14px 0 12px}
 </style></head>
@@ -179,11 +182,11 @@
 </div>
 
 <section id="ik-overview" class="ik-command-page" aria-label="Admin overview">
-<div class="ik-command-heading"><div><p class="eyebrow">IRONKIN ADMIN</p><h2>Control Center</h2><p>Quick access to the tasks that matter.</p></div></div>
+<div class="ik-command-heading"><div><p class="eyebrow">IRONKIN ADMIN</p><h2>Control Center</h2><p>Review what needs attention and jump directly to the right tool.</p></div></div>
 <div class="ik-action-grid ik-dashboard-actions">
 <button type="button" data-ik-go="events:setup"><strong>Manage Events →</strong><small>Create or edit events · opens 01 Details</small></button>
 <button type="button" id="ikGoPvm"><strong>Configure PvM Entry List →</strong><small>Opens PvM Entry in Items</small></button>
-<button type="button" id="ikOpenPublishQueue" aria-expanded="false" aria-controls="ikPublishQueue"><strong>Awaiting Discord Publishing <span id="ikFinishedCount">—</span> →</strong><small>Ended events needing a results post</small></button>
+<button type="button" id="ikOpenPublishQueue" aria-expanded="false" aria-controls="ikPublishQueue"><strong>Awaiting Discord Publishing <span id="ikFinishedCount">—</span> →</strong><small>Ended events and failed archived Discord posts</small></button>
 <button type="button" data-ik-go="approvals"><strong>Pending Submissions <span id="ikPendingCount">—</span> →</strong><small>Open the approvals hub</small></button>
 </div>
 <div id="ikPublishQueue" class="ik-publish-queue" hidden><h3>Events waiting for Discord results</h3>
@@ -1026,62 +1029,64 @@
 })();
 </script>
 <script>
-/* Read-only action dashboard. Dates must be known before an event enters the publishing queue. */
+/* Publishing queue uses server-side archived Discord post records. */
 (function(){
  const $=id=>document.getElementById(id);
- const title=event=>event.title||event.name||event.label||event.id||'Unnamed event';
- const pending=[];
- function renderQueue(){
-  const list=$('ikPublishList');if(!list)return;
-  list.replaceChildren();
-  if(!pending.length){
-   const empty=document.createElement('p');empty.className='admin-muted';
-   empty.textContent='No ended events awaiting Discord publishing.';list.append(empty);return;
-  }
-  pending.forEach(event=>{
-   const button=document.createElement('button');button.type='button';
-   const label=document.createElement('strong');label.textContent=title(event);
-   const detail=document.createElement('small');detail.textContent='Open Results →';
-   button.append(label,detail);
-   button.addEventListener('click',()=>{
-    document.querySelector('[data-ik-main="events"]')?.click();
-    const select=$('adminEventSelect');
-    if(select && [...select.options].some(option=>option.value===event.id)){
-      select.value=event.id;select.dispatchEvent(new Event('change',{bubbles:true}));
-    }
-    document.querySelector('[data-ik-stage="results"]')?.click();
-    window.scrollTo({top:0,behavior:'smooth'});
+ let queue=[];
+ function render(){
+   const list=$("ikPublishList");if(!list)return;
+   list.replaceChildren();
+   if(!queue.length){const p=document.createElement("p");p.className="admin-muted";p.textContent="No events waiting for Discord results.";list.append(p);return;}
+   queue.forEach(event=>{
+     const row=document.createElement("div");row.className="ik-queue-entry";
+     const info=document.createElement("div");const name=document.createElement("strong");name.textContent=event.title;
+     const detail=document.createElement("small");detail.textContent=event.kind==="archive" ? `Discord: ${event.status}` : "Ended · review results";
+     info.append(name,detail);row.append(info);
+     const button=document.createElement("button");button.type="button";
+     button.textContent=event.kind==="archive"?"Retry Discord Post":"Review Results";
+     button.addEventListener("click",async()=>{
+       if(event.kind==="event"){
+         document.querySelector('[data-ik-main="events"]')?.click();
+         const select=$("adminEventSelect");
+         if(select&&[...select.options].some(o=>o.value===event.id)){
+           select.value=event.id;select.dispatchEvent(new Event("change",{bubbles:true}));
+         }
+         document.querySelector('[data-ik-stage="results"]')?.click();
+         window.scrollTo({top:0,behavior:"smooth"});return;
+       }
+       if(!confirm(`Retry Discord results publishing for ${event.title}? This uses the saved archived results.`))return;
+       button.disabled=true;button.textContent="Publishing…";
+       try{
+         const response=await fetch("/api/admin/events/results/retry",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({archiveId:event.id})});
+         const data=await response.json().catch(()=>({}));
+         if(!response.ok)throw Error(data.details||data.error||"Discord post failed");
+         await refresh();
+       }catch(error){alert(error.message||"Could not publish");button.disabled=false;button.textContent="Retry Discord Post";}
+     });row.append(button);list.append(row);
    });
-   list.append(button);
-  });
  }
- async function refreshOverview(){
-  const status=$('ikOverviewStatus');
-  try{
-   const [ev,game]=await Promise.all([
-    fetch('/api/admin/events/list',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Events unavailable');return r.json()}),
-    fetch('/api/admin/ironkin-games/state',{cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null)
-   ]);
-   const events=Array.isArray(ev)?ev:Array.isArray(ev.events)?ev.events:[];
-   const now=Date.now();pending.length=0;
-   events.forEach(e=>{
-    if(e.id==='pvm-entry'||e.type==='pvm-entry'||e.id==='bounties'||e.type==='bounties')return;
-    const end=Date.parse(e.endDate||e.end||'');
-    const announcement=e.resultsAnnouncement||{};
-    if(Number.isFinite(end)&&end<now&&announcement.status!=='posted'&&
-       !e.archived&&e.status!=='archived'&&announcement.enabled!==false)pending.push(e);
-   });
-   pending.sort((a,b)=>Date.parse(a.endDate||a.end||'')-Date.parse(b.endDate||b.end||''));
-   $('ikFinishedCount').textContent=String(pending.length);
-   renderQueue();
-   const gameState=game?.state||game;
-   const submissions=Array.isArray(gameState?.submissions)?gameState.submissions:[];
-   $('ikPendingCount').textContent=game?String(submissions.filter(s=>String(s.status||'pending')==='pending').length):'—';
-   if(status)status.textContent='Publishing queue includes ended, unarchived events with known dates. Pending count covers Ironkin Games.';
-  }catch(err){if(status)status.textContent='Dashboard status unavailable. Management tools remain accessible.';}
+ async function refresh(){
+   const status=$("ikOverviewStatus");
+   try{
+     const response=await fetch("/api/admin/events/publishing-queue",{cache:"no-store"});
+     if(!response.ok)throw Error("Publishing queue unavailable");
+     const data=await response.json();queue=Array.isArray(data.queue)?data.queue:[];
+     $("ikFinishedCount").textContent=String(queue.length);render();
+     if(status)status.textContent="Discord publishing status is checked against saved event and archive records.";
+   }catch(error){$("ikFinishedCount").textContent="—";if(status)status.textContent=error.message;}
+    try {
+      const response = await fetch("/api/admin/pending-submissions", {cache:"no-store"});
+      if (!response.ok) throw Error("Pending counts unavailable");
+      const data = await response.json();
+      $("ikPendingCount").textContent = data.complete ? String(data.total) : `${data.knownCount || 0}+`;
+      const subtitle = document.querySelector('[data-ik-go="approvals"] small');
+      if (subtitle) subtitle.textContent = data.complete
+        ? "Pending across Games, location proofs, Hall of Flame and event drops"
+        : "Partial count — one or more review sources are unavailable";
+    } catch { $("ikPendingCount").textContent = "—"; }
  }
- window.ikRefreshOverview=refreshOverview;
- document.addEventListener('DOMContentLoaded',refreshOverview);
+ window.ikRefreshOverview=refresh;
+ document.addEventListener("DOMContentLoaded",refresh);
 })();
 </script>
 </body>

@@ -2320,6 +2320,7 @@ async function loadAdmin() {
     });
 
     selectedEventId = eventSelect.value;
+    try { sessionStorage.setItem("ironkin-admin-selected-event", selectedEventId || ""); } catch {}
     populateEventFields();
     loadAdminDrops();
 
@@ -2417,6 +2418,10 @@ async function saveSelectedEvent() {
   if (Array.isArray(data.events)) {
     const keepSelectedId = selectedEventId;
     allEvents = data.events;
+    try {
+      const remembered = sessionStorage.getItem("ironkin-admin-selected-event");
+      if (!keepSelectedId && remembered && allEvents.some(e => e.id === remembered)) keepSelectedId = remembered;
+    } catch {}
     selectedEventId = keepSelectedId;
     populateBackfillEventSelect();
     populateUnlinkedEventSelect();
