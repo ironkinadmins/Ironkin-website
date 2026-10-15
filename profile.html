@@ -71,6 +71,11 @@
 @media(max-width:800px){.profile-page .ik-profile-achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.profile-page .ik-profile-nav{top:0;margin:0 -12px;border-radius:0;padding:6px 12px}.profile-page .ik-profile-nav button{padding:12px 14px}.profile-page .ik-profile-achievement-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.profile-page [role="tabpanel"]{animation:none}}
+
+.ik-profile-hero-achievements{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 5px}
+.ik-hero-earned-badge{border:1px solid #9b6933;background:#382617;color:#f7c78c;border-radius:7px;padding:6px 9px;font-size:12px;font-weight:700}
+.ik-hero-earned-badge[hidden]{display:none}
+.ik-hero-badges-toggle{background:transparent;border:1px solid #6b4c30;color:#eab77e;border-radius:7px;padding:6px 9px;cursor:pointer;font:inherit;font-size:12px}
 </style>
 </head>
 <body>
@@ -111,7 +116,7 @@
 
       </div>
       <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
-        <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Clan badges earned from recorded event results, alongside your profile recognition.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
+        <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Event achievements and profile recognition, all in one collection.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
         <div id="profileFeaturedAchievements" class="ik-profile-featured"></div>
         <div class="ik-profile-status-filters" role="group" aria-label="Achievement status">
           <button type="button" class="btn secondary is-active" data-achievement-filter="all">All</button>

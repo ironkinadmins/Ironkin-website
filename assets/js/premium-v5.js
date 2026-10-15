@@ -41,13 +41,6 @@
   }
 
   function buildDataViz(){
-    // Profile: turn existing top-skill rows into a quick visual summary without changing source data.
-    const skillBox=$('.profile-top-skills');
-    if(skillBox && !$('.ik-data-viz',skillBox.parentElement||document)){
-      const rows=$$('.profile-skill-row',skillBox).slice(0,5);
-      const data=rows.map(r=>({label:($('strong',r)?.textContent||$('span',r)?.textContent||'Skill').trim(),value:parseNumber(r.textContent),display:(r.textContent.match(/[\d,.]+\s*[KMBT]?/i)||[''])[0]})).filter(x=>x.value>0);
-      if(data.length) insertViz(skillBox,data,'Progress snapshot','Top tracked skills');
-    }
     // Leaderboard / record style rows: gives live data a visual hierarchy.
     const host=$('#emberLeaderboard, #recordsGrid, .leaderboard, .records-grid');
     if(host && !$('.ik-data-viz')){

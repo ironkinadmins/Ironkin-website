@@ -1,6 +1,8 @@
 
 let ikAchievementFilter='all';
 let ikAchievementCatalog=[];
+let ikClanAchievementCatalog=[];
+let ikProfileRecognitionCatalog=[];
 let ikAchievementRequest=0;
 let ikAchievementFrame=null;
 function ikRenderAchievements(){
@@ -11,6 +13,7 @@ function ikRenderAchievements(){
  const unlocked=ikAchievementCatalog.filter(a=>a.unlocked);
  if(count)count.textContent=`${unlocked.length} / ${ikAchievementCatalog.length} unlocked`;
  if(featured)featured.innerHTML=unlocked.slice(0,3).map(a=>`<span>✦ ${profileEscapeHtml(a.name)}</span>`).join('');
+ ikRenderHeroAchievements();
  document.querySelectorAll('[data-achievement-filter]').forEach(button=>{
   const selected=button.dataset.achievementFilter===ikAchievementFilter;
   button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
@@ -21,7 +24,10 @@ function ikRenderAchievements(){
 function ikRequestAchievements(profile){
  const mount=document.getElementById('profileAchievementsList');
  if(!mount)return;
- ikAchievementCatalog=[];mount.innerHTML='<p class="admin-muted">Loading achievements from clan records…</p>';
+ ikClanAchievementCatalog=[];
+ ikAchievementCatalog=[...ikProfileRecognitionCatalog];
+ ikRenderAchievements();
+ mount.insertAdjacentHTML('beforeend','<p class="admin-muted" id="ikClanBadgeLoading">Loading event achievements…</p>');
  const requestId=++ikAchievementRequest;
  if(ikAchievementFrame)ikAchievementFrame.remove();
  ikAchievementFrame=document.createElement('iframe');
@@ -36,7 +42,8 @@ function ikRequestAchievements(profile){
 window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.source!==ikAchievementFrame?.contentWindow)return;
  if(event.data?.type!=='ironkin:profile-achievements'||event.data.requestId!==ikAchievementRequest)return;
- ikAchievementCatalog=Array.isArray(event.data.catalog)?event.data.catalog:[];
+ ikClanAchievementCatalog=Array.isArray(event.data.catalog)?event.data.catalog:[];
+ ikAchievementCatalog=[...ikProfileRecognitionCatalog,...ikClanAchievementCatalog];
  ikRenderAchievements();
  ikAchievementFrame?.remove();ikAchievementFrame=null;
 });
@@ -136,7 +143,58 @@ function buildProfileBadges(profile) {
     tooltip: "Ember Collector — Reached at least 500 Embers."
   });
 
-  return badges.slice(0, 3);
+  return badges;
+}
+
+
+function ikBuildRecognitionCatalog(profile) {
+ const wins=profile.placements?.wins||{};
+ const botw=Number(wins.botw||0),sotw=Number(wins.sotw||0),bingo=Number(wins.bingo||0);
+ const podiums=Number(profile.placements?.topThreeFinishes||0);
+ const embers=Number(profile.embers?.balance||0);
+ const rank=String(profile.rank||profile.clanRank||'');
+ const recognition=[];
+ if(rank && rank!=='Member') recognition.push({
+   name:`${rank} Rank`, rarity:'Rank', unlocked:true,
+   description:`Current clan rank: ${rank}.`,category:'recognition'
+ });
+ recognition.push(
+  {name:'Ember Collector',rarity:'Recognition',unlocked:embers>=500,description:`Hold at least 500 Embers. Current balance: ${profileFormatNumber(embers)}.`,category:'recognition'},
+  {name:'Ember Elite',rarity:'Recognition',unlocked:embers>=1000,description:`Hold at least 1,000 Embers. Current balance: ${profileFormatNumber(embers)}.`,category:'recognition'},
+  {name:'BOTW Winner',rarity:'Event Recognition',unlocked:botw>0,description:`Win a Boss of the Week event. Recorded wins: ${botw}.`,category:'recognition'},
+  {name:'SOTW Winner',rarity:'Event Recognition',unlocked:sotw>0,description:`Win a Skill of the Week event. Recorded wins: ${sotw}.`,category:'recognition'},
+  {name:'Bingo Winner',rarity:'Event Recognition',unlocked:bingo>0,description:`Win a Battleship Bingo event. Recorded wins: ${bingo}.`,category:'recognition'},
+  {name:'Event Champion',rarity:'Event Recognition',unlocked:podiums>=5,description:`Earn five top-three finishes. Recorded finishes: ${podiums}.`,category:'recognition'}
+ );
+ return recognition;
+}
+function ikRenderHeroAchievements(){
+ const hero=document.getElementById('profileHeroAchievements');
+ if(!hero)return;
+ const unlocked=ikAchievementCatalog.filter(a=>a.unlocked);
+ hero.replaceChildren();
+ const initial=6;
+ for(const [index,badge] of unlocked.entries()){
+   const chip=document.createElement('span');
+   chip.className='ik-hero-earned-badge';
+   chip.textContent=`✦ ${badge.name}`;
+   chip.title=badge.description||badge.name;
+   if(index>=initial)chip.hidden=true;
+   hero.append(chip);
+ }
+ if(unlocked.length>initial){
+   const toggle=document.createElement('button');
+   toggle.type='button';toggle.className='ik-hero-badges-toggle';
+   toggle.textContent=`+${unlocked.length-initial} more`;
+   toggle.setAttribute('aria-expanded','false');
+   toggle.addEventListener('click',()=>{
+     const expanded=toggle.getAttribute('aria-expanded')!=='true';
+     hero.querySelectorAll('.ik-hero-earned-badge').forEach((badge,index)=>{badge.hidden=!expanded&&index>=initial;});
+     toggle.textContent=expanded?'Show fewer':`+${unlocked.length-initial} more`;
+     toggle.setAttribute('aria-expanded',String(expanded));
+   });
+   hero.append(toggle);
+ }
 }
 
 function renderProfileHero(profile) {
@@ -169,6 +227,7 @@ function renderProfileHero(profile) {
         <div class="profile-badge-row">
           ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0">${badge.iconHtml || `<i>${badge.icon}</i>`}${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
+        <div class="ik-profile-hero-achievements" id="profileHeroAchievements" aria-label="Earned achievements"></div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "Add a short profile bio to make this page yours."}</p>
       </div>
     </div>
@@ -331,7 +390,10 @@ function renderProfile(profile) {
   const grid = document.getElementById("profileGrid");
   if (grid) grid.style.display = "grid";
 
+  ikProfileRecognitionCatalog=ikBuildRecognitionCatalog(profile);
+  ikAchievementCatalog=[...ikProfileRecognitionCatalog];
   renderProfileHero(profile);
+  ikRenderAchievements();
   renderWomStats(profile);
   renderEmbers(profile);
   renderEventRecord(profile);
