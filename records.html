@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/assets/ironkin-emblem.png">
   <link rel="stylesheet" href="/assets/css/styles.css?v=20261001-hof-pb-v1" />
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-modern-nav-headings">
-  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261014-chapters1" />
+  <link rel="stylesheet" href="/assets/css/records-refined.css?v=20261015-legacy1" />
 </head>
 <body class="records-no-pulse">
   <div id="siteNav"></div>
@@ -35,6 +35,17 @@
         <button type="button" class="records-chapter-arrow" id="recordsChapterNext" aria-label="Next chapter">›</button>
       </div>
       <div class="records-chapter-heading"><div><p class="eyebrow" id="recordsChapterKicker">THE HALL OF LEGENDS</p><h2 id="recordsChapterTitle">Ironkin Legends</h2></div><span id="recordsChapterCounter">01 / 04</span></div>
+      <div class="records-discord-publish" id="recordsDiscordPublish" hidden>
+        <button type="button" id="recordsPreviewPublish">Preview Discord embeds</button>
+        <span class="records-publish-note">Staff only · SOTW and BOTW · No automatic posting</span>
+      </div>
+      <dialog id="recordsPublishDialog" class="records-profile-dialog" aria-labelledby="recordsPublishTitle">
+        <h2 id="recordsPublishTitle">Publish Hall of Flame records</h2>
+        <p>Two Discord embeds will be posted or updated in the configured Hall of Flame channel. Review the counts before confirming.</p>
+        <div id="recordsPublishPreview" class="records-publish-preview"></div>
+        <p id="recordsPublishStatus" role="status" aria-live="polite"></p>
+        <div class="records-publish-actions"><button type="button" id="recordsConfirmPublish">Publish SOTW &amp; BOTW</button><button type="button" id="recordsCancelPublish">Cancel</button></div>
+      </dialog>
       <div id="recordsLegends" class="records-legends" aria-live="polite"></div>
       <section id="recordsGrid" class="records-grid" aria-live="polite" aria-busy="true">
         <div class="records-loading"><span class="records-loading-icon" aria-hidden="true">✦</span> Retrieving clan records…</div>
@@ -43,8 +54,8 @@
   </main>
   <dialog id="recordsProfileDialog" class="records-profile-dialog" aria-labelledby="recordsProfileTitle"><div id="recordsProfileContent"></div><button type="button" class="records-modal-close" aria-label="Close player achievements">✕</button></dialog>
   <footer><p>© Ironkin Clan. Not affiliated with Jagex.</p></footer>
-  <script src="/assets/js/script.js?v=20261001-hof-pb-v1"></script>
-  <script src="/assets/js/records-refined.js?v=20261014-chapters1" defer></script>
+  <script src="/assets/js/script.js?v=20261015-records-legacy1"></script>
+  <script src="/assets/js/records-refined.js?v=20261015-legacy1" defer></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

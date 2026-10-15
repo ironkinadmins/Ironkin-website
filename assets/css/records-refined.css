@@ -38,3 +38,10 @@ body.records-no-pulse .ik-data-viz{display:none!important}
 @media(max-width:750px){.records-page .records-chapter-nav{gap:5px;padding:6px}.records-page .records-chapter-tabs{gap:2px}.records-page .records-chapter-tabs button{padding:11px 3px;font-size:.8rem}.records-page .records-chapter-arrow{flex-basis:30px;height:38px;font-size:1.5rem}.records-page #recordsGrid.records-grid{grid-template-columns:1fr!important}.records-page #recordsLegends .records-legends-grid{grid-template-columns:1fr}}
 @media(max-width:440px){.records-page .records-chapter-tabs button span{display:block;font-size:.65rem}.records-page .records-chapter-tabs button{font-size:1rem}.records-page .records-chapter-heading{padding-top:16px}}
 @media(prefers-reduced-motion:reduce){.records-page #recordsLegends>.records-feature,.records-page #recordsGrid.records-grid{animation:none!important}}
+
+/* Staff-controlled Discord record publication. */
+.records-discord-publish:not([hidden]){display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+.records-discord-publish button,.records-publish-actions button{padding:11px 16px;border:1px solid #c18b4c;border-radius:10px;background:#59361f;color:#ffe2b8;font:inherit;font-weight:800;cursor:pointer}
+.records-discord-publish button:hover,.records-publish-actions button:hover{background:#774522}
+.records-publish-note{font-size:.8rem;color:#c9ad95}.records-publish-preview>div{display:flex;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid #65432b}.records-publish-preview>p{font-size:.84rem;color:#e2c6a9}.records-publish-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.records-publish-actions button:disabled{opacity:.5;cursor:wait}

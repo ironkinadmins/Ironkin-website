@@ -64,6 +64,7 @@
     players.clear();
     const archive = Array.isArray(detail.archive) ? detail.archive : [];
     const events = [];
+    const legacySeen = new Set();
     const recorded = new Set();
     archive.forEach((e,index) => {
       const title = e.title || e.metric || 'Archived event';
@@ -88,10 +89,21 @@
         recorded.add(`${key(winner)}|${key(e.metric || title)}`);
       }
     });
-    // Include historical winner names for discoverability, without inflating archive-derived statistics.
+    // Historical champions are included in wins and profiles, with archived duplicates removed.
+    const normalizeEvent = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const archiveKeys = new Set(archive.filter(e => e?.winner?.name).map(e => `${key(e.winner.name)}|${normalizeEvent(e.metric || e.title)}`));
     [...(detail.sotwChampions||[]),...(detail.botwChampions||[])].forEach(row => {
       const p=ensure(row.winner); if(!p) return;
-      if(row.source==='legacy') p.events.push({title:row.eventName || 'Legacy champion',date:'',result:'Legacy winner (not counted in archive totals)'});
+      const k=`${key(row.winner)}|${normalizeEvent(row.eventName)}`;
+      const urlKey=String(row.url || '').match(/competitions\/(\d+)/)?.[1] || '';
+      const dedupKey=urlKey ? `${key(row.winner)}|${urlKey}` : k;
+      if(legacySeen.has(dedupKey)) return;
+      legacySeen.add(dedupKey);
+      if(row.source === 'archive') return;
+      // A matching archive winner is already counted. Prefer its dated entry.
+      if(archiveKeys.has(k) || archive.some(e => key(e?.winner?.name)===key(row.winner) && normalizeEvent(e.metric || e.title).includes(normalizeEvent(row.eventName)))) return;
+      p.wins++; p.podiums++;
+      p.events.push({title:row.eventName || 'Legacy champion',date:'',result:'Legacy champion',url:row.url || ''});
     });
     const ranking = [...players.values()].sort((a,b)=>b.wins-a.wins || b.podiums-a.podiums || a.name.localeCompare(b.name));
     const maxWins=Math.max(0,...ranking.map(p=>p.wins));
@@ -115,5 +127,24 @@
     host.querySelector('#recordsYearFilter').addEventListener('change',e=>renderTimeline(e.target.value));
     renderTimeline();
     classify();
+    // The publish control is gated by the server session; the endpoint checks again.
+    const publishBox=document.getElementById('recordsDiscordPublish');
+    const previewButton=document.getElementById('recordsPreviewPublish');
+    const publishDialog=document.getElementById('recordsPublishDialog');
+    const status=document.getElementById('recordsPublishStatus');
+    const publishData={sotw:detail.sotwChampions||[],botw:detail.botwChampions||[]};
+    fetch('/api/admin/records/publish',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(d=>{if(d?.authorized && publishBox) publishBox.hidden=false;}).catch(()=>{});
+    previewButton?.addEventListener('click',()=>{
+      document.getElementById('recordsPublishPreview').innerHTML=`<div><strong>Skill of the Week</strong><span>${publishData.sotw.length} winners</span></div><div><strong>Boss of the Week</strong><span>${publishData.botw.length} winners</span></div><p>Existing messages with matching titles will be updated where possible. If no matching message exists, a new one will be created.</p>`;
+      status.textContent='';publishDialog.showModal();
+    });
+    document.getElementById('recordsCancelPublish')?.addEventListener('click',()=>publishDialog.close());
+    document.getElementById('recordsConfirmPublish')?.addEventListener('click',async e=>{
+      if(!window.confirm('Publish both record embeds to the Hall of Flame Discord channel?'))return;
+      e.currentTarget.disabled=true;status.textContent='Publishing…';
+      try {const response=await fetch('/api/admin/records/publish',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(publishData)});const result=await response.json();if(!response.ok)throw Error(result.error||'Publish failed');status.textContent=`Published: ${result.results.map(x=>x.type+' '+x.action).join(', ')}`;}
+      catch(error){status.textContent='Could not publish: '+error.message;}
+      finally{e.currentTarget.disabled=false;}
+    });
   });
 })();
