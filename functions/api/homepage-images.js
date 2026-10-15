@@ -1,0 +1,7 @@
+import { hybridKv } from "../_hybridKv.js";
+import { getSession, isStaffSession } from "./_auth.js";
+const KEY="homepage:images:v1";
+const fields=["hero","games","flame","events","profiles"];
+function validUrl(value){if(value==="")return true;if(typeof value!=="string"||value.length>1500)return false;try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}}
+export async function onRequestGet({env}){try{const raw=await (await hybridKv(env,"drops")).get(KEY);return Response.json({images:raw?JSON.parse(raw):{}},{headers:{"Cache-Control":"no-store"}});}catch{return Response.json({error:"Image configuration unavailable"},{status:503});}}
+export async function onRequestPut({request,env}){if(!isStaffSession(await getSession(request,env)))return Response.json({error:"Staff only"},{status:403});const body=await request.json().catch(()=>null);if(!body||typeof body.images!=="object"||!body.images||Array.isArray(body.images))return Response.json({error:"Invalid image settings"},{status:400});const images={};for(const key of fields){const value=body.images[key]??"";if(!validUrl(value))return Response.json({error:`Invalid HTTPS image URL for ${key}`},{status:400});images[key]=value.trim();}try{await (await hybridKv(env,"drops")).put(KEY,JSON.stringify(images));return Response.json({success:true,images});}catch{return Response.json({error:"Unable to save images"},{status:503});}}

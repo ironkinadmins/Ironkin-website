@@ -328,12 +328,40 @@
   </style>
   <link rel="stylesheet" href="/assets/css/premium-v5.css?v=20260913-home-news-pagination-v7">
   <link rel="stylesheet" href="/assets/css/home-refined.css?v=20261001-home-refine-v1">
+<style id="ik-visual-home-css">
+.ik-visual-banner{position:relative;min-height:clamp(340px,43vw,590px);display:flex;align-items:end;overflow:hidden;border-radius:22px;border:1px solid #78502b;margin:0 0 22px;background:radial-gradient(circle at 72% 30%,#604026,#10191c 65%);box-shadow:0 18px 55px #0008}
+.ik-visual-banner>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:none}
+.ik-visual-banner:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080d12 0%,#080d12a8 35%,transparent 85%);pointer-events:none}
+.ik-visual-banner-content{position:relative;z-index:1;padding:clamp(22px,5vw,58px);max-width:850px}
+.ik-visual-banner h1{font-size:clamp(2.4rem,5vw,5.2rem);line-height:1.02;margin:0 0 12px;color:#fff;text-shadow:0 3px 15px #000}
+.ik-visual-banner h1 em{display:block;color:#ffb76b;font-style:normal}
+.ik-visual-banner p{max-width:560px;color:#f2e4d3;line-height:1.6}
+.ik-visual-banner-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.ik-visual-banner-actions a{display:inline-block;padding:12px 21px;border-radius:9px;background:#ef8538;color:#16100c;text-decoration:none;font-weight:800}
+.ik-visual-banner-actions a:last-child{background:#151b20d9;color:#fff;border:1px solid #a87a4c}
+.ik-visual-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 0 30px}
+.ik-visual-link{position:relative;min-height:225px;border:1px solid #795332;border-radius:16px;overflow:hidden;text-decoration:none;background:linear-gradient(140deg,#3e2c25,#141c22);display:flex;align-items:end;transition:transform .2s,border-color .2s}
+.ik-visual-link:hover{transform:translateY(-3px);border-color:#ed9a51}
+.ik-visual-link img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.ik-visual-link:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#090e13 0%,#090e13bb 33%,transparent 85%)}
+.ik-visual-link span{position:relative;z-index:1;padding:20px;color:#fff;font-weight:800;font-size:1.1rem;text-shadow:0 2px 8px #000}
+.ik-visual-link small{display:block;color:#dbc5ad;font-size:.78rem;font-weight:500;margin-top:5px}
+@media(max-width:900px){.ik-visual-links{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.ik-visual-links{gap:10px}.ik-visual-link{min-height:170px}.ik-visual-link span{padding:12px;font-size:.94rem}.ik-visual-banner{min-height:380px}}
+</style>
 </head>
 <body class="home-premium-page premium-ui home-ledger-v3">
   <div id="siteNav"></div>
 
   <main class="member-home home-premium">
-    <section class="home-refined-hero" aria-labelledby="homeHeroTitle">
+<div id="ikVisualHome">
+<section class="ik-visual-banner"><img data-ik-home-image="hero" alt="Ironkin featured artwork" loading="eager"><div class="ik-visual-banner-content"><h1>Forged Alone.<em>Bound as Kin.</em></h1><p>An Ironman-only community built around progression, competition, and the milestones we share.</p><div class="ik-visual-banner-actions"><a href="rules.html">Join Ironkin</a><a href="events.html">Explore Events</a></div></div></section>
+<div class="ik-visual-links" aria-label="Explore Ironkin">
+<a class="ik-visual-link" href="ironkin-games.html"><img data-ik-home-image="games" alt="Ironkin Games artwork" loading="lazy"><span>Ironkin Games<small>Team challenges and standings</small></span></a>
+<a class="ik-visual-link" href="hall-of-flame.html"><img data-ik-home-image="flame" alt="Hall of Flame artwork" loading="lazy"><span>Hall of Flame<small>Clan records and achievements</small></span></a>
+<a class="ik-visual-link" href="events.html"><img data-ik-home-image="events" alt="Clan events artwork" loading="lazy"><span>Clan Events<small>Upcoming competitions</small></span></a>
+<a class="ik-visual-link" href="profile.html"><img data-ik-home-image="profiles" alt="Member profiles artwork" loading="lazy"><span>Member Profiles<small>Embers, ranks and badges</small></span></a>
+</div></div>
+    <div class="ik-original-home-hero" style="display:none"><section class="home-refined-hero" aria-labelledby="homeHeroTitle">
       <div class="home-refined-hero-copy">
         <div class="home-kicker"><span></span> Old School RuneScape · Ironman Clan</div>
         <h1 id="homeHeroTitle">Forged alone.<em>Bound as kin.</em></h1>
@@ -352,7 +380,7 @@
           <article><div><strong id="homeNextEvent">—</strong><small>Next Event</small></div></article>
         </div>
       </div>
-    </section>
+    </section></div>
 
     <div class="home-context-stack" aria-label="Clan and member updates">
       <section id="ironkinGamesPromoHome" data-ironkin-games-promo hidden class="games-card full home-context-card" style="display:none">
@@ -415,5 +443,6 @@
 
   <script src="/assets/js/script.js?v=20260913-home-news-pagination-v7"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
+<script>(async()=>{try{const r=await fetch('/api/homepage-images',{cache:'no-store'});if(!r.ok)return;const data=await r.json();for(const img of document.querySelectorAll('[data-ik-home-image]')){const url=data.images?.[img.dataset.ikHomeImage];if(typeof url==='string'&&/^https:\/\//i.test(url)){img.onload=()=>img.style.display='block';img.onerror=()=>img.style.display='none';img.src=url;}}}catch(e){console.warn('Homepage artwork unavailable',e)}})();</script>
 </body>
 </html>
