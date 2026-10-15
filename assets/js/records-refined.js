@@ -157,6 +157,27 @@
     const summary = !ownProfile ? '<p class="records-achievements-notice">Sign in with Discord and set your RuneScape name on your Ironkin profile to view your earned badges.</p>' : !player ? '<p class="records-achievements-notice">No matching archived results were found for your linked RuneScape name. You can still browse all badge requirements below.</p>' : `<p class="records-achievements-notice">Showing achievements for <strong>${escape(player.name)}</strong>, based on recorded clan results.</p>`;
     achievementsContent.innerHTML = `<div class="records-achievements-overview"><div><p class="eyebrow">YOUR COLLECTION</p><h3>${count} / ${total} badges unlocked</h3>${summary}</div><strong>${Math.round(count/total*100)}%</strong></div><div class="records-badge-progress" role="progressbar" aria-label="Achievements completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(count/total*100)}"><span style="width:${count/total*100}%"></span></div><div class="records-achievement-grid">${badgeNames.map(name=>{const rarity=badgeRarity[name]||'common';const description=badgeDescription(name,player||{name:'You',wins:0,podiums:0,events:[],legacyWins:0},mostWinsSeen,mostPodiumsSeen);const earned=unlocked.has(name);return `<article class="records-achievement-card rarity-${rarity} ${earned?'is-unlocked':'is-locked'}"><div class="records-achievement-card-top"><span class="records-achievement-status">${earned?'✓ UNLOCKED':'🔒 LOCKED'}</span><span class="records-achievement-tier">${rarityLabels[rarity]}</span></div><h3 class="records-achievement-name">${escape(name)}</h3><p class="records-achievement-requirement">${escape(description)}</p></article>`;}).join('')}</div>`;
   }
+
+  // Share the exact same recorded-result achievement calculations with member profiles.
+  // The profile does not duplicate or approximate these badge rules.
+  function shareAchievements(request, source) {
+    const identities = Array.isArray(request.identities) ? request.identities.slice(0,8).map(key).filter(Boolean) : [];
+    const matched = [...new Set(identities.map(name=>players.get(name)).filter(Boolean))];
+    const player = matched.find(p=>key(p.name)===identities[0]) || (matched.length===1?matched[0]:null);
+    const catalog = badgeNames.map(name=>({
+      name, rarity:badgeRarity[name]||'common',
+      unlocked:!!player?.badges?.includes(name),
+      description:badgeDescription(name,player||{name:'Member',wins:0,podiums:0,events:[],legacyWins:0},mostWinsSeen,mostPodiumsSeen)
+    }));
+    source?.postMessage({type:'ironkin:profile-achievements',requestId:request.requestId,playerName:player?.name||'',catalog},location.origin);
+  }
+  let archiveReady=false;
+  const queuedRequests=[];
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin || event.data?.type!=='ironkin:request-achievements')return;
+    if(archiveReady)shareAchievements(event.data,event.source);
+    else queuedRequests.push([event.data,event.source]);
+  });
   resolveOwnProfile().then(renderAchievements);
   host.addEventListener('click', e => { const btn=e.target.closest('[data-record-player]'); if(btn) showProfile(btn.dataset.recordPlayer); });
   dialog?.addEventListener('click', e => { if(e.target === dialog || e.target.closest('.records-modal-close')) dialog.close(); });
@@ -214,6 +235,8 @@
     const maxPodiums=Math.max(0,...ranking.map(p=>p.podiums));
     mostWinsSeen = maxWins; mostPodiumsSeen = maxPodiums;
     ranking.forEach(p=>p.badges=badges(p,maxWins,maxPodiums));
+    archiveReady=true;
+    queuedRequests.splice(0).forEach(([request,source])=>shareAchievements(request,source));
     resolveOwnProfile().then(renderAchievements);
     const featured=ranking.filter(p=>p.wins>0).slice(0,3);
     host.innerHTML=`<section class="records-feature"><div class="records-feature-head"><div><p>Champions who left their mark on the clan.</p></div><span class="records-count">${ranking.filter(p=>p.wins).length} archive champions</span></div><div class="records-legends-grid">${featured.length ? featured.map((p,i)=>`<button class="records-legend ${i===0?'is-king':''}" type="button" data-record-player="${escape(key(p.name))}"><span class="records-legend-medal">${['♛','🥈','🥉'][i]}</span><small>${['MOST DECORATED','RUNNER-UP','THIRD PLACE'][i]}</small><strong>${escape(p.name)}</strong><span>${p.wins} wins · ${p.podiums} podiums</span><span class="records-legend-cta">View achievements ↗</span></button>`).join('') : '<p class="admin-muted">No archived champions yet.</p>'}</div></section><section class="records-feature"><div class="records-feature-head"><div></div><label class="records-search-label">Find a member <input id="recordsMemberSearch" type="search" placeholder="Search players…" autocomplete="off"></label></div><div class="records-ranking" id="recordsRanking"></div></section><section class="records-feature"><div class="records-feature-head"><div></div><label class="records-search-label">Year <select id="recordsYearFilter"><option value="all">All years</option>${[...new Set(events.map(e=>String(e.date).slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}</select></label></div><div id="recordsTimeline" class="records-timeline"></div></section>`;

@@ -1,3 +1,46 @@
+
+let ikAchievementFilter='all';
+let ikAchievementCatalog=[];
+let ikAchievementRequest=0;
+let ikAchievementFrame=null;
+function ikRenderAchievements(){
+ const mount=document.getElementById('profileAchievementsList');
+ const count=document.getElementById('profileAchievementCount');
+ const featured=document.getElementById('profileFeaturedAchievements');
+ if(!mount)return;
+ const unlocked=ikAchievementCatalog.filter(a=>a.unlocked);
+ if(count)count.textContent=`${unlocked.length} / ${ikAchievementCatalog.length} unlocked`;
+ if(featured)featured.innerHTML=unlocked.slice(0,3).map(a=>`<span>✦ ${profileEscapeHtml(a.name)}</span>`).join('');
+ document.querySelectorAll('[data-achievement-filter]').forEach(button=>{
+  const selected=button.dataset.achievementFilter===ikAchievementFilter;
+  button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
+ });
+ const shown=ikAchievementCatalog.filter(a=>ikAchievementFilter==='all'||(ikAchievementFilter==='unlocked'?a.unlocked:!a.unlocked));
+ mount.innerHTML=shown.length?shown.map(a=>`<article class="ik-profile-achievement ${a.unlocked?'is-unlocked':'is-locked'}"><div class="ik-achievement-meta"><span>${a.unlocked?'✓ Unlocked':'◇ Locked'}</span><span>${profileEscapeHtml(a.rarity)}</span></div><h3>${profileEscapeHtml(a.name)}</h3><p>${profileEscapeHtml(a.description)}</p></article>`).join(''):'<p class="admin-muted">No achievements in this category.</p>';
+}
+function ikRequestAchievements(profile){
+ const mount=document.getElementById('profileAchievementsList');
+ if(!mount)return;
+ ikAchievementCatalog=[];mount.innerHTML='<p class="admin-muted">Loading achievements from clan records…</p>';
+ const requestId=++ikAchievementRequest;
+ if(ikAchievementFrame)ikAchievementFrame.remove();
+ ikAchievementFrame=document.createElement('iframe');
+ ikAchievementFrame.src='/records.html';ikAchievementFrame.title='Clan achievement records';
+ ikAchievementFrame.style.display='none';ikAchievementFrame.setAttribute('aria-hidden','true');
+ const identities=[profile.rsn,profile.displayName,profile.username,...(profile.previousRsns||[])].filter(Boolean);
+ ikAchievementFrame.addEventListener('load',()=>{
+   ikAchievementFrame.contentWindow?.postMessage({type:'ironkin:request-achievements',requestId,identities},location.origin);
+ });
+ document.body.append(ikAchievementFrame);
+}
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==ikAchievementFrame?.contentWindow)return;
+ if(event.data?.type!=='ironkin:profile-achievements'||event.data.requestId!==ikAchievementRequest)return;
+ ikAchievementCatalog=Array.isArray(event.data.catalog)?event.data.catalog:[];
+ ikRenderAchievements();
+ ikAchievementFrame?.remove();ikAchievementFrame=null;
+});
+
 let currentProfile = null;
 
 function profileFormatNumber(value) {
@@ -93,7 +136,7 @@ function buildProfileBadges(profile) {
     tooltip: "Ember Collector — Reached at least 500 Embers."
   });
 
-  return badges.slice(0, 7);
+  return badges.slice(0, 3);
 }
 
 function renderProfileHero(profile) {
@@ -292,7 +335,14 @@ function renderProfile(profile) {
   renderWomStats(profile);
   renderEmbers(profile);
   renderEventRecord(profile);
+  ikRequestAchievements(profile);
   renderPluginApiKey(profile);
+  const toolsLink=document.getElementById('profileToolsLink');
+  if(toolsLink)toolsLink.hidden=profile.isOwnProfile===false;
+  const hub=document.getElementById('profileHubCard');
+  if(hub)hub.style.display=profile.isOwnProfile===false?'none':'';
+  const activity=document.getElementById('profileActivityCard');
+  if(activity && profile.isOwnProfile===false)activity.style.display='none';
   const settingsCard = document.querySelector(".profile-settings-card");
   if (settingsCard) {
     settingsCard.style.display = profile.isOwnProfile === false ? "none" : "";
@@ -321,6 +371,7 @@ async function loadProfile() {
     }
 
     renderProfile(data.profile);
+    if(data.profile?.isOwnProfile)profileLoadSubmissions();
   } catch (error) {
     if (hero) {
       hero.innerHTML = `
@@ -413,6 +464,9 @@ async function profileLoadSubmissions() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('[data-achievement-filter]').forEach(button=>button.addEventListener('click',()=>{
+    ikAchievementFilter=button.dataset.achievementFilter;ikRenderAchievements();
+  }));
   document.querySelectorAll("[data-profile-filter]").forEach(button=>button.addEventListener("click",()=>{
     profileSubmissionFilter=button.dataset.profileFilter;
     profileRenderSubmissionTracker();
