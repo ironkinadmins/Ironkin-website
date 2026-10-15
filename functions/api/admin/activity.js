@@ -1,5 +1,5 @@
-import { hybridKv } from "../../../_hybridKv.js";
-import { getSession, isStaffSession } from "../../_auth.js";
+import { hybridKv } from "../../_hybridKv.js";
+import { getSession, isStaffSession } from "../_auth.js";
 
 export async function onRequestGet({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
