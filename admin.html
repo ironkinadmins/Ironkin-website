@@ -171,6 +171,22 @@
 .ik-approval-group .ik-approval-sources{margin:0;grid-template-columns:1fr}
 .ik-approval-group .ik-games-review{margin-top:12px}
 .ik-approval-group .ik-games-review h4{margin:0;color:#efcfad;font-size:14px}
+
+/* Simplified approvals: one surface, three clear sections, no nested cards. */
+#ik-approvals .ik-approval-summary{background:transparent;border:0;border-bottom:1px solid #493627;border-radius:0;padding:8px 0 15px;margin:0;color:#e8b077;font-weight:600}
+#ik-approvals .ik-approval-groups{display:block;margin-top:0}
+#ik-approvals .ik-approval-group{background:transparent;border:0;border-bottom:1px solid #493627;border-radius:0;padding:19px 0 17px;margin:0}
+#ik-approvals .ik-approval-group:last-child{border-bottom:0;padding-bottom:0}
+#ik-approvals .ik-approval-group-heading{margin:0 0 8px}
+#ik-approvals .ik-approval-group-heading h3{font-size:15px}
+#ik-approvals .ik-approval-sources{margin:0;gap:0}
+#ik-approvals .ik-approval-source{border:0;background:transparent;border-radius:0;padding:8px 0;min-height:0}
+#ik-approvals .ik-games-review{background:transparent;border:0;border-radius:0;padding:0;margin:4px 0 0}
+#ik-approvals .ik-games-review-head{margin-bottom:5px}
+#ik-approvals .ik-games-review h4{font-size:13px;color:#cbb6a2}
+#ik-approvals .ik-games-review p.admin-muted{font-size:12px;color:#9d8977}
+#ik-approvals .ik-games-review-list,#ik-approvals #ikGamesReviewList{background:transparent}
+#ik-approvals .ik-approval-group-heading span{font-size:12px}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -211,7 +227,7 @@
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
 </section>
 <section id="ik-approvals" class="ik-command-page" hidden aria-label="Approvals">
-<div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>All Approvals</h2><p>Pending submissions from across Ironkin, in one place.</p></div>
+<div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>All Approvals</h2><p>Review submissions by source.</p></div>
 <button type="button" id="ikApprovalsRefresh" class="btn secondary">Refresh</button></div>
 <div class="ik-approval-summary" id="ikApprovalSummary" role="status">Loading pending submissions…</div>
 <div class="ik-approval-groups">
@@ -220,7 +236,7 @@
 <div class="ik-approval-sources" id="ikGamesApprovalSources"></div>
 <div class="ik-games-review" aria-label="Pending team submissions">
 <div class="ik-games-review-head"><div><h4>Team Challenge Proofs <span id="ikGamesReviewCount"></span></h4>
-<p>Review proof, points, and placement here.</p></div></div>
+</div></div>
 <div id="ikGamesReviewList" aria-live="polite"><p class="admin-muted">Loading pending team submissions…</p></div>
 </div>
 </section>
@@ -233,7 +249,7 @@
 <div class="ik-approval-sources" id="ikEventsApprovalSources"></div>
 </section>
 </div>
-<p class="ik-command-note">Each section shows where submissions came from. Team challenge proofs can be reviewed here; other submissions open their existing review tools.</p>
+
 </section>
 <section id="ik-tools" class="ik-command-page" hidden aria-label="Settings and tools"><div class="ik-command-heading"><div><p class="eyebrow">ADMINISTRATION</p><h2>Settings &amp; Tools</h2><p>Specialist tools stay available without cluttering the main navigation.</p></div></div>
 <div class="ik-action-grid">
@@ -924,6 +940,7 @@
    }
  }
  function ikAppendApprovalSource(container,source,route){
+   if(source.status==='ok' && Number(source.count)===0) return;
    const card=document.createElement('div');card.className='ik-approval-source';
    const details=document.createElement('div');
    const title=document.createElement('strong');title.textContent=route.label||source.label||source.id;
