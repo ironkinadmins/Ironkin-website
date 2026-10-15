@@ -75,7 +75,27 @@
 @media(max-width:950px){.ik-admin-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.ik-top{white-space:normal;text-align:center;padding:11px 9px}}
 @media(max-width:600px){.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.ik-top{font-size:12px;min-height:44px}.ik-stage-nav{margin-left:-4px;margin-right:-4px}.ik-stage-nav button{min-width:108px}.ik-event-picker{min-width:0;width:100%}.ik-health-check{padding:15px}}
 @media(prefers-reduced-motion:reduce){.ik-top,.ik-stage-nav button,.ik-subnav button{transition:none!important}}
-.ik-setup-event-picker{margin-bottom:14px}.ik-setup-event-picker select{width:100%;max-width:520px}.ik-auto-status{border:1px solid #60452c;background:#251c16;border-radius:12px;padding:14px 16px;color:#f1d0a7;margin-bottom:14px}.ik-auto-status strong{display:block;margin-bottom:5px}.ik-auto-status button{margin-top:10px;border:1px solid #a9763f;background:#49301d;color:#ffdcad;padding:8px 12px;border-radius:8px;cursor:pointer}.ik-event-head .ik-event-picker{display:none}</style></head>
+.ik-setup-event-picker{margin-bottom:14px}.ik-setup-event-picker select{width:100%;max-width:520px}.ik-auto-status{border:1px solid #60452c;background:#251c16;border-radius:12px;padding:14px 16px;color:#f1d0a7;margin-bottom:14px}.ik-auto-status strong{display:block;margin-bottom:5px}.ik-auto-status button{margin-top:10px;border:1px solid #a9763f;background:#49301d;color:#ffdcad;padding:8px 12px;border-radius:8px;cursor:pointer}.ik-event-head .ik-event-picker{display:none}
+/* Guided event setup and compact item reuse */
+.ik-status-details{margin:8px 0 14px;border:1px solid #4d3a2a;border-radius:10px;padding:11px 14px}
+.ik-status-details summary,.ik-manual-items summary{cursor:pointer;font-weight:700;color:#edba82}
+.ik-muted-inline{font-size:12px;color:#bba58e;font-weight:400}
+.ik-status-details .ik-auto-status{margin-top:12px}
+.ik-preset-box{padding:17px;border:1px solid #715037;border-radius:12px;background:linear-gradient(135deg,#2c211a,#1b1612);margin-bottom:16px}
+.ik-preset-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}
+.ik-preset-title span{font-size:12px;color:#c3aa93}
+.ik-preset-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.ik-preset-select{flex:1;min-width:190px;display:grid;gap:6px;color:#e8d1b8;font-size:13px}
+.ik-preset-select select{width:100%}
+.ik-preset-preview{margin-top:13px;padding:12px;background:#19140f;border:1px solid #51402f;border-radius:9px}
+.ik-preset-preview ul{margin:9px 0 14px;padding-left:20px;max-height:170px;overflow:auto}
+.ik-preset-preview li{margin:4px 0;color:#dbc4ae;font-size:13px}
+.ik-preset-message{margin:9px 0 0;font-size:12px}
+.ik-manual-items{border:1px solid #493628;border-radius:10px;margin:0 0 18px}
+.ik-manual-items summary{padding:13px 15px}
+.ik-manual-items-body{padding:12px 15px 16px}
+@media(max-width:620px){.ik-preset-controls{display:grid;grid-template-columns:1fr}.ik-preset-select{min-width:0}}
+</style></head>
 <body>
 <div id="siteNav"></div>
 <main class="admin-page">
@@ -118,27 +138,29 @@
 <label for="adminEventSelect">Event</label>
 <select id="adminEventSelect"></select>
 </div>
-<div class="admin-field admin-field-wide ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div>
+<details class="ik-status-details admin-field-wide"><summary>Automatic event status <span class="ik-muted-inline">(view details)</span></summary>
+<div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></details>
 
 <div class="admin-field">
-<label for="eventWomInput">Wise Old Man Competition ID</label>
+<label for="eventWomInput">Competition ID <span class="ik-muted-inline">(Wise Old Man)</span></label>
 <div class="admin-inline-row">
 <input id="eventWomInput" placeholder="WOM competition ID" type="text"/>
 <button class="btn secondary" id="previewWomBtn" type="button">Preview</button>
 </div>
 <small class="admin-wom-confirm" id="primaryWomCompactStatus">Enter a WOM competition ID.</small>
 </div>
+<div class="admin-field admin-field-wide">
+<div class="admin-info-box admin-info-compact" id="botwTierNotice" style="display:none"></div>
+</div>
 <div class="admin-field" id="secondaryWomSection" style="display:none">
-<label for="eventSecondaryWomInput">Add another boss <span class="admin-muted">(optional)</span></label>
+<label for="eventSecondaryWomInput">Second competition ID <span class="admin-muted">(optional — BOTW only)</span></label>
 <div class="admin-inline-row">
 <input id="eventSecondaryWomInput" placeholder="2nd WOM competition ID" type="text"/>
 <button class="btn secondary" id="previewSecondaryWomBtn" type="button">Preview</button>
 </div>
-<small class="admin-wom-confirm" id="secondaryWomCompactStatus">Leave blank for a single-boss BOTW.</small>
+<small class="admin-wom-confirm" id="secondaryWomCompactStatus">Only needed when this BOTW uses two competitions.</small>
 </div>
-<div class="admin-field admin-field-wide">
-<div class="admin-info-box admin-info-compact" id="botwTierNotice" style="display:none"></div>
-</div>
+
 <div aria-hidden="true" class="admin-field admin-field-wide admin-hidden-detected">
 <div class="admin-detected-event" id="womDetectedBox"><strong id="detectedEventTitle">No WOM competition loaded yet.</strong><span id="detectedEventMeta"></span></div>
 </div>
@@ -300,6 +322,18 @@
 <h2>Event Drops</h2>
 <p>These drops are saved only for the selected event.</p>
 </div>
+<div class="ik-preset-box" id="ikDropPresets">
+  <div class="ik-preset-title"><strong>Reuse items from an event</strong><span>Optional</span></div>
+  <div class="ik-preset-controls">
+    <label class="ik-preset-select">Previous event
+      <select id="ikPresetSource"><option value="">Choose an event…</option></select>
+    </label>
+    <button class="btn secondary" id="ikPresetPreview" type="button">Preview items</button>
+  </div>
+  <div class="ik-preset-preview" id="ikPresetPreviewBody" hidden></div>
+  <p class="admin-muted ik-preset-message" id="ikPresetMessage" role="status" aria-live="polite">Select a previous event to copy its tracked items.</p>
+</div>
+<details class="ik-manual-items"><summary>+ Add items manually</summary><div class="ik-manual-items-body">
 <div class="admin-field admin-field-wide">
 <label for="dropItemSearchInput">Search OSRS Items</label>
 <input autocomplete="off" id="dropItemSearchInput" placeholder="Type an item name..." type="text"/>
@@ -336,6 +370,7 @@
 <button class="btn primary" id="addDropBtn">Add Tracked Item</button>
 </div>
 </div>
+</div></details>
 <div class="admin-divider"></div>
 <div class="admin-drops-list" id="adminDropsList">Loading...</div>
 </section></div><div data-ik-item-panel="bounties" hidden=""><section class="admin-card" id="bountiesEditor" style="display:none">

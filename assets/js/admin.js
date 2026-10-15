@@ -1473,7 +1473,7 @@ function populateEventFields() {
     const tier = getBotwTierLabel(event);
     botwTierNotice.style.display = event.type === "botw" ? "block" : "none";
     botwTierNotice.innerHTML = tier
-      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> Add an optional 2nd boss WOM ID below and both competitions will be combined into one leaderboard, result, and reward set.`
+      ? `<strong>Editing BOTW ${escapeHtml(tier)}.</strong> A second WOM competition is optional. Add its ID in the field directly below; both competitions contribute to the same event.`
       : `<strong>Editing BOTW.</strong> This event is separated from other BOTW tiers.`;
   }
 
@@ -2078,7 +2078,135 @@ async function syncDiscordMembersNow() {
   }
 }
 
+
+// Reuse previously configured tracked items. Existing /api/drops endpoints are
+// retained; copying never changes the source event or its submission counts.
+let ikPresetPreviewItems = [];
+let ikArchivedItemPresets = [];
+function populateDropPresetSources() {
+  const select = document.getElementById("ikPresetSource");
+  if (!select) return;
+  const previous = select.value;
+  select.replaceChildren(new Option("Choose an event…", ""));
+  ikArchivedItemPresets.forEach(preset => {
+    select.add(new Option(`${preset.title} · archived ${preset.date || ""} (${preset.count} items)`, `archive:${preset.key}`));
+  });
+  (Array.isArray(allEvents) ? allEvents : []).forEach(event => {
+    if (!event?.id || event.id === selectedEventId) return;
+    select.add(new Option(getAdminEventOptionText(event), event.id));
+  });
+  if ([...select.options].some(option => option.value === previous)) select.value = previous;
+}
+function ikPresetStatus(message) {
+  const status = document.getElementById("ikPresetMessage");
+  if (status) status.textContent = message;
+}
+async function ikFetchDropList(eventId) {
+  const response = await fetch(`/api/drops/list?eventId=${encodeURIComponent(eventId)}&t=${Date.now()}`, {cache:"no-store"});
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Could not load items.");
+  return Array.isArray(payload.drops) ? payload.drops : [];
+}
+async function ikPreviewPreset() {
+  const source = document.getElementById("ikPresetSource")?.value;
+  const preview = document.getElementById("ikPresetPreviewBody");
+  if (!preview) return;
+  preview.hidden = true;
+  preview.replaceChildren();
+  ikPresetPreviewItems = [];
+  if (!source || !selectedEventId) { ikPresetStatus("Choose a previous event first."); return; }
+  if (source === selectedEventId) { ikPresetStatus("Choose a different event."); return; }
+  ikPresetStatus("Loading items…");
+  try {
+    const items = source.startsWith("archive:")
+      ? (ikArchivedItemPresets.find(p => `archive:${p.key}` === source)?.drops || [])
+      : await ikFetchDropList(source);
+    ikPresetPreviewItems = items.filter(item => item?.name && Number(item.itemId) > 0);
+    if (!ikPresetPreviewItems.length) {
+      ikPresetStatus("No reusable items found for this event. Older archived event lists may no longer be stored.");
+      return;
+    }
+    const heading = document.createElement("strong");
+    heading.textContent = `${ikPresetPreviewItems.length} item${ikPresetPreviewItems.length === 1 ? "" : "s"} available`;
+    const list = document.createElement("ul");
+    ikPresetPreviewItems.slice(0,30).forEach(item => {
+      const li=document.createElement("li");
+      li.textContent = `${item.name} (#${item.itemId})`;
+      list.append(li);
+    });
+    if(ikPresetPreviewItems.length>30) {
+      const li=document.createElement("li");
+      li.textContent=`…and ${ikPresetPreviewItems.length-30} more`;
+      list.append(li);
+    }
+    const action=document.createElement("button");
+    action.type="button";
+    action.className="btn primary";
+    action.textContent="Use These Items";
+    action.addEventListener("click", ikApplyPreset);
+    preview.append(heading,list,action);
+    preview.hidden=false;
+    ikPresetStatus("Existing items will be kept; only missing items will be added.");
+  } catch(error) {
+    ikPresetStatus(error?.message || "Unable to load this event's items.");
+  }
+}
+async function ikApplyPreset() {
+  const source=document.getElementById("ikPresetSource")?.value;
+  const target=selectedEventId;
+  if(!source || !target || source===target || !ikPresetPreviewItems.length) return;
+  const items=ikPresetPreviewItems.slice();
+  if(!confirm(`Add missing items from this previous event to the current event? Existing items will be kept. This saves immediately.`)) return;
+  const button=document.querySelector("#ikPresetPreviewBody button");
+  if(button) button.disabled=true;
+  try {
+    const existing=await ikFetchDropList(target);
+    const existingIds=new Set(existing.map(item=>Number(item.itemId)).filter(Boolean));
+    const existingNames=new Set(existing.map(item=>String(item.name||"").toLowerCase()));
+    let added=0,failed=0;
+    for(const item of items) {
+      const id=Number(item.itemId), name=String(item.name||"").trim();
+      if(!name || !Number.isInteger(id) || id<=0 || existingIds.has(id) || existingNames.has(name.toLowerCase())) continue;
+      const response=await fetch("/api/drops/add",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          eventId:target,name,itemId:id,image:item.image||"",wikiUrl:item.wikiUrl||"",
+          rewardEmbers:Number(item.rewardEmbers)||0,trackingRule:item.trackingRule||"repeatable",
+          boss:item.boss||""
+        })
+      });
+      if(response.ok){added++;existingIds.add(id);existingNames.add(name.toLowerCase());}
+      else failed++;
+    }
+    ikPresetStatus(`${added} item${added===1?"":"s"} added. ${failed ? `${failed} could not be saved. ` : ""}Existing items were preserved.`);
+    await loadAdminDrops();
+  }catch(error){ikPresetStatus(error?.message || "Could not copy items.");}
+  finally{if(button) button.disabled=false;}
+}
+async function ikLoadArchivedPresets() {
+  try {
+    const response = await fetch("/api/admin/events/item-presets", {cache:"no-store"});
+    if (!response.ok) throw new Error("Archived presets unavailable");
+    const data = await response.json();
+    ikArchivedItemPresets = Array.isArray(data.presets) ? data.presets : [];
+  } catch(error) {
+    ikArchivedItemPresets = [];
+    console.warn("Archived event item presets unavailable:",error?.message);
+  }
+  populateDropPresetSources();
+}
+function ikInitPresets() {
+  document.getElementById("ikPresetPreview")?.addEventListener("click",ikPreviewPreset);
+  document.getElementById("ikPresetSource")?.addEventListener("change",()=>{
+    const preview=document.getElementById("ikPresetPreviewBody");
+    if(preview) preview.hidden=true;
+    ikPresetPreviewItems=[];
+    ikPresetStatus("Select Preview items to see what will be copied.");
+  });
+}
+
 async function loadAdmin() {
+  ikInitPresets();
   setupAdminTabs();
   setupEventSubtabs();
 
@@ -2144,6 +2272,8 @@ async function loadAdmin() {
 
   try {
     allEvents = await fetchEvents();
+    populateDropPresetSources();
+    ikLoadArchivedPresets();
     populateBackfillEventSelect();
   populateUnlinkedEventSelect();
   loadUnlinkedTrackedItems();
@@ -2164,6 +2294,7 @@ async function loadAdmin() {
     eventSelect.addEventListener("change", () => {
       selectedEventId = eventSelect.value;
       populateEventFields();
+      populateDropPresetSources();
       loadAdminDrops();
     });
 
@@ -3660,7 +3791,7 @@ setupHandbookEditor();
     const title2 = document.getElementById("secondaryDetectedEventTitle")?.textContent?.trim();
     const meta2 = document.getElementById("secondaryDetectedEventMeta")?.textContent?.trim();
     const secondary = document.getElementById("secondaryWomCompactStatus");
-    if (secondary) secondary.textContent = title2 && !title2.startsWith("No second") ? `✓ ${title2}${meta2 ? ` · ${meta2}` : ""}` : "Leave blank for a single-boss BOTW.";
+    if (secondary) secondary.textContent = title2 && !title2.startsWith("No second") ? `✓ ${title2}${meta2 ? ` · ${meta2}` : ""}` : "Optional: add a second BOTW competition.";
   };
   document.addEventListener("DOMContentLoaded", () => {
     ["womDetectedBox","secondaryWomDetectedBox"].forEach(id => {
