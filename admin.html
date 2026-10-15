@@ -61,6 +61,20 @@
 .ik-health-result{overflow-wrap:anywhere;min-height:18px;margin-bottom:0}
 .ik-health-note{font-size:12px;color:#bda68f;margin-top:16px}
 @media(max-width:700px){.ik-health-grid{grid-template-columns:1fr}.ik-health-check-top{flex-wrap:wrap}}
+
+/* Final Admin polish: accessible states, clearer focus, and compact responsive navigation. */
+.ik-admin-nav{position:relative;align-items:center;row-gap:7px}
+.ik-top{min-height:42px;display:inline-flex;align-items:center;justify-content:center;line-height:1.35}
+.ik-top:focus-visible,.ik-stage-nav button:focus-visible,.ik-subnav button:focus-visible,.ik-health-check button:focus-visible{outline:2px solid #ffcc88;outline-offset:3px}
+.ik-stage-nav{scrollbar-width:thin;scrollbar-color:#8a5a35 #17120f}
+.ik-stage-nav button{flex-shrink:0;min-height:56px}
+.ik-event-head{align-items:center}
+.ik-stage .admin-card,.ik-member-panel,.ik-health-check{min-width:0}
+.ik-health-check button:disabled{opacity:.65;cursor:wait}
+.admin-tab-panel .admin-section-header p,.ik-member-panel-heading p{line-height:1.55}
+@media(max-width:950px){.ik-admin-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.ik-top{white-space:normal;text-align:center;padding:11px 9px}}
+@media(max-width:600px){.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.ik-top{font-size:12px;min-height:44px}.ik-stage-nav{margin-left:-4px;margin-right:-4px}.ik-stage-nav button{min-width:108px}.ik-event-picker{min-width:0;width:100%}.ik-health-check{padding:15px}}
+@media(prefers-reduced-motion:reduce){.ik-top,.ik-stage-nav button,.ik-subnav button{transition:none!important}}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -675,7 +689,7 @@
 (function(){
  const $=(q,r=document)=>r.querySelector(q), $$=(q,r=document)=>Array.from(r.querySelectorAll(q));
  function main(which){
-   $$('.ik-top[data-ik-main]').forEach(b=>b.classList.toggle('active',b.dataset.ikMain===which));
+   $$('.ik-top[data-ik-main]').forEach(b=>{const active=b.dataset.ikMain===which;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
    const click=(q)=>$(q)?.click();
    if(which==='events')click('[data-event-subtab="standard"].event-subtab-btn');
    else if(which==='bingo'||which==='guess-kc')click('[data-event-subtab="'+which+'"].event-subtab-btn');
@@ -693,11 +707,11 @@
    });
  }
  function stage(which){
-   $$('.ik-stage-nav button').forEach(b=>b.classList.toggle('active',b.dataset.ikStage===which));
+   $$('.ik-stage-nav button').forEach(b=>{const active=b.dataset.ikStage===which;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
    $$('.ik-stage').forEach(p=>p.hidden=p.dataset.ikPanel!==which);
  }
  function item(which){
-   $$('.ik-subnav [data-ik-item]').forEach(b=>b.classList.toggle('active',b.dataset.ikItem===which));
+   $$('.ik-subnav [data-ik-item]').forEach(b=>{const active=b.dataset.ikItem===which;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
    $$('[data-ik-item-panel]').forEach(p=>p.hidden=p.dataset.ikItemPanel!==which);
  }
  function adapt(){
@@ -732,6 +746,7 @@
      $$('[data-ik-member-panel]').forEach(panel=>{
        const selected=panel.dataset.ikMemberPanel===which;
        panel.hidden=!selected;
+       panel.setAttribute('aria-hidden',String(!selected));
        panel.style.display=selected?'':'none';
      });
      const notes={directory:'Directory: inspect synchronization status or refresh Discord member profiles.',emblems:'Rank Emblems: map Discord emojis to display ranks, then save the mappings.',profiles:'Profile Overrides: search for a member before editing profile information.'};
