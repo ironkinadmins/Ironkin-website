@@ -2522,7 +2522,6 @@ function initArchiveControls(grid) {
   const buttons = [...document.querySelectorAll("[data-archive-filter]")];
   const search = document.getElementById("archiveSearch");
   const count = document.getElementById("archiveResultCount");
-  const reset = document.getElementById("archiveReset");
   let activeFilter = buttons.find(button => button.classList.contains("active"))?.dataset.archiveFilter || "all";
 
   const apply = () => {
@@ -2547,8 +2546,7 @@ function initArchiveControls(grid) {
       grid.appendChild(empty);
     }
 
-    if (count) count.textContent = `${visible} of ${cards.length} ${cards.length === 1 ? "event" : "events"}`;
-    if (reset) reset.hidden = activeFilter === "all" && !query;
+    if (count) count.textContent = `${visible} ${visible === 1 ? "event" : "events"}`;
   };
 
   buttons.forEach(button => button.addEventListener("click", () => {
@@ -2562,11 +2560,6 @@ function initArchiveControls(grid) {
   }));
   buttons.forEach(item => item.setAttribute("aria-pressed", item.dataset.archiveFilter === activeFilter ? "true" : "false"));
   search?.addEventListener("input", apply);
-  reset?.addEventListener("click", () => {
-    if (search) search.value = "";
-    buttons.find(button => button.dataset.archiveFilter === "all")?.click();
-    search?.focus();
-  });
   apply();
 }
 
@@ -2584,7 +2577,6 @@ async function loadArchivePage() {
 
     const canDeleteArchive = isStaffUser(currentUser);
     grid.className = "archive-grid";
-    grid.setAttribute("aria-busy", "false");
     grid.innerHTML = "";
 
     if (!archive.length && !bingoArchive.length) {
@@ -2618,7 +2610,7 @@ async function loadArchivePage() {
             : entry.winner === "tie" ? "Tie" : "Not recorded";
         card.dataset.archiveSearch = `${entry.title || "Battleship Bingo"} bingo ${winner || ""}`.toLowerCase();
         card.innerHTML = `
-          <div class="archive-card-meta"><span class="archive-type-pill">Battleship Bingo</span><time>${dateText}</time></div>
+          <p class="eyebrow">Battleship Bingo · ${dateText}</p>
           <h2>${escapeHtml(entry.title || "Battleship Bingo")}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(winner || "Not recorded")}</p>
           <div class="archive-results-list">
@@ -2637,7 +2629,7 @@ async function loadArchivePage() {
         const title = displayEventTitle(entry.title, entry.type);
         card.dataset.archiveSearch = `${label} ${title} ${getArchiveWinnerText(entry)}`.toLowerCase();
         card.innerHTML = `
-          <div class="archive-card-meta"><span class="archive-type-pill">${escapeHtml(label)}</span><time>${dateText}</time></div>
+          <p class="eyebrow">${escapeHtml(label)} · ${dateText}</p>
           <h2>${escapeHtml(title)}</h2>
           <p><strong>Winner:</strong> ${escapeHtml(getArchiveWinnerText(entry))}</p>
           <div class="archive-results-list">${renderArchivedTopFive(entry)}</div>
@@ -2656,12 +2648,7 @@ async function loadArchivePage() {
 
     initArchiveControls(grid);
   } catch (error) {
-    grid.setAttribute("aria-busy", "false");
-    grid.innerHTML = `<article class="card archive-card archive-error"><h2>Couldn’t load the archive</h2><p>${escapeHtml(error.message)}</p><button class="btn secondary" type="button" id="archiveRetry">Try again</button></article>`;
-    document.getElementById("archiveRetry")?.addEventListener("click", () => {
-      grid.setAttribute("aria-busy", "true");
-      loadArchivePage();
-    });
+    grid.innerHTML = `<article class="card archive-card"><p>Could not load archive: ${escapeHtml(error.message)}</p></article>`;
   }
 }
 
@@ -4119,69 +4106,81 @@ function renderEmberRows(leaders, compact = false) {
 
 async function loadEmberLeaderboard() {
   const container = document.getElementById("emberLeaderboard");
+
   if (!container) return;
-  const escape = value => escapeHtml(String(value ?? ""));
-  const profileLink = player => player.user_id && /^\d{15,22}$/.test(String(player.user_id))
-    ? `/profile.html?id=${encodeURIComponent(player.user_id)}` : "";
+
   try {
     const leaders = await fetchEmberLeaderboard();
+
     if (!leaders.length) {
-      container.innerHTML = `<div class="ember-empty">No Ember balances have been recorded yet.</div>`;
+      container.innerHTML = `<p class="admin-muted">No Ember balances found yet.</p>`;
       return;
     }
-    const total = leaders.reduce((sum, player) => sum + Number(player.balance || 0), 0);
-    const podium = leaders.slice(0, 3);
-    const podiumCard = player => {
-      const href = profileLink(player);
-      const tag = href ? "a" : "div";
-      return `<${tag} class="ember-podium-card place-${player.rank}" ${href ? `href="${href}"` : ""}>
-        <span class="ember-podium-medal" aria-hidden="true">${player.rank === 1 ? "👑" : player.rank === 2 ? "🥈" : "🥉"}</span>
-        <small>${player.rank === 1 ? "EMBER CHAMPION" : `RANK #${player.rank}`}</small>
-        <strong>${escape(player.display_name)}</strong>
-        <span class="ember-podium-balance">${formatNumber(player.balance)} <em>Embers</em></span>
-        <span class="ember-podium-view">${href ? "View profile ↗" : "Profile unavailable"}</span>
-      </${tag}>`;
-    };
-    const row = player => {
-      const href = profileLink(player);
-      const tag = href ? "a" : "div";
-      return `<${tag} class="ember-rank-entry ${player.rank <= 3 ? `top-${player.rank}` : ""}" ${href ? `href="${href}"` : ""}>
-        <span class="ember-rank-number">${player.rank <= 3 ? ["🥇","🥈","🥉"][player.rank-1] : `#${player.rank}`}</span>
-        <strong>${escape(player.display_name)}</strong>
-        <span class="ember-rank-balance">${formatNumber(player.balance)} <small>Embers</small></span>
-        <span class="ember-rank-arrow" aria-hidden="true">${href ? "↗" : ""}</span>
-      </${tag}>`;
-    };
+
+    const totalEmbers = leaders.reduce(
+      (sum, player) => sum + Number(player.balance || 0),
+      0
+    );
+
+    const highest = leaders[0];
+
     container.innerHTML = `
       <div class="ember-summary-grid">
-        <div><span>Clan Ember Wealth</span><strong>${formatNumber(total)}</strong></div>
-        <div><span>Ranked Members</span><strong>${formatNumber(leaders.length)}</strong></div>
-        <div><span>Top Balance</span><strong>${formatNumber(leaders[0].balance)}</strong></div>
+        <div>
+          <strong>${formatNumber(totalEmbers)}</strong>
+          <span>Total Embers</span>
+        </div>
+
+        <div>
+          <strong>${formatNumber(leaders.length)}</strong>
+          <span>Members Ranked</span>
+        </div>
+
+        <div>
+          <strong>${formatNumber(highest.balance)}</strong>
+          <span>Highest Balance</span>
+        </div>
       </div>
-      <div class="ember-section-head"><div><span class="eyebrow">THE TOP THREE</span><h2>Ember Royalty</h2></div><span>Current standings</span></div>
-      <div class="ember-podium">${podium.map(podiumCard).join("")}</div>
-      <div class="ember-section-head ember-rankings-head"><div><span class="eyebrow">THE FULL ROSTER</span><h2>Clan Rankings</h2></div><span id="emberMatchCount">${leaders.length} members</span></div>
-      <div class="ember-toolbar"><label for="emberSearchInput">Find a member</label><input id="emberSearchInput" class="ember-search" type="search" autocomplete="off" placeholder="Search clan members…" /><button id="emberClearSearch" type="button" hidden>Clear</button></div>
-      <div id="emberLeaderboardRows" class="ember-rank-list"></div>
+
+      <div class="ember-podium" aria-label="Top three Ember holders">
+        ${leaders.slice(0, 3).map(player => `
+          <a class="ember-podium-card place-${player.rank}" href="/profile.html?id=${encodeURIComponent(player.user_id || "")}">
+            <span class="ember-podium-medal">${player.rank === 1 ? "🥇" : player.rank === 2 ? "🥈" : "🥉"}</span>
+            <strong>${escapeHtml(player.display_name)}</strong>
+            <span>${formatNumber(player.balance)} Embers</span>
+            <small>#${player.rank}</small>
+          </a>
+        `).join("")}
+      </div>
+
+      <input
+        id="emberSearchInput"
+        class="ember-search"
+        type="text"
+        placeholder="Search member..."
+      />
+
+      <div id="emberLeaderboardRows">
+        ${renderEmberRows(leaders.slice(3))}
+      </div>
     `;
+
     const searchInput = document.getElementById("emberSearchInput");
     const rowsContainer = document.getElementById("emberLeaderboardRows");
-    const clearButton = document.getElementById("emberClearSearch");
-    const count = document.getElementById("emberMatchCount");
-    const update = () => {
-      const q = searchInput.value.trim().toLocaleLowerCase();
-      const filtered = q ? leaders.filter(p => String(p.display_name || "").toLocaleLowerCase().includes(q)) : leaders;
-      rowsContainer.innerHTML = filtered.length ? filtered.map(row).join("") : `<p class="ember-empty">No members match that search.</p>`;
-      count.textContent = `${filtered.length} of ${leaders.length} members`;
-      clearButton.hidden = !q;
-    };
-    searchInput.addEventListener("input", update);
-    clearButton.addEventListener("click", () => { searchInput.value = ""; update(); searchInput.focus(); });
-    update();
+
+    searchInput.addEventListener("input", () => {
+      const search = searchInput.value.toLowerCase().trim();
+
+      const filtered = leaders.filter(player =>
+        String(player.display_name || "")
+          .toLowerCase()
+          .includes(search)
+      );
+
+      rowsContainer.innerHTML = renderEmberRows(search ? filtered : leaders.slice(3));
+    });
   } catch (error) {
-    container.innerHTML = `<div class="ember-empty"><p>Couldn't load the Ember rankings.</p><button type="button" id="emberRetry">Try again</button></div>`;
-    document.getElementById("emberRetry")?.addEventListener("click", loadEmberLeaderboard);
-    console.error("Ember leaderboard:", error);
+    container.textContent = error.message;
   }
 }
 
@@ -4418,9 +4417,8 @@ async function loadRecordsPage() {
   if (!grid) return;
 
   try {
-    const [archive, emberLeaders, hallData] = await Promise.all([
+    const [archive, hallData] = await Promise.all([
       fetchArchive().catch(() => []),
-      fetchEmberLeaderboard(10).catch(() => []),
       fetch("/api/hall-of-flame/discord").then(response => response.ok ? response.json() : { entries: [] }).catch(() => ({ entries: [] }))
     ]);
     const hallEntries = Array.isArray(hallData?.entries) ? hallData.entries : [];
@@ -4512,12 +4510,8 @@ async function loadRecordsPage() {
         ` : `<p class="admin-muted">No BOTW archive records yet.</p>`}
       </article>
 
-      <article class="card record-card records-wide">
-        <p class="eyebrow">Embers</p>
-        <h2>Richest Kin</h2>
-        ${renderEmberRows(emberLeaders.slice(0, 5), true)}
-      </article>
     `;
+    document.dispatchEvent(new CustomEvent("ironkin:records-loaded", { detail: { archive, sotwChampions, botwChampions } }));
   } catch (error) {
     grid.innerHTML = `<article class="card"><p>Could not load records: ${error.message}</p></article>`;
   }
