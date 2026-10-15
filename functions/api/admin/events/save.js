@@ -127,6 +127,19 @@ export async function onRequestPost({ request, env }) {
   );
 
   const catalogSync = await syncEventCatalog(env, eventsToStore);
+  try {
+    const kv = hybridKv(env, "drops");
+    const raw = await kv.get("admin:audit:v1");
+    const log = raw ? JSON.parse(raw) : [];
+    const prior = Array.isArray(log) ? log : [];
+    const changed = eventsToStore.filter(event => JSON.stringify(previousById.get(event.id) || null) !== JSON.stringify(event));
+    if (changed.length) {
+      prior.unshift({ id: crypto.randomUUID(), at: new Date().toISOString(),
+        action: "events.saved", eventIds: changed.map(event => event.id),
+        summary: `Updated ${changed.length} event configuration${changed.length === 1 ? "" : "s"}` });
+      await kv.put("admin:audit:v1", JSON.stringify(prior.slice(0, 250)));
+    }
+  } catch (error) { console.warn("Audit write failed:", error); }
 
   return Response.json({
     success: true,

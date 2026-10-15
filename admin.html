@@ -134,6 +134,16 @@
 .ik-games-review-actions button[data-decision="rejected"]{background:#272321;color:#e8d5c0;border-color:#54483e}
 .ik-games-review-actions button:disabled{opacity:.5;cursor:wait}
 @media(max-width:750px){.ik-games-review-row{grid-template-columns:1fr}.ik-games-review-actions{justify-content:start}}
+
+.ik-template-reuse{border:1px solid #4e3b2a;border-radius:10px;margin:12px 0;padding:12px 15px}
+.ik-template-reuse summary{cursor:pointer;color:#e9b47b;font-weight:650}
+.ik-template-body{padding-top:14px;display:grid;gap:9px}
+.ik-template-body select{max-width:580px}
+.ik-activity-box{border:1px solid #4e3b2a;border-radius:10px;margin-top:18px;padding:14px}
+.ik-activity-box summary{cursor:pointer;font-weight:650;color:#e9b47b}
+.ik-activity-content{padding-top:12px}
+#ikActivityList{list-style:none;margin:12px 0 0;padding:0;max-height:300px;overflow:auto}
+#ikActivityList li{padding:9px 0;border-bottom:1px solid #423024;color:#e5d3bf;font-size:13px}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -166,7 +176,11 @@
 <button type="button" data-ik-go="events:items"><strong>Configure items →</strong><small>Reuse archived item lists and manage tracked drops</small></button>
 <button type="button" data-ik-go="events:results"><strong>Review results →</strong><small>Preview standings before publishing</small></button>
 <button type="button" data-ik-go="approvals"><strong>Review submissions →</strong><small>Find proof reviews for games and competitions</small></button>
-</div><p class="ik-command-note" id="ikOverviewStatus" role="status">Loading your event summary…</p></section>
+</div><p class="ik-command-note" id="ikOverviewStatus" role="status">Loading your event summary…</p>
+<details class="ik-activity-box"><summary>Recent admin activity</summary>
+<div class="ik-activity-content"><button class="btn secondary compact" id="ikActivityRefresh" type="button">Refresh history</button>
+<ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
+</section>
 <section id="ik-approvals" class="ik-command-page" hidden aria-label="Approvals">
 <div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>Approvals</h2><p>One starting point for existing proof and submission review tools.</p></div></div>
 <section class="ik-games-review" aria-label="Ironkin Games pending submissions">
@@ -231,6 +245,15 @@
 <div aria-hidden="true" class="admin-field admin-field-wide admin-hidden-detected" id="secondaryWomDetectedSection" style="display:none">
 <div class="admin-detected-event" id="secondaryWomDetectedBox"><strong id="secondaryDetectedEventTitle">No second WOM competition linked.</strong><span id="secondaryDetectedEventMeta"></span></div>
 </div>
+<details class="ik-template-reuse admin-field-wide">
+<summary>Reuse settings from a past event (optional)</summary>
+<div class="ik-template-body">
+<label for="ikTemplateSelect">Archived event</label>
+<select id="ikTemplateSelect"><option value="">Choose an archived event…</option></select>
+<p class="admin-muted" id="ikTemplateSummary">Copies description and reward configuration, not old WOM IDs, dates, or results.</p>
+<button type="button" class="btn secondary" id="ikTemplateApply">Use This Configuration</button>
+</div>
+</details>
 <details class="admin-advanced-settings admin-field-wide">
 <summary>Advanced Settings</summary>
 <div class="admin-advanced-settings-body">

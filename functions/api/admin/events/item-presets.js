@@ -15,9 +15,19 @@ export async function onRequestGet({ request, env }) {
         key: String(entry.id || entry.archiveRequestId || index),
         title: String(entry.title || entry.label || entry.type || "Previous event"),
         date: String(entry.endDate || entry.endedAt || "").slice(0, 10),
+        template: entry.template || {
+          type: entry.type || "",
+          botwTier: entry.botwTier || null,
+          description: entry.description || "",
+          rewards: entry.rewards || null,
+          milestones: entry.milestones || [],
+          target: entry.target || null
+        },
         eventId: String(entry.eventId || ""),
         eventType: String(entry.type || ""),
-        drops: (Array.isArray(entry.drops) ? entry.drops : (Array.isArray(entry.snapshot?.drops) ? entry.snapshot.drops : []))
+        drops: (Array.isArray(entry.configuredDrops) ? entry.configuredDrops :
+          (Array.isArray(entry.template?.configuredDrops) ? entry.template.configuredDrops :
+          (Array.isArray(entry.drops) ? entry.drops : (Array.isArray(entry.snapshot?.drops) ? entry.snapshot.drops : []))))
           .filter(item => item && item.name)
           .map(item => ({
             name: String(item.name),

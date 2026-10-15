@@ -2187,8 +2187,47 @@ async function ikLoadArchivedPresets() {
     console.warn("Archived event item presets unavailable:",error?.message);
   }
   populateDropPresetSources();
+  ikPopulateTemplateOptions();
+}
+function ikPopulateTemplateOptions() {
+  const select = document.getElementById("ikTemplateSelect");
+  if (!select) return;
+  const old = select.value;
+  select.replaceChildren(new Option("Choose an archived event…", ""));
+  [...ikArchivedItemPresets]
+    .sort((a,b)=>String(a.title||"").localeCompare(String(b.title||""),undefined,{numeric:true}))
+    .forEach(item => select.add(new Option(String(item.title || "Archived event"),String(item.key))));
+  if ([...select.options].some(option=>option.value===old)) select.value=old;
+}
+function ikApplyEventTemplate() {
+  const key=document.getElementById("ikTemplateSelect")?.value;
+  const status=document.getElementById("ikTemplateSummary");
+  const template=ikArchivedItemPresets.find(item=>String(item.key)===key);
+  const target=getSelectedEvent();
+  if (!target || !template) {if(status)status.textContent="Choose an archived event first.";return;}
+  if (isPvmEntryEvent(target) || isBountiesEvent(target)) {
+    if(status)status.textContent="This event uses special settings. Use the Items section to reuse its items.";
+    return;
+  }
+  const source=template.template||{};
+  if(source.type && target.type!==source.type) {
+    if(status)status.textContent="Choose an archived event of the same type.";
+    return;
+  }
+  if(!confirm("Copy the description, reward rules, and eligible milestones into this event? WOM IDs, dates, existing items, and results will not change. Review the fields and click Save Changes afterward.")) return;
+  target.description=String(source.description||"");
+  if(source.rewards && typeof source.rewards==="object"){
+    target.rewards=JSON.parse(JSON.stringify(source.rewards));
+  }
+  if(Array.isArray(source.milestones) && isClanGoalEvent(target)){
+    target.milestones=JSON.parse(JSON.stringify(source.milestones));
+    target.target=Number(source.target)||null;
+  }
+  populateEventFields();
+  if(status)status.textContent="Settings loaded into the editor. Review them, then click Save Changes. Items can be copied separately under Items.";
 }
 function ikInitPresets() {
+  document.getElementById("ikTemplateApply")?.addEventListener("click",ikApplyEventTemplate);
   document.getElementById("ikPresetPreview")?.addEventListener("click",ikPreviewPreset);
   document.getElementById("ikPresetSource")?.addEventListener("change",()=>{
     const preview=document.getElementById("ikPresetPreviewBody");
@@ -3793,3 +3832,36 @@ setupHandbookEditor();
     syncCompactWomStatus();
   });
 })();
+
+
+// Read-only activity history; no background polling or changes to existing handlers.
+document.addEventListener("DOMContentLoaded", () => {
+  const section=document.querySelector(".ik-activity-box");
+  const list=document.getElementById("ikActivityList");
+  async function refreshActivity(){
+    if(!list)return;
+    list.replaceChildren();
+    const loading=document.createElement("li");loading.textContent="Loading activity…";list.append(loading);
+    try{
+      const response=await fetch("/api/admin/activity",{cache:"no-store"});
+      if(!response.ok)throw new Error("Activity history unavailable.");
+      const data=await response.json();
+      list.replaceChildren();
+      const entries=Array.isArray(data.entries)?data.entries:[];
+      if(!entries.length){
+        const li=document.createElement("li");li.textContent="No activity recorded yet.";list.append(li);return;
+      }
+      entries.forEach(entry=>{
+        const li=document.createElement("li");
+        const date=Date.parse(entry.at);
+        li.textContent=`${Number.isFinite(date)?new Date(date).toLocaleString():"Unknown time"} — ${String(entry.summary||entry.action||"Admin action")}`;
+        list.append(li);
+      });
+    }catch(error){
+      list.replaceChildren();
+      const li=document.createElement("li");li.textContent=error.message||"Could not load activity.";list.append(li);
+    }
+  }
+  section?.addEventListener("toggle",()=>{if(section.open)refreshActivity();});
+  document.getElementById("ikActivityRefresh")?.addEventListener("click",refreshActivity);
+});

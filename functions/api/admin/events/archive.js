@@ -48,6 +48,23 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ success: true, archiveEntry: existing, idempotent: true, announcement: existing.resultsAnnouncement || null });
   }
 
+  // The request ID handles retries of one request. This additional guard also
+  // blocks a second click/new request ID for the same finished WOM competition.
+  const womId = String(event.womCompetitionId || "").trim();
+  if (womId && Array.isArray(archive)) {
+    const duplicate = archive.find(item =>
+      String(item?.eventId || "") === String(event.id) &&
+      String(item?.womCompetitionId || "").trim() === womId &&
+      String(item?.endDate || "") === String(event.endDate || ""));
+    if (duplicate) {
+      return Response.json({
+        success: true, archiveEntry: duplicate, idempotent: true,
+        announcement: duplicate.resultsAnnouncement || null,
+        warning: "This WOM competition has already been archived."
+      });
+    }
+  }
+
   let snapshot;
   try {
     snapshot = await buildEventResultsSnapshot(env, event);
@@ -66,6 +83,23 @@ export async function onRequestPost({ request, env }) {
       details: "Refresh the event standings and try End Event + Publish Results again."
     }, { status: 409 });
   }
+
+  // Preserve the configured item catalog, not only the results snapshot.
+  // The latter may omit unclaimed items, making old event templates incomplete.
+  let configuredDrops = [];
+  try {
+    const stored = await hybridKv(env, "drops").get(`drops:${event.id}`);
+    const parsed = stored ? JSON.parse(stored) : [];
+    configuredDrops = Array.isArray(parsed) ? parsed.map(item => ({
+      name: String(item?.name || ""),
+      itemId: Number(item?.itemId || 0),
+      image: String(item?.image || ""),
+      wikiUrl: String(item?.wikiUrl || ""),
+      rewardEmbers: Math.max(0, Number(item?.rewardEmbers || 0)),
+      trackingRule: String(item?.trackingRule || "repeatable"),
+      boss: String(item?.boss || "")
+    })).filter(item => item.name) : [];
+  } catch { configuredDrops = []; }
 
   const endedAt = new Date().toISOString();
   const archiveEntry = {
@@ -95,6 +129,17 @@ export async function onRequestPost({ request, env }) {
     leaderboard: snapshot.leaderboard,
     ...(event?.type === "bounties" || event?.id === "bounties" ? {} : { rewards: event.rewards || { placement: [], participation: [] } }),
     drops: snapshot.drops || [],
+    configuredDrops,
+    templateVersion: 1,
+    template: {
+      type: event.type,
+      botwTier: event.botwTier || null,
+      description: event.description || "",
+      rewards: event.type === "bounties" || event.id === "bounties" ? null : (event.rewards || null),
+      milestones: Array.isArray(event.milestones) ? event.milestones : [],
+      target: event.target || null,
+      configuredDrops
+    },
     ...(snapshot.bountyStats ? { bountyStats: snapshot.bountyStats } : {}),
     resultsAnnouncement: {
       enabled: wantsAutomaticResults(event, body),
@@ -182,5 +227,15 @@ export async function onRequestPost({ request, env }) {
     await hybridKv(env, "drops").put("events:active", JSON.stringify(sanitizedEvents));
   }
 
+  try {
+    const auditKv = hybridKv(env, "drops");
+    const logRaw = await auditKv.get("admin:audit:v1");
+    const log = logRaw ? JSON.parse(logRaw) : [];
+    const next = Array.isArray(log) ? log : [];
+    next.unshift({ id: crypto.randomUUID(), at: endedAt, action: "event.archived", eventId: event.id,
+      summary: `Archived ${String(event.title || event.label || event.id).slice(0, 120)}`,
+      requestId: archiveRequestId, resultStatus: archiveEntry.resultsAnnouncement?.status || "skipped" });
+    await auditKv.put("admin:audit:v1", JSON.stringify(next.slice(0, 250)));
+  } catch (error) { console.warn("Audit write failed:", error); }
   return Response.json({ success: true, archiveEntry, announcement: archiveEntry.resultsAnnouncement, recordsSync: archiveEntry.recordsSync || null });
 }
