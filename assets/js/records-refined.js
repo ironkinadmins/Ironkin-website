@@ -12,8 +12,10 @@
   function classify() {
     const sections = [...host.querySelectorAll(':scope > .records-feature')];
     sections.forEach((section,i) => { section.hidden = chapters[i] !== active; });
-    host.hidden = active === 'milestones';
+    host.hidden = active === 'milestones' || active === 'achievements';
     grid.hidden = active !== 'milestones';
+    const publishBox = document.getElementById('recordsDiscordPublish');
+    if (publishBox) publishBox.hidden = active !== 'milestones' || publishBox.dataset.authorized !== 'true';
     const milestonePanel = document.getElementById('recordsMilestonesPanel');
     if (milestonePanel) milestonePanel.hidden = active !== 'milestones';
     const achievementsPanel = document.getElementById('recordsAchievementsPanel');
@@ -237,7 +239,7 @@
     const publishDialog=document.getElementById('recordsPublishDialog');
     const status=document.getElementById('recordsPublishStatus');
     const publishData={sotw:detail.sotwChampions||[],botw:detail.botwChampions||[]};
-    fetch('/api/admin/records/publish',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(d=>{if(d?.authorized && publishBox) publishBox.hidden=false;}).catch(()=>{});
+    fetch('/api/admin/records/publish',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(d=>{if(d?.authorized && publishBox) { publishBox.dataset.authorized='true'; classify(); }}).catch(()=>{});
     previewButton?.addEventListener('click',()=>{
       document.getElementById('recordsPublishPreview').innerHTML=`<div><strong>Skill of the Week</strong><span>${publishData.sotw.length} winners</span></div><div><strong>Boss of the Week</strong><span>${publishData.botw.length} winners</span></div><p>Existing messages with matching titles will be updated where possible. If no matching message exists, a new one will be created.</p>`;
       status.textContent='';publishDialog.showModal();
