@@ -117,6 +117,23 @@
 .ik-guidance p{margin:10px 0 0;line-height:1.6;font-size:13px}
 @media(max-width:900px){.ik-admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.ik-command-page{padding:15px}.ik-command-heading{display:grid}.ik-summary-grid{gap:6px}.ik-summary-grid>div{padding:10px}.ik-summary-grid strong{font-size:23px}.ik-action-grid{grid-template-columns:1fr}.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.ik-games-review{border:1px solid #61462d;background:#141211;border-radius:13px;padding:17px;margin:18px 0}
+.ik-games-review-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:13px}
+.ik-games-review-head h3{margin:0;color:#f4d6b4;font-size:17px}
+.ik-games-review-head p{margin:4px 0 0;color:#bca58d;font-size:12px}
+.ik-games-review-head button{white-space:nowrap}
+.ik-games-review-row{padding:13px 0;border-top:1px solid #423428;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.ik-games-review-row strong{display:block;color:#f5e3cf;font-size:14px}
+.ik-games-review-row small{display:block;color:#bda48d;margin-top:4px}
+.ik-games-review-row a{color:#e9a65d;display:inline-block;margin-top:6px}
+.ik-games-review-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap;justify-content:end}
+.ik-games-review-actions label{display:grid;gap:4px;font-size:11px;color:#cbb49c}
+.ik-games-review-actions input{width:65px;min-width:0;background:#171411;color:#f7e3cc;border:1px solid #644831;border-radius:7px;padding:8px}
+.ik-games-review-actions button{padding:9px 13px;border:1px solid #8c603a;border-radius:8px;background:#d58c3b;color:#1c130b;font-weight:700;cursor:pointer}
+.ik-games-review-actions button[data-decision="rejected"]{background:#272321;color:#e8d5c0;border-color:#54483e}
+.ik-games-review-actions button:disabled{opacity:.5;cursor:wait}
+@media(max-width:750px){.ik-games-review-row{grid-template-columns:1fr}.ik-games-review-actions{justify-content:start}}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -152,8 +169,12 @@
 </div><p class="ik-command-note" id="ikOverviewStatus" role="status">Loading your event summary…</p></section>
 <section id="ik-approvals" class="ik-command-page" hidden aria-label="Approvals">
 <div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>Approvals</h2><p>One starting point for existing proof and submission review tools.</p></div></div>
+<section class="ik-games-review" aria-label="Ironkin Games pending submissions">
+<div class="ik-games-review-head"><div><h3>Ironkin Games <span id="ikGamesReviewCount"></span></h3><p>Pending team submissions — review proof, points, and placement here.</p></div><button type="button" id="ikGamesReviewRefresh" class="btn secondary">Refresh</button></div>
+<div id="ikGamesReviewList" aria-live="polite"><p class="admin-muted">Open Approvals to load pending Games submissions.</p></div>
+</section>
 <div class="ik-action-grid">
-<a href="/ironkin-games-admin.html"><strong>Ironkin Games submissions ↗</strong><small>Review team challenge proofs and results in the existing Games admin</small></a>
+<a href="/ironkin-games-admin.html"><strong>All Ironkin Games submissions ↗</strong><small>Review team challenge proofs and results in the existing Games admin</small></a>
 <button type="button" data-ik-go="bingo"><strong>Battleship Bingo proofs →</strong><small>Review attacks and proof decisions</small></button>
 <button type="button" data-ik-go="events:tracking"><strong>Event tracking →</strong><small>Inspect event drops and submission tracking</small></button>
 <button type="button" data-ik-go="events:results"><strong>Event results →</strong><small>Preview and publish event outcomes</small></button>
@@ -776,6 +797,7 @@
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
    const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',health:'health',maintenance:'maintenance'}[which];
+   if(which==='approvals')ikLoadGamesReviews();
    for(const [id,visible] of [['ik-overview',which==='overview'],['ik-approvals',which==='approvals'],['ik-tools',which==='tools']]){
      const page=document.getElementById(id);if(page)page.hidden=!visible;
    }
@@ -786,6 +808,76 @@
      p.style.display=visible?'block':'none';
    });
  }
+
+ // Games reviews use the same authenticated endpoints as the Games Admin page.
+ // Only pending entries are shown; decisions update the existing scoring backend.
+ let ikGamesReviewsLoaded=false;
+ function ikGamesReviewText(node,value){node.textContent=String(value??'');return node;}
+ function ikGamesReviewElement(tag,className,textValue){
+   const node=document.createElement(tag);
+   if(className)node.className=className;
+   if(textValue!==undefined)node.textContent=String(textValue);
+   return node;
+ }
+ async function ikLoadGamesReviews(){
+   const list=document.getElementById('ikGamesReviewList');
+   const count=document.getElementById('ikGamesReviewCount');
+   if(!list)return;
+   list.replaceChildren(ikGamesReviewElement('p','admin-muted','Loading Ironkin Games reviews…'));
+   try{
+     const response=await fetch('/api/admin/ironkin-games/state',{cache:'no-store'});
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok)throw Error(data.error||'Unable to load Ironkin Games reviews.');
+     const state=data.state||data;
+     const rows=(Array.isArray(state.submissions)?state.submissions:[]).filter(s=>String(s.status||'pending')==='pending');
+     const teams=Array.isArray(state.teams)?state.teams:[];
+     count.textContent=`(${rows.length})`;
+     list.replaceChildren();
+     if(!rows.length){list.append(ikGamesReviewElement('p','admin-muted','No pending Ironkin Games submissions.'));return;}
+     for(const submission of rows){
+       const row=ikGamesReviewElement('article','ik-games-review-row');
+       const info=ikGamesReviewElement('div','ik-games-review-info');
+       const team=teams.find(t=>String(t.id)===String(submission.teamId));
+       info.append(ikGamesReviewElement('strong','',team?.name||'Unknown team'));
+       info.append(ikGamesReviewElement('small','',[submission.challengeName||submission.challengeTitle||submission.challengeId||'Challenge',submission.score||'',submission.notes||''].filter(Boolean).join(' · ')));
+       if(submission.proofUrl){
+         const link=ikGamesReviewElement('a','','View proof ↗');
+         link.href=submission.proofUrl;link.target='_blank';link.rel='noopener noreferrer';
+         info.append(link);
+       }
+       const actions=ikGamesReviewElement('div','ik-games-review-actions');
+       const inputs={};
+       for(const [key,labelText] of [['points','Points'],['placement','Place']]){
+         const label=ikGamesReviewElement('label','',labelText);
+         const input=document.createElement('input');input.type='number';input.step='1';input.value=submission[key]??'';
+         input.setAttribute('aria-label',`${labelText} for ${team?.name||'team'}`);
+         label.append(input);actions.append(label);inputs[key]=input;
+       }
+       for(const [decision,labelText] of [['approved','Approve'],['rejected','Reject']]){
+         const button=ikGamesReviewElement('button','',labelText);
+         button.type='button';button.dataset.decision=decision;
+         button.addEventListener('click',async()=>{
+           if(decision==='rejected'&&!confirm('Reject this Ironkin Games submission?'))return;
+           const buttons=actions.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);
+           try{
+             const result=await fetch('/api/admin/ironkin-games/result',{
+               method:'POST',headers:{'Content-Type':'application/json'},
+               body:JSON.stringify({submissionId:submission.id,status:decision,
+                 points:Number(inputs.points.value||0),placement:Number(inputs.placement.value||0)})
+             });
+             const payload=await result.json().catch(()=>({}));
+             if(!result.ok)throw Error(payload.error||'Review failed.');
+             await ikLoadGamesReviews();
+           }catch(error){alert(error.message);buttons.forEach(b=>b.disabled=false);}
+         });
+         actions.append(button);
+       }
+       row.append(info,actions);list.append(row);
+     }
+   }catch(error){list.replaceChildren(ikGamesReviewElement('p','admin-muted',error.message));}
+ }
+ document.getElementById('ikGamesReviewRefresh')?.addEventListener('click',ikLoadGamesReviews);
+
  function stage(which){
    $$('.ik-stage-nav button').forEach(b=>{const active=b.dataset.ikStage===which;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
    $$('.ik-stage').forEach(p=>p.hidden=p.dataset.ikPanel!==which);
