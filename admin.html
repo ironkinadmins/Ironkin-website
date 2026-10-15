@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 
 <html lang="en">
 <head>
@@ -32,7 +31,23 @@
 #ikSaveRewards{margin-top:16px}.ik-archive-actions{margin-top:22px}.ik-archive-actions button{max-width:100%}
 #adminTab-maintenance>.admin-card{margin-top:18px}
 @media(max-width:760px){.admin-page{padding:15px 12px 70px}.ik-admin-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ik-top{white-space:normal}.ik-event-head{display:block}.ik-event-picker{margin-top:16px}.ik-stage-nav button{min-width:100px}}
-.ik-overview{display:none;margin:24px 0}.ik-overview.is-active{display:block}.ik-overview-heading{margin-bottom:22px}.ik-overview-heading h2{font-size:30px;margin:6px 0}.ik-overview-heading p:last-child{color:#bca794}.ik-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ik-overview-grid>a,.ik-overview-grid>button{min-height:138px;padding:22px;border:1px solid #66452c;border-radius:15px;background:linear-gradient(145deg,#302016,#17110e);color:#fbe6cd;text-align:left;text-decoration:none;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:12px;transition:border-color .2s,transform .2s}.ik-overview-grid>a:hover,.ik-overview-grid>button:hover,.ik-overview-grid>a:focus-visible,.ik-overview-grid>button:focus-visible{border-color:#f0ad62;transform:translateY(-2px)}.ik-overview-grid strong{font-size:17px}.ik-overview-grid span{font-size:13px;color:#c6ad96;line-height:1.5}@media(max-width:850px){.ik-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ik-overview-grid{grid-template-columns:1fr}}</style></head>
+
+/* Member Management: one accessible workspace at a time. */
+#adminTab-profiles{min-height:320px}
+#adminTab-profiles .ik-member-workspace{max-width:none;padding:24px;background:linear-gradient(150deg,#201713,#15110e);border:1px solid #60412c;border-radius:16px}
+#adminTab-profiles .ik-member-nav{margin:0 0 12px;gap:10px}
+#adminTab-profiles .ik-member-nav button{flex:1 1 170px;min-height:46px;text-align:center}
+#adminTab-profiles .ik-member-helper{margin:0 0 20px;color:#c8ae97;font-size:13px;line-height:1.5}
+#adminTab-profiles [data-ik-member-panel][hidden]{display:none!important}
+#adminTab-profiles .ik-member-panel{padding:22px;background:#241a14;border:1px solid #563a27;border-radius:14px}
+#adminTab-profiles .discord-sync-card{margin:0}
+#adminTab-profiles .discord-rank-emblem-panel{margin:0}
+#adminTab-profiles .ik-member-panel-heading h3{margin:0 0 7px;color:#f9e3c8;font-size:22px}
+#adminTab-profiles .ik-member-panel-heading p{margin:0 0 22px;color:#c4ab95;font-size:13px}
+#adminTab-profiles .admin-profile-results{margin:14px 0}
+#adminTab-profiles .discord-sync-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:760px){#adminTab-profiles .ik-member-workspace{padding:14px}#adminTab-profiles .ik-member-panel{padding:15px}#adminTab-profiles .discord-sync-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head>
 <body>
 <div id="siteNav"></div>
 <main class="admin-page">
@@ -41,7 +56,7 @@
 <h1>Admin Dashboard</h1>
 <p>Manage Ironkin events, WOM tracking, rewards, and admin tools.</p>
 </section><nav aria-label="Admin tools" class="ik-admin-nav">
-<button class="ik-top active" data-ik-main="overview" type="button">Overview</button><button class="ik-top" data-ik-main="events" type="button">Events</button>
+<button class="ik-top active" data-ik-main="events" type="button">Events</button>
 <a class="ik-top" href="/ironkin-games-admin.html">Ironkin Games ↗</a>
 <button class="ik-top" data-ik-main="bingo" type="button">Battleship Bingo</button>
 <button class="ik-top" data-ik-main="guess-kc" type="button">Guess the KC</button>
@@ -57,7 +72,7 @@
 <button class="admin-tab-btn" data-admin-tab="handbook" type="button"></button>
 </div>
 
-<section id="ikAdminOverview" class="ik-overview is-active" aria-label="Admin overview"><div class="ik-overview-heading"><p class="eyebrow">IRONKIN OPERATIONS</p><h2>Admin Overview</h2><p>Choose a workspace. No duplicate settings or controls.</p></div><div class="ik-overview-grid"><button type="button" data-ik-go="events"><strong>⚔ Event Manager</strong><span>Setup, rewards, results, drops, tracking and archive</span></button><a href="/ironkin-games-admin.html"><strong>🏆 Ironkin Games ↗</strong><span>Challenges, teams and proofs</span></a><button type="button" data-ik-go="bingo"><strong>▦ Battleship Bingo</strong><span>Manage the Bingo event</span></button><button type="button" data-ik-go="guess-kc"><strong>◎ Guess the KC</strong><span>Manage the guessing event</span></button><button type="button" data-ik-go="members"><strong>♜ Member Management</strong><span>Directory, ranks and profile overrides</span></button><button type="button" data-ik-go="maintenance"><strong>⚙ Advanced Tools</strong><span>Backfills and exceptional maintenance</span></button><button type="button" data-ik-go="handbook"><strong>▤ Staff Handbook</strong><span>Manage staff documentation</span></button></div></section><div class="admin-tab-panel active" id="adminTab-events">
+<div class="admin-tab-panel active" id="adminTab-events">
 <div class="event-subtab-panel active" id="eventSubtab-standard"><div class="ik-event-shell">
 <header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>One workflow. Select an event, then choose what to work on.</p></div><div class="ik-event-picker"><div class="admin-field admin-field-wide">
 <label for="adminEventSelect">Event</label>
@@ -532,14 +547,14 @@
 <div class="handbook-sections-editor" id="handbookSectionsEditor"></div>
 </section>
 </div>
-<div class="admin-tab-panel" id="adminTab-profiles"><nav aria-label="Member management" class="ik-subnav ik-member-nav"><button class="active" data-ik-member="directory" type="button">Profile Directory</button><button data-ik-member="emblems" type="button">Rank Emblems</button><button data-ik-member="profiles" type="button">Profile Overrides</button></nav>
-<section class="admin-card" data-ik-member-panel="profiles">
+<div class="admin-tab-panel" id="adminTab-profiles"><nav aria-label="Member management" class="ik-subnav ik-member-nav" role="tablist"><button aria-controls="ik-member-directory" aria-selected="true" class="active" data-ik-member="directory" role="tab" type="button">Profile Directory</button><button aria-controls="ik-member-emblems" aria-selected="false" data-ik-member="emblems" role="tab" type="button">Rank Emblems</button><button aria-controls="ik-member-profiles" aria-selected="false" data-ik-member="profiles" role="tab" type="button">Profile Overrides</button></nav><p aria-live="polite" class="ik-member-helper" id="ikMemberHelp" role="status">Directory: inspect synchronization status or refresh Discord member profiles.</p>
+<section class="admin-card ik-member-workspace">
 <div class="admin-section-header">
 <p class="eyebrow">Member Profiles</p>
-<h2>User Management</h2>
-<p class="admin-muted">Search members by Discord nickname, RSN, or Discord ID. Staff can override profile blurbs, avatar URLs, and display rank labels if something does not meet clan rules.</p>
+<h2>Member Management</h2>
+<p class="admin-muted">Find members, configure rank emblems, and manage profile overrides. Select a workspace below.</p>
 </div>
-<div class="discord-sync-card" data-ik-member-panel="directory" id="discordProfileSyncCard">
+<div class="discord-sync-card ik-member-panel" data-ik-member-panel="directory" id="ik-member-directory" role="tabpanel">
 <div class="discord-sync-head">
 <div>
 <p class="eyebrow">Discord Member Sync</p>
@@ -571,7 +586,13 @@
 <span class="admin-muted" id="discordSyncStatus">Automatic refresh interval: 6 hours.</span>
 </div>
 <div class="discord-sync-summary" hidden="" id="discordSyncSummary"></div>
-<div class="discord-rank-emblem-panel">
+
+</div>
+
+
+
+
+<div class="discord-rank-emblem-panel ik-member-panel" data-ik-member-panel="emblems" hidden="" id="ik-member-emblems" role="tabpanel">
 <div class="discord-rank-emblem-head">
 <div>
 <h4>Rank Emblem Mapping</h4>
@@ -583,18 +604,13 @@
 <span class="admin-muted">Loading Discord rank emblems…</span>
 </div>
 <p class="admin-muted" id="discordRankEmblemStatus"></p>
-</div>
-</div>
-<div class="admin-divider"></div>
-<div class="admin-field">
+</div><div class="ik-member-panel" data-ik-member-panel="profiles" hidden="" id="ik-member-profiles" role="tabpanel"><div class="ik-member-panel-heading"><h3>Profile Overrides</h3><p>Search by Discord nickname, RuneScape name, or Discord ID. Select a result to edit its profile.</p></div><div class="admin-field">
 <label for="profileSearchInput">Search Member</label>
 <div class="admin-inline-row">
 <input id="profileSearchInput" placeholder="Example: Loote Goblin" type="text"/>
 <button class="btn primary" id="profileSearchBtn" type="button">Search</button>
 </div>
-</div>
-<div class="admin-profile-results" id="profileSearchResults">Search for a member to manage their profile.</div>
-<div class="admin-profile-editor" id="profileAdminEditor" style="display:none;">
+</div><div class="admin-profile-results" id="profileSearchResults">Search for a member to manage their profile.</div><div class="admin-profile-editor" id="profileAdminEditor" style="display:none;">
 <div class="admin-divider"></div>
 <div class="admin-section-header compact">
 <h3 id="profileEditorTitle">Selected Member</h3>
@@ -623,8 +639,7 @@
 <a class="btn secondary" href="profile.html">Open My Profile</a>
 </div>
 <p class="admin-muted" id="profileAdminStatus"></p>
-</div>
-</section>
+</div></div></section>
 </div>
 </main>
 <script>
@@ -633,16 +648,21 @@
  const $=(q,r=document)=>r.querySelector(q), $$=(q,r=document)=>Array.from(r.querySelectorAll(q));
  function main(which){
    $$('.ik-top[data-ik-main]').forEach(b=>b.classList.toggle('active',b.dataset.ikMain===which));
-   $('#ikAdminOverview')?.classList.toggle('is-active',which==='overview');
-   if(which==='overview'){$$('.admin-tab-panel').forEach(p=>p.classList.remove('active'));return;}
    const click=(q)=>$(q)?.click();
-   if(which==='events'){ $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-events')); click('[data-event-subtab="standard"].event-subtab-btn'); }
+   if(which==='events')click('[data-event-subtab="standard"].event-subtab-btn');
    else if(which==='bingo'||which==='guess-kc')click('[data-event-subtab="'+which+'"].event-subtab-btn');
    else if(which==='members')click('[data-admin-tab="profiles"].admin-tab-btn');
    else if(which==='handbook')click('[data-admin-tab="handbook"].admin-tab-btn');
    else if(which==='maintenance'){
      $$('.admin-tab-panel').forEach(p=>p.classList.toggle('active',p.id==='adminTab-maintenance'));
    }
+   const panelName={events:'events',bingo:'events','guess-kc':'events',members:'profiles',handbook:'handbook',maintenance:'maintenance'}[which];
+   $$('.admin-tab-panel').forEach(p=>{
+     const visible=p.id==='adminTab-'+panelName;
+     p.classList.toggle('active',visible);
+     p.hidden=!visible;
+     p.style.display=visible?'block':'none';
+   });
  }
  function stage(which){
    $$('.ik-stage-nav button').forEach(b=>b.classList.toggle('active',b.dataset.ikStage===which));
@@ -670,19 +690,28 @@
  }
  document.addEventListener('DOMContentLoaded',()=>{
    $$('.ik-top[data-ik-main]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikMain)));
-   $$('[data-ik-go]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikGo)));
    $$('.ik-stage-nav button').forEach(b=>b.addEventListener('click',()=>stage(b.dataset.ikStage)));
    $$('[data-ik-item]').forEach(b=>b.addEventListener('click',()=>item(b.dataset.ikItem)));
    $('#ikSaveRewards')?.addEventListener('click',()=>$('#saveEventBtn')?.click());
    $('#adminEventSelect')?.addEventListener('change',()=>setTimeout(adapt,0));
-   // Original profile controls remain in place; these buttons scroll to the exact tool.
-   $$('[data-ik-member]').forEach(b=>b.addEventListener('click',()=>{
-     $$('[data-ik-member]').forEach(x=>x.classList.toggle('active',x===b));
-     const target={directory:'#discordProfileSyncCard',emblems:'#saveDiscordRankEmblemsBtn',profiles:'#saveProfileOverrideBtn'}[b.dataset.ikMember];
-     $(target)?.scrollIntoView({behavior:'smooth',block:'center'});
-   }));
+   // Real member tabs: show one workspace at a time; preserve original element IDs and handlers.
+   function showMemberTab(which){
+     $$('[data-ik-member]').forEach(b=>{
+       const selected=b.dataset.ikMember===which;
+       b.classList.toggle('active',selected);
+       b.setAttribute('aria-selected',String(selected));
+     });
+     $$('[data-ik-member-panel]').forEach(panel=>{
+       const selected=panel.dataset.ikMemberPanel===which;
+       panel.hidden=!selected;
+       panel.style.display=selected?'':'none';
+     });
+     const notes={directory:'Directory: inspect synchronization status or refresh Discord member profiles.',emblems:'Rank Emblems: map Discord emojis to display ranks, then save the mappings.',profiles:'Profile Overrides: search for a member before editing profile information.'};
+     const help=$('#ikMemberHelp');if(help)help.textContent=notes[which]||'';
+   }
+   $$('[data-ik-member]').forEach(b=>b.addEventListener('click',()=>showMemberTab(b.dataset.ikMember)));
+   showMemberTab('directory');
    setTimeout(adapt,350);
-   main('overview');
  });
 })();
 </script></body>
