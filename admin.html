@@ -145,6 +145,15 @@
 #ikActivityList{list-style:none;margin:12px 0 0;padding:0;max-height:300px;overflow:auto}
 #ikActivityList li{padding:9px 0;border-bottom:1px solid #423024;color:#e5d3bf;font-size:13px}
 .admin-advanced-settings{margin-top:12px}.admin-advanced-settings-body{display:grid;gap:12px}.ik-status-details{padding:9px 12px;opacity:.8}
+.ik-publish-queue{margin-top:16px;border:1px solid #68472c;border-radius:12px;padding:16px;background:#171310}
+.ik-publish-queue[hidden]{display:none}
+.ik-publish-queue h3{margin:0 0 12px;color:#f4d8b8;font-size:16px}
+.ik-publish-queue button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:13px;background:#2a2018;border:1px solid #58412e;border-radius:9px;color:#f3d5b3;margin-top:7px;cursor:pointer}
+.ik-publish-queue button:hover{border-color:#ed9b4a;background:#372719}
+.ik-publish-queue button small{color:#c6ad92}
+.ik-dashboard-actions strong span{color:#f5b575}
+.ik-status-inline{padding:8px 0;border:0;background:transparent!important;opacity:.8;font-size:12px}
+.ik-template-reuse{margin:14px 0 12px}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -170,14 +179,16 @@
 </div>
 
 <section id="ik-overview" class="ik-command-page" aria-label="Admin overview">
-<div class="ik-command-heading"><div><p class="eyebrow">TODAY AT IRONKIN</p><h2>What needs your attention?</h2><p>Start here. Open a workspace only when you need it.</p></div><button class="btn primary" type="button" data-ik-go="events:setup">Manage an Event →</button></div>
-<div class="ik-summary-grid"><div><strong id="ikLiveCount">—</strong><span>Active events</span></div><div><strong id="ikFinishedCount">—</strong><span>Ended events</span></div><div><strong id="ikArchiveCount">—</strong><span>Archived events</span></div></div>
-<div class="ik-action-grid">
-<button type="button" data-ik-go="events:setup"><strong>Manage events →</strong><small>Create or edit event details and WOM competitions</small></button>
-<button type="button" data-ik-go="events:items"><strong>Configure items →</strong><small>Reuse archived item lists and manage tracked drops</small></button>
-<button type="button" data-ik-go="events:results"><strong>Review results →</strong><small>Preview standings before publishing</small></button>
-<button type="button" data-ik-go="approvals"><strong>Review submissions →</strong><small>Find proof reviews for games and competitions</small></button>
-</div><p class="ik-command-note" id="ikOverviewStatus" role="status">Loading your event summary…</p>
+<div class="ik-command-heading"><div><p class="eyebrow">IRONKIN ADMIN</p><h2>Control Center</h2><p>Quick access to the tasks that matter.</p></div></div>
+<div class="ik-action-grid ik-dashboard-actions">
+<button type="button" data-ik-go="events:setup"><strong>Manage Events →</strong><small>Create or edit events · opens 01 Details</small></button>
+<button type="button" id="ikGoPvm"><strong>Configure PvM Entry List →</strong><small>Opens PvM Entry in Items</small></button>
+<button type="button" id="ikOpenPublishQueue" aria-expanded="false" aria-controls="ikPublishQueue"><strong>Awaiting Discord Publishing <span id="ikFinishedCount">—</span> →</strong><small>Ended events needing a results post</small></button>
+<button type="button" data-ik-go="approvals"><strong>Pending Submissions <span id="ikPendingCount">—</span> →</strong><small>Open the approvals hub</small></button>
+</div>
+<div id="ikPublishQueue" class="ik-publish-queue" hidden><h3>Events waiting for Discord results</h3>
+<div id="ikPublishList" role="list"><p class="admin-muted">Loading ended events…</p></div></div>
+<p class="ik-command-note" id="ikOverviewStatus" role="status">Checking events and pending submissions…</p>
 <details class="ik-activity-box"><summary>Recent admin activity</summary>
 <div class="ik-activity-content"><button class="btn secondary compact" id="ikActivityRefresh" type="button">Refresh history</button>
 <ul id="ikActivityList"><li>Open to load recent changes.</li></ul></div></details>
@@ -245,18 +256,10 @@
 <div aria-hidden="true" class="admin-field admin-field-wide admin-hidden-detected" id="secondaryWomDetectedSection" style="display:none">
 <div class="admin-detected-event" id="secondaryWomDetectedBox"><strong id="secondaryDetectedEventTitle">No second WOM competition linked.</strong><span id="secondaryDetectedEventMeta"></span></div>
 </div>
-<details class="ik-template-reuse admin-field-wide">
-<summary>Reuse settings from a past event (optional)</summary>
-<div class="ik-template-body">
-<label for="ikTemplateSelect">Archived event</label>
-<select id="ikTemplateSelect"><option value="">Choose an archived event…</option></select>
-<p class="admin-muted" id="ikTemplateSummary">Copies description and reward configuration, not old WOM IDs, dates, or results.</p>
-<button type="button" class="btn secondary" id="ikTemplateApply">Use This Configuration</button>
-</div>
-</details>
+
 <div class="admin-advanced-settings admin-field-wide">
 <div class="admin-advanced-settings-body">
-<div class="ik-status-details admin-field-wide"><div class="admin-field ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div></div>
+<div class="admin-field ik-auto-status ik-status-inline" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div>
 <div class="admin-field">
 <label for="eventPasswordInput">Event password</label>
 <input autocomplete="off" id="eventPasswordInput" maxlength="128" placeholder="Optional clan plugin password" type="text"/>
@@ -274,6 +277,15 @@
 
 
 
+<details class="ik-template-reuse admin-field-wide">
+<summary>Reuse settings from a past event (optional)</summary>
+<div class="ik-template-body">
+<label for="ikTemplateSelect">Archived event</label>
+<select id="ikTemplateSelect"><option value="">Choose an archived event…</option></select>
+<p class="admin-muted" id="ikTemplateSummary">Copies description and reward configuration, not old WOM IDs, dates, or results.</p>
+<button type="button" class="btn secondary" id="ikTemplateApply">Use This Configuration</button>
+</div>
+</details>
 <div class="admin-action-row">
 <button class="btn primary" id="saveEventBtn">Save Changes</button>
 
@@ -810,7 +822,7 @@
  function main(which){
    $$('.ik-top[data-ik-main]').forEach(b=>{const active=b.dataset.ikMain===which;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
    const click=(q)=>$(q)?.click();
-   if(which==='events')click('[data-event-subtab="standard"].event-subtab-btn');
+   if(which==='events'){click('[data-event-subtab="standard"].event-subtab-btn');stage('setup');}
    else if(which==='bingo'||which==='guess-kc')click('[data-event-subtab="'+which+'"].event-subtab-btn');
    else if(which==='members')click('[data-admin-tab="profiles"].admin-tab-btn');
    else if(which==='handbook')click('[data-admin-tab="handbook"].admin-tab-btn');
@@ -926,6 +938,21 @@
  document.addEventListener('DOMContentLoaded',()=>{
    $$('.ik-top[data-ik-main]').forEach(b=>b.addEventListener('click',()=>main(b.dataset.ikMain)));
    main('overview');
+   $('#ikGoPvm')?.addEventListener('click',()=>{
+     main('events');
+     const select=$('#adminEventSelect');
+     const option=select&&Array.from(select.options).find(o=>o.value==='pvm-entry');
+     if(option){select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));}
+     stage('items');item('drops');
+     window.scrollTo({top:0,behavior:'smooth'});
+   });
+   $('#ikOpenPublishQueue')?.addEventListener('click',()=>{
+     const queue=$('#ikPublishQueue');const button=$('#ikOpenPublishQueue');
+     if(!queue)return;
+     queue.hidden=!queue.hidden;button?.setAttribute('aria-expanded',String(!queue.hidden));
+     if(!queue.hidden)window.ikRefreshOverview?.();
+   });
+
    $$('[data-ik-go]').forEach(b=>b.addEventListener('click',()=>{
      const [destination,sub]=b.dataset.ikGo.split(':');main(destination);if(sub)stage(sub);
      window.scrollTo({top:0,behavior:'smooth'});
@@ -999,31 +1026,61 @@
 })();
 </script>
 <script>
-/* Read-only dashboard counts. Does not modify event state or create new polling. */
+/* Read-only action dashboard. Dates must be known before an event enters the publishing queue. */
 (function(){
+ const $=id=>document.getElementById(id);
+ const title=event=>event.title||event.name||event.label||event.id||'Unnamed event';
+ const pending=[];
+ function renderQueue(){
+  const list=$('ikPublishList');if(!list)return;
+  list.replaceChildren();
+  if(!pending.length){
+   const empty=document.createElement('p');empty.className='admin-muted';
+   empty.textContent='No ended events awaiting Discord publishing.';list.append(empty);return;
+  }
+  pending.forEach(event=>{
+   const button=document.createElement('button');button.type='button';
+   const label=document.createElement('strong');label.textContent=title(event);
+   const detail=document.createElement('small');detail.textContent='Open Results →';
+   button.append(label,detail);
+   button.addEventListener('click',()=>{
+    document.querySelector('[data-ik-main="events"]')?.click();
+    const select=$('adminEventSelect');
+    if(select && [...select.options].some(option=>option.value===event.id)){
+      select.value=event.id;select.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    document.querySelector('[data-ik-stage="results"]')?.click();
+    window.scrollTo({top:0,behavior:'smooth'});
+   });
+   list.append(button);
+  });
+ }
  async function refreshOverview(){
-  const status=document.getElementById('ikOverviewStatus');
+  const status=$('ikOverviewStatus');
   try{
-   const [ev,archive]=await Promise.all([
-    fetch('/api/admin/events/list',{cache:'no-store'}).then(async r=>{if(!r.ok)throw new Error('Events unavailable');return r.json()}),
-    fetch('/api/admin/events/item-presets',{cache:'no-store'}).then(async r=>r.ok?r.json():{presets:[]}).catch(()=>({presets:[]}))
+   const [ev,game]=await Promise.all([
+    fetch('/api/admin/events/list',{cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Events unavailable');return r.json()}),
+    fetch('/api/admin/ironkin-games/state',{cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null)
    ]);
    const events=Array.isArray(ev)?ev:Array.isArray(ev.events)?ev.events:[];
-   const now=Date.now();let active=0,finished=0;
+   const now=Date.now();pending.length=0;
    events.forEach(e=>{
-    const start=Date.parse(e.startDate||e.start||'');
+    if(e.id==='pvm-entry'||e.type==='pvm-entry'||e.id==='bounties'||e.type==='bounties')return;
     const end=Date.parse(e.endDate||e.end||'');
-    if(Number.isFinite(start)&&Number.isFinite(end)){
-      if(start<=now&&now<=end)active++;
-      else if(end<now)finished++;
-    }
+    const announcement=e.resultsAnnouncement||{};
+    if(Number.isFinite(end)&&end<now&&announcement.status!=='posted'&&
+       !e.archived&&e.status!=='archived'&&announcement.enabled!==false)pending.push(e);
    });
-   document.getElementById('ikLiveCount').textContent=String(active);
-   document.getElementById('ikFinishedCount').textContent=String(finished);
-   document.getElementById('ikArchiveCount').textContent=Array.isArray(archive.presets)?String(archive.presets.length):'—';
-   if(status)status.textContent='Counts reflect available event dates. Events with missing dates are excluded.';
-  }catch(err){if(status)status.textContent='Summary unavailable. Event tools remain accessible.';}
+   pending.sort((a,b)=>Date.parse(a.endDate||a.end||'')-Date.parse(b.endDate||b.end||''));
+   $('ikFinishedCount').textContent=String(pending.length);
+   renderQueue();
+   const gameState=game?.state||game;
+   const submissions=Array.isArray(gameState?.submissions)?gameState.submissions:[];
+   $('ikPendingCount').textContent=game?String(submissions.filter(s=>String(s.status||'pending')==='pending').length):'—';
+   if(status)status.textContent='Publishing queue includes ended, unarchived events with known dates. Pending count covers Ironkin Games.';
+  }catch(err){if(status)status.textContent='Dashboard status unavailable. Management tools remain accessible.';}
  }
+ window.ikRefreshOverview=refreshOverview;
  document.addEventListener('DOMContentLoaded',refreshOverview);
 })();
 </script>
