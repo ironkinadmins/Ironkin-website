@@ -1,4 +1,5 @@
 import { hybridKv } from "../../../_hybridKv.js";
+import { syncRecordEmbeds } from "../../../_recordsAutoSync.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import {
   buildEventResultsSnapshot,
@@ -132,6 +133,20 @@ export async function onRequestPost({ request, env }) {
     await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
   }
 
+  // Archive is already committed: Discord failures must never roll back the event.
+  // Only the affected competition category is republished.
+  if (event.type === "sotw" || event.type === "botw") {
+    try {
+      const synced = await syncRecordEmbeds(env, archive, [event.type]);
+      archiveEntry.recordsSync = { status: "synced", at: new Date().toISOString(), results: synced };
+    } catch (error) {
+      archiveEntry.recordsSync = { status: "failed", error: String(error?.message || error).slice(0, 250) };
+    }
+    const index = archive.findIndex(item => item.archiveRequestId === archiveRequestId);
+    if (index !== -1) archive[index] = archiveEntry;
+    await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
+  }
+
   if (events) {
     const getResetEventTitle = item => {
       if (item?.type === "sotw") return "Skill of the Week";
@@ -167,5 +182,5 @@ export async function onRequestPost({ request, env }) {
     await hybridKv(env, "drops").put("events:active", JSON.stringify(sanitizedEvents));
   }
 
-  return Response.json({ success: true, archiveEntry, announcement: archiveEntry.resultsAnnouncement });
+  return Response.json({ success: true, archiveEntry, announcement: archiveEntry.resultsAnnouncement, recordsSync: archiveEntry.recordsSync || null });
 }
