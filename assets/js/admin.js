@@ -1148,6 +1148,37 @@ async function retryResultsPost() {
   }
 }
 
+// Read-only event lifecycle state. The original inputs remain hidden for compatibility
+// with legacy event save/archive handlers and are synchronized before those actions.
+function ikSyncEventLifecycle(event) {
+  if (!event) return;
+  const pvm = isPvmEntryEvent(event);
+  const bounty = isBountiesEvent(event);
+  const start = event.startDate ? Date.parse(event.startDate) : NaN;
+  const end = event.endDate ? Date.parse(event.endDate) : NaN;
+  const validDates = Number.isFinite(start) && Number.isFinite(end) && end >= start;
+  const now = Date.now();
+  let active = pvm ? true : bounty ? Boolean(event.active) : validDates ? now >= start && now <= end : Boolean(event.active);
+  let featured = pvm ? false : bounty ? Boolean(event.featured) : validDates ? active : Boolean(event.featured);
+  const configuredDrops = Array.isArray(event.drops) ? event.drops.length > 0 : null;
+  let drops = pvm ? true : configuredDrops === null ? Boolean(event.dropsEnabled) : configuredDrops;
+  const status = pvm ? 'Always Active · not featured' : bounty ? 'Bounties · manually managed' : validDates ? (now < start ? 'Scheduled' : now > end ? 'Awaiting Results' : 'Live') : 'Dates unavailable · existing saved state retained';
+  for (const [id,value] of [['eventActiveInput',active],['eventFeaturedInput',featured],['eventDropsInput',drops]]) {
+    const el=document.getElementById(id); if(el) el.checked=value;
+  }
+  event.active=active;event.featured=featured;event.dropsEnabled=drops;
+  const panel=document.getElementById('ikEventLifecycle');
+  if(panel){
+    panel.textContent='';
+    const heading=document.createElement('strong');heading.textContent=status;panel.appendChild(heading);
+    const detail=document.createElement('span');detail.textContent=`Active: ${active?'Yes':'No'} · Featured: ${featured?'Yes':'No'} · Drops enabled: ${drops?'Yes':'No'}`;panel.appendChild(detail);
+    if(!pvm&&!bounty&&validDates&&now>end){
+      const btn=document.createElement('button');btn.type='button';btn.textContent='Review results post →';
+      btn.addEventListener('click',()=>document.querySelector('[data-ik-stage="results"]')?.click());panel.appendChild(btn);
+    }
+  }
+}
+
 function updateEventFieldVisibility() {
   const event = getSelectedEvent();
   const targetSection = document.getElementById("targetSection");
@@ -1470,6 +1501,7 @@ function populateEventFields() {
   activeInput.disabled = pvmEntry;
   featuredInput.disabled = pvmEntry;
   dropsInput.disabled = pvmEntry;
+  ikSyncEventLifecycle(event);
   updatePluginEventIdDisplay();
   renderPluginTrackingOverview();
 
@@ -2188,9 +2220,7 @@ async function saveSelectedEvent() {
 
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
-  event.active = isPvmEntryEvent(event) ? true : document.getElementById("eventActiveInput").checked;
-  event.featured = isPvmEntryEvent(event) ? false : document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = isPvmEntryEvent(event) ? true : document.getElementById("eventDropsInput").checked;
+  ikSyncEventLifecycle(event);
   if (isPvmEntryEvent(event)) {
     event.pluginEventId = "pvm-entry";
     event.pluginOnly = true;
@@ -2254,9 +2284,7 @@ async function archiveSelectedEvent() {
   event.eventPassword = eventPasswordInput?.value.trim() || null;
   const targetValue = document.getElementById("eventTargetInput").value;
   event.target = isClanGoalEvent(event) && targetValue ? Number(targetValue) : null;
-  event.active = document.getElementById("eventActiveInput").checked;
-  event.featured = document.getElementById("eventFeaturedInput").checked;
-  event.dropsEnabled = document.getElementById("eventDropsInput").checked;
+  ikSyncEventLifecycle(event);
   collectMilestonesFromEditor();
   collectRewardsFromEditor();
   collectResultsAnnouncementSettings(event);

@@ -75,7 +75,7 @@
 @media(max-width:950px){.ik-admin-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.ik-top{white-space:normal;text-align:center;padding:11px 9px}}
 @media(max-width:600px){.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.ik-top{font-size:12px;min-height:44px}.ik-stage-nav{margin-left:-4px;margin-right:-4px}.ik-stage-nav button{min-width:108px}.ik-event-picker{min-width:0;width:100%}.ik-health-check{padding:15px}}
 @media(prefers-reduced-motion:reduce){.ik-top,.ik-stage-nav button,.ik-subnav button{transition:none!important}}
-</style></head>
+.ik-setup-event-picker{margin-bottom:14px}.ik-setup-event-picker select{width:100%;max-width:520px}.ik-auto-status{border:1px solid #60452c;background:#251c16;border-radius:12px;padding:14px 16px;color:#f1d0a7;margin-bottom:14px}.ik-auto-status strong{display:block;margin-bottom:5px}.ik-auto-status button{margin-top:10px;border:1px solid #a9763f;background:#49301d;color:#ffdcad;padding:8px 12px;border-radius:8px;cursor:pointer}.ik-event-head .ik-event-picker{display:none}</style></head>
 <body>
 <div id="siteNav"></div>
 <main class="admin-page">
@@ -103,24 +103,25 @@
 
 <div class="admin-tab-panel active" id="adminTab-events">
 <div class="event-subtab-panel active" id="eventSubtab-standard"><div class="ik-event-shell">
-<header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>One workflow. Select an event, then choose what to work on.</p></div><div class="ik-event-picker"><div class="admin-field admin-field-wide">
-<label for="adminEventSelect">Event</label>
-<select id="adminEventSelect"></select>
-</div></div></header>
+<header class="ik-event-head"><div><p class="eyebrow">EVENT MANAGER</p><h2>Manage Events</h2><p>One workflow. Select an event, then choose what to work on.</p></div></header>
 <nav aria-label="Event workflow" class="ik-stage-nav">
 <button class="active" data-ik-stage="setup" type="button"><span>01</span> Setup</button>
 <button data-ik-stage="rewards" type="button"><span>02</span> Rewards</button>
-<button data-ik-stage="results" type="button"><span>03</span> Results</button>
-<button data-ik-stage="items" type="button"><span>04</span> Items &amp; Drops</button>
-<button data-ik-stage="tracking" type="button"><span>05</span> Tracking</button>
-<button data-ik-stage="archive" type="button"><span>06</span> Archive</button>
-</nav>
+<button data-ik-stage="items" type="button"><span>03</span> Items &amp; Drops</button>
+<button data-ik-stage="results" type="button"><span>04</span> Results</button>
+<button data-ik-stage="archive" type="button"><span>05</span> Archive</button>
+<button data-ik-stage="tracking" type="button"><span>06</span> Tracking</button></nav>
 <div class="ik-stage" data-ik-panel="setup"><section class="admin-card">
 <div id="standardEventEditor">
 <div class="admin-form-grid admin-event-setup-simple">
+<div class="admin-field admin-field-wide ik-setup-event-picker"><div class="ik-event-picker"><div class="admin-field admin-field-wide">
+<label for="adminEventSelect">Event</label>
+<select id="adminEventSelect"></select>
+</div>
+<div class="admin-field admin-field-wide ik-auto-status" id="ikEventLifecycle" role="status" aria-live="polite">Event status will appear after selection.</div>
 
 <div class="admin-field">
-<label for="eventWomInput">Primary boss</label>
+<label for="eventWomInput">Wise Old Man Competition ID</label>
 <div class="admin-inline-row">
 <input id="eventWomInput" placeholder="WOM competition ID" type="text"/>
 <button class="btn secondary" id="previewWomBtn" type="button">Preview</button>
@@ -155,11 +156,7 @@
 <label for="eventDescriptionInput">Description</label>
 <textarea id="eventDescriptionInput" placeholder="Optional text shown on the event dashboard" rows="3"></textarea>
 </div>
-<div class="admin-toggle-row admin-field-wide">
-<label><input id="eventActiveInput" type="checkbox"/> Active</label>
-<label><input id="eventFeaturedInput" type="checkbox"/> Featured</label>
-<label><input id="eventDropsInput" type="checkbox"/> Drops enabled</label>
-</div>
+<div class="ik-automatic-fields" hidden aria-hidden="true"><input id="eventActiveInput" type="checkbox" tabindex="-1"/><input id="eventFeaturedInput" type="checkbox" tabindex="-1"/><input id="eventDropsInput" type="checkbox" tabindex="-1"/></div>
 </div>
 </details>
 
