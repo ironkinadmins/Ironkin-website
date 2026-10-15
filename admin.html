@@ -163,6 +163,14 @@
 .ik-approval-source>div{display:grid;gap:5px}.ik-approval-source strong{color:#f1d8bd}.ik-approval-source small{color:#c8b09a}
 .ik-approval-source .btn{white-space:nowrap}
 @media(max-width:700px){.ik-approval-sources{grid-template-columns:1fr}}
+.ik-approval-groups{display:grid;gap:15px;margin-top:15px}
+.ik-approval-group{border:1px solid #5c422d;border-radius:12px;background:#18130f;padding:16px}
+.ik-approval-group-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ik-approval-group-heading h3{margin:0;color:#f2d6b7;font-size:17px}
+.ik-approval-group-heading span{font-size:12px;color:#e6a15c}
+.ik-approval-group .ik-approval-sources{margin:0;grid-template-columns:1fr}
+.ik-approval-group .ik-games-review{margin-top:12px}
+.ik-approval-group .ik-games-review h4{margin:0;color:#efcfad;font-size:14px}
 </style></head>
 <body>
 <div id="siteNav"></div>
@@ -206,13 +214,26 @@
 <div class="ik-command-heading"><div><p class="eyebrow">REVIEW QUEUE</p><h2>All Approvals</h2><p>Pending submissions from across Ironkin, in one place.</p></div>
 <button type="button" id="ikApprovalsRefresh" class="btn secondary">Refresh</button></div>
 <div class="ik-approval-summary" id="ikApprovalSummary" role="status">Loading pending submissions…</div>
-<div class="ik-approval-sources" id="ikApprovalSources"></div>
-<section class="ik-games-review" aria-label="Pending team submissions">
-<div class="ik-games-review-head"><div><h3>Team Challenge Submissions <span id="ikGamesReviewCount"></span></h3>
-<p>Review proof, points and placement.</p></div></div>
+<div class="ik-approval-groups">
+<section class="ik-approval-group" aria-label="Ironkin Games approvals">
+<div class="ik-approval-group-heading"><h3>Ironkin Games</h3><span id="ikGamesGroupCount">—</span></div>
+<div class="ik-approval-sources" id="ikGamesApprovalSources"></div>
+<div class="ik-games-review" aria-label="Pending team submissions">
+<div class="ik-games-review-head"><div><h4>Team Challenge Proofs <span id="ikGamesReviewCount"></span></h4>
+<p>Review proof, points, and placement here.</p></div></div>
 <div id="ikGamesReviewList" aria-live="polite"><p class="admin-muted">Loading pending team submissions…</p></div>
+</div>
 </section>
-<p class="ik-command-note">All sources are counted here. Team challenges can be approved below; other review types open their existing secure approval screens.</p>
+<section class="ik-approval-group" aria-label="Hall of Flame approvals">
+<div class="ik-approval-group-heading"><h3>Hall of Flame</h3><span id="ikHofGroupCount">—</span></div>
+<div class="ik-approval-sources" id="ikHofApprovalSources"></div>
+</section>
+<section class="ik-approval-group" aria-label="Event submissions">
+<div class="ik-approval-group-heading"><h3>Event Submissions</h3><span id="ikEventsGroupCount">—</span></div>
+<div class="ik-approval-sources" id="ikEventsApprovalSources"></div>
+</section>
+</div>
+<p class="ik-command-note">Each section shows where submissions came from. Team challenge proofs can be reviewed here; other submissions open their existing review tools.</p>
 </section>
 <section id="ik-tools" class="ik-command-page" hidden aria-label="Settings and tools"><div class="ik-command-heading"><div><p class="eyebrow">ADMINISTRATION</p><h2>Settings &amp; Tools</h2><p>Specialist tools stay available without cluttering the main navigation.</p></div></div>
 <div class="ik-action-grid">
@@ -853,45 +874,73 @@
 
  async function ikLoadUnifiedApprovals(){
    const summary=document.getElementById('ikApprovalSummary');
-   const list=document.getElementById('ikApprovalSources');
-   if(!summary||!list)return;
+   const groups={
+     games:document.getElementById('ikGamesApprovalSources'),
+     hof:document.getElementById('ikHofApprovalSources'),
+     events:document.getElementById('ikEventsApprovalSources')
+   };
+   if(!summary||Object.values(groups).some(group=>!group))return;
    summary.textContent='Loading pending approvals…';
-   list.replaceChildren();
+   Object.values(groups).forEach(group=>group.replaceChildren());
+   const groupConfig={
+     games:{ids:['ironkin-games','games-location'],count:'ikGamesGroupCount'},
+     hof:{ids:['hall-of-flame'],count:'ikHofGroupCount'},
+     events:{ids:['event-drops'],count:'ikEventsGroupCount'}
+   };
+   const routes={
+     'ironkin-games':{label:'Team challenge proofs',inline:true},
+     'games-location':{label:'Trivia and location proofs',href:'/ironkin-games-admin.html'},
+     'hall-of-flame':{label:'Hall of Flame submissions',href:'/hall-of-flame.html'},
+     'event-drops':{label:'Event drop submissions',destination:'events:tracking'}
+   };
    try{
      const response=await fetch('/api/admin/pending-submissions',{cache:'no-store'});
      const data=await response.json().catch(()=>({}));
      if(!response.ok)throw Error(data.error||'Could not load approvals.');
      summary.textContent=data.complete
-       ? `${data.total} pending submission${data.total===1?'':'s'} across all systems`
+       ? `${data.total} pending submission${data.total===1?'':'s'}`
        : `${data.knownCount}+ pending submissions · some sources could not be checked`;
-     const routes={
-       'ironkin-games':{label:'Team challenges',href:'/ironkin-games-admin.html'},
-       'games-location':{label:'Trivia and location proofs',href:'/ironkin-games-admin.html'},
-       'hall-of-flame':{label:'Hall of Flame',href:'/hall-of-flame.html'},
-       'event-drops':{label:'Event drop submissions',destination:'events:tracking'}
-     };
-     (data.sources||[]).forEach(source=>{
-       const route=routes[source.id]||{};
-       const card=document.createElement('div');card.className='ik-approval-source';
-       const details=document.createElement('div');
-       const title=document.createElement('strong');title.textContent=route.label||source.label||source.id;
-       const info=document.createElement('small');
-       info.textContent=source.status==='ok'
-         ? `${source.count} pending`
-         : source.status==='restricted'?'Access restricted':'Count unavailable';
-       details.append(title,info);card.append(details);
-       if(source.status==='ok' && source.count>0 && route.destination){
-         const button=document.createElement('button');button.type='button';button.className='btn secondary';
-         button.textContent='Review →';
-         button.addEventListener('click',()=>document.querySelector(`[data-ik-go="${route.destination}"]`)?.click());
-         card.append(button);
-       }else if(source.status==='ok' && source.count>0 && route.href){
-         const link=document.createElement('a');link.className='btn secondary';link.href=route.href;
-         link.textContent='Open reviews ↗';card.append(link);
+     const sources=Array.isArray(data.sources)?data.sources:[];
+     Object.entries(groupConfig).forEach(([key,config])=>{
+       const entries=config.ids.map(id=>sources.find(s=>s.id===id)).filter(Boolean);
+       const complete=entries.length===config.ids.length&&entries.every(s=>s.status==='ok');
+       const count=entries.reduce((sum,s)=>sum+(s.status==='ok'?Number(s.count)||0:0),0);
+       const indicator=document.getElementById(config.count);
+       if(indicator)indicator.textContent=complete?`${count} pending`:`${count}+ pending`;
+       if(key==='games'){
+         // Team proofs are listed with approve/reject controls directly below.
+         const location=entries.find(s=>s.id==='games-location');
+         if(location)ikAppendApprovalSource(groups[key],location,routes['games-location']);
+       }else{
+         entries.forEach(source=>ikAppendApprovalSource(groups[key],source,routes[source.id]||{}));
        }
-       list.append(card);
      });
-   }catch(error){summary.textContent=error.message||'Unable to load pending submissions.';}
+   }catch(error){
+     summary.textContent=error.message||'Unable to load pending submissions.';
+     Object.values(groupConfig).forEach(config=>{
+       const indicator=document.getElementById(config.count);
+       if(indicator)indicator.textContent='Unavailable';
+     });
+   }
+ }
+ function ikAppendApprovalSource(container,source,route){
+   const card=document.createElement('div');card.className='ik-approval-source';
+   const details=document.createElement('div');
+   const title=document.createElement('strong');title.textContent=route.label||source.label||source.id;
+   const info=document.createElement('small');
+   info.textContent=source.status==='ok'?`${source.count} pending`
+     :source.status==='restricted'?'Access restricted':'Count unavailable';
+   details.append(title,info);card.append(details);
+   if(source.status==='ok'&&source.count>0&&route.destination){
+     const button=document.createElement('button');button.type='button';button.className='btn secondary';
+     button.textContent='Review →';
+     button.addEventListener('click',()=>document.querySelector(`[data-ik-go="${route.destination}"]`)?.click());
+     card.append(button);
+   }else if(source.status==='ok'&&source.count>0&&route.href){
+     const link=document.createElement('a');link.className='btn secondary';link.href=route.href;
+     link.textContent='Open reviews ↗';card.append(link);
+   }
+   container.append(card);
  }
  document.addEventListener('DOMContentLoaded',()=>{
    document.getElementById('ikApprovalsRefresh')?.addEventListener('click',()=>{
