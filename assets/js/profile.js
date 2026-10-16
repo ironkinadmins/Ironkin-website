@@ -278,16 +278,14 @@ function renderProfileHero(profile) {
       <div class="ik-avatar-edit-wrap"><img class="profile-avatar"
         src="${profileEscapeHtml(profile.avatarUrl || "assets/ironkin-emblem.png")}"
         alt="${profileEscapeHtml(profile.displayName)} avatar"
-        onerror="this.onerror=null;this.src='assets/ironkin-emblem.png';" />${profile.isOwnProfile ? `<button type="button" class="ik-profile-edit-trigger" data-ik-edit="avatar">Edit avatar</button>` : ""}</div>
+        onerror="this.onerror=null;this.src='assets/ironkin-emblem.png';" /></div>
       <div class="profile-identity-copy">
         <p class="eyebrow">Ironkin Member Profile</p>
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
         <div class="profile-meta-row">
-          <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
           ${memberSincePill}
         </div>
         <div class="ik-osrs-links" id="ikOsrsLinks"></div>
-        ${profile.isOwnProfile ? `<div class="ik-profile-edit-actions"><button type="button" class="ik-profile-edit-trigger" data-ik-edit="all">Edit profile</button></div>` : ""}
         <div class="profile-hero-facts">
           <div><strong>${profileFormatNumber(profile.embers?.balance || 0)}</strong><span>Embers</span></div>
           <div><strong>${profileFormatNumber(profile.placements?.topThreeFinishes || 0)}</strong><span>Top 3 Finishes</span></div>
@@ -298,9 +296,9 @@ function renderProfileHero(profile) {
         </div>
         <div class="ik-profile-hero-achievements" id="profileHeroAchievements" aria-label="Earned achievements"></div>
         <div class="ik-showcase" id="ikMemberShowcase" aria-label="Member showcase" hidden></div>
-        <p class="profile-blurb" ${profile.isOwnProfile ? `data-ik-edit="bio" role="button" tabindex="0" title="Edit your bio" style="cursor:pointer"` : ""}>${profile.blurb ? profileEscapeHtml(profile.blurb) : (profile.isOwnProfile ? "Click to add your profile bio" : "")}</p>
+        <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : (profile.isOwnProfile ? "Click to add your profile bio" : "")}</p>
       </div>
-      ${profile.isOwnProfile ? `<button type="button" class="ik-profile-edit-trigger ik-banner-edit-trigger" data-ik-edit="banner">Edit banner</button>` : ""}
+      ${profile.isOwnProfile ? `<button type="button" class="ik-profile-edit-trigger ik-banner-edit-trigger" data-ik-edit="all">Edit Profile</button>` : ""}
     </div>
   `;
   ikRenderShowcase();
@@ -342,11 +340,11 @@ function renderWomStats(profile) {
     </div>
     <div class="profile-top-skills ik-profile-progress-widget">
       <div class="ik-progress-tabs" role="tablist" aria-label="OSRS progression">
-        <button type="button" class="is-active" data-osrs-progress-tab="skills" aria-selected="true">Skills</button>
-        <button type="button" data-osrs-progress-tab="quests" aria-selected="false">Quests</button>
-        <button type="button" data-osrs-progress-tab="diaries" aria-selected="false">Achievement Diaries</button>
+        <button type="button" class="is-active" data-osrs-progress-tab="skills" aria-selected="true"><img class="ik-progress-tab-icon" src="https://oldschool.runescape.wiki/images/Stats_icon.png" alt="" loading="lazy" onerror="this.style.display='none'">Skills</button>
+        <button type="button" data-osrs-progress-tab="quests" aria-selected="false"><img class="ik-progress-tab-icon" src="https://oldschool.runescape.wiki/images/Quest_point_icon.png" alt="" loading="lazy" onerror="this.style.display='none'">Quests</button>
+        <button type="button" data-osrs-progress-tab="diaries" aria-selected="false"><img class="ik-progress-tab-icon" src="https://oldschool.runescape.wiki/images/Achievement_Diary_icon.png" alt="" loading="lazy" onerror="this.style.display='none'">Achievement Diaries</button>
       </div>
-      <div data-osrs-progress-panel="skills"><div class="ik-osrs-skill-grid">${ikOrderedSkills(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill" title="${profileEscapeHtml(skill.name)} · ${profileFormatNumber(skill.experience??skill.xp??0)} XP"><img loading="lazy" alt="" src="https://oldschool.runescape.wiki/images/${encodeURIComponent(skill.name.replace(/ /g,'_'))}_icon.png" onerror="this.style.display='none'"><span class="ik-skill-name">${profileEscapeHtml(skill.name)}</span><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
+      <div data-osrs-progress-panel="skills"><div class="ik-osrs-skill-grid">${ikOrderedSkills(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill" title="${profileEscapeHtml(skill.name)} · ${profileFormatNumber(skill.experience??skill.xp??0)} XP"><img loading="lazy" alt="" src="https://oldschool.runescape.wiki/images/${encodeURIComponent((String(skill.name).toLowerCase()==='runecrafting'?'Runecraft':skill.name).replace(/ /g,'_'))}_icon.png" onerror="this.style.display='none'"><span class="ik-skill-name">${profileEscapeHtml(skill.name)}</span><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
       <div data-osrs-progress-panel="quests" hidden><p class="admin-muted">Select Quests to load RuneProfile progress.</p></div>
       <div data-osrs-progress-panel="diaries" hidden><p class="admin-muted">Select Achievement Diaries to load RuneProfile progress.</p></div>
     </div>
@@ -768,12 +766,24 @@ const ikCaState={tasks:[],loaded:false,loading:false,error:'',rsn:'',points:0,ti
 function ikCaRender(){
  const mount=document.getElementById('ikCaTasks'),status=document.getElementById('ikCaStatus'),summary=document.getElementById('ikCombatSummary');if(!mount)return;
  mount.replaceChildren();const tier=document.getElementById('ikCaTier')?.value||'',query=(document.getElementById('ikCaSearch')?.value||'').trim().toLowerCase();
- const filtered=ikCaState.tasks.filter(t=>(!tier||t.tier===tier)&&(!query||[t.name,t.boss,t.description,t.type].some(v=>v.toLowerCase().includes(query))));
+ const completion=document.getElementById('ikCaCompletion')?.value||'all',boss=document.getElementById('ikCaBoss')?.value||'',type=document.getElementById('ikCaType')?.value||'';
+ const filtered=ikCaState.tasks.filter(t=>(!tier||t.tier===tier)&&(!boss||t.boss===boss)&&(!type||t.type===type)&&(completion==='all'||(completion==='exempt'?t.exempt:completion==='completed'?t.completed&&!t.exempt:!t.completed&&!t.exempt))&&(!query||[t.name,t.boss,t.description,t.type].some(v=>String(v||'').toLowerCase().includes(query))));
  const completed=ikCaState.tasks.filter(t=>t.completed&&!t.exempt).length;
  const eligible=ikCaState.tasks.filter(t=>!t.exempt).length;
  if(summary)summary.textContent=ikCaState.loaded?`${completed} / ${eligible} tasks completed · ${ikCaState.points} points · Highest tier: ${ikCaState.tierReached||'None'}`:'Player-specific Combat Achievements from RuneProfile';
  const progress=document.getElementById('ikCaProgress');if(progress){progress.replaceChildren();for(const tierName of ['Easy','Medium','Hard','Elite','Master','Grandmaster']){const ts=ikCaState.tasks.filter(t=>t.tier===tierName&&!t.exempt);if(!ts.length)continue;const badge=document.createElement('span');const strong=document.createElement('strong');strong.textContent=tierName+' ';badge.append(strong,document.createTextNode(`${ts.filter(t=>t.completed).length}/${ts.length}`));progress.append(badge)}}
- const near=document.getElementById('ikCaNearComplete');if(near){near.replaceChildren();if(ikCaState.loaded){const groups=new Map();for(const task of ikCaState.tasks){if(task.exempt||!task.boss)continue;const group=groups.get(task.boss)||{done:0,left:0};if(task.completed)group.done++;else group.left++;groups.set(task.boss,group)}const closest=[...groups.entries()].filter(([,v])=>v.left>0&&v.done>0).sort((a,b)=>a[1].left-b[1].left||b[1].done-a[1].done).slice(0,5);if(closest.length){const heading=document.createElement('h3');heading.textContent='Closest to completion';near.append(heading);for(const [boss,v] of closest){const b=document.createElement('button');b.type='button';b.textContent=`${boss} · ${v.left} remaining`;b.onclick=()=>{const select=document.getElementById('ikCaBoss');if(select){select.value=boss;select.dispatchEvent(new Event('change'))}};near.append(b)}}}}
+ const near=document.getElementById('ikCaNearComplete');if(near){
+   near.replaceChildren();if(ikCaState.loaded){
+     const names=['Easy','Medium','Hard','Elite','Master','Grandmaster'];
+     const weights=[1,2,3,4,5,6];let cumulative=0;
+     const thresholds=names.map((name,i)=>{cumulative+=ikCaState.tasks.filter(t=>t.tier===name&&!t.exempt).length*weights[i];return {name,points:cumulative}});
+     const next=thresholds.find(t=>ikCaState.points<t.points);
+     const previous=next?(thresholds[thresholds.indexOf(next)-1]?.points||0):thresholds.at(-1)?.points||0;
+     const title=document.createElement('div');title.className='ik-ca-next-title';
+     title.textContent=next?`${ikCaState.points.toLocaleString()} / ${next.points.toLocaleString()} points to ${next.name} · ${(next.points-ikCaState.points).toLocaleString()} remaining`:`${ikCaState.points.toLocaleString()} points · Grandmaster threshold reached`;
+     const track=document.createElement('div');track.className='ik-ca-next-track';const fill=document.createElement('div');fill.className='ik-ca-next-fill';fill.style.width=`${next?Math.max(0,Math.min(100,(ikCaState.points-previous)/(next.points-previous)*100)):100}%`;track.append(fill);near.append(title,track);
+   }
+ }
  if(status)status.textContent=ikCaState.loading?'Loading player Combat Achievements…':ikCaState.error?ikCaState.error:ikCaState.loaded?`${filtered.length.toLocaleString()} matching tasks · ${completed} / ${eligible} completed · RuneProfile`:'Open this tab to load player progress.';
  for(const task of filtered.slice(0,350)){
   const card=document.createElement('details');card.className='ik-ca-task'+(task.completed&&!task.exempt?' is-complete':'');
@@ -796,11 +806,12 @@ async function ikCaLoad(force=false){
   const data=await res.json();if(!res.ok)throw Error(data.error||`HTTP ${res.status}`);
   if(!data.available||!Array.isArray(data.tasks))throw Error('Player completion data unavailable.');
   ikCaState.tasks=data.tasks;ikCaState.points=data.totalPoints;ikCaState.tierReached=data.tierReached;ikCaState.loaded=true;
+  for(const [id,key,placeholder] of [['ikCaBoss','boss','All bosses'],['ikCaType','type','All types']]){const select=document.getElementById(id);if(!select)continue;const old=select.value;select.replaceChildren(new Option(placeholder,''));const values=[...new Set(data.tasks.map(t=>t[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));for(const value of values)select.add(new Option(value,value));select.value=values.includes(old)?old:'';}
  }catch(err){ikCaState.error='Player Combat Achievements unavailable: '+err.message;}
  finally{ikCaState.loading=false;ikCaRender()}
 }
 document.addEventListener('DOMContentLoaded',()=>{
- document.getElementById('ikCaTier')?.addEventListener('change',ikCaRender);
+ for(const id of ['ikCaTier','ikCaCompletion','ikCaBoss','ikCaType'])document.getElementById(id)?.addEventListener('change',ikCaRender);
  document.getElementById('ikCaSearch')?.addEventListener('input',ikCaRender);
  document.getElementById('ikCaReload')?.addEventListener('click',()=>{ikCaState.loaded=false;ikCaLoad(true)});
 });
@@ -818,7 +829,8 @@ async function ikLoadRuneJournal(rsn,temple,templeRecent){
  for(const page of list){const b=document.createElement('button');b.type='button';b.dataset.page=page.name;b.textContent=page.name;const c=document.createElement('small');c.textContent=`${page.obtained}/${page.total}`;b.append(c);b.onclick=()=>showPage(page);pages.append(b)}if(list.length)showPage(list[0]);};
  for(const tab of tabs){const b=document.createElement('button');b.type='button';b.dataset.tab=tab.name;b.textContent=tab.name;const count=document.createElement('small');count.textContent=`${tab.obtained} / ${tab.total}`;b.append(count);b.onclick=()=>showTab(tab);bar.append(b)}showTab(tabs[0]);const summary=document.getElementById('ikClogSummary');if(summary)summary.textContent=`${data.collection.obtained} / ${data.collection.total} slots · RuneProfile`;
  }else{const list=document.createElement('div');list.className='ik-osrs-collection-list';for(const item of (temple.items||[]).slice(0,300)){const row=document.createElement('div');row.className='ik-osrs-item';row.textContent=(item.name||'Item #'+item.id)+' ×'+(item.count||1);list.append(row)}mount.append(list);if(!list.children.length)mount.textContent='Collection Log not yet synced to RuneProfile or TempleOSRS.';}}
-  ikRenderOsrsHighlights(activities, data?.collection);
+  if(data?.collection?.tabs?.length)ikPopulateCollectionGoal(data.collection);
+ ikRenderOsrsHighlights(activities, data?.collection);
  if(feed){
   const filters=document.getElementById('ikOsrsFilters');
   const categories=[['all','All activity'],['collection','Collection Log'],['achievements','Achievements'],['levels','Levels & XP'],['drops','Drops'],['quests','Quests']];

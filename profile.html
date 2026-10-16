@@ -268,6 +268,12 @@
 @media(max-width:980px){.profile-page .profile-identity-copy{grid-template-columns:minmax(0,1fr)!important}.profile-page .profile-identity-copy>.profile-hero-facts{grid-column:1!important;grid-row:auto!important;max-width:430px;margin:8px 0!important}}
 @media(max-width:600px){.profile-page .profile-identity-card{grid-template-columns:76px minmax(0,1fr)!important;gap:12px!important;padding:18px!important}.profile-page .profile-identity-card>.ik-avatar-edit-wrap,.profile-page .ik-avatar-edit-wrap .profile-avatar{width:76px!important;height:76px!important}.profile-page .profile-identity-copy>h1{font-size:clamp(25px,7vw,36px)!important}.ik-banner-edit-trigger{position:relative;right:auto;bottom:auto;grid-column:1/-1;justify-self:end}.profile-page .profile-hero-facts>div{padding:8px 4px!important}.ik-edit-dialog{padding:15px}}
 </style>
+<style>
+.ik-ca-next-progress{padding:14px 0!important;display:block!important}.ik-ca-next-title{color:#eac18b;font-weight:700;font-size:14px;margin-bottom:9px}.ik-ca-next-track{height:12px;background:#241c17;border:1px solid #76502b;border-radius:99px;overflow:hidden}.ik-ca-next-fill{height:100%;background:linear-gradient(90deg,#b86b23,#f6b85d);border-radius:99px;transition:width .3s}.ik-banner-edit-trigger{position:absolute!important;top:18px!important;right:20px!important;bottom:auto!important;z-index:8!important}.ik-avatar-edit-wrap .ik-profile-edit-trigger,.ik-profile-edit-actions{display:none!important}
+</style><style id="ik-osrs-progress-tab-icons">
+[data-osrs-progress-tab] { display:inline-flex; align-items:center; justify-content:center; gap:7px; vertical-align:middle; }
+[data-osrs-progress-tab] .ik-progress-tab-icon { width:19px; height:19px; object-fit:contain; flex:0 0 19px; image-rendering:auto; }
+</style>
 </head>
 <body>
   <div id="siteNav"></div>
@@ -314,7 +320,7 @@
  <div class="profile-section-header"><div><h2>Combat Achievements</h2><small id="ikCombatSummary">Player-specific Combat Achievement progress from RuneProfile</small></div><a id="ikCombatExternal" class="btn secondary" target="_blank" rel="noopener noreferrer">RuneProfile ↗</a></div>
  <p class="ik-ca-disclaimer">Completed tasks and points are synced from RuneProfile. Exempt tasks are excluded from progress.</p>
  <div class="ik-ca-controls"><label for="ikCaTier">Tier <select id="ikCaTier"><option value="">All tiers</option><option>Easy</option><option>Medium</option><option>Hard</option><option>Elite</option><option>Master</option><option>Grandmaster</option></select></label><label for="ikCaSearch">Search tasks or bosses <input id="ikCaSearch" type="search" placeholder="e.g. Zulrah, speed, raid" autocomplete="off"></label><button type="button" id="ikCaReload" class="btn secondary">Refresh progress</button></div>
- <div class="ik-ca-quickfilters"><label>Completion <select id="ikCaCompletion"><option value="all">All tasks</option><option value="remaining">Remaining</option><option value="completed">Completed</option><option value="exempt">Exempt</option></select></label><label>Boss <select id="ikCaBoss"><option value="">All bosses</option></select></label><label>Type <select id="ikCaType"><option value="">All types</option></select></label></div><div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaNearComplete" class="ik-ca-near"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
+ <div class="ik-ca-quickfilters"><label>Completion <select id="ikCaCompletion"><option value="all">All tasks</option><option value="remaining">Remaining</option><option value="completed">Completed</option><option value="exempt">Exempt</option></select></label><label>Boss <select id="ikCaBoss"><option value="">All bosses</option></select></label><label>Type <select id="ikCaType"><option value="">All types</option></select></label></div><div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaNearComplete" class="ik-ca-near ik-ca-next-progress"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
  </section>
       <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
         <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Event achievements and profile recognition, all in one collection.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
@@ -435,7 +441,7 @@
 
 <div id="ikProfileEditOverlay" class="ik-edit-overlay" hidden><div class="ik-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="ikEditDialogTitle"><div class="ik-edit-dialog-head"><div><p class="eyebrow">Your profile</p><h2 id="ikEditDialogTitle">Edit Profile</h2></div><button type="button" id="ikCloseEdit" class="ik-edit-close" aria-label="Close profile editor">✕</button></div><div id="ikEditFormMount"></div></div></div>
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
-  <script src="assets/js/profile.js?v=20261016-showcase-goals-v1"></script>
+  <script src="assets/js/profile.js?v=20261016-profile-fixes-v2"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
