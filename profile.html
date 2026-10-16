@@ -82,7 +82,23 @@
 @media(max-width:540px){.ik-wallet-tx{align-items:flex-start}.ik-wallet-top strong{font-size:22px}}
 </style>
   <link rel="stylesheet" href="/assets/css/ironkin-sitewide-layout.css?v=20261016-wide-v1">
-</head>
+<style>
+.profile-page{max-width:1600px!important;width:100%;box-sizing:border-box}
+.profile-page .ik-profile-overview{display:grid!important;grid-template-columns:minmax(300px,390px) minmax(0,1fr)!important;align-items:start}
+.profile-page .ik-profile-overview-title{grid-column:1/-1}
+.profile-page .profile-main-stats{grid-column:1;grid-row:2}
+.profile-page .ik-osrs-activity{grid-column:2;grid-row:2;min-width:0}
+.ik-osrs-skill-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.ik-osrs-skill{display:flex;justify-content:space-between;align-items:center;gap:3px;background:#221c17;border:1px solid #433125;border-radius:5px;padding:7px 5px;font-size:12px}
+.ik-osrs-skill strong{color:#e6b46b}.ik-osrs-skill small{color:#c9a98b}
+.ik-osrs-feed-row,.ik-osrs-item{padding:11px 8px;border-bottom:1px solid #483326;display:flex;gap:10px;justify-content:space-between;align-items:center}
+.ik-osrs-feed-row small{color:#c29b72}.ik-osrs-item img,.ik-osrs-feed-row img{width:32px;height:32px;object-fit:contain;image-rendering:pixelated}
+.ik-osrs-collection-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.ik-osrs-collection-list .ik-osrs-item{background:#211914;border:1px solid #493324;border-radius:7px}
+.ik-osrs-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px}.ik-osrs-links a{color:#efa34f;font-size:12px}
+.ik-osrs-statline{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:14px}
+@media(max-width:850px){.profile-page .ik-profile-overview{display:flex!important;flex-direction:column}.profile-page .ik-osrs-activity,.profile-page .profile-main-stats{width:100%;box-sizing:border-box}}
+</style></head>
 <body>
   <div id="siteNav"></div>
 
@@ -97,6 +113,8 @@
     <section class="profile-grid" id="profileGrid" style="display:none;">
       <nav class="ik-profile-nav" aria-label="Profile sections" role="tablist">
         <button type="button" id="profileTabOverview" role="tab" aria-controls="profileOverview" aria-selected="true" tabindex="0" data-profile-tab="overview">Overview</button>
+        <button type="button" id="profileTabCollection" role="tab" aria-controls="profileCollection" aria-selected="false" tabindex="-1" data-profile-tab="collection">Collection Log</button>
+        <button type="button" id="profileTabCombat" role="tab" aria-controls="profileCombat" aria-selected="false" tabindex="-1" data-profile-tab="combat">Combat Achievements</button>
         <button type="button" id="profileTabAchievements" role="tab" aria-controls="profileAchievements" aria-selected="false" tabindex="-1" data-profile-tab="achievements">Achievements <span id="profileTabAchievementCount" class="ik-profile-tab-count"></span></button>
         <button type="button" id="profileTabHistory" role="tab" aria-controls="profileEventHistory" aria-selected="false" tabindex="-1" data-profile-tab="history">Event History</button>
         <button type="button" id="profileToolsLink" role="tab" aria-controls="profileTools" aria-selected="false" tabindex="-1" data-profile-tab="tools">My Tools</button>
@@ -119,7 +137,10 @@
         <a class="profile-text-link" href="/ember-leaderboard.html">View Ember Leaderboard →</a>
       </div>
 
+        <section class="ik-osrs-activity profile-panel" aria-label="OSRS activity"><div class="profile-section-header"><h2>Recent OSRS Activity</h2><small>TempleOSRS collection updates</small></div><div id="ikOsrsFeed">Loading recent collections…</div></section>
       </div>
+      <section class="profile-panel ik-osrs-collection" id="profileCollection" role="tabpanel" aria-labelledby="profileTabCollection" hidden><div class="profile-section-header"><h2>Collection Log</h2><small id="ikClogSummary">Loading TempleOSRS…</small></div><div id="ikClogItems"></div></section>
+      <section class="profile-panel ik-osrs-combat" id="profileCombat" role="tabpanel" aria-labelledby="profileTabCombat" hidden><div class="profile-section-header"><h2>Combat Achievements</h2></div><p class="admin-muted">Individual combat task completions are not available from the verified Wise Old Man or TempleOSRS endpoints. View the player's RuneProfile for additional tracked achievements.</p><a id="ikCombatExternal" class="btn secondary" target="_blank" rel="noopener noreferrer">Open RuneProfile ↗</a></section>
       <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
         <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Event achievements and profile recognition, all in one collection.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
         <div id="profileFeaturedAchievements" class="ik-profile-featured"></div>
@@ -233,7 +254,7 @@
   </main>
 
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
-  <script src="assets/js/profile.js?v=20261015-interactive-tabs-v2"></script>
+  <script src="assets/js/profile.js?v=20261016-osrs-integrated-v1"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>

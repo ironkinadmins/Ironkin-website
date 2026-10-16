@@ -264,6 +264,7 @@ function renderProfileHero(profile) {
           <span>Rank: ${profileEscapeHtml(profile.rank)}</span>
           ${memberSincePill}
         </div>
+        <div class="ik-osrs-links" id="ikOsrsLinks"></div>
         <div class="profile-hero-facts">
           <div><strong>${profileFormatNumber(profile.embers?.balance || 0)}</strong><span>Embers</span></div>
           <div><strong>${profileFormatNumber(profile.placements?.topThreeFinishes || 0)}</strong><span>Top 3 Finishes</span></div>
@@ -313,16 +314,7 @@ function renderWomStats(profile) {
       <span>Overall Rank</span>
       <strong>${wom.overallRank ? profileFormatNumber(wom.overallRank) : "-"}</strong>
     </div>
-    <div class="profile-top-skills">
-      <h3>Top Skills</h3>
-      ${topSkills.length ? topSkills.map(skill => `
-        <div class="profile-skill-row">
-          <span>${profileEscapeHtml(skill.name)}</span>
-          <strong>${profileFormatNumber(skill.experience)} XP</strong>
-          <small>Level ${profileFormatNumber(skill.level)}</small>
-        </div>
-      `).join("") : `<p class="admin-muted">No skill data available.</p>`}
-    </div>
+    <div class="profile-top-skills"><h3>Skills</h3><div class="ik-osrs-skill-grid">${(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill" title="${profileEscapeHtml(skill.name)} · ${profileFormatNumber(skill.experience)} XP"><small>${profileEscapeHtml(skill.name)}</small><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
   `;
 }
 
@@ -440,6 +432,7 @@ function renderProfile(profile) {
   renderProfileHero(profile);
   ikRenderAchievements();
   renderWomStats(profile);
+  ikLoadOsrsProgress(profile);
   renderEmbers(profile);
   renderEventRecord(profile);
   ikRequestAchievements(profile);
@@ -576,14 +569,14 @@ async function profileLoadSubmissions() {
 }
 
 
-const ikProfileTabs = ["overview","achievements","history","tools"];
+const ikProfileTabs = ["overview","collection","combat","achievements","history","tools"];
 let ikProfileActiveTab = "overview";
 function ikSelectProfileTab(name,{focus=false,updateHash=true}={}) {
   if(!ikProfileTabs.includes(name)) name="overview";
   const toolTab=document.querySelector('[data-profile-tab="tools"]');
   if(name==="tools" && toolTab?.hidden) name="overview";
   ikProfileActiveTab=name;
-  const ids={overview:"profileOverview",achievements:"profileAchievements",history:"profileEventHistory",tools:"profileTools"};
+  const ids={overview:"profileOverview",collection:"profileCollection",combat:"profileCombat",achievements:"profileAchievements",history:"profileEventHistory",tools:"profileTools"};
   document.querySelectorAll('[data-profile-tab]').forEach(button=>{
     const selected=button.dataset.profileTab===name;
     button.setAttribute('aria-selected',String(selected));
@@ -646,3 +639,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadProfile();
 });
+
+// External progression is public data. The existing Ironkin API remains authoritative for clan data.
+async function ikLoadOsrsProgress(profile){
+ const rsn=String(profile.rsn||profile.wom?.username||'').trim();
+ const links=document.getElementById('ikOsrsLinks');
+ const external=document.getElementById('ikCombatExternal');
+ if(links){links.replaceChildren();for(const [name,href] of [['RuneProfile','https://www.runeprofile.com/'+encodeURIComponent(rsn)],['TempleOSRS','https://templeosrs.com/player/overview.php?player='+encodeURIComponent(rsn)],['Wise Old Man','https://wiseoldman.net/players/'+encodeURIComponent(rsn)]]){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=name+' ↗';links.append(a)}}
+ if(external)external.href='https://www.runeprofile.com/'+encodeURIComponent(rsn);
+ if(!rsn){for(const id of ['ikClogSummary','ikOsrsFeed']){const n=document.getElementById(id);if(n)n.textContent='No linked OSRS username.'}return}
+ try{
+ const response=await fetch('/api/profile/osrs-progress?rsn='+encodeURIComponent(rsn));
+ const result=await response.json();if(!response.ok)throw Error(result.error||'OSRS sources unavailable');
+ const clog=result.collection||{};
+ const summary=document.getElementById('ikClogSummary');if(summary)summary.textContent=clog.available?`${Number(clog.total||0).toLocaleString()} / ${Number(clog.possible||0).toLocaleString()} slots · TempleOSRS`:'Collection Log not synced or unavailable on TempleOSRS';
+ const mount=document.getElementById('ikClogItems');if(mount){mount.replaceChildren();const items=Array.isArray(clog.items)?clog.items:[];const wrap=document.createElement('div');wrap.className='ik-osrs-collection-list';for(const item of items.slice(0,300)){const row=document.createElement('div');row.className='ik-osrs-item';const label=document.createElement('span');label.textContent=item.name||('Item #'+item.id);row.append(label);const count=document.createElement('small');count.textContent='×'+(item.count||1);row.append(count);wrap.append(row)}mount.append(wrap);if(!items.length){const p=document.createElement('p');p.className='admin-muted';p.textContent=clog.available?'No individual items returned.':'Sync a collection log to TempleOSRS to display obtained items.';mount.append(p)}}
+ const feed=document.getElementById('ikOsrsFeed');if(feed){feed.replaceChildren();const items=Array.isArray(result.recent)?result.recent:[];for(const item of items.slice(0,30)){const row=document.createElement('div');row.className='ik-osrs-feed-row';const title=document.createElement('span');title.textContent='Collected '+(item.name||('item #'+item.id));const date=document.createElement('small');const d=new Date(Number(item.date)*1000);date.textContent=Number.isFinite(d.getTime())?d.toLocaleDateString():'';row.append(title,date);feed.append(row)}if(!items.length)feed.textContent='No recent synced collection unlocks available.'}
+ }catch(err){for(const id of ['ikClogSummary','ikOsrsFeed']){const n=document.getElementById(id);if(n)n.textContent='External OSRS data unavailable: '+err.message}}
+}
