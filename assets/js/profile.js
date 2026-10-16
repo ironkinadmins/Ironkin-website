@@ -314,8 +314,54 @@ function renderWomStats(profile) {
       <span>Overall Rank</span>
       <strong>${wom.overallRank ? profileFormatNumber(wom.overallRank) : "-"}</strong>
     </div>
-    <div class="profile-top-skills"><h3>Skills</h3><div class="ik-osrs-skill-grid">${(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill" title="${profileEscapeHtml(skill.name)} · ${profileFormatNumber(skill.experience)} XP"><small>${profileEscapeHtml(skill.name)}</small><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
+    <div class="profile-top-skills ik-profile-progress-widget">
+      <div class="ik-progress-tabs" role="tablist" aria-label="OSRS progression">
+        <button type="button" class="is-active" data-osrs-progress-tab="skills" aria-selected="true">Skills</button>
+        <button type="button" data-osrs-progress-tab="quests" aria-selected="false">Quests</button>
+        <button type="button" data-osrs-progress-tab="diaries" aria-selected="false">Achievement Diaries</button>
+      </div>
+      <div data-osrs-progress-panel="skills"><div class="ik-osrs-skill-grid">${(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill" title="${profileEscapeHtml(skill.name)} · ${profileFormatNumber(skill.experience)} XP"><small>${profileEscapeHtml(skill.name)}</small><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
+      <div data-osrs-progress-panel="quests" hidden><p class="admin-muted">Select Quests to load RuneProfile progress.</p></div>
+      <div data-osrs-progress-panel="diaries" hidden><p class="admin-muted">Select Achievement Diaries to load RuneProfile progress.</p></div>
+    </div>
   `;
+  ikInitOsrsProgressTabs(profile);
+}
+
+
+let ikChecklistRequest=0;
+function ikInitOsrsProgressTabs(profile){
+ const widget=document.querySelector('.ik-profile-progress-widget');if(!widget)return;
+ let cached=null;let pending=null;
+ const buttons=[...widget.querySelectorAll('[data-osrs-progress-tab]')];
+ const esc=value=>profileEscapeHtml(String(value??''));
+ const render=(tab)=>{
+   const panel=widget.querySelector(`[data-osrs-progress-panel="${tab}"]`);if(!panel||!cached)return;
+   if(tab==='quests'){
+     const response=cached.quests;
+     if(!Array.isArray(response?.data)){panel.textContent=response?.error||'Quest information unavailable for this player.';return;}
+     const quests=response.data;
+     const completed=quests.filter(q=>q.state==='finished').length;
+     panel.innerHTML=`<p class="ik-progress-summary">${completed} / ${quests.length} quests completed</p><div class="ik-checklist">${quests.map(q=>`<div class="ik-checklist-row ${q.state==='finished'?'is-complete':''}"><span>${q.state==='finished'?'✓':q.state==='in_progress'?'◐':'○'}</span><span>${esc(q.name)}</span><small>${Number(q.points)||0} QP</small></div>`).join('')}</div>`;
+   }else if(tab==='diaries'){
+     const response=cached.diaries;
+     if(!Array.isArray(response?.data)){panel.textContent=response?.error||'Achievement Diary information unavailable for this player.';return;}
+     const areas=response.data;
+     panel.innerHTML=`<div class="ik-checklist">${areas.map(a=>`<div class="ik-diary-area"><strong>${esc(a.area)}</strong>${(a.tiers||[]).map(t=>`<div class="ik-checklist-row ${t.total>0&&t.completed>=t.total?'is-complete':''}"><span>${t.total>0&&t.completed>=t.total?'✓':'○'}</span><span>${esc(t.tier)}</span><small>${Number(t.completed)||0} / ${Number(t.total)||0}</small></div>`).join('')}</div>`).join('')}</div>`;
+   }
+ };
+ const requestId=++ikChecklistRequest;
+ buttons.forEach(button=>button.addEventListener('click',async()=>{
+   const tab=button.dataset.osrsProgressTab;
+   buttons.forEach(b=>{const selected=b===button;b.classList.toggle('is-active',selected);b.setAttribute('aria-selected',String(selected));});
+   widget.querySelectorAll('[data-osrs-progress-panel]').forEach(p=>{p.hidden=p.dataset.osrsProgressPanel!==tab;});
+   if(tab==='skills')return;
+   const panel=widget.querySelector(`[data-osrs-progress-panel="${tab}"]`);
+   if(cached){render(tab);return;}
+   panel.textContent='Loading '+(tab==='quests'?'quests':'achievement diaries')+'…';
+   if(!pending)pending=fetch('/api/profile-osrs-checklist?rsn='+encodeURIComponent(profile.rsn||profile.username||''),{headers:{Accept:'application/json'}}).then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.error||'Unable to load RuneProfile progress');return data;});
+   try{const data=await pending;if(requestId!==ikChecklistRequest)return;cached=data;render(tab);}catch(e){pending=null;panel.textContent=e.message||'RuneProfile progress unavailable.';}
+ }));
 }
 
 function renderEmbers(profile) {
@@ -717,7 +763,27 @@ async function ikLoadRuneJournal(rsn,temple,templeRecent){
  for(const page of list){const b=document.createElement('button');b.type='button';b.dataset.page=page.name;b.textContent=page.name;const c=document.createElement('small');c.textContent=`${page.obtained}/${page.total}`;b.append(c);b.onclick=()=>showPage(page);pages.append(b)}if(list.length)showPage(list[0]);};
  for(const tab of tabs){const b=document.createElement('button');b.type='button';b.dataset.tab=tab.name;b.textContent=tab.name;const count=document.createElement('small');count.textContent=`${tab.obtained} / ${tab.total}`;b.append(count);b.onclick=()=>showTab(tab);bar.append(b)}showTab(tabs[0]);const summary=document.getElementById('ikClogSummary');if(summary)summary.textContent=`${data.collection.obtained} / ${data.collection.total} slots · RuneProfile`;
  }else{const list=document.createElement('div');list.className='ik-osrs-collection-list';for(const item of (temple.items||[]).slice(0,300)){const row=document.createElement('div');row.className='ik-osrs-item';row.textContent=(item.name||'Item #'+item.id)+' ×'+(item.count||1);list.append(row)}mount.append(list);if(!list.children.length)mount.textContent='Collection Log not yet synced to RuneProfile or TempleOSRS.';}}
- if(feed){feed.replaceChildren();const kinds={level_up:['⭐','Level up'],new_item_obtained:['🎁','Collection log unlock'],combat_achievement_tier_completed:['🏆','Combat Achievement tier'],achievement_diary_tier_completed:['📜','Achievement Diary'],quest_completed:['📖','Quest completed'],maxed:['👑','Maxed'],xp_milestone:['✨','XP milestone'],valuable_drop:['💰','Valuable drop']};
- for(const event of activities.slice(0,35)){const kind=kinds[event.type]||['⚔️','OSRS activity'];const row=document.createElement('div');row.className='ik-osrs-feed-row';const icon=document.createElement('span');icon.className='ik-feed-icon';icon.textContent=kind[0];const info=document.createElement('div');info.className='ik-feed-info';const title=document.createElement('strong');const d=event.data||{},e=event.enriched||{};title.textContent=kind[1]+(event.type==='level_up'?`: ${d.name||''} ${d.level||''}`:event.type==='new_item_obtained'?`: ${e.itemName||'Item #'+d.itemId}`:event.type==='combat_achievement_tier_completed'?`: ${e.tierName||'Tier '+d.tierId}`:event.type==='xp_milestone'?`: ${d.name||''} ${Number(d.xp||0).toLocaleString()} XP`:event.type==='valuable_drop'?`: ${e.itemName||'Item #'+d.itemId}`:event.type==='quest_completed'?`: ${e.questName||'Quest #'+d.questId}`:'');const when=document.createElement('small');const date=new Date(event.createdAt);when.textContent=Number.isFinite(date.getTime())?date.toLocaleString():'';info.append(title,when);row.append(icon,info);feed.append(row)}
- if(!activities.length){for(const item of templeRecent.slice(0,20)){const row=document.createElement('div');row.className='ik-osrs-feed-row';row.textContent='🎁 Collected '+(item.name||'Item #'+item.id);feed.append(row)}if(!feed.children.length)feed.textContent='No recent RuneProfile activity available. The player may need to sync their RuneProfile plugin.';}}
+ if(feed){
+  const filters=document.getElementById('ikOsrsFilters');
+  const categories=[['all','All activity'],['collection','Collection Log'],['achievements','Achievements'],['levels','Levels & XP'],['drops','Drops'],['quests','Quests']];
+  const groupOf={new_item_obtained:'collection',combat_achievement_tier_completed:'achievements',achievement_diary_tier_completed:'achievements',level_up:'levels',xp_milestone:'levels',maxed:'levels',valuable_drop:'drops',quest_completed:'quests'};
+  const labels={new_item_obtained:'Collection Log unlock',combat_achievement_tier_completed:'Combat Achievement tier',achievement_diary_tier_completed:'Achievement Diary',level_up:'Level up',xp_milestone:'XP milestone',maxed:'Maxed',valuable_drop:'Valuable drop',quest_completed:'Quest completed'};
+  const rows=activities.length?activities:(templeRecent||[]).map(item=>({type:'new_item_obtained',data:{itemId:item.id},enriched:{itemName:item.name},createdAt:null}));
+  let active='all',page=0;const pageSize=7;
+  const count=document.getElementById('ikOsrsFeedCount'),indicator=document.getElementById('ikOsrsPage'),prev=document.getElementById('ikOsrsPrev'),next=document.getElementById('ikOsrsNext');
+  const render=()=>{
+   const filtered=active==='all'?rows:rows.filter(event=>groupOf[event.type]===active);
+   const pages=Math.max(1,Math.ceil(filtered.length/pageSize));page=Math.min(page,pages-1);feed.replaceChildren();
+   for(const event of filtered.slice(page*pageSize,(page+1)*pageSize)){
+    const d=event.data||{},e=event.enriched||{},group=groupOf[event.type]||'other';
+    const detail=event.type==='level_up'?`${d.name||'Skill'} level ${d.level??''}`:event.type==='new_item_obtained'?e.itemName||`Item #${d.itemId}`:event.type==='combat_achievement_tier_completed'?e.tierName||`Tier ${d.tierId}`:event.type==='achievement_diary_tier_completed'?`${e.areaName||'Area '+d.areaId} ${e.tierName||''}`:event.type==='xp_milestone'?`${d.name||'Skill'} ${Number(d.xp||0).toLocaleString()} XP`:event.type==='valuable_drop'?e.itemName||`Item #${d.itemId}`:event.type==='quest_completed'?e.questName||`Quest #${d.questId}`:'';
+    const row=document.createElement('div');row.className='ik-osrs-feed-row';const marker=document.createElement('span');marker.className='ik-feed-marker';marker.dataset.kind=group;marker.setAttribute('aria-hidden','true');const info=document.createElement('div');info.className='ik-feed-info';const title=document.createElement('strong');title.textContent=(labels[event.type]||'OSRS activity')+(detail?': '+detail:'');const when=document.createElement('small');const date=new Date(event.createdAt);when.textContent=event.createdAt&&Number.isFinite(date.getTime())?date.toLocaleString():'Recent unlock (time unavailable)';info.append(title,when);row.append(marker,info);feed.append(row);
+   }
+   if(!filtered.length){const empty=document.createElement('p');empty.className='admin-muted';empty.textContent=rows.length?'No activity in this category.':'No recent RuneProfile activity available. The player may need to sync their RuneProfile plugin.';feed.append(empty)}
+   if(count)count.textContent=`${filtered.length} ${filtered.length===1?'event':'events'}`;if(indicator)indicator.textContent=`${page+1} / ${pages}`;if(prev)prev.disabled=page===0;if(next)next.disabled=page>=pages-1;
+   filters?.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===active)));
+  };
+  if(filters){filters.replaceChildren();for(const [key,label] of categories){const button=document.createElement('button');button.type='button';button.dataset.filter=key;button.textContent=label;button.onclick=()=>{active=key;page=0;render()};filters.append(button)}}
+  if(prev)prev.onclick=()=>{page=Math.max(0,page-1);render()};if(next)next.onclick=()=>{page++;render()};render();
+ }
 }

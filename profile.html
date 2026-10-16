@@ -121,6 +121,28 @@
 .ik-osrs-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px}.ik-osrs-links a{color:#efa34f;font-size:12px}
 .ik-osrs-statline{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:14px}
 @media(max-width:850px){.profile-page .ik-profile-overview{display:flex!important;flex-direction:column}.profile-page .ik-osrs-activity,.profile-page .profile-main-stats{width:100%;box-sizing:border-box}}
+
+/* Wide-screen hero: use the available width rather than leaving an empty right half. */
+.profile-page #profileHero,.profile-page .profile-hero{width:100%;max-width:none;box-sizing:border-box}
+.profile-page .profile-identity-card{display:grid!important;grid-template-columns:112px minmax(0,1fr);gap:26px;align-items:start;min-height:0;padding:30px 36px!important;box-sizing:border-box;width:100%}
+.profile-page .profile-identity-card>.profile-avatar{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:cover;align-self:center}
+.profile-page .profile-identity-copy{grid-column:2;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);column-gap:28px;align-items:start}
+.profile-page .profile-identity-copy>.eyebrow,.profile-page .profile-identity-copy>h1,.profile-page .profile-meta-row,.profile-page .ik-osrs-links,.profile-page .profile-blurb{grid-column:1}
+.profile-page .profile-identity-copy>h1{font-size:clamp(30px,3vw,48px);margin:5px 0 8px}
+.profile-page .profile-hero-facts{grid-column:2;grid-row:1/span 3;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-self:center;margin:0}
+.profile-page .profile-hero-facts>div{min-width:0;padding:14px 9px;text-align:center}
+.profile-page .profile-hero-facts strong{font-size:clamp(17px,1.5vw,23px)}
+.profile-page .profile-badge-row,.profile-page .ik-profile-hero-achievements{grid-column:1/-1}
+.profile-page .profile-blurb{margin:10px 0 0}
+.ik-osrs-activity{overflow:hidden}.ik-feed-toolbar{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0;padding-bottom:12px;border-bottom:1px solid #473326}
+.ik-feed-toolbar button,.ik-feed-pager button{border:1px solid #55402d;background:#241b15;color:#d4b699;border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.ik-feed-toolbar button[aria-pressed="true"]{background:#694322;border-color:#c58a47;color:#ffddab}
+#ikOsrsFeed{min-height:170px}.ik-osrs-feed-row{display:grid!important;grid-template-columns:7px minmax(0,1fr);gap:12px!important;align-items:center!important;padding:12px 6px!important}
+.ik-feed-marker{height:28px;width:4px;border-radius:4px;background:#a47746;display:block}.ik-feed-marker[data-kind="collection"]{background:#d3a04d}.ik-feed-marker[data-kind="levels"]{background:#6ea6a0}.ik-feed-marker[data-kind="achievements"]{background:#ad86d4}.ik-feed-marker[data-kind="drops"]{background:#85b66b}
+.ik-feed-info strong{font-size:13px}.ik-feed-info small{font-size:11px}
+.ik-feed-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0 0;color:#bca18a;font-size:12px;flex-wrap:wrap}.ik-feed-pager{display:flex;align-items:center;gap:10px}.ik-feed-pager button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:1000px){.profile-page .profile-identity-copy{display:block}.profile-page .profile-hero-facts{margin:14px 0}.profile-page .profile-identity-card{padding:24px!important}}
+@media(max-width:600px){.profile-page .profile-identity-card{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:17px!important}.profile-page .profile-identity-card>.profile-avatar{width:72px;height:72px;align-self:start}.profile-page .profile-hero-facts{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-page .profile-hero-facts>div{padding:9px 4px}.ik-feed-toolbar button{padding:7px 9px}}
 </style></head>
 <body>
   <div id="siteNav"></div>
@@ -160,7 +182,7 @@
         <a class="profile-text-link" href="/ember-leaderboard.html">View Ember Leaderboard →</a>
       </div>
 
-        <section class="ik-osrs-activity profile-panel" aria-label="OSRS activity"><div class="profile-section-header"><h2>Recent OSRS Activity</h2><small>RuneProfile level-ups, collection unlocks and milestones</small></div><div id="ikOsrsFeed">Loading recent collections…</div></section>
+        <section class="ik-osrs-activity profile-panel" aria-label="OSRS activity"><div class="profile-section-header"><h2>Recent OSRS Activity</h2><small>RuneProfile level-ups, collection unlocks and milestones</small></div><div class="ik-feed-toolbar" id="ikOsrsFilters" role="group" aria-label="Filter OSRS activity"></div><div id="ikOsrsFeed" aria-live="polite">Loading recent activity…</div><div class="ik-feed-footer"><span id="ikOsrsFeedCount"></span><div class="ik-feed-pager"><button type="button" id="ikOsrsPrev">Previous</button><span id="ikOsrsPage"></span><button type="button" id="ikOsrsNext">Next</button></div></div></section>
       </div>
       <section class="profile-panel ik-osrs-collection" id="profileCollection" role="tabpanel" aria-labelledby="profileTabCollection" hidden><div class="profile-section-header"><h2>Collection Log</h2><small id="ikClogSummary">Loading TempleOSRS…</small></div><div id="ikClogItems"></div></section>
       <section class="profile-panel ik-osrs-combat" id="profileCombat" role="tabpanel" aria-labelledby="profileTabCombat" hidden>
@@ -286,3 +308,14 @@
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
+<style>
+.ik-progress-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 12px;border-bottom:1px solid #483529;padding-bottom:8px}
+.ik-progress-tabs button{appearance:none;border:1px solid #493629;background:#241b15;color:#c5aa90;border-radius:6px;padding:7px 9px;font-size:12px;font-weight:700;cursor:pointer}
+.ik-progress-tabs button.is-active{background:#684322;color:#ffe0ac;border-color:#bb8340}
+.ik-profile-progress-widget [hidden]{display:none!important}
+.ik-progress-summary{color:#dfb46f;font-size:13px;margin:4px 0 10px}
+.ik-checklist{max-height:390px;overflow:auto;scrollbar-width:thin}
+.ik-checklist-row{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:7px;align-items:center;border-bottom:1px solid #382a21;padding:8px 3px;color:#bca38e;font-size:12px}
+.ik-checklist-row.is-complete{color:#e8bd78}.ik-checklist-row small{color:#bba08a;white-space:nowrap}
+.ik-diary-area{margin:0 0 14px}.ik-diary-area>strong{display:block;color:#f1c47e;margin:0 0 5px;font-size:13px}
+</style>
