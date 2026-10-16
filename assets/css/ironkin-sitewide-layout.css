@@ -1,0 +1,70 @@
+/* Ironkin site-wide responsive layout, October 2026.
+   Full-bleed chrome + hero, controlled content widths. No runtime changes. */
+:root { --ik-site-max: 1600px; --ik-site-gutter: clamp(16px, 2.5vw, 44px); }
+html { max-width:100%; }
+body { max-width:100%; overflow-x:clip; }
+/* The outer header spans the viewport. The menu remains centered. */
+.site-header.premium-header { width:100%!important; max-width:none!important; margin:0!important; border-radius:0!important; }
+.site-header .premium-nav {
+  box-sizing:border-box!important;
+  width:min(var(--ik-site-max), calc(100% - 2 * var(--ik-site-gutter)))!important;
+  max-width:var(--ik-site-max)!important;
+  margin-inline:auto!important;
+  padding-inline:clamp(0px,1vw,16px)!important;
+}
+/* Shared page width. Excludes editing controls within the pages themselves. */
+main.page, main.profile-page, main.admin-page, main.bingo-page,
+main.bingo-entry-page, main.handbook-page, main.team-shell,
+main.editor, main.member-home, main.home-premium {
+  box-sizing:border-box!important;
+  width:min(var(--ik-site-max), calc(100% - 2 * var(--ik-site-gutter)))!important;
+  max-width:var(--ik-site-max)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+/* A few pages wrap their primary content in a secondary shell. */
+body.ik-hall-page .page, .profile-page, .events-page-shell,
+.games-shell, .draft-shell, .games-signup-shell,
+.archive-shell, .records-page {
+  max-width:var(--ik-site-max)!important;
+}
+.ik-footer-inner, .ik-footer-bottom {
+  width:min(var(--ik-site-max), calc(100% - 2 * var(--ik-site-gutter)))!important;
+  max-width:var(--ik-site-max)!important;
+}
+/* Homepage hero is edge-to-edge; cards and live data use the shared container. */
+body.home-ledger-v3 main.home-premium {
+  width:min(var(--ik-site-max), calc(100% - 2 * var(--ik-site-gutter)))!important;
+  max-width:var(--ik-site-max)!important;
+}
+body.home-ledger-v3 .ik-visual-banner {
+  box-sizing:border-box;
+  width:100vw;
+  max-width:none;
+  margin-left:calc(50% - 50vw);
+  margin-right:calc(50% - 50vw);
+  border-left:0;
+  border-right:0;
+  border-radius:0;
+  min-height:clamp(400px,42vw,640px);
+}
+body.home-ledger-v3 .ik-visual-banner-content {
+  box-sizing:border-box;
+  width:min(var(--ik-site-max), calc(100% - 2 * var(--ik-site-gutter)));
+  max-width:var(--ik-site-max);
+  margin-inline:auto;
+  padding:clamp(24px,4vw,64px) 0;
+}
+/* Ensure wide grids shrink correctly instead of overflowing. */
+main > *, .home-ledger-grid > *, .ik-visual-links > *, .home-live-section > * { min-width:0; }
+@media(max-width:900px) {
+  :root { --ik-site-gutter:16px; }
+  .site-header .premium-nav { min-height:70px!important; padding-inline:0!important; }
+  body.home-ledger-v3 .ik-visual-banner { min-height:440px; }
+  body.home-ledger-v3 .ik-visual-banner-content { padding-block:38px; }
+}
+@media(max-width:640px) {
+  :root { --ik-site-gutter:11px; }
+  body.home-ledger-v3 .ik-visual-banner { min-height:420px; }
+  body.home-ledger-v3 .ik-visual-banner-content { padding-block:28px; }
+}
