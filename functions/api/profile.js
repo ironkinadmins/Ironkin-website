@@ -449,6 +449,7 @@ const displayRank =
     discordAvatarUrl,
     customAvatarUrl: record.customAvatarUrl || "",
     blurb,
+    showcase: record.showcase || {},
     ownBlurb: record.blurb || "",
     ownAvatarUrl: record.customAvatarUrl || "",
     hasAdminAvatarOverride: Boolean(record.adminAvatarOverride),
@@ -585,6 +586,14 @@ export async function onRequestPost({ request, env }) {
   const customAvatarUrl = String(body.customAvatarUrl || "").trim();
   const blurb = String(body.blurb || "").trim().slice(0, 250);
   const regeneratePluginApiKey = body.regeneratePluginApiKey === true;
+  const showcaseInput = body.showcase && typeof body.showcase === "object" ? body.showcase : {};
+  const clean = (value, max) => String(value || "").trim().slice(0, max);
+  const showcase = {
+    title: clean(showcaseInput.title, 55),
+    featuredBoss: clean(showcaseInput.featuredBoss, 65),
+    collectionGoal: clean(showcaseInput.collectionGoal, 100),
+    goalNote: clean(showcaseInput.goalNote, 160)
+  };
   const displayName = getDisplayName(session);
 
   const existing = await getProfileRecord(env, session.id);
@@ -607,6 +616,7 @@ export async function onRequestPost({ request, env }) {
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
     blurb,
+    showcase: body.showcase === undefined ? (existing.showcase || {}) : showcase,
     pluginApiKey: existing.pluginApiKey || "",
     pluginApiKeyCreatedAt: existing.pluginApiKeyCreatedAt || null,
     updatedAt: new Date().toISOString()

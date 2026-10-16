@@ -242,10 +242,32 @@ function ikRenderHeroAchievements(){
  }
 }
 
+let ikShowcaseProfile = null;
+let ikShowcaseCollection = null;
+function ikShowcaseSafe(value){return profileEscapeHtml(String(value || ""));}
+function ikRenderShowcase(){
+ const root=document.getElementById('ikMemberShowcase');if(!root||!ikShowcaseProfile)return;
+ const pref=ikShowcaseProfile.showcase||{};root.replaceChildren();
+ const add=(label,value,note)=>{if(!value)return;const card=document.createElement('div');card.className='ik-showcase-card';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;card.append(small,strong);if(note){const p=document.createElement('p');p.textContent=note;card.append(p)}root.append(card);return card;};
+ add('Current focus',pref.title);
+ add('Favourite boss',pref.featuredBoss);
+ if(pref.collectionGoal){
+  const tabs=ikShowcaseCollection?.tabs||[];const page=tabs.flatMap(t=>t.pages||[]).find(p=>p.name===pref.collectionGoal);
+  const card=add('Collection Log goal',pref.collectionGoal,page?`${page.obtained} / ${page.total} obtained`:'Waiting for Collection Log sync');
+  if(card&&page){const track=document.createElement('div');track.className='ik-goal-track';track.setAttribute('role','progressbar');track.setAttribute('aria-valuenow',String(page.obtained));track.setAttribute('aria-valuemax',String(page.total));const fill=document.createElement('div');fill.className='ik-goal-fill';fill.style.width=`${page.total?Math.min(100,Math.round(page.obtained/page.total*100)):0}%`;track.append(fill);card.append(track);const missing=(page.items||[]).filter(i=>!i.quantity).slice(0,4).map(i=>i.name);if(missing.length){const m=document.createElement('div');m.className='ik-goal-missing';m.textContent='Still missing: '+missing.join(', ');card.append(m)}}
+  if(card&&pref.goalNote){const note=document.createElement('p');note.textContent=pref.goalNote;card.append(note)}
+ }
+ root.hidden=!root.childElementCount;
+}
+function ikPopulateCollectionGoal(data){
+ ikShowcaseCollection=data;const select=document.getElementById('ikCollectionGoal');if(select){const chosen=ikShowcaseProfile?.showcase?.collectionGoal||select.value;select.replaceChildren();select.add(new Option('No active goal',''));const pages=(data?.tabs||[]).flatMap(t=>(t.pages||[]).map(p=>({tab:t.name,page:p})));for(const {tab,page} of pages)select.add(new Option(`${tab} · ${page.name} (${page.obtained}/${page.total})`,page.name));if(chosen&&!pages.some(({page})=>page.name===chosen))select.add(new Option(chosen+' (not in latest sync)',chosen));select.value=chosen;}
+ ikRenderShowcase();
+}
 function renderProfileHero(profile) {
   const hero = document.getElementById("profileHero");
   if (!hero) return;
 
+  ikShowcaseProfile=profile;
   const memberSince = profileFormatDate(profile.memberSince);
   const memberSincePill = memberSince
     ? `<span>Member Since: ${profileEscapeHtml(memberSince)}</span>`
@@ -274,10 +296,12 @@ function renderProfileHero(profile) {
           ${buildProfileBadges(profile).map(badge => `<span class="profile-badge badge-${badge.tone}" data-tooltip="${profileEscapeHtml(badge.tooltip)}" aria-label="${profileEscapeHtml(badge.tooltip)}" tabindex="0">${badge.iconHtml || `<i>${badge.icon}</i>`}${profileEscapeHtml(badge.label)}</span>`).join("")}
         </div>
         <div class="ik-profile-hero-achievements" id="profileHeroAchievements" aria-label="Earned achievements"></div>
+        <div class="ik-showcase" id="ikMemberShowcase" aria-label="Member showcase" hidden></div>
         <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "Add a short profile bio to make this page yours."}</p>
       </div>
     </div>
   `;
+  ikRenderShowcase();
 }
 
 function renderWomStats(profile) {
@@ -406,6 +430,8 @@ function populateProfileForm(profile) {
 
   if (avatarInput) avatarInput.value = profile.ownAvatarUrl || "";
   if (blurbInput) blurbInput.value = profile.ownBlurb || "";
+  for(const [id,key] of [['ikShowcaseTitle','title'],['ikShowcaseBoss','featuredBoss'],['ikGoalNote','goalNote']]){const input=document.getElementById(id);if(input)input.value=profile.showcase?.[key]||'';}
+  const goal=document.getElementById('ikCollectionGoal');if(goal){const v=profile.showcase?.collectionGoal||'';if(v&&!Array.from(goal.options).some(o=>o.value===v))goal.add(new Option(v,v));goal.value=v;}
 }
 
 
@@ -551,7 +577,8 @@ async function saveProfile() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       customAvatarUrl: avatarInput?.value.trim() || "",
-      blurb: blurbInput?.value.trim() || ""
+      blurb: blurbInput?.value.trim() || "",
+      showcase: {title:document.getElementById('ikShowcaseTitle')?.value.trim()||'',featuredBoss:document.getElementById('ikShowcaseBoss')?.value.trim()||'',collectionGoal:document.getElementById('ikCollectionGoal')?.value||'',goalNote:document.getElementById('ikGoalNote')?.value.trim()||''}
     })
   });
 
