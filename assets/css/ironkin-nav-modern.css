@@ -1,6 +1,6 @@
-/* Ironkin shared navigation: full-width, restrained dark ember theme */
+/* Ironkin shared navigation: centered to match the homepage hero. */
 .site-header.premium-header{background:#0c0a09!important;border-bottom:1px solid rgba(245,135,42,.25)!important;box-shadow:0 8px 25px #0005!important;padding:0!important}
-.site-header .premium-nav{box-sizing:border-box!important;width:100%!important;max-width:none!important;min-height:94px!important;margin:0 auto!important;padding:15px clamp(22px,3.5vw,64px)!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:32px!important}
+.site-header .premium-nav{box-sizing:border-box!important;width:min(1480px, calc(100% - 56px))!important;max-width:1480px!important;min-height:94px!important;margin:0 auto!important;padding:15px clamp(22px,3.5vw,64px)!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:32px!important}
 .site-header .premium-brand{margin-right:auto!important;flex-shrink:0!important}
 .site-header .premium-nav-links{gap:clamp(4px,.6vw,12px)!important;align-items:center!important}
 .site-header .premium-nav-links>a:not(.nav-discord-btn),.site-header .nav-dropdown-toggle{font-size:.98rem!important;min-height:48px!important;padding:0 clamp(8px,.8vw,16px)!important;border-radius:7px!important;color:#e7ddd1!important}
@@ -20,7 +20,6 @@
 /* Slightly roomier branding and controls without changing login state logic. */
 @media(min-width:901px){.site-header .premium-brand{transform:scale(1.06);transform-origin:left center}}
 
-/* Align the outer desktop navigation edges with the homepage hero (14px beyond the previous nav). */
-@media (min-width:901px){
-  .site-header.premium-header{position:relative!important;width:calc(100% + 28px)!important;max-width:none!important;margin-left:-14px!important;margin-right:-14px!important;box-sizing:border-box!important}
-}
+
+/* Small screens retain a usable, full-width menu with matching outer gutters. */
+@media(max-width:900px){.site-header .premium-nav{width:calc(100% - 32px)!important;max-width:none!important}}
