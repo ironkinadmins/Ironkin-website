@@ -23,3 +23,47 @@
 
 /* Small screens retain a usable, full-width menu with matching outer gutters. */
 @media(max-width:900px){.site-header .premium-nav{width:calc(100% - 32px)!important;max-width:none!important}}
+
+/* 2026-10-16: align the OUTER header with the same responsive wrapper as .home-premium.
+   Avoid widening the entire header or padding the logo away from the hero edge. */
+@media (min-width: 901px) {
+  body.home-ledger-v3 .site-header.premium-header {
+    box-sizing:border-box!important;
+    width:min(1480px, calc(100% - 56px))!important;
+    max-width:1480px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    border-radius:0 0 12px 12px!important;
+  }
+  body.home-ledger-v3 .site-header .premium-nav {
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:15px 14px 15px 0!important;
+  }
+  body.home-ledger-v3 .site-header .premium-brand {
+    transform:none!important;
+    margin-left:0!important;
+  }
+}
+@media (min-width:901px) and (max-width:1180px) {
+  body.home-ledger-v3 .site-header.premium-header {
+    width:calc(100% - 36px)!important;
+  }
+}
+@media (max-width:900px) {
+  body.home-ledger-v3 .site-header.premium-header {
+    width:calc(100% - 36px)!important;
+    margin:0 auto!important;
+  }
+  body.home-ledger-v3 .site-header .premium-nav {
+    width:100%!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+}
+@media (max-width:640px) {
+  body.home-ledger-v3 .site-header.premium-header {
+    width:calc(100% - 22px)!important;
+  }
+}
