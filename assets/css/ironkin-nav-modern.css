@@ -19,3 +19,8 @@
 
 /* Slightly roomier branding and controls without changing login state logic. */
 @media(min-width:901px){.site-header .premium-brand{transform:scale(1.06);transform-origin:left center}}
+
+/* Align the outer desktop navigation edges with the homepage hero (14px beyond the previous nav). */
+@media (min-width:901px){
+  .site-header.premium-header{position:relative!important;width:calc(100% + 28px)!important;max-width:none!important;margin-left:-14px!important;margin-right:-14px!important;box-sizing:border-box!important}
+}
