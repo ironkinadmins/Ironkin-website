@@ -330,7 +330,7 @@
   <link rel="stylesheet" href="/assets/css/home-refined.css?v=20261001-home-refine-v1">
 <style id="ik-visual-home-css">
 .ik-visual-banner{position:relative;min-height:clamp(340px,43vw,590px);display:flex;align-items:end;overflow:hidden;border-radius:22px;border:1px solid #78502b;margin:0 0 22px;background:radial-gradient(circle at 72% 30%,#604026,#10191c 65%);box-shadow:0 18px 55px #0008}
-.ik-visual-banner>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;opacity:0;transition:opacity .2s ease}
+.ik-visual-banner>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:none}
 .ik-visual-banner:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080d12 0%,#080d12a8 35%,transparent 85%);pointer-events:none}
 .ik-visual-banner-content{position:relative;z-index:1;padding:clamp(22px,5vw,58px);max-width:850px}
 .ik-visual-banner h1{font-size:clamp(2.4rem,5vw,5.2rem);line-height:1.02;margin:0 0 12px;color:#fff;text-shadow:0 3px 15px #000}
@@ -342,11 +342,32 @@
 .ik-visual-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 0 30px}
 .ik-visual-link{position:relative;min-height:225px;border:1px solid #795332;border-radius:16px;overflow:hidden;text-decoration:none;background:linear-gradient(140deg,#3e2c25,#141c22);display:flex;align-items:end;transition:transform .2s,border-color .2s}
 .ik-visual-link:hover{transform:translateY(-3px);border-color:#ed9a51}
-.ik-visual-link img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .2s ease}
+.ik-visual-link img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
 .ik-visual-link:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#090e13 0%,#090e13bb 33%,transparent 85%)}
 .ik-visual-link span{position:relative;z-index:1;padding:20px;color:#fff;font-weight:800;font-size:1.1rem;text-shadow:0 2px 8px #000}
 .ik-visual-link small{display:block;color:#dbc5ad;font-size:.78rem;font-weight:500;margin-top:5px}
 @media(max-width:900px){.ik-visual-links{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.ik-visual-links{gap:10px}.ik-visual-link{min-height:170px}.ik-visual-link span{padding:12px;font-size:.94rem}.ik-visual-banner{min-height:380px}}
+</style>
+
+<style>
+/* Live bounty snapshot: uses the same API as the full bounty board. */
+body.home-ledger-v3 .home-feature-panel .featured-stats:has(+ .home-bounty-dashboard),
+body.home-ledger-v3 .home-feature-panel .featured-stats:has(~ .home-bounty-dashboard){grid-template-columns:repeat(4,minmax(0,1fr))}
+.home-bounty-dashboard{display:grid;gap:12px;margin:12px 0 8px;text-align:left}
+.home-bounty-columns{display:grid;grid-template-columns:1fr 1.2fr;gap:18px}
+.home-bounty-dashboard h3{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#f4a35d;margin:0 0 8px}
+.home-bounty-hunter,.home-bounty-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:.83rem}
+.home-bounty-hunter strong,.home-bounty-item strong{font-size:.83rem;color:#f3ece6}
+.home-bounty-hunter span,.home-bounty-item small{color:#a99e96;font-size:.73rem}
+.home-bounty-item img,.home-bounty-placeholder{width:30px;height:30px;object-fit:contain;flex-shrink:0;border-radius:7px;background:#211a17}
+.home-bounty-item>span:nth-child(2){display:grid;gap:2px;flex:1;min-width:0}
+.home-bounty-item b{font-size:.73rem;color:#f7a65e;white-space:nowrap}
+.home-bounty-personal{padding:11px 12px;border:1px solid rgba(255,140,45,.2);border-radius:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:.8rem}
+.home-bounty-progress{width:100%;height:5px;border-radius:10px;background:#292320;overflow:hidden}
+.home-bounty-progress i{display:block;height:100%;background:#ef892d}
+.home-bounty-note{font-size:.75rem;color:#b3a49b;margin:2px 0}
+body.home-ledger-v3 .home-feature-panel:has(.home-bounty-dashboard) .home-top-three{min-height:0}
+@media(max-width:700px){.home-bounty-columns{grid-template-columns:1fr}body.home-ledger-v3 .home-feature-panel .featured-stats:has(~ .home-bounty-dashboard){grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body class="home-premium-page premium-ui home-ledger-v3">
@@ -356,10 +377,10 @@
 <div id="ikVisualHome">
 <section class="ik-visual-banner"><img data-ik-home-image="hero" alt="Ironkin featured artwork" loading="eager"><div class="ik-visual-banner-content"><h1>Forged Alone.<em>Bound as Kin.</em></h1><p>An Ironman-only community built around progression, competition, and the milestones we share.</p><div class="ik-visual-banner-actions"><a href="rules.html">Join Ironkin</a><a href="events.html">Explore Events</a></div></div></section>
 <div class="ik-visual-links" aria-label="Explore Ironkin">
-<a class="ik-visual-link" href="ironkin-games.html"><img data-ik-home-image="games" alt="Ironkin Games artwork" loading="eager"><span>Ironkin Games<small>Team challenges and standings</small></span></a>
-<a class="ik-visual-link" href="hall-of-flame.html"><img data-ik-home-image="flame" alt="Hall of Flame artwork" loading="eager"><span>Hall of Flame<small>Clan records and achievements</small></span></a>
-<a class="ik-visual-link" href="events.html"><img data-ik-home-image="events" alt="Clan events artwork" loading="eager"><span>Clan Events<small>Upcoming competitions</small></span></a>
-<a class="ik-visual-link" href="profile.html"><img data-ik-home-image="profiles" alt="Member profiles artwork" loading="eager"><span>Member Profiles<small>Embers, ranks and badges</small></span></a>
+<a class="ik-visual-link" href="ironkin-games.html"><img data-ik-home-image="games" alt="Ironkin Games artwork" loading="lazy"><span>Ironkin Games<small>Team challenges and standings</small></span></a>
+<a class="ik-visual-link" href="hall-of-flame.html"><img data-ik-home-image="flame" alt="Hall of Flame artwork" loading="lazy"><span>Hall of Flame<small>Clan records and achievements</small></span></a>
+<a class="ik-visual-link" href="events.html"><img data-ik-home-image="events" alt="Clan events artwork" loading="lazy"><span>Clan Events<small>Upcoming competitions</small></span></a>
+<a class="ik-visual-link" href="profile.html"><img data-ik-home-image="profiles" alt="Member profiles artwork" loading="lazy"><span>Member Profiles<small>Embers, ranks and badges</small></span></a>
 </div></div>
     <div class="ik-original-home-hero" style="display:none"><section class="home-refined-hero" aria-labelledby="homeHeroTitle">
       <div class="home-refined-hero-copy">
@@ -449,12 +470,11 @@
       const slot=img.dataset.ikHomeImage;
       if(!slots.includes(slot))continue;
       const url=images[slot];
-      if(!valid(url)){img.removeAttribute('src');img.style.opacity='0';delete img.dataset.ikImageUrl;continue;}
+      if(!valid(url))continue;
       if(img.dataset.ikImageUrl===url && img.getAttribute('src')===url)continue;
       img.dataset.ikImageUrl=url;
-      img.style.opacity='0';
       let retries=0;
-      img.onload=()=>{img.style.opacity='1';retries=0;};
+      img.onload=()=>{img.style.display='block';retries=0;};
       img.onerror=()=>{
         if(img.dataset.ikImageUrl!==url)return;
         if(retries++<3){
@@ -464,7 +484,7 @@
             const separator=url.includes('?')?'&':'?';
             img.src=url+separator+'ik_retry='+attempt;
           },attempt*1100);
-        }else{img.style.opacity='0';}
+        }else{img.style.display='none';}
       };
       img.src=url;
     }

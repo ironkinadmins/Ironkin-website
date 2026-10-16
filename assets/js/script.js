@@ -1151,43 +1151,45 @@ function renderHomeFeaturedRotationItem(index = 0, resetTimer = false) {
   // Bounties are drop-based, not WOM-based. Render aggregate bounty counts
   // instead of WOM standings/competitor language.
   if (featuredEvent?.type === "bounties" || featuredEvent?.id === "bounties") {
-    const drops = Array.isArray(item.bountyDrops) ? item.bountyDrops : [];
-    const totalCompleted = drops.reduce((sum, drop) => sum + Number(drop?.count || 0), 0);
-    const completedDrops = drops
-      .filter(drop => Number(drop?.count || 0) > 0)
-      .sort((a, b) => Number(b.count || 0) - Number(a.count || 0));
-
-    if (eventMeta) eventMeta.textContent = featuredEvent.description || "Complete selected bounty drops to earn Embers.";
+    const bountyData = item.bountyData || {};
+    const drops = Array.isArray(bountyData.drops) ? bountyData.drops : [];
+    const stats = bountyData.stats || {};
+    const hunters = Array.isArray(bountyData.topHunters) ? bountyData.topHunters : [];
+    const viewer = bountyData.viewer || {};
+    const claims = Array.isArray(bountyData.recentClaims) ? bountyData.recentClaims : [];
+    const totalCompleted = Number(stats.totalClaims ?? drops.reduce((sum, d) => sum + Number(d.count || 0), 0));
+    const uniqueCompleted = drops.filter(d => Number(d.count || 0) > 0).length;
+    const hunterCount = Number(stats.hunters ?? stats.uniqueHunters ?? hunters.length);
+    const embers = Number(stats.embersAwarded ?? stats.totalEmbers ?? claims.reduce((sum, c) => sum + Number(c.embers || 0), 0));
+    const topDrop = drops.slice().sort((a,b) => Number(b.count || 0) - Number(a.count || 0))[0];
+    if (eventMeta) eventMeta.textContent = featuredEvent.description || "Collect selected items to earn Embers for approved bounty claims.";
     if (homeTotalGained) homeTotalGained.textContent = formatNumber(totalCompleted);
-    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Bounties Completed";
-    if (homeClanXp) homeClanXp.textContent = `${formatNumber(totalCompleted)} completed`;
+    if (homeTotalGainedLabel) homeTotalGainedLabel.textContent = "Approved Claims";
+    if (homeClanXp) homeClanXp.textContent = `${formatNumber(totalCompleted)} approved claims`;
     if (featuredStats) {
       featuredStats.innerHTML = `
-        <div class="featured-stat">
-          <strong>${formatNumber(drops.length)}</strong>
-          <span>Bounty Items</span>
-        </div>
-        <div class="featured-stat">
-          <strong>${formatNumber(completedDrops.length)}</strong>
-          <span>Items Completed</span>
-        </div>
-        <div class="featured-stat">
-          <strong>${formatNumber(totalCompleted)}</strong>
-          <span>Total Drops</span>
-        </div>
-      `;
+        <div class="featured-stat"><strong>${formatNumber(drops.length)}</strong><span>Active Bounties</span></div>
+        <div class="featured-stat"><strong>${formatNumber(totalCompleted)}</strong><span>Approved Claims</span></div>
+        <div class="featured-stat"><strong>${formatNumber(hunterCount)}</strong><span>Hunters</span></div>
+        <div class="featured-stat"><strong>${formatNumber(embers)}</strong><span>Embers Awarded</span></div>`;
     }
     if (topThree) {
-      topThree.innerHTML = "";
-      if (completedDrops.length) {
-        completedDrops.slice(0, 3).forEach((drop, dropIndex) => {
-          const div = document.createElement("div");
-          div.innerHTML = `<strong>#${dropIndex + 1} ${escapeHtml(drop.name)}</strong><span>${formatNumber(drop.count)} completed</span>`;
-          topThree.appendChild(div);
-        });
-      } else {
-        topThree.textContent = "No bounty drops completed yet.";
-      }
+      const hunterRows = hunters.slice(0, 3).map((hunter, i) => `
+        <div class="home-bounty-hunter"><strong>#${i + 1} ${escapeHtml(hunter.playerName || "Clan member")}</strong>
+          <span>${formatNumber(hunter.totalClaims || 0)} claims · ${formatNumber(hunter.uniqueBounties || 0)} unique</span></div>`).join("");
+      const itemRows = drops.slice().sort((a,b) => Number(b.count || 0) - Number(a.count || 0)).slice(0, 4).map(drop => `
+        <div class="home-bounty-item">${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="" loading="lazy">` : '<span class="home-bounty-placeholder">✦</span>'}
+          <span><strong>${escapeHtml(drop.name || "Bounty")}</strong><small>${formatNumber(drop.count || 0)} clan claims</small></span>
+          <b>${formatNumber(drop.rewardEmbers || 0)} Embers</b></div>`).join("");
+      const mine = viewer.signedIn
+        ? `<div class="home-bounty-personal"><strong>Your bounty hunt</strong><span>${formatNumber(viewer.uniqueClaimed || 0)} / ${formatNumber(drops.length)} unique claimed</span><div class="home-bounty-progress"><i style="width:${drops.length ? Math.min(100, 100 * Number(viewer.uniqueClaimed || 0) / drops.length) : 0}%"></i></div></div>`
+        : '<p class="home-bounty-note">Sign in to see your personal bounty progress.</p>';
+      topThree.innerHTML = `<div class="home-bounty-dashboard">
+        <div class="home-bounty-columns"><div><h3>Top Hunters</h3>${hunterRows || '<p class="home-bounty-note">No approved hunters yet.</p>'}</div>
+        <div><h3>Available Bounties</h3>${itemRows || '<p class="home-bounty-note">No active bounty items.</p>'}</div></div>
+        ${mine}${topDrop && Number(topDrop.count || 0) ? `<p class="home-bounty-note">Most claimed: <strong>${escapeHtml(topDrop.name || "Bounty")}</strong> (${formatNumber(topDrop.count)} claims)</p>` : ''}
+        ${claims.length ? `<p class="home-bounty-note">Latest claim: ${escapeHtml(claims[0].playerName || "Clan member")} · ${escapeHtml(claims[0].itemName || "Bounty")}</p>` : ''}
+      </div>`;
     }
     setHomeFeaturedControls(homeFeaturedRotationItems, homeFeaturedRotationIndex);
     if (resetTimer) restartHomeFeaturedRotation();
@@ -1321,7 +1323,7 @@ async function loadHomeStats() {
         try {
           const response = await fetch(`/api/drops/list?eventId=bounties&t=${Date.now()}`, { cache: "no-store" });
           const data = await response.json();
-          return response.ok ? (data.drops || []) : [];
+          return response.ok ? data : null;
         } catch {
           return [];
         }
@@ -1331,7 +1333,7 @@ async function loadHomeStats() {
     homeFeaturedRotationItems = featuredCandidates.map((event, index) => ({
       event,
       standings: standingsList[index],
-      bountyDrops: bountyDropsList[index]
+      bountyData: bountyDropsList[index]
     }));
 
     renderHomeFeaturedRotationItem(0, false);
