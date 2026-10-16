@@ -213,6 +213,25 @@
 @media(max-width:760px){.profile-page .ik-ca-workspace{grid-template-columns:1fr}.profile-page .ik-ca-sidebar{position:static}.profile-page .ik-ca-sidebar .ik-ca-controls,.profile-page .ik-ca-sidebar .ik-ca-quickfilters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-clog-body{grid-template-columns:135px minmax(0,1fr)}.profile-page .ik-clog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-osrs-collection,.profile-page .ik-osrs-combat{padding:12px!important}.profile-page .ik-clog-detail{padding:12px}.profile-page .ik-clog-tabs button{font-size:11px}}
 @media(max-width:520px){.profile-page .ik-ca-progress{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-ca-sidebar .ik-ca-controls,.profile-page .ik-ca-sidebar .ik-ca-quickfilters{grid-template-columns:1fr}.profile-page .ik-clog-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}.profile-page .ik-clog-tabs button{padding:9px 2px;font-size:10px}}
 </style>
+
+<style id="ik-profile-skill-and-highlights-fix">
+/* Override the legacy skill-label ellipsis and give every skill a real, readable name. */
+.profile-page .ik-osrs-skill-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.profile-page .ik-osrs-skill{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-width:0;min-height:54px;padding:9px 11px;box-sizing:border-box;background:#221a16;border:1px solid #4a3427;border-radius:8px}
+.profile-page .ik-osrs-skill img{display:block;flex:0 0 25px;width:25px;height:25px;object-fit:contain;image-rendering:pixelated}
+.profile-page .ik-osrs-skill .ik-skill-name{display:block;min-width:0;flex:1;color:#ead4bb;font-size:13px;line-height:1.25;overflow-wrap:anywhere;white-space:normal;text-overflow:clip;overflow:visible}
+.profile-page .ik-osrs-skill strong{flex:none;margin-left:auto;color:#f4bc72;font-size:15px}
+.profile-page .ik-osrs-highlights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.profile-page .ik-highlight-card{padding:13px;background:#211914;border:1px solid #4a3427;border-radius:9px;min-width:0}
+.profile-page .ik-highlight-card span{display:block;color:#ba9d84;font-size:11px;margin-bottom:6px}
+.profile-page .ik-highlight-card strong{display:block;color:#f1c18a;font-size:13px;overflow-wrap:anywhere}
+.profile-page .ik-ca-near{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}
+.profile-page .ik-ca-near h3{width:100%;font-size:14px;color:#f1c18a;margin:0 0 4px}
+.profile-page .ik-ca-near button{background:#271c16;color:#e7c09a;border:1px solid #66462d;border-radius:7px;padding:9px 11px;cursor:pointer;font-size:12px}
+.profile-page .ik-ca-near button:hover{border-color:#e68c35}
+@media(max-width:1250px){.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.profile-page .ik-osrs-highlights{grid-template-columns:1fr}.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-osrs-skill{padding:8px 7px;gap:5px}.profile-page .ik-osrs-skill img{width:20px;height:20px;flex-basis:20px}.profile-page .ik-osrs-skill .ik-skill-name{font-size:11px}}
+</style>
 </head>
 <body>
   <div id="siteNav"></div>
@@ -252,14 +271,14 @@
         <a class="profile-text-link" href="/ember-leaderboard.html">View Ember Leaderboard →</a>
       </div>
 
-        <section class="ik-osrs-activity profile-panel" aria-label="OSRS activity"><div class="profile-section-header"><h2>Recent OSRS Activity</h2><small>RuneProfile level-ups, collection unlocks and milestones</small></div><div class="ik-feed-toolbar" id="ikOsrsFilters" role="group" aria-label="Filter OSRS activity"></div><div id="ikOsrsFeed" aria-live="polite">Loading recent activity…</div><div class="ik-feed-footer"><span id="ikOsrsFeedCount"></span><div class="ik-feed-pager"><button type="button" id="ikOsrsPrev">Previous</button><span id="ikOsrsPage"></span><button type="button" id="ikOsrsNext">Next</button></div></div></section>
+        <section class="ik-osrs-activity profile-panel" aria-label="OSRS activity"><div class="profile-section-header"><h2>Recent OSRS Activity</h2><small>RuneProfile level-ups, collection unlocks and milestones</small></div><div class="ik-feed-toolbar" id="ikOsrsFilters" role="group" aria-label="Filter OSRS activity"></div><div id="ikOsrsHighlights" class="ik-osrs-highlights" aria-label="Recent progression highlights"></div><div id="ikOsrsFeed" aria-live="polite">Loading recent activity…</div><div class="ik-feed-footer"><span id="ikOsrsFeedCount"></span><div class="ik-feed-pager"><button type="button" id="ikOsrsPrev">Previous</button><span id="ikOsrsPage"></span><button type="button" id="ikOsrsNext">Next</button></div></div></section>
       </div>
       <section class="profile-panel ik-osrs-collection" id="profileCollection" role="tabpanel" aria-labelledby="profileTabCollection" hidden><div class="profile-section-header"><h2>Collection Log</h2><small id="ikClogSummary">Loading TempleOSRS…</small></div><div id="ikClogItems"></div></section>
       <section class="profile-panel ik-osrs-combat" id="profileCombat" role="tabpanel" aria-labelledby="profileTabCombat" hidden>
  <div class="profile-section-header"><div><h2>Combat Achievements</h2><small id="ikCombatSummary">Player-specific Combat Achievement progress from RuneProfile</small></div><a id="ikCombatExternal" class="btn secondary" target="_blank" rel="noopener noreferrer">RuneProfile ↗</a></div>
  <p class="ik-ca-disclaimer">Completed tasks and points are synced from RuneProfile. Exempt tasks are excluded from progress.</p>
  <div class="ik-ca-controls"><label for="ikCaTier">Tier <select id="ikCaTier"><option value="">All tiers</option><option>Easy</option><option>Medium</option><option>Hard</option><option>Elite</option><option>Master</option><option>Grandmaster</option></select></label><label for="ikCaSearch">Search tasks or bosses <input id="ikCaSearch" type="search" placeholder="e.g. Zulrah, speed, raid" autocomplete="off"></label><button type="button" id="ikCaReload" class="btn secondary">Refresh progress</button></div>
- <div class="ik-ca-quickfilters"><label>Completion <select id="ikCaCompletion"><option value="all">All tasks</option><option value="remaining">Remaining</option><option value="completed">Completed</option><option value="exempt">Exempt</option></select></label><label>Boss <select id="ikCaBoss"><option value="">All bosses</option></select></label><label>Type <select id="ikCaType"><option value="">All types</option></select></label></div><div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
+ <div class="ik-ca-quickfilters"><label>Completion <select id="ikCaCompletion"><option value="all">All tasks</option><option value="remaining">Remaining</option><option value="completed">Completed</option><option value="exempt">Exempt</option></select></label><label>Boss <select id="ikCaBoss"><option value="">All bosses</option></select></label><label>Type <select id="ikCaType"><option value="">All types</option></select></label></div><div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaNearComplete" class="ik-ca-near"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
  </section>
       <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
         <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Event achievements and profile recognition, all in one collection.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
