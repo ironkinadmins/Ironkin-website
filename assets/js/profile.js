@@ -576,6 +576,7 @@ function ikSelectProfileTab(name,{focus=false,updateHash=true}={}) {
   const toolTab=document.querySelector('[data-profile-tab="tools"]');
   if(name==="tools" && toolTab?.hidden) name="overview";
   ikProfileActiveTab=name;
+  if(name==="combat")ikCaLoad();
   const ids={overview:"profileOverview",collection:"profileCollection",combat:"profileCombat",achievements:"profileAchievements",history:"profileEventHistory",tools:"profileTools"};
   document.querySelectorAll('[data-profile-tab]').forEach(button=>{
     const selected=button.dataset.profileTab===name;
@@ -643,6 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // External progression is public data. The existing Ironkin API remains authoritative for clan data.
 async function ikLoadOsrsProgress(profile){
  const rsn=String(profile.rsn||profile.wom?.username||'').trim();
+ ikCaState.rsn=rsn;ikCaState.loaded=false;ikCaState.tasks=[];ikCaState.error='';
  const links=document.getElementById('ikOsrsLinks');
  const external=document.getElementById('ikCombatExternal');
  if(links){links.replaceChildren();for(const [name,href] of [['RuneProfile','https://www.runeprofile.com/'+encodeURIComponent(rsn)],['TempleOSRS','https://templeosrs.com/player/overview.php?player='+encodeURIComponent(rsn)],['Wise Old Man','https://wiseoldman.net/players/'+encodeURIComponent(rsn)]]){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=name+' ↗';links.append(a)}}
@@ -657,3 +659,46 @@ async function ikLoadOsrsProgress(profile){
  const feed=document.getElementById('ikOsrsFeed');if(feed){feed.replaceChildren();const items=Array.isArray(result.recent)?result.recent:[];for(const item of items.slice(0,30)){const row=document.createElement('div');row.className='ik-osrs-feed-row';const title=document.createElement('span');title.textContent='Collected '+(item.name||('item #'+item.id));const date=document.createElement('small');const d=new Date(Number(item.date)*1000);date.textContent=Number.isFinite(d.getTime())?d.toLocaleDateString():'';row.append(title,date);feed.append(row)}if(!items.length)feed.textContent='No recent synced collection unlocks available.'}
  }catch(err){for(const id of ['ikClogSummary','ikOsrsFeed']){const n=document.getElementById(id);if(n)n.textContent='External OSRS data unavailable: '+err.message}}
 }
+
+
+// Player-specific Combat Achievements from RuneProfile public API.
+const ikCaState={tasks:[],loaded:false,loading:false,error:'',rsn:'',points:0,tierReached:null};
+function ikCaRender(){
+ const mount=document.getElementById('ikCaTasks'),status=document.getElementById('ikCaStatus'),summary=document.getElementById('ikCombatSummary');if(!mount)return;
+ mount.replaceChildren();const tier=document.getElementById('ikCaTier')?.value||'',query=(document.getElementById('ikCaSearch')?.value||'').trim().toLowerCase();
+ const filtered=ikCaState.tasks.filter(t=>(!tier||t.tier===tier)&&(!query||[t.name,t.boss,t.description,t.type].some(v=>v.toLowerCase().includes(query))));
+ const completed=ikCaState.tasks.filter(t=>t.completed&&!t.exempt).length;
+ const eligible=ikCaState.tasks.filter(t=>!t.exempt).length;
+ if(summary)summary.textContent=ikCaState.loaded?`${completed} / ${eligible} tasks completed · ${ikCaState.points} points · Highest tier: ${ikCaState.tierReached||'None'}`:'Player-specific Combat Achievements from RuneProfile';
+ if(status)status.textContent=ikCaState.loading?'Loading player Combat Achievements…':ikCaState.error?ikCaState.error:ikCaState.loaded?`${filtered.length.toLocaleString()} matching tasks · ${completed} / ${eligible} completed · RuneProfile`:'Open this tab to load player progress.';
+ for(const task of filtered.slice(0,350)){
+  const card=document.createElement('article');card.className='ik-ca-task';
+  const head=document.createElement('div');head.className='ik-ca-task-head';const title=document.createElement('h3');title.textContent=(task.exempt?'— ':task.completed?'✓ ':'○ ')+task.name;head.append(title);
+  const badge=document.createElement('span');badge.className='ik-ca-pill';badge.textContent=task.tier;head.append(badge);card.append(head);
+  const meta=document.createElement('small');meta.textContent=task.boss+(task.type?' · '+task.type:'')+' · '+(task.exempt?'Exempt':task.completed?'Completed':'Incomplete');card.append(meta);
+  const description=document.createElement('p');description.textContent=task.description;card.append(description);
+  if(task.completed&&!task.exempt){card.style.borderColor='rgba(66,185,113,.55)'}
+  mount.append(card);
+ }
+ if(filtered.length>350){const p=document.createElement('p');p.className='admin-muted';p.textContent='Showing first 350 matches. Use tier or search to narrow results.';mount.append(p)}
+ if(ikCaState.loaded&&!filtered.length){const p=document.createElement('p');p.className='admin-muted';p.textContent='No tasks match these filters.';mount.append(p)}
+}
+async function ikCaLoad(force=false){
+ if(ikCaState.loading||(ikCaState.loaded&&!force))return;
+ const rsn=ikCaState.rsn;
+ if(!rsn){ikCaState.error='No linked OSRS username.';ikCaRender();return}
+ ikCaState.loading=true;ikCaState.error='';ikCaRender();
+ try{
+  const res=await fetch('/api/player-combat-achievements?rsn='+encodeURIComponent(rsn),{headers:{Accept:'application/json'},cache:force?'reload':'default'});
+  if(!(res.headers.get('content-type')||'').includes('application/json'))throw Error('Player Combat Achievements API returned HTML. Confirm the Pages Function was deployed.');
+  const data=await res.json();if(!res.ok)throw Error(data.error||`HTTP ${res.status}`);
+  if(!data.available||!Array.isArray(data.tasks))throw Error('Player completion data unavailable.');
+  ikCaState.tasks=data.tasks;ikCaState.points=data.totalPoints;ikCaState.tierReached=data.tierReached;ikCaState.loaded=true;
+ }catch(err){ikCaState.error='Player Combat Achievements unavailable: '+err.message;}
+ finally{ikCaState.loading=false;ikCaRender()}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ document.getElementById('ikCaTier')?.addEventListener('change',ikCaRender);
+ document.getElementById('ikCaSearch')?.addEventListener('input',ikCaRender);
+ document.getElementById('ikCaReload')?.addEventListener('click',()=>{ikCaState.loaded=false;ikCaLoad(true)});
+});
