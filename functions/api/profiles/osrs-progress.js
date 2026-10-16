@@ -6,7 +6,7 @@ function flattenItems(data){const items=data?.items||{};const out=[];function wa
 export async function onRequestGet({request}){
  const url=new URL(request.url),rsn=String(url.searchParams.get('rsn')||'').trim();
  if(!/^[a-zA-Z0-9 _-]{1,12}$/.test(rsn))return Response.json({error:'Invalid OSRS username'},{status:400});
- const key=new Request(url.origin+'/api/profile/osrs-progress?rsn='+encodeURIComponent(rsn.toLowerCase()));
+ const key=new Request(url.origin+'/api/osrs-progress?rsn='+encodeURIComponent(rsn.toLowerCase()));
  const cache=caches.default;const hit=await cache.match(key);if(hit)return hit;
  const name=encodeURIComponent(rsn);
  const [clogResult,recentResult]=await Promise.allSettled([

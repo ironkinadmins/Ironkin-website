@@ -649,8 +649,8 @@ async function ikLoadOsrsProgress(profile){
  if(external)external.href='https://www.runeprofile.com/'+encodeURIComponent(rsn);
  if(!rsn){for(const id of ['ikClogSummary','ikOsrsFeed']){const n=document.getElementById(id);if(n)n.textContent='No linked OSRS username.'}return}
  try{
- const response=await fetch('/api/profile/osrs-progress?rsn='+encodeURIComponent(rsn));
- const result=await response.json();if(!response.ok)throw Error(result.error||'OSRS sources unavailable');
+ const response=await fetch('/api/osrs-progress?rsn='+encodeURIComponent(rsn),{headers:{Accept:'application/json'}});
+ const contentType=response.headers.get('content-type')||'';if(!contentType.includes('application/json'))throw Error('OSRS API route returned a web page instead of JSON (HTTP '+response.status+'). Confirm Cloudflare Pages Functions are deployed at /api/osrs-progress.');const result=await response.json();if(!response.ok)throw Error(result.error||'OSRS sources unavailable (HTTP '+response.status+')');
  const clog=result.collection||{};
  const summary=document.getElementById('ikClogSummary');if(summary)summary.textContent=clog.available?`${Number(clog.total||0).toLocaleString()} / ${Number(clog.possible||0).toLocaleString()} slots · TempleOSRS`:'Collection Log not synced or unavailable on TempleOSRS';
  const mount=document.getElementById('ikClogItems');if(mount){mount.replaceChildren();const items=Array.isArray(clog.items)?clog.items:[];const wrap=document.createElement('div');wrap.className='ik-osrs-collection-list';for(const item of items.slice(0,300)){const row=document.createElement('div');row.className='ik-osrs-item';const label=document.createElement('span');label.textContent=item.name||('Item #'+item.id);row.append(label);const count=document.createElement('small');count.textContent='×'+(item.count||1);row.append(count);wrap.append(row)}mount.append(wrap);if(!items.length){const p=document.createElement('p');p.className='admin-muted';p.textContent=clog.available?'No individual items returned.':'Sync a collection log to TempleOSRS to display obtained items.';mount.append(p)}}
