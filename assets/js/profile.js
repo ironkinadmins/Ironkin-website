@@ -719,13 +719,11 @@ function ikCaRender(){
  const progress=document.getElementById('ikCaProgress');if(progress){progress.replaceChildren();for(const tierName of ['Easy','Medium','Hard','Elite','Master','Grandmaster']){const ts=ikCaState.tasks.filter(t=>t.tier===tierName&&!t.exempt);if(!ts.length)continue;const badge=document.createElement('span');const strong=document.createElement('strong');strong.textContent=tierName+' ';badge.append(strong,document.createTextNode(`${ts.filter(t=>t.completed).length}/${ts.length}`));progress.append(badge)}}
  if(status)status.textContent=ikCaState.loading?'Loading player Combat Achievements…':ikCaState.error?ikCaState.error:ikCaState.loaded?`${filtered.length.toLocaleString()} matching tasks · ${completed} / ${eligible} completed · RuneProfile`:'Open this tab to load player progress.';
  for(const task of filtered.slice(0,350)){
-  const card=document.createElement('article');card.className='ik-ca-task'+(task.completed&&!task.exempt?' is-complete':'');
-  const head=document.createElement('div');head.className='ik-ca-task-head';const title=document.createElement('h3');title.textContent=(task.exempt?'— ':task.completed?'✓ ':'○ ')+task.name;head.append(title);
-  const badge=document.createElement('span');badge.className='ik-ca-pill';badge.textContent=task.tier;head.append(badge);card.append(head);
-  const meta=document.createElement('small');meta.textContent=task.boss+(task.type?' · '+task.type:'')+' · '+(task.exempt?'Exempt':task.completed?'Completed':'Incomplete');card.append(meta);
-  const description=document.createElement('p');description.textContent=task.description;card.append(description);
-  if(task.completed&&!task.exempt){card.style.borderColor='rgba(66,185,113,.55)'}
-  mount.append(card);
+  const card=document.createElement('details');card.className='ik-ca-task'+(task.completed&&!task.exempt?' is-complete':'');
+  const row=document.createElement('summary');const mark=document.createElement('span');mark.className='ik-ca-status-icon';mark.textContent=task.exempt?'—':task.completed?'✓':'○';
+  const copy=document.createElement('span');copy.className='ik-ca-task-copy';const name=document.createElement('strong');name.textContent=task.name;const meta=document.createElement('small');meta.textContent=[task.boss,task.type,task.exempt?'Exempt':task.completed?'Completed':'Remaining'].filter(Boolean).join(' · ');copy.append(name,meta);
+  const badge=document.createElement('span');badge.className='ik-ca-pill';badge.textContent=task.tier;row.append(mark,copy,badge);card.append(row);
+  const description=document.createElement('div');description.className='ik-ca-task-description';description.textContent=task.description||'No description available.';card.append(description);mount.append(card);
  }
  if(filtered.length>350){const p=document.createElement('p');p.className='admin-muted';p.textContent='Showing first 350 matches. Use tier or search to narrow results.';mount.append(p)}
  if(ikCaState.loaded&&!filtered.length){const p=document.createElement('p');p.className='admin-muted';p.textContent='No tasks match these filters.';mount.append(p)}
@@ -787,3 +785,11 @@ async function ikLoadRuneJournal(rsn,temple,templeRecent){
   if(prev)prev.onclick=()=>{page=Math.max(0,page-1);render()};if(next)next.onclick=()=>{page++;render()};render();
  }
 }
+
+// Group existing RuneProfile controls into an Ironkin task-browser sidebar.
+document.addEventListener('DOMContentLoaded',()=>{
+ const panel=document.getElementById('profileCombat');if(!panel||panel.querySelector('.ik-ca-workspace'))return;
+ const controls=panel.querySelector('.ik-ca-controls'),quick=panel.querySelector('.ik-ca-quickfilters'),progress=panel.querySelector('#ikCaProgress'),status=panel.querySelector('#ikCaStatus'),tasks=panel.querySelector('#ikCaTasks');
+ if(!controls||!quick||!progress||!status||!tasks)return;
+ const layout=document.createElement('div');layout.className='ik-ca-workspace';const sidebar=document.createElement('aside');sidebar.className='ik-ca-sidebar';sidebar.setAttribute('aria-label','Combat Achievement filters');const heading=document.createElement('h3');heading.textContent='Find achievements';sidebar.append(heading,controls,quick);const main=document.createElement('div');main.className='ik-ca-main';main.append(progress,status,tasks);layout.append(sidebar,main);panel.append(layout);
+});

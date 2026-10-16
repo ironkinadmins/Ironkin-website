@@ -149,6 +149,70 @@
 .ik-diary-area{border:1px solid #483427;border-radius:6px;padding:0;margin-bottom:7px}.ik-diary-area summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px;gap:8px;list-style:none}.ik-diary-area summary::-webkit-details-marker{display:none}.ik-diary-area summary small{color:#d7a76d}.ik-diary-tier{padding:0 10px 8px}.ik-diary-bar,.ik-clog-progress-track{height:5px;background:#34271c;border-radius:10px;overflow:hidden;margin:5px 0 8px}.ik-diary-bar span,.ik-clog-progress-track span{display:block;height:100%;background:#b4864a}.ik-clog-controls{padding:8px 12px;border-bottom:1px solid #493729}.ik-clog-progress-track{max-width:360px;margin:9px 0 15px}.ik-clog-slot{position:relative}.ik-clog-slot.missing{opacity:.48}.ik-ca-quickfilters label{display:flex;flex-direction:column;gap:4px;flex:1 1 130px;color:#cbaa83;font-size:12px}.ik-ca-quickfilters select{width:100%}
 @media(max-width:640px){.ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ik-ca-quickfilters label{flex-basis:45%}}
 </style>
+<style id="ik-profile-visual-refresh">
+/* Unified Ironkin surfaces, no OSRS brown stripes. */
+.profile-page{--ik-accent:#e68c35;--ik-gold:#f3bb76;--ik-edge:#493226;--ik-surface:#171311;--ik-raised:#211a16}
+.profile-page .ik-profile-nav{flex-wrap:wrap;overflow-x:visible;position:relative;top:auto;gap:7px;padding:9px;background:#15110f;border-color:var(--ik-edge)}
+.profile-page .ik-profile-nav button{padding:11px 15px;font-size:13px}
+.profile-page .ik-profile-nav button[aria-selected=true]{background:#613719;box-shadow:inset 0 -2px var(--ik-accent)}
+.profile-page .profile-identity-card{grid-template-columns:90px minmax(0,1fr)!important;padding:25px 30px!important;gap:22px!important;background:linear-gradient(125deg,#211713,#14100e 70%)!important}
+.profile-page .profile-identity-card>.profile-avatar{width:90px;height:90px}
+.profile-page .profile-identity-copy{grid-template-columns:minmax(0,1fr) minmax(260px,330px)}
+.profile-page .profile-hero-facts>div{background:#251b16;border:1px solid var(--ik-edge);border-radius:10px}
+.profile-page .ik-profile-overview{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)!important;gap:18px!important}
+.profile-page .ik-osrs-activity,.profile-page .profile-main-stats{min-width:0;width:100%;box-sizing:border-box}
+.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.profile-page .ik-osrs-skill{min-width:0;padding:8px;grid-template-columns:28px minmax(0,1fr) auto;min-height:46px}
+.profile-page .ik-osrs-skill small{font-size:12px}
+.profile-page .ik-osrs-collection,.profile-page .ik-osrs-combat{background:var(--ik-surface);border:1px solid var(--ik-edge);border-radius:14px;padding:22px!important}
+.profile-page .ik-clog-tabs{background:#201814;border:1px solid var(--ik-edge);border-radius:10px 10px 0 0;overflow:hidden}
+.profile-page .ik-clog-tabs button{font:700 14px inherit;font-family:inherit;color:#d7b08c;background:#201814;padding:14px 7px;border-color:#493226}
+.profile-page .ik-clog-tabs button[aria-selected=true]{background:#653a1e;color:#ffe2b7;box-shadow:inset 0 -3px var(--ik-accent)}
+.profile-page .ik-clog-tabs small{color:#d3a27b}
+.profile-page .ik-clog-body{border:1px solid var(--ik-edge);border-top:0;border-radius:0 0 10px 10px;background:#171310;grid-template-columns:minmax(200px,27%) minmax(0,1fr);min-height:500px}
+.profile-page .ik-clog-pages{max-height:610px;border-right:1px solid var(--ik-edge)}
+.profile-page .ik-clog-pages button{font:inherit;font-size:13px;color:#d7b494;padding:12px 14px;border-bottom:1px solid #30241d}
+.profile-page .ik-clog-pages button:hover{background:#2c201a;color:#ffe0b2}
+.profile-page .ik-clog-pages button[aria-selected=true]{background:#58351f;color:#ffd4a1;border-left:3px solid var(--ik-accent)}
+.profile-page .ik-clog-detail{padding:22px}
+.profile-page .ik-clog-detail h3{font-family:inherit;font-size:21px;color:var(--ik-gold)}
+.profile-page .ik-clog-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.profile-page .ik-clog-slot{min-height:120px;background:#241b16;border:1px solid #483226;border-radius:9px;color:#edc092;transition:border-color .15s,transform .15s}
+.profile-page .ik-clog-slot:not(.missing){border-color:#79502e;background:#2a1d15}
+.profile-page .ik-clog-slot.missing{opacity:1;color:#78685c;background:#1b1714;border-color:#322820}
+.profile-page .ik-clog-slot.missing img{opacity:.23;filter:grayscale(1)}
+.profile-page .ik-clog-slot img{width:44px;height:44px}
+.profile-page .ik-clog-slot:hover{border-color:var(--ik-accent)}
+.profile-page .ik-ca-workspace{display:grid;grid-template-columns:minmax(215px,260px) minmax(0,1fr);gap:18px;align-items:start;margin-top:18px}
+.profile-page .ik-ca-sidebar{padding:16px;background:#1d1713;border:1px solid var(--ik-edge);border-radius:12px;position:sticky;top:15px}
+.profile-page .ik-ca-sidebar h3{margin:0 0 14px;font-size:15px;color:var(--ik-gold)}
+.profile-page .ik-ca-sidebar .ik-ca-controls,.profile-page .ik-ca-sidebar .ik-ca-quickfilters{display:grid;grid-template-columns:1fr;gap:12px;margin:0}
+.profile-page .ik-ca-sidebar .ik-ca-controls label,.profile-page .ik-ca-sidebar .ik-ca-quickfilters label{min-width:0;flex:auto;font-size:12px}
+.profile-page .ik-ca-sidebar input,.profile-page .ik-ca-sidebar select{width:100%;box-sizing:border-box}
+.profile-page .ik-ca-sidebar #ikCaReload{width:100%;font-size:12px}
+.profile-page .ik-ca-main{min-width:0}
+.profile-page .ik-ca-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 14px}
+.profile-page .ik-ca-progress span{background:#211914;border:1px solid var(--ik-edge);padding:12px 10px;border-radius:9px;font-size:12px}
+.profile-page .ik-ca-progress strong{display:block;font-size:13px;margin-bottom:3px;color:var(--ik-gold)}
+.profile-page .ik-ca-tasks{border:1px solid var(--ik-edge);border-radius:11px;max-height:660px;background:#171310}
+.profile-page .ik-ca-task{background:transparent!important;border:0!important;border-bottom:1px solid #3c2b22!important;padding:0!important}
+.profile-page .ik-ca-task:last-child{border-bottom:0!important}
+.profile-page .ik-ca-task summary{cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 15px;list-style:none;min-width:0}
+.profile-page .ik-ca-task summary::-webkit-details-marker{display:none}
+.profile-page .ik-ca-task summary:hover{background:#291e18}
+.profile-page .ik-ca-task[open] summary{background:#2c2019}
+.profile-page .ik-ca-status-icon{display:grid;place-items:center;flex:none;width:23px;height:23px;border-radius:50%;border:1px solid #76553a;color:#a18a77;font-size:14px}
+.profile-page .ik-ca-task.is-complete .ik-ca-status-icon{color:#9bd6a1;border-color:#51865b;background:#233326}
+.profile-page .ik-ca-task-copy{min-width:0;flex:1}
+.profile-page .ik-ca-task-copy strong{display:block;color:#f0c18a;font-size:14px}
+.profile-page .ik-ca-task-copy small{display:block;color:#b99d85;font-size:12px;margin-top:4px}
+.profile-page .ik-ca-pill{font-size:11px}
+.profile-page .ik-ca-task-description{padding:12px 16px 17px 50px;border-top:1px solid #3b2b22;color:#cbb49e;font-size:13px;line-height:1.5}
+.profile-page .ik-ca-disclaimer{margin:8px 0!important}
+@media(max-width:1100px){.profile-page .ik-profile-overview{grid-template-columns:minmax(0,1fr)!important}.profile-page .ik-osrs-activity{grid-column:1;grid-row:3}.profile-page .profile-main-stats{grid-column:1;grid-row:2}}
+@media(max-width:760px){.profile-page .ik-ca-workspace{grid-template-columns:1fr}.profile-page .ik-ca-sidebar{position:static}.profile-page .ik-ca-sidebar .ik-ca-controls,.profile-page .ik-ca-sidebar .ik-ca-quickfilters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-clog-body{grid-template-columns:135px minmax(0,1fr)}.profile-page .ik-clog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-osrs-collection,.profile-page .ik-osrs-combat{padding:12px!important}.profile-page .ik-clog-detail{padding:12px}.profile-page .ik-clog-tabs button{font-size:11px}}
+@media(max-width:520px){.profile-page .ik-ca-progress{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-ca-sidebar .ik-ca-controls,.profile-page .ik-ca-sidebar .ik-ca-quickfilters{grid-template-columns:1fr}.profile-page .ik-clog-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}.profile-page .ik-clog-tabs button{padding:9px 2px;font-size:10px}}
+</style>
 </head>
 <body>
   <div id="siteNav"></div>
