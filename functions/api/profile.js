@@ -450,6 +450,7 @@ const displayRank =
     customAvatarUrl: record.customAvatarUrl || "",
     blurb,
     showcase: record.showcase || {},
+    bannerUrl: record.bannerUrl || "",
     ownBlurb: record.blurb || "",
     ownAvatarUrl: record.customAvatarUrl || "",
     hasAdminAvatarOverride: Boolean(record.adminAvatarOverride),
@@ -585,6 +586,8 @@ export async function onRequestPost({ request, env }) {
   const body = await request.json().catch(() => ({}));
   const customAvatarUrl = String(body.customAvatarUrl || "").trim();
   const blurb = String(body.blurb || "").trim().slice(0, 250);
+  const bannerUrl=String(body.bannerUrl || "").trim();
+  if(bannerUrl && (!/^https:\/\/[^\s]+$/i.test(bannerUrl) || bannerUrl.length>500))return Response.json({error:"Banner must be a public HTTPS image URL (max 500 characters)."},{status:400});
   const regeneratePluginApiKey = body.regeneratePluginApiKey === true;
   const showcaseInput = body.showcase && typeof body.showcase === "object" ? body.showcase : {};
   const clean = (value, max) => String(value || "").trim().slice(0, max);
@@ -615,6 +618,7 @@ export async function onRequestPost({ request, env }) {
     previousRsns,
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
+    bannerUrl,
     blurb,
     showcase: body.showcase === undefined ? (existing.showcase || {}) : showcase,
     pluginApiKey: existing.pluginApiKey || "",

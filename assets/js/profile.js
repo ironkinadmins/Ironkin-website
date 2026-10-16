@@ -274,11 +274,11 @@ function renderProfileHero(profile) {
     : "";
 
   hero.innerHTML = `
-    <div class="profile-identity-card">
-      <img class="profile-avatar"
+    <div class="profile-identity-card" style="--ik-profile-banner:${profile.bannerUrl ? `url(\"${profileEscapeHtml(profile.bannerUrl)}\")` : "none"}">
+      <div class="ik-avatar-edit-wrap"><img class="profile-avatar"
         src="${profileEscapeHtml(profile.avatarUrl || "assets/ironkin-emblem.png")}"
         alt="${profileEscapeHtml(profile.displayName)} avatar"
-        onerror="this.onerror=null;this.src='assets/ironkin-emblem.png';" />
+        onerror="this.onerror=null;this.src='assets/ironkin-emblem.png';" />${profile.isOwnProfile ? `<button type="button" class="ik-profile-edit-trigger" data-ik-edit="avatar">Edit avatar</button>` : ""}</div>
       <div class="profile-identity-copy">
         <p class="eyebrow">Ironkin Member Profile</p>
         <h1>${profileEscapeHtml(profile.displayName)}</h1>
@@ -287,6 +287,7 @@ function renderProfileHero(profile) {
           ${memberSincePill}
         </div>
         <div class="ik-osrs-links" id="ikOsrsLinks"></div>
+        ${profile.isOwnProfile ? `<div class="ik-profile-edit-actions"><button type="button" class="ik-profile-edit-trigger" data-ik-edit="all">Edit profile</button></div>` : ""}
         <div class="profile-hero-facts">
           <div><strong>${profileFormatNumber(profile.embers?.balance || 0)}</strong><span>Embers</span></div>
           <div><strong>${profileFormatNumber(profile.placements?.topThreeFinishes || 0)}</strong><span>Top 3 Finishes</span></div>
@@ -297,8 +298,9 @@ function renderProfileHero(profile) {
         </div>
         <div class="ik-profile-hero-achievements" id="profileHeroAchievements" aria-label="Earned achievements"></div>
         <div class="ik-showcase" id="ikMemberShowcase" aria-label="Member showcase" hidden></div>
-        <p class="profile-blurb">${profile.blurb ? profileEscapeHtml(profile.blurb) : "Add a short profile bio to make this page yours."}</p>
+        <p class="profile-blurb" ${profile.isOwnProfile ? `data-ik-edit="bio" role="button" tabindex="0" title="Edit your bio" style="cursor:pointer"` : ""}>${profile.blurb ? profileEscapeHtml(profile.blurb) : (profile.isOwnProfile ? "Click to add your profile bio" : "")}</p>
       </div>
+      ${profile.isOwnProfile ? `<button type="button" class="ik-profile-edit-trigger ik-banner-edit-trigger" data-ik-edit="banner">Edit banner</button>` : ""}
     </div>
   `;
   ikRenderShowcase();
@@ -429,6 +431,7 @@ function populateProfileForm(profile) {
   const blurbInput = document.getElementById("profileBlurbInput");
 
   if (avatarInput) avatarInput.value = profile.ownAvatarUrl || "";
+  const bannerInput=document.getElementById("profileBannerInput");if(bannerInput)bannerInput.value=profile.bannerUrl||"";
   if (blurbInput) blurbInput.value = profile.ownBlurb || "";
   for(const [id,key] of [['ikShowcaseTitle','title'],['ikShowcaseBoss','featuredBoss'],['ikGoalNote','goalNote']]){const input=document.getElementById(id);if(input)input.value=profile.showcase?.[key]||'';}
   const goal=document.getElementById('ikCollectionGoal');if(goal){const v=profile.showcase?.collectionGoal||'';if(v&&!Array.from(goal.options).some(o=>o.value===v))goal.add(new Option(v,v));goal.value=v;}
@@ -577,6 +580,7 @@ async function saveProfile() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       customAvatarUrl: avatarInput?.value.trim() || "",
+      bannerUrl: document.getElementById("profileBannerInput")?.value.trim() || "",
       blurb: blurbInput?.value.trim() || "",
       showcase: {title:document.getElementById('ikShowcaseTitle')?.value.trim()||'',featuredBoss:document.getElementById('ikShowcaseBoss')?.value.trim()||'',collectionGoal:document.getElementById('ikCollectionGoal')?.value||'',goalNote:document.getElementById('ikGoalNote')?.value.trim()||''}
     })
@@ -591,6 +595,7 @@ async function saveProfile() {
 
   if (status) status.textContent = "Profile saved.";
   renderProfile(data.profile);
+  ikCloseProfileEditor();
 }
 
 
@@ -688,7 +693,28 @@ function ikInitProfileTabs(){
   });
 }
 
+
+let ikEditorReturnParent=null;
+function ikOpenProfileEditor(focus){
+ const overlay=document.getElementById('ikProfileEditOverlay');const mount=document.getElementById('ikEditFormMount');const card=document.querySelector('.profile-settings-card');
+ if(!overlay||!mount||!card||card.style.display==='none')return;
+ if(!ikEditorReturnParent)ikEditorReturnParent=card.parentNode;
+ mount.append(card);overlay.hidden=false;document.body.style.overflow='hidden';
+ const focusId={avatar:'profileAvatarInput',banner:'profileBannerInput',bio:'profileBlurbInput',all:'ikShowcaseTitle'}[focus]||'ikShowcaseTitle';
+ document.getElementById(focusId)?.focus();
+}
+function ikCloseProfileEditor(){
+ const overlay=document.getElementById('ikProfileEditOverlay');const card=document.querySelector('.profile-settings-card');
+ if(overlay)overlay.hidden=true;document.body.style.overflow='';
+ if(ikEditorReturnParent&&card&&card.parentNode!==ikEditorReturnParent)ikEditorReturnParent.append(card);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("profileHero")?.addEventListener("click",event=>{const trigger=event.target.closest("[data-ik-edit]");if(trigger)ikOpenProfileEditor(trigger.dataset.ikEdit);});
+  document.getElementById("profileHero")?.addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&event.target.matches("[data-ik-edit]")){event.preventDefault();ikOpenProfileEditor(event.target.dataset.ikEdit);}});
+  document.getElementById("ikCloseEdit")?.addEventListener("click",ikCloseProfileEditor);
+  document.getElementById("ikProfileEditOverlay")?.addEventListener("click",event=>{if(event.target.id==="ikProfileEditOverlay")ikCloseProfileEditor();});
+  document.addEventListener("keydown",event=>{if(event.key==="Escape")ikCloseProfileEditor();});
   ikInitWallet();
   ikInitProfileTabs();
   const badgeCount=document.getElementById('profileAchievementCount');

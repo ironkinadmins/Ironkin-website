@@ -245,6 +245,29 @@
 @media(max-width:1250px){.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.profile-page .ik-osrs-highlights{grid-template-columns:1fr}.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-page .ik-osrs-skill{padding:8px 7px;gap:5px}.profile-page .ik-osrs-skill img{width:20px;height:20px;flex-basis:20px}.profile-page .ik-osrs-skill .ik-skill-name{font-size:11px}}
 </style>
+<style id="ik-direct-profile-editor">
+/* Header: fixed grid tracks prevent avatar / title collisions. */
+.profile-page .profile-identity-card{position:relative;display:grid!important;grid-template-columns:104px minmax(0,1fr)!important;gap:22px!important;align-items:start!important;min-height:240px;overflow:hidden;isolation:isolate;padding:30px!important}
+.profile-page .profile-identity-card::before{content:"";position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(19,13,11,.90),rgba(19,13,11,.62)),var(--ik-profile-banner,none);background-size:cover;background-position:center;z-index:-1;pointer-events:none}
+.profile-page .profile-identity-card>.ik-avatar-edit-wrap{grid-column:1;grid-row:1;position:relative;align-self:start;width:104px;height:104px}
+.profile-page .ik-avatar-edit-wrap .profile-avatar{display:block;width:104px!important;height:104px!important;object-fit:cover;border-radius:16px}
+.profile-page .profile-identity-copy{grid-column:2;grid-row:1;min-width:0;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(220px,330px)!important;gap:7px 20px;align-items:start}
+.profile-page .profile-identity-copy>.eyebrow,.profile-page .profile-identity-copy>h1,.profile-page .profile-meta-row,.profile-page .ik-osrs-links,.profile-page .profile-badge-row,.profile-page .ik-profile-hero-achievements,.profile-page .ik-showcase,.profile-page .profile-blurb{grid-column:1!important;min-width:0}
+.profile-page .profile-identity-copy>.profile-hero-facts{grid-column:2!important;grid-row:1/span 5!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px;margin:12px 0 0!important;align-self:start}
+.profile-page .profile-identity-copy>h1{margin:0 0 3px!important;line-height:1.1}
+.profile-page .profile-identity-copy>.profile-blurb{margin:8px 0 0}
+.ik-profile-edit-trigger{cursor:pointer;border:1px solid #9c6636;background:#261b15;color:#f3bf83;border-radius:8px;padding:7px 10px;font:700 12px inherit;font-family:inherit;transition:background .15s}
+.ik-profile-edit-trigger:hover,.ik-profile-edit-trigger:focus-visible{background:#55341f;outline:2px solid #d28a41;outline-offset:2px}
+.ik-avatar-edit-wrap .ik-profile-edit-trigger{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);white-space:nowrap}
+.ik-banner-edit-trigger{position:absolute;right:16px;bottom:14px;z-index:2}
+.ik-profile-edit-actions{grid-column:1!important;display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.ik-edit-overlay[hidden]{display:none!important}.ik-edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,.79);z-index:9999;display:grid;place-items:center;padding:16px}
+.ik-edit-dialog{background:#191310;border:1px solid #674328;color:#f3e0ca;border-radius:16px;width:min(620px,100%);max-height:min(90vh,900px);overflow:auto;padding:22px;box-shadow:0 20px 80px #000}
+.ik-edit-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #493327;margin-bottom:18px;padding-bottom:12px}.ik-edit-dialog-head h2{margin:4px 0}.ik-edit-close{border:1px solid #65442c;background:#2c2019;color:#f7d5ae;border-radius:8px;padding:9px 12px;cursor:pointer}
+.ik-edit-dialog .profile-settings-card{display:block!important;border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important}.ik-edit-dialog .profile-settings-card>.profile-section-header{display:none}
+@media(max-width:980px){.profile-page .profile-identity-copy{grid-template-columns:minmax(0,1fr)!important}.profile-page .profile-identity-copy>.profile-hero-facts{grid-column:1!important;grid-row:auto!important;max-width:430px;margin:8px 0!important}}
+@media(max-width:600px){.profile-page .profile-identity-card{grid-template-columns:76px minmax(0,1fr)!important;gap:12px!important;padding:18px!important}.profile-page .profile-identity-card>.ik-avatar-edit-wrap,.profile-page .ik-avatar-edit-wrap .profile-avatar{width:76px!important;height:76px!important}.profile-page .profile-identity-copy>h1{font-size:clamp(25px,7vw,36px)!important}.ik-banner-edit-trigger{position:relative;right:auto;bottom:auto;grid-column:1/-1;justify-self:end}.profile-page .profile-hero-facts>div{padding:8px 4px!important}.ik-edit-dialog{padding:15px}}
+</style>
 </head>
 <body>
   <div id="siteNav"></div>
@@ -389,6 +412,7 @@
             <input id="profileAvatarInput" type="url" placeholder="https://example.com/avatar.png" />
           </div>
 
+          <div class="admin-field admin-field-wide"><label for="profileBannerInput">Banner image URL</label><input id="profileBannerInput" type="url" placeholder="https://example.com/banner.jpg" /><small class="admin-muted">Use a public HTTPS image URL. The banner is shown behind your profile header.</small></div>
           <div class="admin-field admin-field-wide">
             <label for="profileBlurbInput">Profile Blurb</label>
             <textarea id="profileBlurbInput" rows="4" maxlength="250" placeholder="Short Ironkin blurb, max 250 characters."></textarea>
@@ -409,6 +433,7 @@
     </section>
   </main>
 
+<div id="ikProfileEditOverlay" class="ik-edit-overlay" hidden><div class="ik-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="ikEditDialogTitle"><div class="ik-edit-dialog-head"><div><p class="eyebrow">Your profile</p><h2 id="ikEditDialogTitle">Edit Profile</h2></div><button type="button" id="ikCloseEdit" class="ik-edit-close" aria-label="Close profile editor">✕</button></div><div id="ikEditFormMount"></div></div></div>
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
   <script src="assets/js/profile.js?v=20261016-showcase-goals-v1"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
