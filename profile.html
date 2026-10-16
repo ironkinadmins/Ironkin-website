@@ -143,44 +143,13 @@
 .ik-feed-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0 0;color:#bca18a;font-size:12px;flex-wrap:wrap}.ik-feed-pager{display:flex;align-items:center;gap:10px}.ik-feed-pager button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:1000px){.profile-page .profile-identity-copy{display:block}.profile-page .profile-hero-facts{margin:14px 0}.profile-page .profile-identity-card{padding:24px!important}}
 @media(max-width:600px){.profile-page .profile-identity-card{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:17px!important}.profile-page .profile-identity-card>.profile-avatar{width:72px;height:72px;align-self:start}.profile-page .profile-hero-facts{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-page .profile-hero-facts>div{padding:9px 4px}.ik-feed-toolbar button{padding:7px 9px}}
-
-/* Responsive profile width correction, Oct 2026. Keep tab panels and data unchanged. */
-.profile-page{width:100%;max-width:1600px!important;min-width:0;overflow-x:clip}
-.profile-page,.profile-page *{box-sizing:border-box}
-.profile-page .profile-grid,.profile-page .ik-profile-overview,.profile-page .profile-panel,.profile-page .profile-main-stats,.profile-page .ik-osrs-activity{min-width:0;max-width:100%}
-/* Navigation wraps instead of introducing an unwanted horizontal scrollbar. */
-.profile-page .ik-profile-nav{flex-wrap:wrap;overflow-x:visible;scrollbar-width:none;gap:5px}
-.profile-page .ik-profile-nav button{flex:0 1 auto;padding:11px clamp(9px,1.2vw,18px);font-size:clamp(12px,.85vw,14px)}
-/* Stats need space for the three-column skill grid; activity receives the rest. */
-.profile-page .ik-profile-overview{grid-template-columns:minmax(0,440px) minmax(0,1fr)!important;gap:18px}
-.profile-page .profile-main-stats,.profile-page .ik-osrs-activity{width:auto;overflow-wrap:anywhere}
-.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
-.profile-page .ik-osrs-skill{min-width:0;gap:4px;padding:7px 6px}
-.profile-page .ik-osrs-skill small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.profile-page .ik-osrs-skill strong{flex-shrink:0}
-.profile-page .ik-feed-toolbar{gap:6px}
-.profile-page .ik-feed-toolbar button{white-space:nowrap;padding:8px 10px}
-.profile-page .ik-feed-pager{min-width:0;flex-wrap:wrap}
-.profile-page .profile-identity-copy,.profile-page .profile-hero-facts{min-width:0}
-@media(max-width:1100px){
- .profile-page .ik-profile-overview{grid-template-columns:minmax(0,390px) minmax(0,1fr)!important}
- .profile-page .profile-identity-copy{display:block}
- .profile-page .profile-hero-facts{margin:14px 0 0;max-width:520px}
-}
-@media(max-width:850px){
- .profile-page .ik-profile-overview{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
- .profile-page .ik-profile-overview-title{grid-column:1;grid-row:auto}
- .profile-page .profile-main-stats,.profile-page .ik-osrs-activity{grid-column:1;grid-row:auto;width:100%}
- .profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@media(max-width:520px){
- .profile-page .ik-profile-nav{margin:0;gap:4px}
- .profile-page .ik-profile-nav button{padding:9px 10px;min-height:38px}
- .profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
- .profile-page .ik-feed-footer{align-items:flex-start}
- .profile-page .profile-hero-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-</style></head>
+</style><style id="ik-osrs-upgrade-style">
+.ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.ik-osrs-skill{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:5px;min-height:39px;padding:5px 7px}.ik-osrs-skill img{width:23px;height:23px;object-fit:contain;image-rendering:pixelated}.ik-osrs-skill small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ik-osrs-skill strong{font-size:14px}
+.ik-journal-controls,.ik-clog-controls,.ik-ca-quickfilters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.ik-journal-controls input,.ik-journal-controls select,.ik-clog-controls input[type=search],.ik-ca-quickfilters select{min-width:0;background:#231b15;border:1px solid #63452c;color:#eed3b0;border-radius:6px;padding:8px;font:inherit;font-size:12px}.ik-journal-controls input{flex:1 1 120px}.ik-clog-controls input[type=search]{flex:1 1 200px}.ik-clog-controls label{display:flex;align-items:center;gap:6px;color:#dfb57d;font-size:12px}.ik-checklist-row[hidden],.ik-clog-slot[hidden],.ik-clog-pages button[hidden]{display:none!important}.ik-quest-row.is-complete .ik-quest-status{color:#79bc78}.ik-quest-row:not(.is-complete) .ik-quest-status{color:#b5a08a}
+.ik-diary-area{border:1px solid #483427;border-radius:6px;padding:0;margin-bottom:7px}.ik-diary-area summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px;gap:8px;list-style:none}.ik-diary-area summary::-webkit-details-marker{display:none}.ik-diary-area summary small{color:#d7a76d}.ik-diary-tier{padding:0 10px 8px}.ik-diary-bar,.ik-clog-progress-track{height:5px;background:#34271c;border-radius:10px;overflow:hidden;margin:5px 0 8px}.ik-diary-bar span,.ik-clog-progress-track span{display:block;height:100%;background:#b4864a}.ik-clog-controls{padding:8px 12px;border-bottom:1px solid #493729}.ik-clog-progress-track{max-width:360px;margin:9px 0 15px}.ik-clog-slot{position:relative}.ik-clog-slot.missing{opacity:.48}.ik-ca-quickfilters label{display:flex;flex-direction:column;gap:4px;flex:1 1 130px;color:#cbaa83;font-size:12px}.ik-ca-quickfilters select{width:100%}
+@media(max-width:640px){.ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ik-ca-quickfilters label{flex-basis:45%}}
+</style>
+</head>
 <body>
   <div id="siteNav"></div>
 
@@ -226,7 +195,7 @@
  <div class="profile-section-header"><div><h2>Combat Achievements</h2><small id="ikCombatSummary">Player-specific Combat Achievement progress from RuneProfile</small></div><a id="ikCombatExternal" class="btn secondary" target="_blank" rel="noopener noreferrer">RuneProfile ↗</a></div>
  <p class="ik-ca-disclaimer">Completed tasks and points are synced from RuneProfile. Exempt tasks are excluded from progress.</p>
  <div class="ik-ca-controls"><label for="ikCaTier">Tier <select id="ikCaTier"><option value="">All tiers</option><option>Easy</option><option>Medium</option><option>Hard</option><option>Elite</option><option>Master</option><option>Grandmaster</option></select></label><label for="ikCaSearch">Search tasks or bosses <input id="ikCaSearch" type="search" placeholder="e.g. Zulrah, speed, raid" autocomplete="off"></label><button type="button" id="ikCaReload" class="btn secondary">Refresh progress</button></div>
- <div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
+ <div class="ik-ca-quickfilters"><label>Completion <select id="ikCaCompletion"><option value="all">All tasks</option><option value="remaining">Remaining</option><option value="completed">Completed</option><option value="exempt">Exempt</option></select></label><label>Boss <select id="ikCaBoss"><option value="">All bosses</option></select></label><label>Type <select id="ikCaType"><option value="">All types</option></select></label></div><div class="ik-ca-progress" id="ikCaProgress"></div><div id="ikCaStatus" class="admin-muted" role="status">Open this tab to load player progress.</div><div id="ikCaTasks" class="ik-ca-tasks"></div>
  </section>
       <section class="profile-panel ik-profile-achievements" id="profileAchievements" role="tabpanel" aria-labelledby="profileTabAchievements" hidden>
         <div class="profile-section-header ik-profile-section-heading"><div><p class="eyebrow">YOUR LEGACY</p><h2>Achievements</h2><p class="admin-muted">Event achievements and profile recognition, all in one collection.</p></div><div id="profileAchievementCount" class="ik-profile-achievement-count">—</div></div>
@@ -341,7 +310,7 @@
   </main>
 
   <script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
-  <script src="assets/js/profile.js?v=20261016-osrs-integrated-v1"></script>
+  <script src="assets/js/profile.js?v=20261016-osrs-ui-upgrade-v2"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
 </body>
 </html>
