@@ -143,6 +143,43 @@
 .ik-feed-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0 0;color:#bca18a;font-size:12px;flex-wrap:wrap}.ik-feed-pager{display:flex;align-items:center;gap:10px}.ik-feed-pager button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:1000px){.profile-page .profile-identity-copy{display:block}.profile-page .profile-hero-facts{margin:14px 0}.profile-page .profile-identity-card{padding:24px!important}}
 @media(max-width:600px){.profile-page .profile-identity-card{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:17px!important}.profile-page .profile-identity-card>.profile-avatar{width:72px;height:72px;align-self:start}.profile-page .profile-hero-facts{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-page .profile-hero-facts>div{padding:9px 4px}.ik-feed-toolbar button{padding:7px 9px}}
+
+/* Responsive profile width correction, Oct 2026. Keep tab panels and data unchanged. */
+.profile-page{width:100%;max-width:1600px!important;min-width:0;overflow-x:clip}
+.profile-page,.profile-page *{box-sizing:border-box}
+.profile-page .profile-grid,.profile-page .ik-profile-overview,.profile-page .profile-panel,.profile-page .profile-main-stats,.profile-page .ik-osrs-activity{min-width:0;max-width:100%}
+/* Navigation wraps instead of introducing an unwanted horizontal scrollbar. */
+.profile-page .ik-profile-nav{flex-wrap:wrap;overflow-x:visible;scrollbar-width:none;gap:5px}
+.profile-page .ik-profile-nav button{flex:0 1 auto;padding:11px clamp(9px,1.2vw,18px);font-size:clamp(12px,.85vw,14px)}
+/* Stats need space for the three-column skill grid; activity receives the rest. */
+.profile-page .ik-profile-overview{grid-template-columns:minmax(0,440px) minmax(0,1fr)!important;gap:18px}
+.profile-page .profile-main-stats,.profile-page .ik-osrs-activity{width:auto;overflow-wrap:anywhere}
+.profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.profile-page .ik-osrs-skill{min-width:0;gap:4px;padding:7px 6px}
+.profile-page .ik-osrs-skill small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-page .ik-osrs-skill strong{flex-shrink:0}
+.profile-page .ik-feed-toolbar{gap:6px}
+.profile-page .ik-feed-toolbar button{white-space:nowrap;padding:8px 10px}
+.profile-page .ik-feed-pager{min-width:0;flex-wrap:wrap}
+.profile-page .profile-identity-copy,.profile-page .profile-hero-facts{min-width:0}
+@media(max-width:1100px){
+ .profile-page .ik-profile-overview{grid-template-columns:minmax(0,390px) minmax(0,1fr)!important}
+ .profile-page .profile-identity-copy{display:block}
+ .profile-page .profile-hero-facts{margin:14px 0 0;max-width:520px}
+}
+@media(max-width:850px){
+ .profile-page .ik-profile-overview{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
+ .profile-page .ik-profile-overview-title{grid-column:1;grid-row:auto}
+ .profile-page .profile-main-stats,.profile-page .ik-osrs-activity{grid-column:1;grid-row:auto;width:100%}
+ .profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:520px){
+ .profile-page .ik-profile-nav{margin:0;gap:4px}
+ .profile-page .ik-profile-nav button{padding:9px 10px;min-height:38px}
+ .profile-page .ik-osrs-skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .profile-page .ik-feed-footer{align-items:flex-start}
+ .profile-page .profile-hero-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style></head>
 <body>
   <div id="siteNav"></div>
