@@ -383,17 +383,9 @@
     </section></div>
 
     <div class="home-context-stack" aria-label="Clan and member updates">
-      <section id="ironkinGamesPromoHome" data-ironkin-games-promo hidden class="games-card full home-context-card" style="display:none">
-        <div><p class="eyebrow" data-games-promo-eyebrow>Season Competition</p><h2>Ironkin Games</h2><p data-games-promo-copy>A multi-week team competition with timed challenge reveals, flexible team slots, private proof, and a points leaderboard.</p></div>
-        <a class="btn primary" data-games-promo-cta href="/ironkin-games.html">Open Ironkin Games</a>
-      </section>
       <section id="homeBingoSignupBanner" class="bingo-home-banner home-context-card" style="display:none;">
         <div><p class="eyebrow">Battleship Bingo</p><h2>Battleship Bingo is live</h2><p>The event has started. Choose your private team board.</p></div>
         <a class="btn primary" href="/bingo">Enter Bingo</a>
-      </section>
-      <section id="homePersonalizedWelcome" class="home-personalized-welcome home-context-card" hidden aria-label="Your Ironkin profile">
-        <div><p class="eyebrow">Your Ironkin</p><h2 id="homeWelcomeName">Welcome back</h2><p id="homeWelcomeMeta"></p></div>
-        <div class="home-personal-links"><a href="/profile.html">View Profile</a><a href="/profile.html#event-history">Event Results</a><a href="/ember-leaderboard.html">Embers</a></div>
       </section>
     </div>
 
@@ -443,6 +435,60 @@
 
   <script src="/assets/js/script.js?v=20260913-home-news-pagination-v7"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
-<script>(async()=>{try{const r=await fetch('/api/homepage-images',{cache:'no-store'});if(!r.ok)return;const data=await r.json();for(const img of document.querySelectorAll('[data-ik-home-image]')){const url=data.images?.[img.dataset.ikHomeImage];if(typeof url==='string'&&(/^(https:\/\/|\/api\/homepage-image-file\/)/i.test(url))){img.onload=()=>img.style.display='block';img.onerror=()=>img.style.display='none';img.src=url;}}}catch(e){console.warn('Homepage artwork unavailable',e)}})();</script>
+<script>
+/* Homepage images: persist last successful configuration and recover from transient API/R2 failures. */
+(()=>{
+  const cacheKey='ironkin:homepage-images:v1';
+  const slots=['hero','games','flame','events','profiles'];
+  const valid=url=>typeof url==='string' && (/^https:\/\/[^\s]+$/i.test(url)||/^\/api\/homepage-image-file\/(hero|games|flame|events|profiles)\/[a-f0-9-]{36}\.(png|jpg|webp)$/i.test(url));
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  let saved={};
+  try{const value=JSON.parse(localStorage.getItem(cacheKey)||'{}');if(value&&typeof value==='object'&&!Array.isArray(value))saved=value;}catch{}
+  const apply=images=>{
+    for(const img of document.querySelectorAll('[data-ik-home-image]')){
+      const slot=img.dataset.ikHomeImage;
+      if(!slots.includes(slot))continue;
+      const url=images[slot];
+      if(!valid(url))continue;
+      if(img.dataset.ikImageUrl===url && img.getAttribute('src')===url)continue;
+      img.dataset.ikImageUrl=url;
+      let retries=0;
+      img.onload=()=>{img.style.display='block';retries=0;};
+      img.onerror=()=>{
+        if(img.dataset.ikImageUrl!==url)return;
+        if(retries++<3){
+          const attempt=retries;
+          setTimeout(()=>{
+            if(img.dataset.ikImageUrl!==url)return;
+            const separator=url.includes('?')?'&':'?';
+            img.src=url+separator+'ik_retry='+attempt;
+          },attempt*1100);
+        }else{img.style.display='none';}
+      };
+      img.src=url;
+    }
+  };
+  apply(saved);
+  (async()=>{
+    for(let attempt=0;attempt<4;attempt++){
+      try{
+        const response=await fetch('/api/homepage-images',{cache:'no-store',credentials:'same-origin'});
+        if(!response.ok)throw new Error('Homepage settings HTTP '+response.status);
+        const data=await response.json();
+        if(!data||!data.images||typeof data.images!=='object'||Array.isArray(data.images))throw new Error('Invalid homepage settings');
+        const images=data.images;
+        // A valid empty configuration is intentional; a network failure never overwrites the cache.
+        const next={};for(const slot of slots){if(valid(images[slot]))next[slot]=images[slot];}
+        apply(next);
+        try{localStorage.setItem(cacheKey,JSON.stringify(next));}catch{}
+        return;
+      }catch(error){
+        if(attempt===3)console.warn('Homepage images: using last saved settings',error);
+        else await wait(700*Math.pow(2,attempt));
+      }
+    }
+  })();
+})();
+</script>
 </body>
 </html>
