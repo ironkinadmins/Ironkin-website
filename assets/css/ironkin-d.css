@@ -654,7 +654,7 @@ html body.home-ledger-v3 .ik-visual-banner::after {
     linear-gradient(90deg, rgba(10,10,11,.96) 0%, rgba(10,10,11,.88) 24%, rgba(10,10,11,.55) 46%, rgba(10,10,11,.18) 70%, rgba(10,10,11,0) 100%),
     linear-gradient(0deg, #0a0a0b 0%, rgba(10,10,11,0) 32%) !important;
 }
-html body.home-ledger-v3 .ik-visual-banner-content { position: relative; z-index: 2; }
+html body.home-ledger-v3 .ik-visual-banner-content { position: relative; z-index: 3; }
 
 /* Ironkin Games time trials: equal-height cards, action pinned to the bottom */
 html body .tt-grid { align-items: stretch !important; }
@@ -838,3 +838,79 @@ html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_
 html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_):not(#__):hover { background: var(--d-hover) !important; }
 html body :is(#recentActivity, #homeUpcomingEvents, .home-activity-list, .home-upcoming-list, #ikOsrsFeed):not(#_) { display: grid !important; gap: 4px !important; }
 html body .ik-osrs-feed-row:not(#_):not(#__) { column-gap: 14px !important; }
+
+
+/* hero FX (ironkin-hero-fx.js): living glow + embers */
+html body .ik-visual-banner > .ik-hero-glow {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center;
+  filter: blur(18px) saturate(1.8) brightness(1.25) contrast(1.2);
+  mix-blend-mode: screen;
+  opacity: 0; transition: opacity .6s linear;
+  animation: ik-drift 26s var(--d-ease) both;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 35%, #000 70%);
+          mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 35%, #000 70%);
+}
+html body .ik-visual-banner > .ik-hero-glow:not(.is-ready) { display: none; }
+html body .ik-visual-banner > .ik-hero-embers { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
+/* homepage top-five rows: same bent-divider problem as the feeds */
+html body :not(.home-bounty-active) > .home-top-three > div:not(#_):not(#__) {
+  border: 0 !important; border-radius: var(--d-r-md) !important; padding: 10px 12px !important;
+  background: transparent !important; transition: background-color var(--d-fast) var(--d-ease);
+}
+html body :not(.home-bounty-active) > .home-top-three > div:nth-child(1):not(#_):not(#__) { background: var(--d-ember-soft) !important; }
+html body :not(.home-bounty-active) > .home-top-three > div:not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body .home-top-three:not(#_) { display: grid !important; gap: 4px !important; }
+
+
+/* homepage Bounties card: legacy ".home-top-three div" rules were styling every
+   nested div (brown boxes, boxes inside boxes, centred text). Reset, then lay out. */
+html body .home-bounty-active .home-top-three:not(#_) { display: block !important; }
+html body .home-bounty-active .home-top-three div:not(#_):not(#__) {
+  background: none !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important;
+  min-height: 0 !important; box-shadow: none !important; text-align: left !important;
+}
+html body .home-bounty-active div.home-bounty-details:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) !important; gap: 16px !important; align-items: start !important;
+}
+html body .home-bounty-active .home-bounty-details > section:not(#_) {
+  background: var(--d-s2) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important; padding: 16px !important;
+}
+html body .home-bounty-active .home-bounty-details h3:not(#_) {
+  margin: 0 0 10px !important; font: 800 11px/1 var(--d-ui) !important; letter-spacing: .14em !important; text-transform: uppercase !important; color: var(--d-muted) !important;
+}
+html body .home-bounty-active div.home-bounty-person:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: 28px minmax(0, 1fr) auto !important; align-items: center !important; gap: 10px !important;
+  padding: 10px 12px !important; border-radius: var(--d-r-md) !important;
+}
+html body .home-bounty-active div.home-bounty-person:first-of-type:not(#_):not(#__) { background: var(--d-ember-soft) !important; }
+html body .home-bounty-active div:is(.home-bounty-person, .home-bounty-item):not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body .home-bounty-active .home-bounty-rank:not(#_) { font: 700 12px var(--d-num) !important; color: var(--d-muted) !important; }
+html body .home-bounty-active .home-bounty-person:first-of-type .home-bounty-rank:not(#_) { color: var(--d-ember) !important; }
+html body .home-bounty-active .home-bounty-person strong:not(#_) { color: var(--d-text) !important; font-size: 14px !important; }
+html body .home-bounty-active .home-bounty-person small:not(#_) { margin: 0 !important; color: var(--d-muted) !important; font-size: 12px !important; white-space: nowrap; }
+html body .home-bounty-active div.home-bounty-item:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: 36px minmax(0, 1fr) auto !important; align-items: center !important; gap: 12px !important;
+  padding: 10px 12px !important; border-radius: var(--d-r-md) !important;
+}
+html body .home-bounty-active .home-bounty-item + .home-bounty-item:not(#_) { margin-top: 2px; }
+html body .home-bounty-active .home-bounty-item :is(img, .home-bounty-item-placeholder):not(#_) {
+  width: 36px !important; height: 36px !important; object-fit: contain; display: grid; place-items: center;
+  background: var(--d-s3) !important; border-radius: var(--d-r-md) !important; padding: 4px !important; box-sizing: border-box; image-rendering: pixelated; color: var(--d-muted);
+}
+html body .home-bounty-active div.home-bounty-item > div:not(#_):not(#__) { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 2px !important; min-width: 0 !important; }
+html body .home-bounty-active .home-bounty-item strong:not(#_) { color: var(--d-text) !important; font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html body .home-bounty-active .home-bounty-item small:not(#_) { color: var(--d-muted) !important; font-size: 12px !important; }
+html body .home-bounty-active .home-bounty-reward:not(#_) { font: 700 12px var(--d-num) !important; color: var(--d-ember) !important; white-space: nowrap; }
+html body .home-bounty-active div.home-bounty-footer:not(#_):not(#__) {
+  display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px 20px !important;
+  margin-top: 16px !important; padding: 12px 2px 0 !important; border-top: 1px solid var(--d-line) !important;
+  color: var(--d-muted) !important; font-size: 12px !important;
+}
+html body .home-bounty-active .home-bounty-stat:not(#_) { background: var(--d-s2) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-md) !important; padding: 14px 16px !important; }
+html body .home-bounty-active .home-bounty-stat strong:not(#_) { font-family: var(--d-num) !important; color: var(--d-text) !important; font-size: 22px !important; }
+html body .home-bounty-active .home-bounty-stat span:not(#_) { color: var(--d-muted) !important; font-size: 11px !important; font-weight: 700; letter-spacing: .1em; margin-top: 4px; }
+@media (max-width: 760px) {
+  html body .home-bounty-active div.home-bounty-details:not(#_):not(#__) { grid-template-columns: 1fr !important; }
+}
