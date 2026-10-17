@@ -654,7 +654,7 @@ html body.home-ledger-v3 .ik-visual-banner::after {
     linear-gradient(90deg, rgba(10,10,11,.96) 0%, rgba(10,10,11,.88) 24%, rgba(10,10,11,.55) 46%, rgba(10,10,11,.18) 70%, rgba(10,10,11,0) 100%),
     linear-gradient(0deg, #0a0a0b 0%, rgba(10,10,11,0) 32%) !important;
 }
-html body.home-ledger-v3 .ik-visual-banner-content { position: relative; z-index: 2; }
+html body.home-ledger-v3 .ik-visual-banner-content { position: relative; z-index: 3; }
 
 /* Ironkin Games time trials: equal-height cards, action pinned to the bottom */
 html body .tt-grid { align-items: stretch !important; }
@@ -758,3 +758,159 @@ html body :is(.live-dot, .ik-live-dot) { animation: ik-pulse 2s ease-in-out infi
 
 /* card-header actions ("Open This Week →") stay on one line */
 html body :is(.games-text-action, .home-panel-heading > a, .home-section-heading > a, .section-heading-row > a) { white-space: nowrap !important; flex-shrink: 0; }
+
+
+/* ---------------------------------------------------------------------
+   Profile: OSRS progress panels
+   --------------------------------------------------------------------- */
+/* checklists (quests, diaries): keep rows off the scrollbar */
+html body .ik-checklist:not(#_) { padding-right: 12px !important; scrollbar-gutter: stable; }
+html body .ik-checklist-row:not(#_) { padding: 9px 10px !important; gap: 10px !important; border-bottom-color: var(--d-line) !important; }
+html body .ik-checklist-row:not(#_):hover { background: var(--d-hover); }
+/* diary areas: title and rows had no inner padding */
+html body .ik-diary-area:not(#_) { padding: 12px 12px 6px !important; margin-bottom: 12px !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important; background: var(--d-s1); }
+html body .ik-diary-area > strong:not(#_) { display: block; padding: 2px 10px 8px; color: var(--d-text) !important; font-family: var(--d-head); }
+html body .ik-diary-area .ik-checklist-row:last-child { border-bottom: 0 !important; }
+
+/* skills: one-step-larger tiles, and a slow glowing ring on 99s */
+html body .ik-osrs-skill-grid:not(#_) { gap: 8px !important; }
+html body .ik-osrs-skill:not(#_) { padding: 10px 12px !important; border-radius: var(--d-r-md) !important; background: var(--d-s1) !important; border: 1px solid var(--d-line) !important; position: relative; isolation: isolate; }
+@property --ik-ring { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+html body .ik-osrs-skill.is-max:not(#_) { border-color: transparent !important; }
+html body .ik-osrs-skill.is-max::before {
+  content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; padding: 1px;
+  background: conic-gradient(from var(--ik-ring), rgba(255,143,63,.15) 0deg, #ff8f3f 60deg, #ffd0a6 90deg, #ff8f3f 120deg, rgba(255,143,63,.15) 200deg, rgba(255,143,63,.15) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: ik-ring-spin 4s linear infinite;
+}
+html body .ik-osrs-skill.is-max::after {
+  content: ""; position: absolute; inset: 0; z-index: -2; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 14px rgba(255,128,40,.18), inset 0 0 18px rgba(255,128,40,.06);
+  animation: ik-ring-breathe 4s ease-in-out infinite;
+}
+html body .ik-osrs-skill.is-max strong { color: #ffb27a !important; text-shadow: 0 0 10px rgba(255,128,40,.35); }
+@keyframes ik-ring-spin { to { --ik-ring: 360deg; } }
+@keyframes ik-ring-breathe { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html body .ik-osrs-skill.is-max::before { animation: none !important; background: rgba(255,143,63,.6); }
+}
+
+/* profile activity feed: the 4x28 coloured bar was a side-stripe; use a small dot */
+html body .ik-osrs-feed-row:not(#_) { grid-template-columns: 8px minmax(0,1fr) !important; align-items: start !important; padding: 12px 10px !important; border-bottom-color: var(--d-line) !important; border-radius: var(--d-r-md); }
+html body .ik-osrs-feed-row:not(#_):hover { background: var(--d-hover); }
+html body .ik-feed-marker:not(#_) { width: 8px !important; height: 8px !important; border-radius: 50% !important; margin-top: 5px; box-shadow: none !important; }
+
+
+/* skill tooltip (follows the cursor; built in profile.js) */
+.ik-skill-tip {
+  position: fixed; left: 0; top: 0; z-index: 2000; pointer-events: none;
+  width: 220px; padding: 12px 14px 11px;
+  background: rgba(17,17,20,.96); border: 1px solid var(--d-line-2); border-radius: var(--d-r-lg);
+  box-shadow: 0 16px 40px rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  color: var(--d-text); font: 500 12px/1.4 var(--d-ui);
+  opacity: 0; transition: opacity 120ms var(--d-ease);
+  will-change: transform;
+}
+.ik-skill-tip.is-on { opacity: 1; }
+.ik-skill-tip[hidden] { display: block !important; visibility: hidden; }
+.ik-skill-tip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.ik-skill-tip-head strong { font: 700 14px var(--d-head); letter-spacing: -.01em; }
+.ik-skill-tip-level { font: 700 11px var(--d-num); color: var(--d-ember); white-space: nowrap; }
+.ik-skill-tip.is-max { border-color: var(--d-ember-line); box-shadow: 0 16px 40px rgba(0,0,0,.55), 0 0 18px rgba(255,128,40,.12); }
+.ik-skill-tip dl { margin: 0 0 9px; display: grid; gap: 3px; }
+.ik-skill-tip dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.ik-skill-tip dt { color: var(--d-muted); }
+.ik-skill-tip dd { margin: 0; font-family: var(--d-num); font-weight: 600; }
+.ik-skill-tip-bar { height: 4px; border-radius: 99px; background: var(--d-s3); overflow: hidden; margin-bottom: 6px; }
+.ik-skill-tip-bar span { display: block; height: 100%; border-radius: inherit; background: var(--d-ember-fill); }
+.ik-skill-tip small { color: var(--d-muted); font-size: 11px; }
+html body .ik-osrs-skill[data-skill] { cursor: default; }
+html body .ik-osrs-skill[data-skill]:focus-visible { outline: 2px solid var(--d-ember) !important; outline-offset: 2px; }
+
+/* feed rows: rounded hover backgrounds and bottom dividers don't mix (the
+   radius bends the line), so rows are separated by space instead of borders */
+html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_):not(#__) {
+  border-bottom: 0 !important;
+  border-radius: var(--d-r-md) !important;
+  padding: 12px 14px !important;
+}
+html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body :is(#recentActivity, #homeUpcomingEvents, .home-activity-list, .home-upcoming-list, #ikOsrsFeed):not(#_) { display: grid !important; gap: 4px !important; }
+html body .ik-osrs-feed-row:not(#_):not(#__) { column-gap: 14px !important; }
+
+
+/* hero FX (ironkin-hero-fx.js): living glow + embers */
+html body .ik-visual-banner > .ik-hero-glow {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center;
+  filter: blur(18px) saturate(1.8) brightness(1.25) contrast(1.2);
+  mix-blend-mode: screen;
+  opacity: 0; transition: opacity .6s linear;
+  animation: ik-drift 26s var(--d-ease) both;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 35%, #000 70%);
+          mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 35%, #000 70%);
+}
+html body .ik-visual-banner > .ik-hero-glow:not(.is-ready) { display: none; }
+html body .ik-visual-banner > .ik-hero-embers { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
+/* homepage top-five rows: same bent-divider problem as the feeds */
+html body :not(.home-bounty-active) > .home-top-three > div:not(#_):not(#__) {
+  border: 0 !important; border-radius: var(--d-r-md) !important; padding: 10px 12px !important;
+  background: transparent !important; transition: background-color var(--d-fast) var(--d-ease);
+}
+html body :not(.home-bounty-active) > .home-top-three > div:nth-child(1):not(#_):not(#__) { background: var(--d-ember-soft) !important; }
+html body :not(.home-bounty-active) > .home-top-three > div:not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body .home-top-three:not(#_) { display: grid !important; gap: 4px !important; }
+
+
+/* homepage Bounties card: legacy ".home-top-three div" rules were styling every
+   nested div (brown boxes, boxes inside boxes, centred text). Reset, then lay out. */
+html body .home-bounty-active .home-top-three:not(#_) { display: block !important; }
+html body .home-bounty-active .home-top-three div:not(#_):not(#__) {
+  background: none !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important;
+  min-height: 0 !important; box-shadow: none !important; text-align: left !important;
+}
+html body .home-bounty-active div.home-bounty-details:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) !important; gap: 16px !important; align-items: start !important;
+}
+html body .home-bounty-active .home-bounty-details > section:not(#_) {
+  background: var(--d-s2) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important; padding: 16px !important;
+}
+html body .home-bounty-active .home-bounty-details h3:not(#_) {
+  margin: 0 0 10px !important; font: 800 11px/1 var(--d-ui) !important; letter-spacing: .14em !important; text-transform: uppercase !important; color: var(--d-muted) !important;
+}
+html body .home-bounty-active div.home-bounty-person:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: 28px minmax(0, 1fr) auto !important; align-items: center !important; gap: 10px !important;
+  padding: 10px 12px !important; border-radius: var(--d-r-md) !important;
+}
+html body .home-bounty-active div.home-bounty-person:first-of-type:not(#_):not(#__) { background: var(--d-ember-soft) !important; }
+html body .home-bounty-active div:is(.home-bounty-person, .home-bounty-item):not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body .home-bounty-active .home-bounty-rank:not(#_) { font: 700 12px var(--d-num) !important; color: var(--d-muted) !important; }
+html body .home-bounty-active .home-bounty-person:first-of-type .home-bounty-rank:not(#_) { color: var(--d-ember) !important; }
+html body .home-bounty-active .home-bounty-person strong:not(#_) { color: var(--d-text) !important; font-size: 14px !important; }
+html body .home-bounty-active .home-bounty-person small:not(#_) { margin: 0 !important; color: var(--d-muted) !important; font-size: 12px !important; white-space: nowrap; }
+html body .home-bounty-active div.home-bounty-item:not(#_):not(#__) {
+  display: grid !important; grid-template-columns: 36px minmax(0, 1fr) auto !important; align-items: center !important; gap: 12px !important;
+  padding: 10px 12px !important; border-radius: var(--d-r-md) !important;
+}
+html body .home-bounty-active .home-bounty-item + .home-bounty-item:not(#_) { margin-top: 2px; }
+html body .home-bounty-active .home-bounty-item :is(img, .home-bounty-item-placeholder):not(#_) {
+  width: 36px !important; height: 36px !important; object-fit: contain; display: grid; place-items: center;
+  background: var(--d-s3) !important; border-radius: var(--d-r-md) !important; padding: 4px !important; box-sizing: border-box; image-rendering: pixelated; color: var(--d-muted);
+}
+html body .home-bounty-active div.home-bounty-item > div:not(#_):not(#__) { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 2px !important; min-width: 0 !important; }
+html body .home-bounty-active .home-bounty-item strong:not(#_) { color: var(--d-text) !important; font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html body .home-bounty-active .home-bounty-item small:not(#_) { color: var(--d-muted) !important; font-size: 12px !important; }
+html body .home-bounty-active .home-bounty-reward:not(#_) { font: 700 12px var(--d-num) !important; color: var(--d-ember) !important; white-space: nowrap; }
+html body .home-bounty-active div.home-bounty-footer:not(#_):not(#__) {
+  display: flex !important; flex-wrap: wrap !important; justify-content: space-between !important; gap: 8px 20px !important;
+  margin-top: 16px !important; padding: 12px 2px 0 !important; border-top: 1px solid var(--d-line) !important;
+  color: var(--d-muted) !important; font-size: 12px !important;
+}
+html body .home-bounty-active .home-bounty-stat:not(#_) { background: var(--d-s2) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-md) !important; padding: 14px 16px !important; }
+html body .home-bounty-active .home-bounty-stat strong:not(#_) { font-family: var(--d-num) !important; color: var(--d-text) !important; font-size: 22px !important; }
+html body .home-bounty-active .home-bounty-stat span:not(#_) { color: var(--d-muted) !important; font-size: 11px !important; font-weight: 700; letter-spacing: .1em; margin-top: 4px; }
+@media (max-width: 760px) {
+  html body .home-bounty-active div.home-bounty-details:not(#_):not(#__) { grid-template-columns: 1fr !important; }
+}
