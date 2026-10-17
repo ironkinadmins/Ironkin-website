@@ -758,3 +758,44 @@ html body :is(.live-dot, .ik-live-dot) { animation: ik-pulse 2s ease-in-out infi
 
 /* card-header actions ("Open This Week →") stay on one line */
 html body :is(.games-text-action, .home-panel-heading > a, .home-section-heading > a, .section-heading-row > a) { white-space: nowrap !important; flex-shrink: 0; }
+
+
+/* ---------------------------------------------------------------------
+   Profile: OSRS progress panels
+   --------------------------------------------------------------------- */
+/* checklists (quests, diaries): keep rows off the scrollbar */
+html body .ik-checklist:not(#_) { padding-right: 12px !important; scrollbar-gutter: stable; }
+html body .ik-checklist-row:not(#_) { padding: 9px 10px !important; gap: 10px !important; border-bottom-color: var(--d-line) !important; }
+html body .ik-checklist-row:not(#_):hover { background: var(--d-hover); }
+/* diary areas: title and rows had no inner padding */
+html body .ik-diary-area:not(#_) { padding: 12px 12px 6px !important; margin-bottom: 12px !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important; background: var(--d-s1); }
+html body .ik-diary-area > strong:not(#_) { display: block; padding: 2px 10px 8px; color: var(--d-text) !important; font-family: var(--d-head); }
+html body .ik-diary-area .ik-checklist-row:last-child { border-bottom: 0 !important; }
+
+/* skills: one-step-larger tiles, and a slow glowing ring on 99s */
+html body .ik-osrs-skill-grid:not(#_) { gap: 8px !important; }
+html body .ik-osrs-skill:not(#_) { padding: 10px 12px !important; border-radius: var(--d-r-md) !important; background: var(--d-s1) !important; border: 1px solid var(--d-line) !important; position: relative; isolation: isolate; }
+@property --ik-ring { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+html body .ik-osrs-skill.is-max:not(#_) { border-color: transparent !important; }
+html body .ik-osrs-skill.is-max::before {
+  content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; padding: 1px;
+  background: conic-gradient(from var(--ik-ring), rgba(255,143,63,.15) 0deg, #ff8f3f 60deg, #ffd0a6 90deg, #ff8f3f 120deg, rgba(255,143,63,.15) 200deg, rgba(255,143,63,.15) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: ik-ring-spin 4s linear infinite;
+}
+html body .ik-osrs-skill.is-max::after {
+  content: ""; position: absolute; inset: 0; z-index: -2; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 14px rgba(255,128,40,.18), inset 0 0 18px rgba(255,128,40,.06);
+  animation: ik-ring-breathe 4s ease-in-out infinite;
+}
+html body .ik-osrs-skill.is-max strong { color: #ffb27a !important; text-shadow: 0 0 10px rgba(255,128,40,.35); }
+@keyframes ik-ring-spin { to { --ik-ring: 360deg; } }
+@keyframes ik-ring-breathe { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html body .ik-osrs-skill.is-max::before { animation: none !important; background: rgba(255,143,63,.6); }
+}
+
+/* profile activity feed: the 4x28 coloured bar was a side-stripe; use a small dot */
+html body .ik-osrs-feed-row:not(#_) { grid-template-columns: 8px minmax(0,1fr) !important; align-items: start !important; padding: 12px 10px !important; border-bottom-color: var(--d-line) !important; border-radius: var(--d-r-md); }
+html body .ik-osrs-feed-row:not(#_):hover { background: var(--d-hover); }
+html body .ik-feed-marker:not(#_) { width: 8px !important; height: 8px !important; border-radius: 50% !important; margin-top: 5px; box-shadow: none !important; }
