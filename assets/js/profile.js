@@ -344,7 +344,7 @@ function renderWomStats(profile) {
         <button type="button" data-osrs-progress-tab="quests" aria-selected="false"><img class="ik-progress-tab-icon" src="https://oldschool.runescape.wiki/images/Quest_point_icon.png" alt="" loading="lazy" onerror="this.style.display='none'">Quests</button>
         <button type="button" data-osrs-progress-tab="diaries" aria-selected="false"><img class="ik-progress-tab-icon" src="https://oldschool.runescape.wiki/images/Achievement_Diary_icon.png" alt="" loading="lazy" onerror="this.style.display='none'">Achievement Diaries</button>
       </div>
-      <div data-osrs-progress-panel="skills"><div class="ik-osrs-skill-grid">${ikOrderedSkills(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill${Number(skill.level)>=99?' is-max':''}" title="${profileEscapeHtml(skill.name)}${Number(skill.level)>=99?' · Level 99':''} · ${profileFormatNumber(skill.experience??skill.xp??0)} XP"><img loading="lazy" alt="" src="https://oldschool.runescape.wiki/images/${encodeURIComponent((String(skill.name).toLowerCase()==='runecrafting'?'Runecraft':skill.name).replace(/ /g,'_'))}_icon.png" onerror="this.style.display='none'"><span class="ik-skill-name">${profileEscapeHtml(skill.name)}</span><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
+      <div data-osrs-progress-panel="skills"><div class="ik-osrs-skill-grid">${ikOrderedSkills(Array.isArray(wom.skills)?wom.skills:topSkills).map(skill=>`<div class="ik-osrs-skill${Number(skill.level)>=99?' is-max':''}" tabindex="0" aria-label="${profileEscapeHtml(skill.name)} level ${Number(skill.level)||1}, ${profileFormatNumber(skill.experience??skill.xp??0)} XP" data-skill="${profileEscapeHtml(skill.name)}" data-level="${Number(skill.level)||1}" data-xp="${Number(skill.experience??skill.xp??0)||0}" data-rank="${Number(skill.rank)||''}"><img loading="lazy" alt="" src="https://oldschool.runescape.wiki/images/${encodeURIComponent((String(skill.name).toLowerCase()==='runecrafting'?'Runecraft':skill.name).replace(/ /g,'_'))}_icon.png" onerror="this.style.display='none'"><span class="ik-skill-name">${profileEscapeHtml(skill.name)}</span><strong>${profileFormatNumber(skill.level)}</strong></div>`).join('')}</div></div>
       <div data-osrs-progress-panel="quests" hidden><p class="admin-muted">Select Quests to load RuneProfile progress.</p></div>
       <div data-osrs-progress-panel="diaries" hidden><p class="admin-muted">Select Achievement Diaries to load RuneProfile progress.</p></div>
     </div>
@@ -871,3 +871,43 @@ document.addEventListener('DOMContentLoaded',()=>{
  if(!controls||!quick||!progress||!status||!tasks)return;
  const layout=document.createElement('div');layout.className='ik-ca-workspace';const sidebar=document.createElement('aside');sidebar.className='ik-ca-sidebar';sidebar.setAttribute('aria-label','Combat Achievement filters');const heading=document.createElement('h3');heading.textContent='Find achievements';sidebar.append(heading,controls,quick);const main=document.createElement('div');main.className='ik-ca-main';main.append(progress,status,tasks);layout.append(sidebar,main);panel.append(layout);
 });
+
+
+/* Skill tooltip (2026-10-17): follows the cursor while it is inside a skill tile.
+   Replaces the native title tooltip. Shows level, XP, rank and progress to the
+   next level (or to 200M XP once a skill is 99). */
+(function(){
+  if(window.__ikSkillTip)return;window.__ikSkillTip=true;
+  const XP=[0];for(let l=1,p=0;l<99;l++){p+=Math.floor(l+300*Math.pow(2,l/7));XP.push(Math.floor(p/4));}
+  const MAX=200000000, fmt=n=>Number(n||0).toLocaleString('en-US');
+  let tip=null, cur=null, raf=0, mx=0, my=0;
+  function ensure(){if(tip)return tip;tip=document.createElement('div');tip.className='ik-skill-tip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip);return tip;}
+  function fill(el){
+    const name=el.dataset.skill||'',lvl=Number(el.dataset.level)||1,xp=Number(el.dataset.xp)||0,rank=Number(el.dataset.rank)||0;
+    let label,pct,remain;
+    if(lvl>=99){const base=XP[98];pct=Math.min(1,(xp-base)/(MAX-base));remain=Math.max(0,MAX-xp);label=xp>=MAX?'200M XP reached':`${fmt(remain)} XP to 200M`;}
+    else{const a=XP[lvl-1],b=XP[lvl];pct=Math.min(1,Math.max(0,(xp-a)/(b-a)));remain=Math.max(0,b-xp);label=`${fmt(remain)} XP to level ${lvl+1}`;}
+    const t=ensure();
+    t.classList.toggle('is-max',lvl>=99);
+    t.innerHTML=`<div class="ik-skill-tip-head"><strong></strong><span class="ik-skill-tip-level">${lvl>=99?'99 · Max':'Level '+lvl}</span></div>
+      <dl><div><dt>Experience</dt><dd>${fmt(xp)}</dd></div>${rank?`<div><dt>Rank</dt><dd>#${fmt(rank)}</dd></div>`:''}</dl>
+      <div class="ik-skill-tip-bar"><span style="width:${(pct*100).toFixed(1)}%"></span></div><small>${label}</small>`;
+    t.querySelector('strong').textContent=name;
+  }
+  function place(){raf=0;if(!tip||tip.hidden)return;const pad=14,w=tip.offsetWidth,h=tip.offsetHeight;let x=mx+pad,y=my+pad+4;
+    if(x+w>innerWidth-8)x=mx-w-pad;if(y+h>innerHeight-8)y=my-h-pad;tip.style.transform=`translate3d(${Math.max(8,x)}px,${Math.max(8,y)}px,0)`;}
+  function show(el,x,y){cur=el;fill(el);mx=x;my=y;tip.hidden=false;place();requestAnimationFrame(()=>tip.classList.add('is-on'));}
+  function hide(){cur=null;if(tip){tip.classList.remove('is-on');tip.hidden=true;}}
+  document.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch')return;
+    const el=e.target.closest&&e.target.closest('.ik-osrs-skill[data-skill]');
+    if(!el){if(cur)hide();return;}
+    if(el!==cur){show(el,e.clientX,e.clientY);return;}
+    mx=e.clientX;my=e.clientY;if(!raf)raf=requestAnimationFrame(place);
+  },{passive:true});
+  document.addEventListener('pointerleave',hide);
+  addEventListener('scroll',()=>{if(cur)hide();},{passive:true});
+  // keyboard: focus shows the tip anchored to the tile
+  document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('.ik-osrs-skill[data-skill]');if(!el)return;const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.bottom-6);});
+  document.addEventListener('focusout',e=>{if(e.target.closest&&e.target.closest('.ik-osrs-skill[data-skill]'))hide();});
+})();
