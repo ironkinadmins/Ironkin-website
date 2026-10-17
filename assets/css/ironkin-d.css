@@ -799,3 +799,31 @@ html body .ik-osrs-skill.is-max strong { color: #ffb27a !important; text-shadow:
 html body .ik-osrs-feed-row:not(#_) { grid-template-columns: 8px minmax(0,1fr) !important; align-items: start !important; padding: 12px 10px !important; border-bottom-color: var(--d-line) !important; border-radius: var(--d-r-md); }
 html body .ik-osrs-feed-row:not(#_):hover { background: var(--d-hover); }
 html body .ik-feed-marker:not(#_) { width: 8px !important; height: 8px !important; border-radius: 50% !important; margin-top: 5px; box-shadow: none !important; }
+
+
+/* skill tooltip (follows the cursor; built in profile.js) */
+.ik-skill-tip {
+  position: fixed; left: 0; top: 0; z-index: 2000; pointer-events: none;
+  width: 220px; padding: 12px 14px 11px;
+  background: rgba(17,17,20,.96); border: 1px solid var(--d-line-2); border-radius: var(--d-r-lg);
+  box-shadow: 0 16px 40px rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  color: var(--d-text); font: 500 12px/1.4 var(--d-ui);
+  opacity: 0; transition: opacity 120ms var(--d-ease);
+  will-change: transform;
+}
+.ik-skill-tip.is-on { opacity: 1; }
+.ik-skill-tip[hidden] { display: block !important; visibility: hidden; }
+.ik-skill-tip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.ik-skill-tip-head strong { font: 700 14px var(--d-head); letter-spacing: -.01em; }
+.ik-skill-tip-level { font: 700 11px var(--d-num); color: var(--d-ember); white-space: nowrap; }
+.ik-skill-tip.is-max { border-color: var(--d-ember-line); box-shadow: 0 16px 40px rgba(0,0,0,.55), 0 0 18px rgba(255,128,40,.12); }
+.ik-skill-tip dl { margin: 0 0 9px; display: grid; gap: 3px; }
+.ik-skill-tip dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.ik-skill-tip dt { color: var(--d-muted); }
+.ik-skill-tip dd { margin: 0; font-family: var(--d-num); font-weight: 600; }
+.ik-skill-tip-bar { height: 4px; border-radius: 99px; background: var(--d-s3); overflow: hidden; margin-bottom: 6px; }
+.ik-skill-tip-bar span { display: block; height: 100%; border-radius: inherit; background: var(--d-ember-fill); }
+.ik-skill-tip small { color: var(--d-muted); font-size: 11px; }
+html body .ik-osrs-skill[data-skill] { cursor: default; }
+html body .ik-osrs-skill[data-skill]:focus-visible { outline: 2px solid var(--d-ember) !important; outline-offset: 2px; }
