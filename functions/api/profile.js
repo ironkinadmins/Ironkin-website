@@ -165,10 +165,10 @@ async function getEmberBalance(env, discordId, displayName) {
 
   const queries = [];
   if (discordId) {
-    queries.push(`${base}/rest/v1/balances?select=balance,display_name,user_id&user_id=eq.${encodeURIComponent(discordId)}&limit=1`);
+    queries.push(`${base}/rest/v1/balances?select=balance,display_name,user_id::text&user_id=eq.${encodeURIComponent(discordId)}&limit=1`);
   }
   if (displayName) {
-    queries.push(`${base}/rest/v1/balances?select=balance,display_name,user_id&display_name=ilike.${encodeURIComponent(displayName)}&limit=1`);
+    queries.push(`${base}/rest/v1/balances?select=balance,display_name,user_id::text&display_name=ilike.${encodeURIComponent(displayName)}&limit=1`);
   }
 
   for (const url of queries) {

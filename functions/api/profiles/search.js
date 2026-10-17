@@ -30,7 +30,7 @@ async function getSupabaseBalances(env) {
 
   try {
     const response = await fetch(
-      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/balances?select=display_name,balance,user_id&order=display_name.asc&limit=1000`,
+      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/balances?select=display_name,balance,user_id::text&order=display_name.asc&limit=1000`,
       {
         headers: {
           apikey: serviceKey,

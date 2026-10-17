@@ -584,6 +584,136 @@ html body :is(.ik-footer-inner, .ik-footer-bottom) {
 html body .bingo-home-banner { max-width: none !important; width: 100% !important; }
 
 /* ---------------------------------------------------------------------
+   Polish pass 2 (2026-10-17)
+   --------------------------------------------------------------------- */
+/* list rows: hover gets room to breathe instead of text touching the edge */
+html body :is(.activity-feed-row, .upcoming-event-row):not(#_) {
+  padding-inline: 12px !important;
+  border-radius: var(--d-r-md) !important;
+  transition: background-color var(--d-fast) var(--d-ease), transform var(--d-med) var(--d-ease) !important;
+}
+html body :is(.activity-feed-row, .upcoming-event-row):not(#_):hover { background: var(--d-hover) !important; transform: none !important; }
+html body .activity-feed-row:first-child:not(#_) { background: transparent !important; }
+html body .activity-feed-row:first-child:not(#_):hover { background: var(--d-hover) !important; }
+
+/* inputs: consistent inner padding (palette included) */
+html body :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), textarea) { padding-inline: 12px; }
+html body .global-search-input-row input { padding: 0 14px !important; height: 44px !important; min-height: 44px !important; }
+html body .global-search-input-row > span { display: inline-flex; color: var(--d-ember) !important; }
+html body .global-search-dialog { background: var(--d-s1) !important; border: 1px solid var(--d-line-2) !important; border-radius: var(--d-r-lg) !important; }
+html body .global-search-input-row kbd { background: var(--d-s3) !important; border: 1px solid var(--d-line-2) !important; color: var(--d-muted) !important; font-family: var(--d-num) !important; border-radius: var(--d-r-sm) !important; }
+html body textarea { padding-block: 10px; }
+
+/* selects: Heroicons chevron instead of the native arrow */
+html body select:not([multiple]):not([size]):not(#_):not(#__) {
+  -webkit-appearance: none !important; appearance: none !important;
+  padding-left: 12px !important; padding-right: 36px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238d8a84'%3E%3Cpath fill-rule='evenodd' d='M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 16px 16px !important;
+  cursor: pointer;
+}
+html body select:not([multiple]):not([size]):not(#_):not(#__):hover { border-color: #3d3c41 !important; }
+html body select option { background: var(--d-s1); color: var(--d-text); }
+
+/* Hall of Flame recent records: room for the hover lift inside the scroller */
+html body .hof-recent-strip { padding-top: 6px !important; margin-top: -6px !important; padding-bottom: 8px !important; }
+html body:has(#hallOfFlameGrid) .hof-recent-item { background: var(--d-s1) !important; border-color: var(--d-line-2) !important; color: var(--d-text) !important; border-radius: var(--d-r-md) !important; }
+html body:has(#hallOfFlameGrid) .hof-recent-item:hover { border-color: #3d3c41 !important; }
+html body:has(#hallOfFlameGrid) .hof-recent-item span { color: var(--d-muted) !important; }
+html body:has(#hallOfFlameGrid) .hof-recent-records .section-heading-row h2 { color: var(--d-text) !important; }
+
+/* Hall of Flame hero: tabs sat on the bottom edge */
+html body:has(#hallOfFlameGrid) .hof-hero { padding-bottom: 28px !important; }
+html body:has(#hallOfFlameGrid) .hof-hero .hof-utility-bar { margin-top: 22px !important; }
+
+/* Ember leaderboard: separated rows */
+html body #emberLeaderboardRows { display: grid; gap: 8px; }
+html body .ember-leader-row:not(.compact) {
+  padding: 14px 16px !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-md) !important;
+  background: var(--d-s1) !important;
+}
+html body a.ember-leader-row:not(.compact):hover { border-color: var(--d-line-2) !important; background: var(--d-hover) !important; transform: translateX(3px); }
+html body .ember-leader-row span { color: var(--d-ember) !important; font-family: var(--d-num) !important; font-weight: 700 !important; }
+html body .ember-search { margin: 18px 0 12px !important; width: 100%; }
+
+/* homepage hero: art reads clearly on the right, fading to dark and desaturated on the left */
+html body.home-ledger-v3 .ik-visual-banner > img { filter: saturate(1.25) contrast(1.05); }
+html body.home-ledger-v3 .ik-visual-banner::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  -webkit-backdrop-filter: saturate(.15) brightness(.85); backdrop-filter: saturate(.15) brightness(.85);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 22%, rgba(0,0,0,.6) 45%, transparent 72%);
+          mask-image: linear-gradient(90deg, #000 0%, #000 22%, rgba(0,0,0,.6) 45%, transparent 72%);
+}
+html body.home-ledger-v3 .ik-visual-banner::after {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(10,10,11,.96) 0%, rgba(10,10,11,.88) 24%, rgba(10,10,11,.55) 46%, rgba(10,10,11,.18) 70%, rgba(10,10,11,0) 100%),
+    linear-gradient(0deg, #0a0a0b 0%, rgba(10,10,11,0) 32%) !important;
+}
+html body.home-ledger-v3 .ik-visual-banner-content { position: relative; z-index: 2; }
+
+/* Ironkin Games time trials: equal-height cards, action pinned to the bottom */
+html body .tt-grid { align-items: stretch !important; }
+html body :is(.tt-card, .tt-raid) {
+  display: flex !important; flex-direction: column !important;
+  background: var(--d-s1) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important;
+}
+html body .tt-card.tt-counting { border-color: var(--d-ember-line) !important; }
+html body :is(.tt-card, .tt-raid) > :is(.games-btn, .tt-form-actions):last-child { margin-top: auto !important; }
+html body :is(.tt-card, .tt-raid) > .games-btn:last-of-type { margin-top: auto !important; }
+
+/* ---------------------------------------------------------------------
+   Spacing system (audit 2026-10-17)
+   One rhythm: 24px between page sections, 16px heading->content,
+   24px panel padding (20px on phones), 12px between stacked rows.
+   --------------------------------------------------------------------- */
+:root { --d-sp-section: 24px; --d-sp-head: 16px; --d-sp-panel: 24px; --d-sp-row: 12px; }
+@media (max-width: 640px) { :root { --d-sp-section: 18px; --d-sp-panel: 18px; } }
+
+/* page sections: same gap everywhere (was 12-56px depending on page) */
+html body main > :not(script):not(style):not([hidden]) { margin-top: 0 !important; margin-bottom: 0 !important; }
+html body main > :not(script):not(style):not([hidden]) ~ :not(script):not(style):not([hidden]) { margin-top: var(--d-sp-section) !important; }
+html body main { padding-bottom: 56px !important; }
+
+/* an empty wrapper (e.g. the Bingo banner slot when no event runs) must not add a gap */
+html body .home-context-stack:not(:has(> :not([style*="display:none"]):not([style*="display: none"]):not([hidden]))) { display: none !important; }
+
+/* section headings */
+html body :is(.section-heading-row, .home-section-heading, .games-card-heading, .profile-section-header, .admin-section-header, .records-feature-head, .home-panel-heading, .card-head) {
+  margin-bottom: var(--d-sp-head) !important;
+}
+
+/* big panels share one inner padding */
+html body :is(.card, .admin-card, .games-card, .profile-panel, .event-panel, .home-panel, .home-feature-panel, .home-news-section,
+  .calendar-card, .records-feature, .rank-live-card, .rank-members-panel, .handbook-card, .ik-command-page, .hof-section-wide,
+  .games-standings-card, .games-season-card, .event-detail-card, .clan-goal-dashboard-card, .botw-dashboard-card):not(#_) {
+  padding: var(--d-sp-panel) !important;
+}
+html body :is(.home-panel, .home-feature-panel):not(#_) { padding: 22px !important; }
+
+/* Hall of Flame hero: tabs had 0px below them */
+html body section.page-title.hof-hero:not(#_):not(#__) { padding-bottom: 24px !important; }
+html body section.page-title.hof-hero:not(#_):not(#__) .hof-utility-bar { margin-top: 22px !important; }
+
+/* stacked list rows get a little air instead of hairline-touching */
+html body :is(#recentActivity, #homeUpcomingEvents, .home-activity-list, .home-upcoming-list, .rank-recent-list) { display: grid; gap: 2px; }
+
+/* archive: action buttons were mismatched (one rendered as bare text) */
+html body .archive-card-actions:not(#_) { gap: 10px !important; padding-top: 14px !important; }
+html body .archive-card-actions :is(.btn.secondary:not(.danger), .text-link):not(#_) {
+  display: inline-flex !important; align-items: center !important; gap: 6px !important; border-radius: var(--d-r-btn) !important; text-decoration: none !important; font-weight: 600 !important;
+}
+html body .archive-card-actions :is(.btn.secondary:not(.danger), .text-link):not(#_) { background: var(--d-s3) !important; border: 1px solid var(--d-line-2) !important; color: var(--d-text) !important; height: var(--d-ctl-sm) !important; min-height: var(--d-ctl-sm) !important; padding: 0 12px !important; font-size: 13px !important; }
+html body .archive-card-actions .btn.danger:not(#_) { height: var(--d-ctl-sm) !important; min-height: var(--d-ctl-sm) !important; padding: 0 12px !important; font-size: 13px !important; }
+
+/* buttons inside panels never hug the panel edge */
+html body :is(.card, .games-card, .home-panel, .home-feature-panel, .profile-panel, .event-panel) > :is(.btn, .games-btn):last-child { margin-top: 16px; }
+
+/* ---------------------------------------------------------------------
    Motion — entrance once, then quiet. Script adds .ik-rv / .ik-in.
    --------------------------------------------------------------------- */
 @keyframes ik-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -625,3 +755,6 @@ html body :is(.live-dot, .ik-live-dot) { animation: ik-pulse 2s ease-in-out infi
   html body *, html body *::before, html body *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .ik-rv { opacity: 1 !important; transform: none !important; }
 }
+
+/* card-header actions ("Open This Week →") stay on one line */
+html body :is(.games-text-action, .home-panel-heading > a, .home-section-heading > a, .section-heading-row > a) { white-space: nowrap !important; flex-shrink: 0; }
