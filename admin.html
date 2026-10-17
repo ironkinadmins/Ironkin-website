@@ -7,42 +7,42 @@
 <title>Ironkin Admin Dashboard</title>
 <link href="/assets/ironkin-emblem-favicon.png" rel="icon" type="image/png"/>
 <link href="/assets/ironkin-emblem.png" rel="apple-touch-icon"/>
-<link href="/assets/css/styles.css?v=20260902-emoji-picker-clean" rel="stylesheet">
-<link href="/assets/css/premium-v5.css?v=20260913-hub-ux-v1" rel="stylesheet"/>
+<link href="/assets/css/styles.css?v=20261017-i1" rel="stylesheet">
+<link href="/assets/css/premium-v5.css?v=20261017-d1" rel="stylesheet"/>
 </link><style>
 /* Ironkin unified admin: the only page-specific layout layer */
 .admin-page{max-width:1220px;margin:0 auto;padding:24px 24px 90px}
 .admin-hero{margin-bottom:18px}.admin-hero p{max-width:720px}
-.ik-admin-nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px;margin:0 0 22px;background:#15110e;border:1px solid #463122;border-radius:16px}
+.ik-admin-nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px;margin:0 0 22px;background:#121111;border:1px solid #373431;border-radius:16px}
 .ik-top{appearance:none;cursor:pointer;text-decoration:none;color:#cdb9a4;background:transparent;border:1px solid transparent;border-radius:10px;padding:12px 16px;font:700 13px/1.2 inherit;white-space:nowrap}
-.ik-top:hover,.ik-top:focus-visible{background:#34261b;color:#ffe5bd}.ik-top.active{background:#56361f;border-color:#b67b3d;color:#ffe5bd}
+.ik-top:hover,.ik-top:focus-visible{background:#292726;color:#ffd6bd}.ik-top.active{background:#3d3a38;border-color:#b67b3d;color:#ffd6bd}
 .ik-legacy-hooks{display:none!important}
 .admin-tab-panel:not(.active),.event-subtab-panel:not(.active){display:none!important}
 .ik-event-shell{display:block}.ik-event-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin:0 0 18px}.ik-event-head h2{margin:3px 0}.ik-event-head p{margin:3px 0;color:#b9a596}
 .ik-event-picker{min-width:min(380px,100%)}.ik-event-picker .admin-field{margin:0}.ik-event-picker select{width:100%}
-.ik-stage-nav{display:flex;gap:6px;overflow-x:auto;padding:7px;background:#17120f;border:1px solid #473323;border-radius:14px;margin:0 0 16px}
+.ik-stage-nav{display:flex;gap:6px;overflow-x:auto;padding:7px;background:#141312;border:1px solid #383532;border-radius:14px;margin:0 0 16px}
 .ik-stage-nav button{cursor:pointer;flex:1 0 auto;min-width:112px;border:1px solid transparent;border-radius:9px;background:transparent;color:#bca796;padding:13px 10px;font-weight:750}
-.ik-stage-nav button span{display:block;font-size:10px;color:#d9974f;letter-spacing:1px;margin-bottom:5px}.ik-stage-nav button.active{background:#54341f;color:#ffebd0;border-color:#b87c3d}
+.ik-stage-nav button span{display:block;font-size:10px;color:#d9974f;letter-spacing:1px;margin-bottom:5px}.ik-stage-nav button.active{background:#3c3937;color:#ffe1d0;border-color:#b87c3d}
 .ik-stage[hidden],[data-ik-item-panel][hidden]{display:none!important}
 .ik-stage>.admin-card{margin-top:0}.ik-stage .admin-card{max-width:none}
 .ik-section-intro{margin:4px 0 18px}.ik-section-intro h3{font-size:22px;margin:0 0 6px;color:#f4e3d0}.ik-section-intro p{color:#b9a596;margin:0}
-.ik-subnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 15px}.ik-subnav button{border:1px solid #5a402c;background:#241b15;color:#d4b99f;border-radius:9px;padding:10px 16px;cursor:pointer;font-weight:700}.ik-subnav button.active{background:#704421;border-color:#d39350;color:#fff0da}
-.ik-reward-details{border:1px solid #60412a;border-radius:12px;margin:10px 0;background:#231a14}.ik-reward-details summary{cursor:pointer;padding:14px 16px;font-weight:800;color:#f4c18a}.ik-reward-details>.admin-reward-panel{margin:0;border:0;background:transparent}.ik-reward-details .admin-section-header h3{display:none}
+.ik-subnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 15px}.ik-subnav button{border:1px solid #464340;background:#1e1c1b;color:#d4b99f;border-radius:9px;padding:10px 16px;cursor:pointer;font-weight:700}.ik-subnav button.active{background:#4c4845;border-color:#d39350;color:#fff0da}
+.ik-reward-details{border:1px solid #484442;border-radius:12px;margin:10px 0;background:#1d1b1a}.ik-reward-details summary{cursor:pointer;padding:14px 16px;font-weight:800;color:#f4c18a}.ik-reward-details>.admin-reward-panel{margin:0;border:0;background:transparent}.ik-reward-details .admin-section-header h3{display:none}
 #ikSaveRewards{margin-top:16px}.ik-archive-actions{margin-top:22px}.ik-archive-actions button{max-width:100%}
 #adminTab-maintenance>.admin-card{margin-top:18px}
 @media(max-width:760px){.admin-page{padding:15px 12px 70px}.ik-admin-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ik-top{white-space:normal}.ik-event-head{display:block}.ik-event-picker{margin-top:16px}.ik-stage-nav button{min-width:100px}}
 
 /* Member Management: one accessible workspace at a time. */
 #adminTab-profiles{min-height:320px}
-#adminTab-profiles .ik-member-workspace{max-width:none;padding:24px;background:linear-gradient(150deg,#201713,#15110e);border:1px solid #60412c;border-radius:16px}
+#adminTab-profiles .ik-member-workspace{max-width:none;padding:24px;background:linear-gradient(150deg,#1b1918,#121111);border:1px solid #4a4542;border-radius:16px}
 #adminTab-profiles .ik-member-nav{margin:0 0 12px;gap:10px}
 #adminTab-profiles .ik-member-nav button{flex:1 1 170px;min-height:46px;text-align:center}
 #adminTab-profiles .ik-member-helper{margin:0 0 20px;color:#c8ae97;font-size:13px;line-height:1.5}
 #adminTab-profiles [data-ik-member-panel][hidden]{display:none!important}
-#adminTab-profiles .ik-member-panel{padding:22px;background:#241a14;border:1px solid #563a27;border-radius:14px}
+#adminTab-profiles .ik-member-panel{padding:22px;background:#1d1c1b;border:1px solid #423e3b;border-radius:14px}
 #adminTab-profiles .discord-sync-card{margin:0}
 #adminTab-profiles .discord-rank-emblem-panel{margin:0}
-#adminTab-profiles .ik-member-panel-heading h3{margin:0 0 7px;color:#f9e3c8;font-size:22px}
+#adminTab-profiles .ik-member-panel-heading h3{margin:0 0 7px;color:#f9dac8;font-size:22px}
 #adminTab-profiles .ik-member-panel-heading p{margin:0 0 22px;color:#c4ab95;font-size:13px}
 #adminTab-profiles .admin-profile-results{margin:14px 0}
 #adminTab-profiles .discord-sync-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -50,14 +50,14 @@
 
 /* Phase 5: on-demand diagnostics, no extra admin application */
 .ik-health-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
-.ik-health-check{border:1px solid #60402d;background:linear-gradient(135deg,#281c16,#191411);border-radius:14px;padding:20px;min-width:0}
+.ik-health-check{border:1px solid #4a4643;background:linear-gradient(135deg,#211e1d,#161514);border-radius:14px;padding:20px;min-width:0}
 .ik-health-check-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .ik-health-check h3{margin:0;font-size:17px;color:#f7e3cd}
 .ik-health-check p{font-size:13px;line-height:1.5;color:#c5ae9a}
-.ik-health-status{flex-shrink:0;border:1px solid #72533c;border-radius:20px;padding:5px 9px;font-size:11px;color:#e4c09a}
+.ik-health-status{flex-shrink:0;border:1px solid #494542;border-radius:20px;padding:5px 9px;font-size:11px;color:#e4c09a}
 .ik-health-status[data-state="ok"]{border-color:#507b5e;color:#a3e6b4}
 .ik-health-status[data-state="error"]{border-color:#9e5b51;color:#f5b1a4}
-.ik-health-status[data-state="checking"]{border-color:#b58b4e;color:#f6d49a}
+.ik-health-status[data-state="checking"]{border-color:#b5754e;color:#f6bd9a}
 .ik-health-result{overflow-wrap:anywhere;min-height:18px;margin-bottom:0}
 .ik-health-note{font-size:12px;color:#bda68f;margin-top:16px}
 @media(max-width:700px){.ik-health-grid{grid-template-columns:1fr}.ik-health-check-top{flex-wrap:wrap}}
@@ -65,8 +65,8 @@
 /* Final Admin polish: accessible states, clearer focus, and compact responsive navigation. */
 .ik-admin-nav{position:relative;align-items:center;row-gap:7px}
 .ik-top{min-height:42px;display:inline-flex;align-items:center;justify-content:center;line-height:1.35}
-.ik-top:focus-visible,.ik-stage-nav button:focus-visible,.ik-subnav button:focus-visible,.ik-health-check button:focus-visible{outline:2px solid #ffcc88;outline-offset:3px}
-.ik-stage-nav{scrollbar-width:thin;scrollbar-color:#8a5a35 #17120f}
+.ik-top:focus-visible,.ik-stage-nav button:focus-visible,.ik-subnav button:focus-visible,.ik-health-check button:focus-visible{outline:2px solid #ffb488;outline-offset:3px}
+.ik-stage-nav{scrollbar-width:thin;scrollbar-color:#504c49 #141312}
 .ik-stage-nav button{flex-shrink:0;min-height:56px}
 .ik-event-head{align-items:center}
 .ik-stage .admin-card,.ik-member-panel,.ik-health-check{min-width:0}
@@ -75,96 +75,96 @@
 @media(max-width:950px){.ik-admin-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.ik-top{white-space:normal;text-align:center;padding:11px 9px}}
 @media(max-width:600px){.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px}.ik-top{font-size:12px;min-height:44px}.ik-stage-nav{margin-left:-4px;margin-right:-4px}.ik-stage-nav button{min-width:108px}.ik-event-picker{min-width:0;width:100%}.ik-health-check{padding:15px}}
 @media(prefers-reduced-motion:reduce){.ik-top,.ik-stage-nav button,.ik-subnav button{transition:none!important}}
-.ik-setup-event-picker{margin-bottom:14px}.ik-setup-event-picker select{width:100%;max-width:520px}.ik-auto-status{border:1px solid #60452c;background:#251c16;border-radius:12px;padding:14px 16px;color:#f1d0a7;margin-bottom:14px}.ik-auto-status strong{display:block;margin-bottom:5px}.ik-auto-status button{margin-top:10px;border:1px solid #a9763f;background:#49301d;color:#ffdcad;padding:8px 12px;border-radius:8px;cursor:pointer}.ik-event-head .ik-event-picker{display:none}
+.ik-setup-event-picker{margin-bottom:14px}.ik-setup-event-picker select{width:100%;max-width:520px}.ik-auto-status{border:1px solid #4a4642;background:#1f1d1c;border-radius:12px;padding:14px 16px;color:#f1c2a7;margin-bottom:14px}.ik-auto-status strong{display:block;margin-bottom:5px}.ik-auto-status button{margin-top:10px;border:1px solid #a9763f;background:#363330;color:#ffcbad;padding:8px 12px;border-radius:8px;cursor:pointer}.ik-event-head .ik-event-picker{display:none}
 /* Guided event setup and compact item reuse */
-.ik-status-details{margin:8px 0 14px;border:1px solid #4d3a2a;border-radius:10px;padding:11px 14px}
+.ik-status-details{margin:8px 0 14px;border:1px solid #3e3b39;border-radius:10px;padding:11px 14px}
 .ik-status-details summary,.ik-manual-items summary{cursor:pointer;font-weight:700;color:#edba82}
 .ik-muted-inline{font-size:12px;color:#bba58e;font-weight:400}
 .ik-status-details .ik-auto-status{margin-top:12px}
-.ik-preset-box{padding:17px;border:1px solid #715037;border-radius:12px;background:linear-gradient(135deg,#2c211a,#1b1612);margin-bottom:16px}
+.ik-preset-box{padding:17px;border:1px solid #474340;border-radius:12px;background:linear-gradient(135deg,#252321,#181615);margin-bottom:16px}
 .ik-preset-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}
 .ik-preset-title span{font-size:12px;color:#c3aa93}
 .ik-preset-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
 .ik-preset-select{flex:1;min-width:190px;display:grid;gap:6px;color:#e8d1b8;font-size:13px}
 .ik-preset-select select{width:100%}
-.ik-preset-preview{margin-top:13px;padding:12px;background:#19140f;border:1px solid #51402f;border-radius:9px}
+.ik-preset-preview{margin-top:13px;padding:12px;background:#151413;border:1px solid #43403d;border-radius:9px}
 .ik-preset-preview ul{margin:9px 0 14px;padding-left:20px;max-height:170px;overflow:auto}
 .ik-preset-preview li{margin:4px 0;color:#dbc4ae;font-size:13px}
 .ik-preset-message{margin:9px 0 0;font-size:12px}
-.ik-manual-items{border:1px solid #493628;border-radius:10px;margin:0 0 18px}
+.ik-manual-items{border:1px solid #3b3836;border-radius:10px;margin:0 0 18px}
 .ik-manual-items summary{padding:13px 15px}
 .ik-manual-items-body{padding:12px 15px 16px}
 @media(max-width:620px){.ik-preset-controls{display:grid;grid-template-columns:1fr}.ik-preset-select{min-width:0}}
 
 /* 2026 Control Center: fewer navigation choices, actionable overview */
 .ik-command-page[hidden]{display:none!important}
-.ik-command-page{margin:0 0 26px;padding:24px;background:linear-gradient(145deg,#211912,#14110f);border:1px solid #62452e;border-radius:17px}
+.ik-command-page{margin:0 0 26px;padding:24px;background:linear-gradient(145deg,#1b1918,#121111);border:1px solid #4c4844;border-radius:17px}
 .ik-command-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:22px}
 .ik-command-heading h2{margin:2px 0 6px;font-size:25px;color:#f7dfc4}
 .ik-command-heading p{color:#c7b29d;margin:0}
 .ik-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
-.ik-summary-grid>div{background:#2b211a;border:1px solid #57402c;border-radius:12px;padding:17px;display:grid;gap:5px}
+.ik-summary-grid>div{background:#242221;border:1px solid #45413e;border-radius:12px;padding:17px;display:grid;gap:5px}
 .ik-summary-grid strong{font-size:29px;color:#f2ae6a}.ik-summary-grid span{color:#d1bca7;font-size:12px}
 .ik-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.ik-action-grid button,.ik-action-grid a{display:grid;gap:8px;text-align:left;background:#261d17;border:1px solid #60432e;border-radius:12px;padding:19px;color:#f4dbc0;text-decoration:none;cursor:pointer;font:inherit}
-.ik-action-grid button:hover,.ik-action-grid a:hover{background:#38271c;border-color:#e99d51}
+.ik-action-grid button,.ik-action-grid a{display:grid;gap:8px;text-align:left;background:#201e1d;border:1px solid #4b4643;border-radius:12px;padding:19px;color:#f4dbc0;text-decoration:none;cursor:pointer;font:inherit}
+.ik-action-grid button:hover,.ik-action-grid a:hover{background:#2c2a28;border-color:#e99d51}
 .ik-action-grid strong{font-size:15px}.ik-action-grid small{font-size:12px;color:#bfa995;line-height:1.5}
 .ik-command-note{margin:17px 0 0;color:#a99582;font-size:12px}
 .ik-admin-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 .ik-admin-nav .ik-top{min-width:0;white-space:normal}
-.ik-guidance{margin:0 0 14px;border:1px solid #513b29;border-radius:10px;padding:12px 15px;color:#d6bda4}
+.ik-guidance{margin:0 0 14px;border:1px solid #403d3a;border-radius:10px;padding:12px 15px;color:#d6bda4}
 .ik-guidance summary{cursor:pointer;font-weight:700;color:#e8b17d}
 .ik-guidance p{margin:10px 0 0;line-height:1.6;font-size:13px}
 @media(max-width:900px){.ik-admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.ik-command-page{padding:15px}.ik-command-heading{display:grid}.ik-summary-grid{gap:6px}.ik-summary-grid>div{padding:10px}.ik-summary-grid strong{font-size:23px}.ik-action-grid{grid-template-columns:1fr}.ik-admin-nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-.ik-games-review{border:1px solid #61462d;background:#141211;border-radius:13px;padding:17px;margin:18px 0}
+.ik-games-review{border:1px solid #4b4743;background:#141211;border-radius:13px;padding:17px;margin:18px 0}
 .ik-games-review-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:13px}
 .ik-games-review-head h3{margin:0;color:#f4d6b4;font-size:17px}
 .ik-games-review-head p{margin:4px 0 0;color:#bca58d;font-size:12px}
 .ik-games-review-head button{white-space:nowrap}
-.ik-games-review-row{padding:13px 0;border-top:1px solid #423428;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.ik-games-review-row{padding:13px 0;border-top:1px solid #383532;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
 .ik-games-review-row strong{display:block;color:#f5e3cf;font-size:14px}
 .ik-games-review-row small{display:block;color:#bda48d;margin-top:4px}
 .ik-games-review-row a{color:#e9a65d;display:inline-block;margin-top:6px}
 .ik-games-review-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap;justify-content:end}
 .ik-games-review-actions label{display:grid;gap:4px;font-size:11px;color:#cbb49c}
-.ik-games-review-actions input{width:65px;min-width:0;background:#171411;color:#f7e3cc;border:1px solid #644831;border-radius:7px;padding:8px}
-.ik-games-review-actions button{padding:9px 13px;border:1px solid #8c603a;border-radius:8px;background:#d58c3b;color:#1c130b;font-weight:700;cursor:pointer}
-.ik-games-review-actions button[data-decision="rejected"]{background:#272321;color:#e8d5c0;border-color:#54483e}
+.ik-games-review-actions input{width:65px;min-width:0;background:#151413;color:#f7e3cc;border:1px solid #4e4a47;border-radius:7px;padding:8px}
+.ik-games-review-actions button{padding:9px 13px;border:1px solid #534f4b;border-radius:8px;background:#d58c3b;color:#141313;font-weight:700;cursor:pointer}
+.ik-games-review-actions button[data-decision="rejected"]{background:#272321;color:#e8d5c0;border-color:#4d4945}
 .ik-games-review-actions button:disabled{opacity:.5;cursor:wait}
 @media(max-width:750px){.ik-games-review-row{grid-template-columns:1fr}.ik-games-review-actions{justify-content:start}}
 
-.ik-template-reuse{border:1px solid #4e3b2a;border-radius:10px;margin:12px 0;padding:12px 15px}
+.ik-template-reuse{border:1px solid #3f3c39;border-radius:10px;margin:12px 0;padding:12px 15px}
 .ik-template-reuse summary{cursor:pointer;color:#e9b47b;font-weight:650}
 .ik-template-body{padding-top:14px;display:grid;gap:9px}
 .ik-template-body select{max-width:580px}
-.ik-activity-box{border:1px solid #4e3b2a;border-radius:10px;margin-top:18px;padding:14px}
+.ik-activity-box{border:1px solid #3f3c39;border-radius:10px;margin-top:18px;padding:14px}
 .ik-activity-box summary{cursor:pointer;font-weight:650;color:#e9b47b}
 .ik-activity-content{padding-top:12px}
 #ikActivityList{list-style:none;margin:12px 0 0;padding:0;max-height:300px;overflow:auto}
-#ikActivityList li{padding:9px 0;border-bottom:1px solid #423024;color:#e5d3bf;font-size:13px}
+#ikActivityList li{padding:9px 0;border-bottom:1px solid #363230;color:#e5d3bf;font-size:13px}
 .admin-advanced-settings{margin-top:12px}.admin-advanced-settings-body{display:grid;gap:12px}.ik-status-details{padding:9px 12px;opacity:.8}
-.ik-publish-queue{margin-top:16px;border:1px solid #68472c;border-radius:12px;padding:16px;background:#171310}
+.ik-publish-queue{margin-top:16px;border:1px solid #4e4a46;border-radius:12px;padding:16px;background:#141313}
 .ik-publish-queue[hidden]{display:none}
 .ik-publish-queue h3{margin:0 0 12px;color:#f4d8b8;font-size:16px}
-.ik-publish-queue button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:13px;background:#2a2018;border:1px solid #58412e;border-radius:9px;color:#f3d5b3;margin-top:7px;cursor:pointer}
-.ik-publish-queue button:hover{border-color:#ed9b4a;background:#372719}
+.ik-publish-queue button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:13px;background:#23211f;border:1px solid #464340;border-radius:9px;color:#f3d5b3;margin-top:7px;cursor:pointer}
+.ik-publish-queue button:hover{border-color:#ed9b4a;background:#2a2826}
 .ik-publish-queue button small{color:#c6ad92}
 .ik-dashboard-actions strong span{color:#f5b575}
-.ik-queue-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid #4c3628}
+.ik-queue-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid #3d3937}
 .ik-queue-entry div{display:grid;gap:4px}.ik-queue-entry small{color:#bfa88f}
 .ik-queue-entry button{width:auto;margin:0;white-space:nowrap}
 .ik-status-inline{padding:8px 0;border:0;background:transparent!important;opacity:.8;font-size:12px}
 .ik-template-reuse{margin:14px 0 12px}
-.ik-approval-summary{padding:12px 15px;border:1px solid #694a2f;border-radius:9px;background:#241a14;color:#f2c18e;margin:12px 0}
+.ik-approval-summary{padding:12px 15px;border:1px solid #504c48;border-radius:9px;background:#1d1c1b;color:#f2c18e;margin:12px 0}
 .ik-approval-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 18px}
-.ik-approval-source{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #58402d;border-radius:10px;background:#241b15}
+.ik-approval-source{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #46423f;border-radius:10px;background:#1e1c1b}
 .ik-approval-source>div{display:grid;gap:5px}.ik-approval-source strong{color:#f1d8bd}.ik-approval-source small{color:#c8b09a}
 .ik-approval-source .btn{white-space:nowrap}
 @media(max-width:700px){.ik-approval-sources{grid-template-columns:1fr}}
 .ik-approval-groups{display:grid;gap:15px;margin-top:15px}
-.ik-approval-group{border:1px solid #5c422d;border-radius:12px;background:#18130f;padding:16px}
+.ik-approval-group{border:1px solid #484441;border-radius:12px;background:#141313;padding:16px}
 .ik-approval-group-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 .ik-approval-group-heading h3{margin:0;color:#f2d6b7;font-size:17px}
 .ik-approval-group-heading span{font-size:12px;color:#e6a15c}
@@ -173,9 +173,9 @@
 .ik-approval-group .ik-games-review h4{margin:0;color:#efcfad;font-size:14px}
 
 /* Simplified approvals: one surface, three clear sections, no nested cards. */
-#ik-approvals .ik-approval-summary{background:transparent;border:0;border-bottom:1px solid #493627;border-radius:0;padding:8px 0 15px;margin:0;color:#e8b077;font-weight:600}
+#ik-approvals .ik-approval-summary{background:transparent;border:0;border-bottom:1px solid #3b3835;border-radius:0;padding:8px 0 15px;margin:0;color:#e8b077;font-weight:600}
 #ik-approvals .ik-approval-groups{display:block;margin-top:0}
-#ik-approvals .ik-approval-group{background:transparent;border:0;border-bottom:1px solid #493627;border-radius:0;padding:19px 0 17px;margin:0}
+#ik-approvals .ik-approval-group{background:transparent;border:0;border-bottom:1px solid #3b3835;border-radius:0;padding:19px 0 17px;margin:0}
 #ik-approvals .ik-approval-group:last-child{border-bottom:0;padding-bottom:0}
 #ik-approvals .ik-approval-group-heading{margin:0 0 8px}
 #ik-approvals .ik-approval-group-heading h3{font-size:15px}
@@ -188,13 +188,14 @@
 #ik-approvals .ik-games-review-list,#ik-approvals #ikGamesReviewList{background:transparent}
 #ik-approvals .ik-approval-group-heading span{font-size:12px}
 
-.ik-inline-review-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid #493524}
+.ik-inline-review-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid #393634}
 .ik-inline-review-info{display:grid;gap:4px;min-width:0}
 .ik-inline-review-info strong{color:#e8d4bf}.ik-inline-review-info small{color:#bea68d}
 .ik-inline-review-info a{color:#eda55f;font-size:12px}
 .ik-inline-review-actions{display:flex;gap:8px}
 @media(max-width:600px){.ik-inline-review-row{align-items:flex-start;flex-direction:column}}
 </style>  <link rel="stylesheet" href="/assets/css/ironkin-sitewide-layout.css?v=20261016-wide-v1">
+  <link rel="stylesheet" href="/assets/css/ironkin-d.css?v=20261017-w3" />
 </head>
 <body>
 <div id="siteNav"></div>
@@ -1208,7 +1209,7 @@
    setTimeout(adapt,350);
  });
 })();
-</script><script src="/assets/js/script.js?v=20260913-hub-ux-v1"></script>
+</script><script src="/assets/js/script.js?v=20261017-d1"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
 <script src="/assets/js/admin.js?v=20261015-member-handler-restore"></script>
@@ -1338,5 +1339,7 @@
    finally{button.disabled=false;}
  });
 })();
-</script></body>
+</script><script src="/assets/js/ironkin-motion.js?v=20261017-d1" defer></script>
+<script src="/assets/js/ironkin-icons.js?v=20261017-i1" defer></script>
+</body>
 </html>

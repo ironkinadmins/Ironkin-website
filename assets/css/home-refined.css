@@ -1,6 +1,6 @@
 /* Ironkin home refinement — intentionally scoped to the homepage. */
 body.home-ledger-v3 .home-premium{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 48px}
-body.home-ledger-v3 .home-refined-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(330px,.65fr);gap:42px;align-items:end;min-height:390px;padding:56px 52px;margin:0 0 14px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:linear-gradient(110deg,rgba(18,13,10,.91),rgba(8,7,6,.78)),url('/assets/ironkin-emblem.png') right 9% center/330px auto no-repeat;box-shadow:0 20px 55px rgba(0,0,0,.2);overflow:hidden}
+body.home-ledger-v3 .home-refined-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(330px,.65fr);gap:42px;align-items:end;min-height:390px;padding:56px 52px;margin:0 0 14px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:linear-gradient(110deg,rgba(15,14,13,.91),rgba(7,7,7,.78)),url('/assets/ironkin-emblem.png') right 9% center/330px auto no-repeat;box-shadow:0 20px 55px rgba(0,0,0,.2);overflow:hidden}
 body.home-ledger-v3 .home-refined-hero-copy{max-width:650px}
 body.home-ledger-v3 .home-refined-hero .home-kicker{margin:0 0 16px;font-size:.66rem;letter-spacing:.18em;color:#ff8a32}
 body.home-ledger-v3 .home-refined-hero h1{margin:0;color:#fff8f2;font-size:clamp(3.25rem,6vw,5.3rem);line-height:.9;letter-spacing:-.065em}
@@ -12,13 +12,13 @@ body.home-ledger-v3 .home-text-link:hover{color:#ff8a32}
 body.home-ledger-v3 .home-refined-status{align-self:end}
 body.home-ledger-v3 .home-refined-status>.eyebrow{margin:0 0 10px;color:rgba(255,255,255,.38)}
 body.home-ledger-v3 .home-status-rail{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;height:auto!important}
-body.home-ledger-v3 .home-status-rail article{display:block!important;min-height:78px!important;padding:15px 16px!important;border:1px solid rgba(255,255,255,.075)!important;border-radius:11px!important;background:rgba(19,14,11,.82)!important;box-shadow:none!important}
+body.home-ledger-v3 .home-status-rail article{display:block!important;min-height:78px!important;padding:15px 16px!important;border:1px solid rgba(255,255,255,.075)!important;border-radius:11px!important;background:rgba(16,15,14,.82)!important;box-shadow:none!important}
 body.home-ledger-v3 .home-status-rail article>div{display:flex!important;flex-direction:column!important;gap:8px!important;text-align:center}
 body.home-ledger-v3 .home-status-rail strong{font-size:1.18rem!important;color:#fff8f2!important}
 body.home-ledger-v3 .home-status-rail small{font-size:.56rem!important;letter-spacing:.09em!important;color:rgba(255,255,255,.37)!important}
 
 body.home-ledger-v3 .home-context-stack{display:grid;gap:8px;margin:0 0 26px}
-body.home-ledger-v3 .home-context-card,body.home-ledger-v3 .home-top-grid>.games-card.full,body.home-ledger-v3 .home-personalized-welcome{display:flex;align-items:center;justify-content:space-between;gap:22px;min-height:0!important;margin:0!important;padding:14px 16px!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:12px!important;background:rgba(20,15,12,.72)!important;box-shadow:none!important}
+body.home-ledger-v3 .home-context-card,body.home-ledger-v3 .home-top-grid>.games-card.full,body.home-ledger-v3 .home-personalized-welcome{display:flex;align-items:center;justify-content:space-between;gap:22px;min-height:0!important;margin:0!important;padding:14px 16px!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:12px!important;background:rgba(17,16,15,.72)!important;box-shadow:none!important}
 body.home-ledger-v3 .home-context-card .eyebrow,body.home-ledger-v3 .home-personalized-welcome .eyebrow{margin-bottom:3px!important}
 body.home-ledger-v3 .home-context-card h2,body.home-ledger-v3 .home-personalized-welcome h2{margin:0 0 3px!important;font-size:.98rem!important}
 body.home-ledger-v3 .home-context-card p:not(.eyebrow),body.home-ledger-v3 .home-personalized-welcome p:not(.eyebrow){margin:0!important;color:rgba(255,255,255,.46)!important;font-size:.72rem!important;line-height:1.4!important}
@@ -33,7 +33,7 @@ body.home-ledger-v3 .home-section-heading h2{margin:0;font-size:1.42rem}
 body.home-ledger-v3 .home-section-heading>a{color:rgba(255,255,255,.48);font-size:.7rem;font-weight:800;text-decoration:none}
 body.home-ledger-v3 .home-section-heading>a:hover{color:#ff8a32}
 body.home-ledger-v3 .home-ledger-grid{display:grid!important;grid-template-columns:minmax(0,1.65fr) minmax(300px,.75fr)!important;gap:12px!important;margin:0!important;align-items:stretch!important}
-body.home-ledger-v3 .home-feature-panel,body.home-ledger-v3 .home-panel,body.home-ledger-v3 .home-news-section{border:1px solid rgba(255,255,255,.075)!important;border-radius:14px!important;background:rgba(20,15,12,.78)!important;box-shadow:none!important}
+body.home-ledger-v3 .home-feature-panel,body.home-ledger-v3 .home-panel,body.home-ledger-v3 .home-news-section{border:1px solid rgba(255,255,255,.075)!important;border-radius:14px!important;background:rgba(17,16,15,.78)!important;box-shadow:none!important}
 body.home-ledger-v3 .home-feature-panel{padding:20px!important}
 body.home-ledger-v3 .home-feature-topline h2{font-size:1.55rem!important;line-height:1.05}
 body.home-ledger-v3 .home-event-progress{margin:13px 0 14px!important;height:4px!important}
@@ -60,12 +60,12 @@ body.home-ledger-v3 .home-news-header h2{margin:2px 0 2px!important;font-size:1.
 body.home-ledger-v3 .home-news-header p:last-child{margin:0!important;color:rgba(255,255,255,.42)!important;font-size:.72rem!important}
 body.home-ledger-v3 .home-news-carousel{display:grid!important;grid-template-columns:28px minmax(0,1fr) 28px!important;gap:8px!important;align-items:stretch!important}
 body.home-ledger-v3 .home-news-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;min-height:0!important;max-height:none!important;overflow:visible!important}
-body.home-ledger-v3 .clan-news-preview-entry,body.home-ledger-v3 .clan-news-entry,body.home-ledger-v3 .news-card{min-height:170px!important;padding:14px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:11px!important;background:rgba(9,8,7,.42)!important;box-shadow:none!important}
+body.home-ledger-v3 .clan-news-preview-entry,body.home-ledger-v3 .clan-news-entry,body.home-ledger-v3 .news-card{min-height:170px!important;padding:14px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:11px!important;background:rgba(8,8,8,.42)!important;box-shadow:none!important}
 body.home-ledger-v3 .home-news-arrow{position:static!important;width:28px!important;min-width:28px!important;height:auto!important;border-radius:9px!important;background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.06)!important;color:rgba(255,255,255,.55)!important}
 body.home-ledger-v3 .home-news-arrow:hover:not(:disabled){color:#ff8a32!important;border-color:rgba(255,126,31,.25)!important}
 body.home-ledger-v3 .home-news-dots{margin-top:10px!important}
 
-body.home-ledger-v3 .home-brand-refined{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:16px!important;margin:12px 0 0!important;padding:15px 18px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:12px!important;background:rgba(18,14,11,.58)!important;box-shadow:none!important}
+body.home-ledger-v3 .home-brand-refined{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:16px!important;margin:12px 0 0!important;padding:15px 18px!important;border:1px solid rgba(255,255,255,.065)!important;border-radius:12px!important;background:rgba(15,14,14,.58)!important;box-shadow:none!important}
 body.home-ledger-v3 .home-brand-refined .premium-brand-mark{width:38px!important;height:38px!important}
 body.home-ledger-v3 .home-brand-refined h2{margin:1px 0 2px!important;font-size:.98rem!important;line-height:1.2!important}
 body.home-ledger-v3 .home-brand-refined h2 span{color:#ff8a32}
@@ -74,7 +74,7 @@ body.home-ledger-v3 .home-brand-refined .btn{min-height:36px!important;padding:8
 
 @media(max-width:900px){
  body.home-ledger-v3 .home-premium{width:min(100% - 28px,1180px)}
- body.home-ledger-v3 .home-refined-hero{grid-template-columns:1fr;gap:26px;min-height:0;padding:38px 34px;background:linear-gradient(110deg,rgba(18,13,10,.94),rgba(8,7,6,.86)),url('/assets/ironkin-emblem.png') right -30px center/280px auto no-repeat}
+ body.home-ledger-v3 .home-refined-hero{grid-template-columns:1fr;gap:26px;min-height:0;padding:38px 34px;background:linear-gradient(110deg,rgba(15,14,13,.94),rgba(7,7,7,.86)),url('/assets/ironkin-emblem.png') right -30px center/280px auto no-repeat}
  body.home-ledger-v3 .home-refined-status{max-width:520px}
  body.home-ledger-v3 .home-ledger-grid{grid-template-columns:1fr!important}
  body.home-ledger-v3 .home-ledger-side{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:auto!important}
@@ -82,7 +82,7 @@ body.home-ledger-v3 .home-brand-refined .btn{min-height:36px!important;padding:8
 }
 @media(max-width:640px){
  body.home-ledger-v3 .home-premium{width:min(100% - 20px,1180px);padding-top:18px}
- body.home-ledger-v3 .home-refined-hero{padding:30px 22px;background:linear-gradient(110deg,rgba(18,13,10,.96),rgba(8,7,6,.92));border-radius:14px}
+ body.home-ledger-v3 .home-refined-hero{padding:30px 22px;background:linear-gradient(110deg,rgba(15,14,13,.96),rgba(7,7,7,.92));border-radius:14px}
  body.home-ledger-v3 .home-refined-hero h1{font-size:clamp(2.8rem,15vw,4rem)}
  body.home-ledger-v3 .home-refined-hero .home-hero-lead{font-size:.86rem}
  body.home-ledger-v3 .home-hero-actions{align-items:flex-start;gap:14px;flex-wrap:wrap}

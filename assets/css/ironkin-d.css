@@ -1,0 +1,627 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* =====================================================================
+   Ironkin Design System D — "Runestone x Ledger"   (2026-10-17)
+   Loaded LAST on every page. Ledger structure (flat near-black panels,
+   Inter UI, mono numerals) + Runestone soul (Cinzel titles), with ember
+   orange as the only accent.
+   House rules: no gold/yellow, no coloured side/bottom accent stripes,
+   no filled-pill-with-underline active states, no decorative corner marks.
+   ===================================================================== */
+
+:root {
+  /* surfaces */
+  --d-bg: #0a0a0b;
+  --d-s1: #0f0f11;      /* card */
+  --d-s2: #141417;      /* inset / input */
+  --d-s3: #1b1b1f;      /* raised / active tab */
+  --d-hover: #17171a;
+  --d-line: #1f1f23;
+  --d-line-2: #2c2b2f;
+  /* text */
+  --d-text: #f3efe6;
+  --d-text-2: #bdb8ae;
+  --d-muted: #8d8a84;
+  /* accent */
+  --d-ember: #ff8f3f;
+  --d-ember-hot: #ff6b1a;
+  --d-ember-fill: linear-gradient(180deg, #ff9a3d, #ec7418);
+  --d-ember-soft: rgba(255,128,40,.08);
+  --d-ember-line: rgba(255,128,40,.32);
+  --d-kicker: #e0874a;
+  --d-on-ember: #1f0d02;
+  --d-danger: #f2826d;
+  --d-ok: #6fd19b;
+  /* shape */
+  --d-r-sm: 5px; --d-r-md: 7px; --d-r-lg: 9px; --d-r-btn: 6px;
+  --d-ctl-sm: 32px; --d-ctl-md: 40px; --d-ctl-lg: 48px;
+  /* type */
+  --d-display: 'Cinzel', Georgia, serif;
+  --d-head: 'Inter Tight', Inter, ui-sans-serif, system-ui, sans-serif;
+  --d-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --d-num: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* motion */
+  --d-ease: cubic-bezier(.22,1,.36,1);
+  --d-fast: 160ms; --d-med: 280ms; --d-slow: 700ms;
+
+  /* ---- remap legacy tokens so existing rules inherit D ---- */
+  --bg: var(--d-bg); --panel: var(--d-s1); --panel-light: var(--d-s2);
+  --text: var(--d-text); --muted: var(--d-muted);
+  --ember: var(--d-ember); --ember-dark: #c85a12; --ember-soft: #ffb27a;
+  --gold: var(--d-ember);
+  --border: var(--d-line-2);
+  --surface: var(--d-s1); --surface-strong: var(--d-s2);
+  --ik-canvas: var(--d-bg); --ik-canvas-2: var(--d-bg); --ik-section: var(--d-s1);
+  --ik-panel: var(--d-s1); --ik-panel-2: var(--d-s2); --ik-raised: var(--d-s3);
+  --ik-text: var(--d-text); --ik-text-2: var(--d-text-2); --ik-muted: var(--d-muted); --ik-faint: #6b6964;
+  --ik-ember: var(--d-ember); --ik-ember-2: #ffa75c; --ik-ember-soft: var(--d-ember-soft);
+  --ik-gold: var(--d-ember);
+  --ik-border: var(--d-line); --ik-border-strong: var(--d-line-2); --ik-border-hot: var(--d-ember-line);
+  --ik-radius-sm: var(--d-r-sm); --ik-radius-md: var(--d-r-md); --ik-radius-lg: var(--d-r-lg); --ik-radius-xl: var(--d-r-lg);
+  --radius-lg: var(--d-r-lg); --radius-md: var(--d-r-md);
+  --ik-display: var(--d-display); --ik-ui: var(--d-ui);
+  --ik-accent: var(--d-ember);
+  --admin-accent: var(--d-ember); --admin-accent-soft: var(--d-ember-soft);
+  --admin-panel: var(--d-s1); --admin-panel-2: var(--d-s2);
+  --admin-line: var(--d-line); --admin-line-strong: var(--d-line-2);
+  --admin-copy: var(--d-text); --admin-muted: var(--d-muted);
+  --admin-ok: var(--d-ok); --admin-danger: var(--d-danger);
+}
+
+/* ---------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------- */
+html { background: var(--d-bg) !important; }
+html body {
+  background: var(--d-bg) !important;
+  color: var(--d-text);
+  font-family: var(--d-ui) !important;
+  -webkit-font-smoothing: antialiased;
+}
+html body::before { opacity: .35; }
+::selection { background: rgba(255,128,40,.35); color: #fff; }
+:focus-visible { outline: 2px solid var(--d-ember) !important; outline-offset: 2px; }
+/* page-level warm blobs from v5 are off-system */
+.page::before, .profile-page::before, .handbook-page::before, .games-shell::before { display: none !important; }
+
+/* type: Cinzel for page + section titles, Inter Tight for card titles */
+html body h1, html body h2,
+.premium-page-hero h1, .page-title h1, .profile-identity-copy h1 {
+  font-family: var(--d-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: .005em !important;
+  font-variation-settings: normal !important;
+  line-height: 1.08 !important;
+  text-wrap: balance;
+}
+html body h1 { line-height: 1.04 !important; }
+html body h1 em { font-style: normal; color: var(--d-ember); }
+html body h3, html body h4, html body h5, html body h6 {
+  font-family: var(--d-head) !important;
+  letter-spacing: -.015em !important;
+  font-variation-settings: normal !important;
+}
+.brand-wordmark strong { font-family: var(--d-display) !important; letter-spacing: .14em !important; font-weight: 700 !important; }
+
+/* kickers / eyebrows */
+.eyebrow, .home-kicker, .draft-kicker, .boss-rush-kicker, .games-signup-kicker,
+.archive-hero-section-label, .results-section-label, .global-search-section-label {
+  font-family: var(--d-ui) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .16em !important;
+  text-transform: uppercase !important;
+  color: var(--d-kicker) !important;
+}
+.home-kicker span { display: none !important; }
+
+/* numerals */
+table, .featured-stat strong, .home-status-rail strong, .event-kpi strong, .profile-stat-card strong,
+.records-profile-stats b, .games-countdown-card strong, .result-stat-strip strong,
+.hof-summary-card strong, .clan-goal-percent-box, .event-percent-box, time {
+  font-variant-numeric: tabular-nums;
+}
+.featured-stat strong, .home-status-rail strong, .event-kpi strong, .profile-stat-card strong,
+.records-profile-stats b, .result-stat-strip strong, .hof-summary-card strong, .games-countdown-card strong {
+  font-family: var(--d-num) !important;
+  letter-spacing: -.01em !important;
+}
+
+/* ---------------------------------------------------------------------
+   Header / nav  — active = brighter text only. No pill, no underline.
+   --------------------------------------------------------------------- */
+html body .site-header.premium-header {
+  background: rgba(10,10,11,.88) !important;
+  backdrop-filter: blur(14px) saturate(120%);
+  border-bottom: 1px solid var(--d-line) !important;
+  box-shadow: none !important;
+}
+html body .site-header .premium-nav { min-height: 72px !important; padding-block: 0 !important; }
+html body .site-header .brand-logo-shell {
+  border: 1px solid var(--d-line-2) !important; background: var(--d-s2) !important; box-shadow: none !important; border-radius: var(--d-r-md) !important;
+}
+html body .site-header .brand-logo { filter: none; }
+html body .site-header .premium-brand { transform: none !important; }
+html body .site-header .premium-nav-links > a:not(.nav-discord-btn),
+html body .site-header .nav-dropdown-toggle {
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: var(--d-r-btn) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--d-muted) !important;
+  font-family: var(--d-ui) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  transition: color var(--d-fast) var(--d-ease) !important;
+}
+html body .site-header .premium-nav-links > a:not(.nav-discord-btn):hover,
+html body .site-header .nav-dropdown-toggle:hover,
+html body .site-header .premium-nav-links > a.active,
+html body .site-header .premium-nav-links > a[aria-current="page"] {
+  color: var(--d-text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+html body .site-header .nav-dropdown-menu {
+  background: rgba(15,15,17,.98) !important;
+  border: 1px solid var(--d-line-2) !important;
+  border-radius: var(--d-r-lg) !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,.5) !important;
+  padding: 6px !important;
+}
+html body .site-header .nav-dropdown-menu a {
+  color: var(--d-text-2) !important; font-size: 13px !important; font-weight: 600 !important;
+  border-radius: var(--d-r-sm) !important; padding: 9px 11px !important; background: transparent !important; box-shadow: none !important; border: 0 !important;
+}
+html body .site-header .nav-dropdown-menu a:hover,
+html body .site-header .nav-dropdown-menu a.active { color: var(--d-text) !important; background: var(--d-hover) !important; }
+html body .site-header .nav-global-search-trigger {
+  min-height: 34px !important; border: 1px solid var(--d-line-2) !important; border-radius: var(--d-r-btn) !important;
+  background: var(--d-s2) !important; color: var(--d-muted) !important; box-shadow: none !important;
+}
+html body .site-header .nav-global-search-trigger:hover { color: var(--d-text) !important; border-color: #3a393e !important; background: var(--d-s2) !important; }
+html body .site-header .nav-global-search-trigger kbd { background: var(--d-s3) !important; border-color: var(--d-line-2) !important; color: var(--d-muted) !important; font-family: var(--d-num) !important; }
+html body .site-header .ik-signin,
+html body .site-header .ik-account-toggle,
+html body .site-header .nav-discord-btn {
+  min-height: var(--d-ctl-sm) !important; height: var(--d-ctl-sm) !important;
+  padding: 0 14px !important;
+  background: var(--d-ember-fill) !important; color: var(--d-on-ember) !important;
+  border: 0 !important; border-radius: var(--d-r-btn) !important;
+  box-shadow: inset 0 1px rgba(255,230,200,.35) !important;
+  font: 600 13px/1 var(--d-ui) !important;
+}
+html body .site-header .ik-signin:hover, html body .site-header .ik-account-toggle:hover { filter: brightness(1.07); }
+html body .site-header .ik-account-dropdown { background: var(--d-s1) !important; border: 1px solid var(--d-line-2) !important; border-radius: var(--d-r-lg) !important; }
+html body .site-header .ik-account-dropdown a { color: var(--d-text-2) !important; border-radius: var(--d-r-sm) !important; }
+html body .site-header .ik-account-dropdown a:hover { background: var(--d-hover) !important; color: var(--d-text) !important; }
+@media (max-width: 900px) {
+  html body .site-header .premium-nav { min-height: 64px !important; }
+  html body .site-header .premium-nav-links { background: var(--d-s1) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-lg) !important; }
+  html body .site-header .ik-signin, html body .site-header .ik-account-toggle { height: var(--d-ctl-md) !important; }
+}
+
+/* footer */
+.ik-footer, footer.site-footer { background: var(--d-bg) !important; border-top: 1px solid var(--d-line) !important; }
+
+/* ---------------------------------------------------------------------
+   Buttons — one system: .btn / .games-btn, sizes sm 32 · md 40 · lg 48
+   --------------------------------------------------------------------- */
+html body :is(.btn, .games-btn, .home-feature-button, .hof-hero-submit) {
+  display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important;
+  height: var(--d-ctl-md) !important; min-height: var(--d-ctl-md) !important;
+  padding: 0 16px !important;
+  border-radius: var(--d-r-btn) !important;
+  border: 1px solid var(--d-line-2) !important;
+  background: var(--d-s3) !important;
+  color: var(--d-text) !important;
+  box-shadow: none !important;
+  font-family: var(--d-ui) !important; font-size: 14px !important; font-weight: 600 !important;
+  letter-spacing: 0 !important; text-transform: none !important; line-height: 1 !important;
+  text-decoration: none !important; white-space: nowrap;
+  transition: background-color var(--d-fast) var(--d-ease), border-color var(--d-fast) var(--d-ease),
+              color var(--d-fast) var(--d-ease), transform var(--d-med) var(--d-ease), box-shadow var(--d-med) var(--d-ease), filter var(--d-fast) !important;
+}
+html body :is(.btn, .games-btn):hover { border-color: #3d3c41 !important; transform: translateY(-1px); }
+html body :is(.btn, .games-btn):active { transform: translateY(0) scale(.98); transition-duration: 80ms !important; }
+html body :is(.btn, .games-btn):disabled, html body :is(.btn, .games-btn)[aria-disabled="true"] { opacity: .45 !important; transform: none !important; cursor: not-allowed; }
+
+/* primary = ember. .btn without a variant, .games-btn without secondary, and named CTAs */
+html body :is(.btn.primary, .btn:not(.secondary):not(.danger):not(.ghost), .games-btn:not(.secondary):not(.danger), .home-feature-button, .hof-hero-submit, .boss-rush-primary) {
+  background: var(--d-ember-fill) !important;
+  color: var(--d-on-ember) !important;
+  border-color: transparent !important;
+  box-shadow: inset 0 1px rgba(255,230,200,.35) !important;
+}
+html body :is(.btn.primary, .btn:not(.secondary):not(.danger):not(.ghost), .games-btn:not(.secondary):not(.danger), .home-feature-button, .hof-hero-submit):hover {
+  border-color: transparent !important;
+  box-shadow: inset 0 1px rgba(255,230,200,.35), 0 8px 22px rgba(236,116,24,.28) !important;
+}
+html body :is(.btn, .games-btn).secondary { background: var(--d-s3) !important; color: var(--d-text) !important; }
+html body :is(.btn, .games-btn).secondary:is(.active, .is-active) { border-color: var(--d-ember-line) !important; color: #ffb27a !important; }
+html body :is(.btn, .games-btn).danger { background: transparent !important; color: var(--d-danger) !important; border-color: #4a2620 !important; box-shadow: none !important; }
+html body :is(.btn, .games-btn).danger:hover { background: rgba(242,130,109,.08) !important; border-color: #6b3328 !important; }
+html body :is(.btn, .games-btn).ghost { background: transparent !important; border-color: transparent !important; color: var(--d-ember) !important; padding-inline: 8px !important; }
+html body :is(.btn, .games-btn):is(.compact, .small, .sm) { height: var(--d-ctl-sm) !important; min-height: var(--d-ctl-sm) !important; padding: 0 12px !important; font-size: 13px !important; }
+html body :is(.btn, .games-btn):is(.large, .lg) { height: var(--d-ctl-lg) !important; min-height: var(--d-ctl-lg) !important; padding: 0 22px !important; font-size: 15px !important; }
+html body :is(.btn, .games-btn).full { width: 100%; }
+html body :is(.btn, .games-btn).hidden, html body :is(.btn, .games-btn)[hidden] { display: none !important; }
+
+/* icon-only buttons */
+html body :is(.games-icon-btn, .bingo-icon-btn, .home-news-arrow, .records-chapter-arrow, #prevMonthBtn, #nextMonthBtn) {
+  width: var(--d-ctl-sm) !important; height: var(--d-ctl-sm) !important; min-height: 0 !important; padding: 0 !important;
+  display: inline-grid !important; place-items: center !important;
+  border-radius: var(--d-r-btn) !important; border: 1px solid var(--d-line-2) !important;
+  background: var(--d-s3) !important; color: var(--d-text-2) !important; font-size: 16px !important; box-shadow: none !important;
+  transition: color var(--d-fast), border-color var(--d-fast) !important;
+}
+html body :is(.games-icon-btn, .bingo-icon-btn, .home-news-arrow, .records-chapter-arrow, #prevMonthBtn, #nextMonthBtn):hover { color: var(--d-text) !important; border-color: #3d3c41 !important; }
+
+/* text links that act as actions */
+html body :is(.games-text-action, .records-legend-cta, .hof-history-button) { color: var(--d-ember) !important; font-weight: 600 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+
+/* ---------------------------------------------------------------------
+   Tabs / filters / segmented controls — one shape
+   --------------------------------------------------------------------- */
+html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .bounty-filter-bar, .calendar-filters,
+  .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs, .trivia-review-tabs, .results-emoji-tabs,
+  .archive-filter-group, .contract-tier-filterbar, .ik-profile-nav, .ik-profile-status-filters, .ik-ca-quickfilters, .results-week-toggle, .ik-admin-nav, .hof-utility-bar) {
+  gap: 2px !important;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 3px !important;
+  background: var(--d-s1) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: calc(var(--d-r-btn) + 3px) !important;
+  box-shadow: none !important;
+}
+html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .bounty-filter-bar, .calendar-filters,
+  .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs, .trivia-review-tabs, .results-emoji-tabs,
+  .archive-filter-group, .contract-tier-filterbar, .ik-profile-nav, .ik-profile-status-filters, .ik-ca-quickfilters, .results-week-toggle)
+  > :is(button, a),
+html body :is(.admin-tab-btn, .event-subtab-btn, .games-tab-link, .archive-filter, .calendar-view-toggle, .ik-top, .hof-utility-link) {
+  height: var(--d-ctl-sm) !important; min-height: var(--d-ctl-sm) !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center; gap: 6px;
+  padding: 0 14px !important;
+  border: 0 !important; border-radius: var(--d-r-btn) !important;
+  background: transparent !important; box-shadow: none !important;
+  color: var(--d-muted) !important;
+  font: 600 13px/1 var(--d-ui) !important; letter-spacing: 0 !important; text-transform: none !important;
+  text-decoration: none !important; white-space: nowrap; cursor: pointer;
+  transform: none !important;
+  transition: color var(--d-fast) var(--d-ease), background-color var(--d-med) var(--d-ease) !important;
+}
+html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .bounty-filter-bar, .calendar-filters,
+  .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs, .trivia-review-tabs, .results-emoji-tabs,
+  .archive-filter-group, .contract-tier-filterbar, .ik-profile-nav, .ik-profile-status-filters, .ik-ca-quickfilters, .results-week-toggle)
+  > :is(button, a):hover,
+html body :is(.admin-tab-btn, .event-subtab-btn, .games-tab-link, .archive-filter, .calendar-view-toggle, .ik-top, .hof-utility-link):hover { color: var(--d-text) !important; }
+html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .bounty-filter-bar, .calendar-filters,
+  .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs, .trivia-review-tabs, .results-emoji-tabs,
+  .archive-filter-group, .contract-tier-filterbar, .ik-profile-nav, .ik-profile-status-filters, .ik-ca-quickfilters, .results-week-toggle)
+  > :is(button, a):is(.active, .is-active, .on, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]),
+html body :is(.admin-tab-btn, .event-subtab-btn, .games-tab-link, .archive-filter, .calendar-view-toggle, .ik-top, .hof-utility-link):is(.active, .is-active, .on, [aria-selected="true"], [aria-pressed="true"]) {
+  background: var(--d-s3) !important;
+  color: #ffb27a !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* ---------------------------------------------------------------------
+   Forms
+   --------------------------------------------------------------------- */
+html body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea) {
+  background-color: var(--d-s2) !important;
+  border: 1px solid var(--d-line-2) !important;
+  border-radius: var(--d-r-btn) !important;
+  color: var(--d-text) !important;
+  font-family: var(--d-ui) !important;
+  box-shadow: none !important;
+  transition: border-color var(--d-fast) var(--d-ease), box-shadow var(--d-fast) var(--d-ease) !important;
+}
+html body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select) { min-height: var(--d-ctl-md); }
+html body :is(input, select, textarea):focus { border-color: var(--d-ember-line) !important; box-shadow: 0 0 0 3px rgba(255,128,40,.12) !important; outline: none !important; }
+html body :is(input, textarea)::placeholder { color: #66645f !important; }
+html body input[type="checkbox"], html body input[type="radio"] { accent-color: var(--d-ember-hot); }
+html body label { color: var(--d-text-2); }
+
+/* ---------------------------------------------------------------------
+   Surfaces — flat near-black cards, one radius, one border
+   --------------------------------------------------------------------- */
+html body :is(.card, .admin-card, .admin-summary-card, .admin-info-box, .games-card, .profile-panel, .event-panel, .handbook-card,
+  .home-panel, .home-feature-panel, .home-news-section, .home-context-card, .home-personalized-welcome, .home-status-rail article,
+  .calendar-card, .calendar-check-card, .calendar-now-card, .calendar-health-card, .calendar-event-details-card, .calendar-day-events-card,
+  .archive-card, .archive-board-card, .hof-summary-card, .records-feature, .records-achievements-panel, .rank-live-card, .rank-members-panel,
+  .profile-identity-card, .profile-hub-card, .profile-activity-card, .profile-embers-card, .profile-events-card, .profile-plugin-card,
+  .profile-settings-card, .profile-stat-card, .profile-loading-card,
+  .games-activity-card, .games-countdown-card, .games-my-team-card, .games-progress-card, .games-season-card, .games-standings-card,
+  .games-team-admin-card, .games-test-mode-card, .games-end-games-card, .games-signup-panel, .games-signup-entry-panel, .games-signup-list-panel,
+  .games-boss-rush-panel, .games-week-header, .games-notice, .games-empty-state,
+  .event-detail-card, .event-contribution-card, .event-rewards-card, .event-starting-soon-panel, .event-leaderboard-shell, .event-personal-position,
+  .botw-dashboard-card, .botw-tier-panel, .bounty-summary-card, .bounty-progress-panel, .bounty-community-panel, .bounty-card-item,
+  .clan-goal-dashboard-card, .clan-goal-progress-card, .clan-goal-personal-card, .clan-goal-next-card, .clan-goal-mvp-panel, .clan-goal-participation-panel,
+  .results-challenge-card, .results-channel-card, .results-publishing-card, .results-toggle-card, .results-composer-shell,
+  .challenge-card, .location-review-card, .trivia-review-card, .tt-panel, .how-to-card, .discord-sync-card, .reward-panel, .admin-reward-panel,
+  .bingo-entry-card, .bingo-status-card, .bingo-countdown-card, .bingo-side-panel, .bingo-team-card, .bingo-captain-card,
+  .team-card, .team-fleet-card, .team-challenge-panel, .fleet-placement-card, .ship-placement-toolbar-card, .draft-pool-panel,
+  .ik-member-panel, .ik-activity-box, .handbook-import-card, .handbook-admin-image-card, .flame-card, .clue-table-card, .giveaway-tab-panel) {
+  background: var(--d-s1) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-lg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+  backdrop-filter: none !important;
+}
+/* nested surfaces read one step lighter */
+html body :is(.featured-stat, .home-total-panel, .event-kpi, .event-percent-box, .clan-goal-percent-box, .records-profile-stats span, .stat-card, .result-stat-strip > *) {
+  background: var(--d-s2) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-md) !important;
+  box-shadow: none !important;
+}
+html body :is(.featured-stat strong, .home-total-panel strong) { color: var(--d-text) !important; }
+html body .featured-stat span { color: var(--d-muted) !important; }
+
+/* page heroes: flat panel, Cinzel title */
+html body :is(.premium-page-hero, .hof-hero, .records-hero, .games-hero, .games-overview-hero, .ember-hero, .events-hero, .archive-hero,
+  .calendar-hero, .handbook-hero, .giveaway-hero, .bingo-hero, .bingo-signup-hero, .draft-hero, .clue-progress-hero, .profile-hero,
+  .event-detail-hero, .team-hero, .admin-hero, .home-ledger-hero, .home-refined-hero, .results-center-hero, .clan-goal-hero, .bounty-board-hero) {
+  background: linear-gradient(180deg, #111113, #0d0d0f) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-lg) !important;
+  box-shadow: none !important;
+}
+html body :is(.premium-page-hero, .hof-hero, .records-hero, .games-hero, .ember-hero, .events-hero, .archive-hero, .calendar-hero,
+  .handbook-hero, .giveaway-hero, .bingo-hero, .draft-hero, .profile-hero, .event-detail-hero, .team-hero, .admin-hero, .home-ledger-hero)::after { display: none !important; }
+
+/* homepage full-bleed banner keeps the uploaded art, with a neutral fade */
+html body .ik-visual-banner { border-color: var(--d-line) !important; box-shadow: none !important; background: #111 !important; }
+html body .ik-visual-banner::after { background: linear-gradient(90deg, #0a0a0b 0%, rgba(10,10,11,.84) 45%, rgba(10,10,11,.4) 100%), linear-gradient(0deg, #0a0a0b 0%, transparent 45%) !important; }
+html body .ik-visual-banner h1 { text-shadow: none !important; }
+html body .ik-visual-banner h1 em { color: var(--d-ember) !important; text-shadow: 0 0 34px rgba(255,128,40,.2) !important; }
+html body .ik-visual-banner-actions a {
+  display: inline-flex !important; align-items: center !important; height: var(--d-ctl-lg) !important; padding: 0 22px !important;
+  border-radius: var(--d-r-btn) !important; font: 600 15px/1 var(--d-ui) !important; text-decoration: none !important; box-shadow: none !important;
+  transition: transform var(--d-med) var(--d-ease), box-shadow var(--d-med) var(--d-ease), border-color var(--d-fast) !important;
+}
+html body .ik-visual-banner-actions a:first-child { background: var(--d-ember-fill) !important; color: var(--d-on-ember) !important; border: 0 !important; box-shadow: inset 0 1px rgba(255,230,200,.35) !important; }
+html body .ik-visual-banner-actions a:not(:first-child) { background: rgba(20,20,23,.8) !important; color: var(--d-text) !important; border: 1px solid var(--d-line-2) !important; }
+html body .ik-visual-banner-actions a:hover { transform: translateY(-1px); }
+html body .ik-visual-link { border-color: var(--d-line) !important; border-radius: var(--d-r-lg) !important; box-shadow: none !important; transition: transform var(--d-med) var(--d-ease), border-color var(--d-fast) !important; }
+html body .ik-visual-link:hover { transform: translateY(-3px); border-color: var(--d-line-2) !important; }
+
+/* tables */
+html body table { border-color: var(--d-line) !important; }
+html body :is(th) { color: var(--d-muted) !important; font: 700 11px var(--d-ui) !important; letter-spacing: .12em !important; text-transform: uppercase !important; background: transparent !important; border-color: var(--d-line) !important; }
+html body :is(td) { border-color: var(--d-line) !important; }
+html body tbody tr { transition: background-color var(--d-fast) var(--d-ease); }
+html body tbody tr:hover { background: var(--d-hover); }
+
+/* pills / badges */
+html body :is(.games-pill, .bingo-pill, .games-count-pill, .games-signup-count-pill, .records-badge, .games-hero-badge) {
+  border-radius: var(--d-r-sm) !important; border: 1px solid var(--d-line-2) !important; background: var(--d-s2) !important; color: var(--d-text-2) !important; box-shadow: none !important;
+}
+html body :is(.home-live-pill, .clan-goal-live-pill, .results-live-chip) {
+  border-radius: var(--d-r-sm) !important; color: var(--d-ember-hot) !important; background: rgba(255,107,26,.08) !important; border: 1px solid rgba(255,107,26,.35) !important; box-shadow: none !important;
+}
+
+/* progress bars */
+html body :is(.home-event-progress span, .progress-fill, .event-progress-fill, .clan-goal-progress-fill, [class*="progress-bar"] > span) {
+  background: var(--d-ember-fill) !important; box-shadow: none !important;
+}
+
+/* modals / dialogs */
+html body :is(dialog, .bingo-modal-card, .bingo-help-modal-card, .bingo-import-modal-card, .games-challenge-modal-panel, .games-rules-modal-panel, .hof-dialog-shell, .records-profile-dialog) {
+  background: var(--d-s1) !important; border: 1px solid var(--d-line-2) !important; border-radius: var(--d-r-lg) !important; color: var(--d-text) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.6) !important;
+}
+html body dialog::backdrop { background: rgba(5,5,6,.78) !important; backdrop-filter: blur(4px); }
+
+/* ---------------------------------------------------------------------
+   Kill list — accent side-stripes and underline-pill active states
+   --------------------------------------------------------------------- */
+html body .games-objective { border-left: 0 !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-md) !important; background: var(--d-s2) !important; }
+html body .records-achievement-card { border-left-width: 1px !important; }
+html body #hallOfFlameGrid :is(.hof-record-card, .hof-champion-card) { border-left-width: 1px !important; }
+html body .profile-page :is(.ik-profile-nav, .ik-clog-tabs, .ik-clog-pages) button[aria-selected="true"] { box-shadow: none !important; border-left: 0 !important; }
+html body .admin-card.is-selected, html body [class*="admin-"].is-active { box-shadow: none !important; }
+html body .event-leaderboard-row.is-you td { box-shadow: none !important; }
+
+/* ---------------------------------------------------------------------
+   Gold → ember. Page CSS hardcodes warm golds/browns; neutralise the
+   common ones on the pages that use them most.
+   --------------------------------------------------------------------- */
+html body :is(.records-legend, .records-legend.is-king, .records-champion-card, .records-achievement-card, .hof-record-card, .hof-champion-card, .archive-card) {
+  background: var(--d-s1) !important; border-color: var(--d-line) !important; box-shadow: none !important;
+}
+html body :is(.records-legend, .records-champion-card, .hof-record-card, .archive-card):hover { border-color: var(--d-line-2) !important; }
+html body .records-legend.is-king { border-color: var(--d-ember-line) !important; }
+html body :is(.records-legend small, .records-legend-medal, .records-count, .records-rank, .records-timeline-item time, .records-profile-dialog h3,
+  .records-profile-stats b, .records-legend .records-legend-cta, .records-timeline-item button) { color: var(--d-ember) !important; }
+html body :is(.records-legend strong, .records-feature-head h2, .records-rank-name strong, .records-timeline-item strong) { color: var(--d-text) !important; }
+html body :is(.records-legend > span:not(.records-legend-medal), .records-feature-head p, .records-ranking-row small, .records-timeline-item span) { color: var(--d-muted) !important; }
+html body .records-timeline { border-left-color: var(--d-line-2) !important; }
+html body .records-timeline-item::before { background: var(--d-ember) !important; box-shadow: 0 0 0 4px var(--d-bg) !important; }
+html body .records-ranking-row:hover { background: var(--d-hover) !important; }
+html body .records-badge { color: #ffb27a !important; }
+html body .records-title-dot { color: var(--d-ember) !important; }
+html body .games-team-banner { border-color: var(--d-line-2) !important; background: var(--d-s1) !important; }
+html body .games-results-final { border-color: var(--d-ember-line) !important; background: var(--d-s1) !important; }
+
+/* ---------------------------------------------------------------------
+   Page leftovers found by audit (warm surfaces that out-specify the above)
+   --------------------------------------------------------------------- */
+html body main::before { display: none !important; }
+html body .event-hub-card::before { display: none !important; }
+html body :is(section.page-title.hof-hero, section.page-title.archive-page-title, section.page-title.premium-page-hero, .events-refined-page .events-intro,
+  .games-dashboard-head, .calendar-happening-now, .draft-clock, .draft-team, .records-chapter-nav, body:has(#hallOfFlameGrid) .hof-section, .hof-explore-controls) {
+  background: var(--d-s1) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-lg) !important;
+  box-shadow: none !important;
+}
+html body .records-chapter-nav { padding: 4px !important; }
+html body :is(.games-up-next, .draft-admin, .calendar-local-time-note, .handbook-access-note, .captain) {
+  background: var(--d-s2) !important; border: 1px solid var(--d-line) !important; border-radius: var(--d-r-md) !important; box-shadow: none !important;
+}
+html body .captain { border-width: 0 0 1px !important; border-radius: 0 !important; }
+html body .games-dashboard-week { border-color: var(--d-line) !important; }
+html body .records-hero-link { border-color: var(--d-line-2) !important; border-radius: var(--d-r-btn) !important; }
+html body :is(#hofBoardSearch, #hofBoardSort) { border: 1px solid var(--d-line-2) !important; background-color: var(--d-s2) !important; }
+html body body:has(#hallOfFlameGrid) .hof-hero .hof-utility-bar,
+html body:has(#hallOfFlameGrid) .hof-hero .hof-utility-bar { border: 1px solid var(--d-line) !important; border-radius: calc(var(--d-r-btn) + 3px) !important; padding: 3px !important; background: var(--d-s2) !important; width: auto !important; display: inline-flex !important; }
+html body:has(#hallOfFlameGrid) .hof-utility-link.is-active { background: var(--d-s3) !important; color: #ffb27a !important; }
+html body .ik-admin-nav { display: flex !important; padding: 3px !important; margin-bottom: 22px !important; }
+html body .games-countdown-icon { border-color: var(--d-line-2) !important; background: var(--d-s2) !important; box-shadow: none !important; color: var(--d-ember) !important; }
+html body :is(#bingoTeamOneCount, #bingoTeamTwoCount, .bingo-member-avatar-fallback) { background: var(--d-s2) !important; border-color: var(--d-line-2) !important; color: var(--d-text) !important; }
+html body .archive-events-icon { background: var(--d-s2) !important; }
+html body .rank-pill { border-radius: var(--d-r-md) !important; border-color: var(--d-line) !important; background: var(--d-s1) !important; }
+html body .rank-pill:hover { border-color: var(--d-line-2) !important; background: var(--d-hover) !important; }
+html body .rank-pill.is-active { border-color: var(--d-ember-line) !important; background: var(--d-ember-soft) !important; }
+
+html body:has(#hallOfFlameGrid) :is(.hof-hero, section.page-title.hof-hero) { background: linear-gradient(180deg, #111113, #0d0d0f) !important; border: 1px solid var(--d-line) !important; box-shadow: none !important; }
+html body:has(#hallOfFlameGrid) :is(#hofBoardSearch, #hofBoardSort) { border: 1px solid var(--d-line-2) !important; background-color: var(--d-s2) !important; }
+html body :is(.event-hub-icon, .events-calendar-icon, .games-panel-icon) { background: var(--d-s2) !important; border: 1px solid var(--d-line-2) !important; box-shadow: none !important; border-radius: var(--d-r-md) !important; }
+html body .games-signup-primary { border-radius: var(--d-r-btn) !important; box-shadow: inset 0 1px rgba(255,230,200,.35) !important; background: var(--d-ember-fill) !important; color: var(--d-on-ember) !important; border: 0 !important; }
+html body .games-signup-primary:disabled { opacity: .45 !important; }
+html body .games-signup-back {
+  display: inline-flex !important; align-items: center !important; gap: 8px !important; height: var(--d-ctl-sm) !important; padding: 0 12px !important;
+  border-radius: var(--d-r-btn) !important; border: 1px solid var(--d-line-2) !important; background: var(--d-s3) !important; color: var(--d-text) !important;
+  font: 600 13px/1 var(--d-ui) !important; box-shadow: none !important; text-decoration: none !important;
+}
+
+/* generic page hero: section.page-title is the shared hero on most pages */
+html body main section.page-title,
+html body main .page-title.premium-page-hero {
+  background: linear-gradient(180deg, #111113, #0d0d0f) !important;
+  border: 1px solid var(--d-line) !important;
+  border-radius: var(--d-r-lg) !important;
+  box-shadow: none !important;
+}
+html body main section.page-title::after { opacity: .06 !important; filter: grayscale(1) !important; }
+html body main section.page-title > * { animation: ik-rise var(--d-slow) var(--d-ease) both; }
+html body main section.page-title > :nth-child(2) { animation-delay: 90ms; }
+html body main section.page-title > :nth-child(n+3) { animation-delay: 180ms; }
+html body .btn.calendar-view-toggle { height: var(--d-ctl-sm) !important; min-height: var(--d-ctl-sm) !important; padding: 0 14px !important; font-size: 13px !important; background: transparent !important; border-color: var(--d-line-2) !important; }
+html body .btn.calendar-view-toggle.active { background: var(--d-s3) !important; color: #ffb27a !important; border-color: var(--d-line-2) !important; }
+
+/* utilities the markup expects but no stylesheet defined */
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+html body .archive-search input { padding-left: 36px !important; }
+html body .archive-search-icon { color: var(--d-muted) !important; z-index: 1; }
+
+/* tab bars scroll sideways instead of squashing on small screens */
+@media (max-width: 760px) {
+  html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs,
+    .archive-filter-group, .ik-profile-nav, .ik-admin-nav, .hof-utility-bar, .calendar-filters) {
+    display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch;
+  }
+  html body :is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .giveaway-tabs, .bingo-tabs, .team-hub-tabs, .ik-progress-tabs,
+    .archive-filter-group, .ik-profile-nav, .ik-admin-nav, .hof-utility-bar, .calendar-filters) > * { flex: 0 0 auto !important; width: auto !important; min-width: max-content !important; }
+}
+:is(.games-tabs, .records-chapter-tabs, .event-filter-bar, .ik-admin-nav, .hof-utility-bar)::-webkit-scrollbar { display: none; }
+
+/* hamburger: lines were stacked with no gap (display:block ignores gap) */
+html body .site-header .menu-toggle {
+  flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  width: 40px; height: 40px; padding: 0 !important;
+  border: 1px solid var(--d-line-2) !important; border-radius: var(--d-r-btn) !important; background: var(--d-s2) !important;
+}
+@media (max-width: 900px) { html body .site-header .menu-toggle { display: inline-flex !important; } }
+html body .site-header .menu-toggle span { width: 18px !important; height: 2px !important; margin: 0 !important; background: var(--d-text) !important; border-radius: 2px !important; }
+
+/* Heroicons (inline SVG via ironkin-icons.js and nav.html) */
+.ik-ico { display: inline-block; width: 1em; height: 1em; flex: none; vertical-align: -.14em; fill: currentColor; transition: transform var(--d-med) var(--d-ease); }
+.ik-ico-arrow-right, .ik-ico-arrow-left, .ik-ico-arrow-up-right { width: .95em; height: .95em; }
+:is(a, button, summary):hover > .ik-ico-arrow-right, :is(a, button, summary):hover .ik-ico-arrow-right:last-child { transform: translateX(2px); }
+:is(a, button):hover > .ik-ico-arrow-up-right { transform: translate(1px, -1px); }
+:is(a, button):hover > .ik-ico-arrow-left { transform: translateX(-2px); }
+:is(button, a, summary) > .ik-ico:only-child { width: 1.15em; height: 1.15em; }
+html body .site-header .nav-caret { display: inline-flex !important; margin-left: 2px !important; opacity: .6; transform: none !important; }
+html body .site-header .nav-caret .ik-ico { width: 14px; height: 14px; transition: transform var(--d-med) var(--d-ease); }
+html body .site-header .nav-dropdown:is(:hover, :focus-within, .open) .nav-caret .ik-ico,
+html body .site-header .ik-account-toggle[aria-expanded="true"] .nav-caret .ik-ico { transform: rotate(180deg); }
+html body .site-header .nav-search-ico { display: inline-flex; }
+html body .site-header .nav-search-ico .ik-ico { width: 14px; height: 14px; }
+html body .site-header .ik-account-toggle .nav-caret { opacity: .8; }
+html body .archive-search-icon .ik-ico { width: 16px; height: 16px; }
+html body .archive-search-icon { line-height: 0 !important; font-size: 16px !important; transform: translateY(-50%) !important; }
+details > summary .ik-ico-chevron-down { transition: transform var(--d-med) var(--d-ease); }
+details[open] > summary .ik-ico-chevron-down { transform: rotate(180deg); }
+
+/* one content width everywhere: nav, hero copy and page content share --ik-site-max.
+   body is a size container so full-bleed pieces can use 100cqw (excludes the scrollbar,
+   unlike 100vw, which pushed the hero copy ~7px off the content edge). */
+html body { container-type: inline-size; container-name: ik-page; }
+html body .site-header .premium-nav {
+  width: min(var(--ik-site-max, 1600px), calc(100% - 2 * var(--ik-site-gutter, 24px))) !important;
+  max-width: var(--ik-site-max, 1600px) !important;
+  padding-inline: 0 !important;
+}
+html body.home-ledger-v3 .ik-visual-banner {
+  width: 100cqw !important;
+  margin-left: calc(50% - 50cqw) !important;
+  margin-right: calc(50% - 50cqw) !important;
+}
+html body.home-ledger-v3 .ik-visual-banner-content {
+  width: min(var(--ik-site-max, 1600px), calc(100cqw - 2 * var(--ik-site-gutter, 24px))) !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+}
+html body .ik-footer { padding-inline: 0 !important; }
+html body :is(.ik-footer-inner, .ik-footer-bottom) {
+  width: min(var(--ik-site-max, 1600px), calc(100% - 2 * var(--ik-site-gutter, 24px))) !important;
+  max-width: var(--ik-site-max, 1600px) !important;
+  margin-inline: auto !important;
+  padding-inline: 0 !important;
+  box-sizing: border-box !important;
+}
+/* leftover cap from the old 1180px layout */
+html body .bingo-home-banner { max-width: none !important; width: 100% !important; }
+
+/* ---------------------------------------------------------------------
+   Motion — entrance once, then quiet. Script adds .ik-rv / .ik-in.
+   --------------------------------------------------------------------- */
+@keyframes ik-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes ik-drift { from { transform: scale(1.07) translate3d(1.2%,0,0); } to { transform: none; } }
+@keyframes ik-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,26,.5); } 60% { box-shadow: 0 0 0 5px rgba(255,107,26,0); } }
+
+/* hero copy staggers in */
+:is(.ik-visual-banner-content, .premium-page-hero, .hof-hero-copy, .records-hero-copy, .games-hero, .ember-hero, .events-hero,
+  .archive-hero, .calendar-hero, .handbook-hero, .giveaway-hero, .bingo-hero, .profile-hero, .home-ledger-hero) > * {
+  animation: ik-rise var(--d-slow) var(--d-ease) both;
+}
+:is(.ik-visual-banner-content, .premium-page-hero, .hof-hero-copy, .records-hero-copy, .games-hero, .ember-hero, .events-hero,
+  .archive-hero, .calendar-hero, .handbook-hero, .giveaway-hero, .bingo-hero, .profile-hero, .home-ledger-hero) > :nth-child(2) { animation-delay: 90ms; }
+:is(.ik-visual-banner-content, .premium-page-hero, .hof-hero-copy, .records-hero-copy, .games-hero, .ember-hero, .events-hero,
+  .archive-hero, .calendar-hero, .handbook-hero, .giveaway-hero, .bingo-hero, .profile-hero, .home-ledger-hero) > :nth-child(3) { animation-delay: 180ms; }
+:is(.ik-visual-banner-content, .premium-page-hero, .hof-hero-copy, .records-hero-copy, .games-hero, .ember-hero, .events-hero,
+  .archive-hero, .calendar-hero, .handbook-hero, .giveaway-hero, .bingo-hero, .profile-hero, .home-ledger-hero) > :nth-child(n+4) { animation-delay: 270ms; }
+html body .ik-visual-banner > img { animation: ik-drift 26s var(--d-ease) both; }
+
+/* scroll reveal (only on elements the script tags) */
+.ik-rv { opacity: 0; transform: translateY(16px); transition: opacity var(--d-slow) var(--d-ease), transform var(--d-slow) var(--d-ease); transition-delay: var(--ik-d, 0ms); }
+.ik-rv.ik-in { opacity: 1; transform: none; }
+
+/* hover life */
+html body :is(.home-panel, .games-card, .archive-card, .records-legend, .hof-record-card, .challenge-card, .bounty-card-item, .profile-hub-card, .calendar-card) {
+  transition: border-color var(--d-fast) var(--d-ease), transform var(--d-med) var(--d-ease), box-shadow var(--d-med) var(--d-ease), opacity var(--d-slow) var(--d-ease) !important;
+}
+html body :is(a.games-card, .archive-card, .records-legend, .hof-record-card, .bounty-card-item, .ik-visual-link):hover {
+  transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0,0,0,.35) !important;
+}
+html body .activity-feed-row, html body .upcoming-event-row { transition: transform var(--d-med) var(--d-ease); }
+html body .activity-feed-row:hover, html body .upcoming-event-row:hover { transform: translateX(3px); }
+
+/* live dots */
+html body :is(.home-live-pill, .clan-goal-live-pill, .results-live-chip, .live-dot, .ik-live-dot) :is(i, .dot, span:first-child:empty),
+html body :is(.live-dot, .ik-live-dot) { animation: ik-pulse 2s ease-in-out infinite; border-radius: 50%; }
+
+@media (prefers-reduced-motion: reduce) {
+  html body *, html body *::before, html body *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .ik-rv { opacity: 1 !important; transform: none !important; }
+}
