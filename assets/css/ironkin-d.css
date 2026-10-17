@@ -827,3 +827,14 @@ html body .ik-feed-marker:not(#_) { width: 8px !important; height: 8px !importan
 .ik-skill-tip small { color: var(--d-muted); font-size: 11px; }
 html body .ik-osrs-skill[data-skill] { cursor: default; }
 html body .ik-osrs-skill[data-skill]:focus-visible { outline: 2px solid var(--d-ember) !important; outline-offset: 2px; }
+
+/* feed rows: rounded hover backgrounds and bottom dividers don't mix (the
+   radius bends the line), so rows are separated by space instead of borders */
+html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_):not(#__) {
+  border-bottom: 0 !important;
+  border-radius: var(--d-r-md) !important;
+  padding: 12px 14px !important;
+}
+html body :is(.ik-osrs-feed-row, .activity-feed-row, .upcoming-event-row):not(#_):not(#__):hover { background: var(--d-hover) !important; }
+html body :is(#recentActivity, #homeUpcomingEvents, .home-activity-list, .home-upcoming-list, #ikOsrsFeed):not(#_) { display: grid !important; gap: 4px !important; }
+html body .ik-osrs-feed-row:not(#_):not(#__) { column-gap: 14px !important; }
