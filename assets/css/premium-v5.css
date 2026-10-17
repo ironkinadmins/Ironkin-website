@@ -5,11 +5,11 @@
    trophies, motion, backgrounds and responsive polish. */
 :root {
   --ik-canvas:#070706;
-  --ik-canvas-2:#0b0908;
-  --ik-section:#100d0b;
-  --ik-panel:#15110e;
-  --ik-panel-2:#1a1410;
-  --ik-raised:#211811;
+  --ik-canvas-2:#0a0909;
+  --ik-section:#0e0d0d;
+  --ik-panel:#121111;
+  --ik-panel-2:#161514;
+  --ik-raised:#1a1918;
   --ik-text:#fff8f1;
   --ik-text-2:#d9cfc6;
   --ik-muted:#968a80;
@@ -17,7 +17,7 @@
   --ik-ember:#ff7a1a;
   --ik-ember-2:#ff9c43;
   --ik-ember-soft:rgba(255,122,26,.12);
-  --ik-gold:#d8ad68;
+  --ik-gold:#d89368;
   --ik-success:#6fd19b;
   --ik-border:rgba(255,255,255,.075);
   --ik-border-strong:rgba(255,255,255,.12);
@@ -51,7 +51,7 @@ body {
   color:var(--ik-text);
   background:
     radial-gradient(900px 520px at 88% 4%, rgba(255,111,18,.08), transparent 64%),
-    radial-gradient(700px 520px at 7% 35%, rgba(216,173,104,.035), transparent 65%),
+    radial-gradient(700px 520px at 7% 35%, rgba(216,147,104,.035), transparent 65%),
     linear-gradient(rgba(7,7,6,.93),rgba(7,7,6,.97)),
     url('/assets/ironkin-bg.png') center top/cover fixed,
     var(--ik-canvas) !important;
@@ -73,7 +73,7 @@ p,li,td,th,input,button,select,textarea { font-family:var(--ik-ui); }
 .card,.panel,.profile-panel,.rank-card,.shop-card,.record-card,.event-card,.archive-card,.handbook-card,
 .games-card,.bingo-card,.team-card,.bounty-progress-panel,.bounty-catalog-section,.bounty-community-panel {
   border-color:var(--ik-border) !important;
-  background:linear-gradient(145deg,rgba(25,20,16,.94),rgba(13,11,9,.95)) !important;
+  background:linear-gradient(145deg,rgba(22,20,19,.94),rgba(12,11,10,.95)) !important;
   box-shadow:inset 0 1px rgba(255,255,255,.025),var(--ik-shadow-sm);
 }
 a,button,.btn,input,select,textarea,.card,.profile-panel,.event-card,.record-card,.hall-card,.shop-card {
@@ -94,8 +94,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .premium-nav-links { align-items:center; gap:4px!important; }
 .premium-nav-links > a,.nav-dropdown-toggle { min-height:38px; display:inline-flex; align-items:center; padding:0 11px!important; border:1px solid transparent!important; border-radius:9px!important; color:#b9aea5!important; background:transparent!important; font-size:.78rem!important; font-weight:750!important; white-space:nowrap; }
 .premium-nav-links > a:hover,.nav-dropdown-toggle:hover,.premium-nav-links > a.active { color:#fff8f1!important; background:rgba(255,255,255,.04)!important; border-color:var(--ik-border)!important; transform:none; }
-.premium-nav-links > a.active { box-shadow:inset 0 -2px var(--ik-ember); }
-.nav-dropdown-menu { border:1px solid var(--ik-border-strong)!important; border-radius:14px!important; background:rgba(14,11,9,.98)!important; backdrop-filter:blur(18px); box-shadow:var(--ik-shadow-lg)!important; padding:7px!important; }
+.premium-nav-links > a.active { box-shadow:none; }
+.nav-dropdown-menu { border:1px solid var(--ik-border-strong)!important; border-radius:14px!important; background:rgba(12,11,11,.98)!important; backdrop-filter:blur(18px); box-shadow:var(--ik-shadow-lg)!important; padding:7px!important; }
 .nav-dropdown-menu a { border-radius:8px!important; padding:10px 12px!important; }
 .nav-dropdown-menu a:hover { background:rgba(255,255,255,.045)!important; }
 .nav-global-search-trigger { min-height:38px!important; border:1px solid var(--ik-border)!important; border-radius:9px!important; background:rgba(255,255,255,.025)!important; color:var(--ik-muted)!important; }
@@ -113,7 +113,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Member profile = a first-class player card */
 .profile-page { width:min(1180px,calc(100% - 32px))!important; margin:auto!important; padding-top:38px!important; }
-.profile-hero { position:relative; overflow:hidden; border:1px solid var(--ik-border)!important; border-radius:22px!important; background:linear-gradient(120deg,rgba(31,23,17,.96),rgba(13,11,9,.96))!important; box-shadow:var(--ik-shadow-lg)!important; }
+.profile-hero { position:relative; overflow:hidden; border:1px solid var(--ik-border)!important; border-radius:22px!important; background:linear-gradient(120deg,rgba(25,24,23,.96),rgba(12,11,10,.96))!important; box-shadow:var(--ik-shadow-lg)!important; }
 .profile-hero::after { content:""; position:absolute; width:330px; height:330px; right:-80px; top:-120px; opacity:.055; background:url('/assets/ironkin-emblem.png') center/contain no-repeat; pointer-events:none; }
 .profile-identity-card { position:relative; z-index:1; padding:30px!important; gap:24px!important; }
 .profile-avatar { width:112px!important; height:112px!important; border:1px solid rgba(255,144,55,.26)!important; box-shadow:0 0 0 7px rgba(255,255,255,.025),0 18px 40px rgba(0,0,0,.35)!important; }
@@ -126,25 +126,25 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .profile-stat-card { min-height:116px; border:1px solid var(--ik-border)!important; border-radius:14px!important; background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012))!important; }
 .profile-stat-card strong { font-size:1.48rem!important; color:#fff!important; }
 .profile-grid { gap:16px!important; }
-.profile-embers-card { background:linear-gradient(145deg,rgba(255,122,26,.11),rgba(18,14,11,.96))!important; border-color:rgba(255,140,50,.2)!important; }
+.profile-embers-card { background:linear-gradient(145deg,rgba(255,122,26,.11),rgba(15,14,14,.96))!important; border-color:rgba(255,140,50,.2)!important; }
 .profile-ember-value { color:var(--ik-ember-2)!important; text-shadow:0 0 24px rgba(255,122,26,.15); }
 
 /* Achievement / trophy identity */
 .ik-achievement-note { display:block; margin-top:5px; color:var(--ik-faint); font-size:.69rem; line-height:1.35; }
 .ik-trophy-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:16px; }
-.ik-trophy { position:relative; overflow:hidden; padding:14px; border:1px solid var(--ik-border); border-radius:13px; background:linear-gradient(145deg,rgba(216,173,104,.07),rgba(255,255,255,.015)); }
+.ik-trophy { position:relative; overflow:hidden; padding:14px; border:1px solid var(--ik-border); border-radius:13px; background:linear-gradient(145deg,rgba(216,147,104,.07),rgba(255,255,255,.015)); }
 .ik-trophy::after { content:""; position:absolute; inset:-100% -30%; background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.06) 50%,transparent 58%); transform:translateX(-45%); transition:transform .8s var(--ik-ease); }
 .ik-trophy:hover::after { transform:translateX(45%); }
-.ik-trophy strong { display:block; color:#f4d6a5; }
+.ik-trophy strong { display:block; color:#f4c3a5; }
 .ik-trophy small { color:var(--ik-muted); }
 
 /* Hall of Flame — restrained trophy room */
 body.ik-hall-page .page { width:min(1180px,calc(100% - 32px)); }
-body.ik-hall-page .page-title { min-height:230px; display:flex; align-items:center; padding:42px!important; border:1px solid var(--ik-border); border-radius:22px; background:linear-gradient(125deg,rgba(31,22,15,.96),rgba(11,10,9,.96)); box-shadow:var(--ik-shadow-lg); }
+body.ik-hall-page .page-title { min-height:230px; display:flex; align-items:center; padding:42px!important; border:1px solid var(--ik-border); border-radius:22px; background:linear-gradient(125deg,rgba(24,23,22,.96),rgba(11,10,9,.96)); box-shadow:var(--ik-shadow-lg); }
 body.ik-hall-page .page-title::before { content:"LEGACY • ACHIEVEMENT • KIN"; position:absolute; left:42px; top:30px; color:var(--ik-gold); font-size:.63rem; font-weight:900; letter-spacing:.2em; }
 body.ik-hall-page .hall-grid { gap:14px!important; margin-top:18px; }
-body.ik-hall-page .hall-grid > * { border-color:rgba(216,173,104,.16)!important; background:radial-gradient(circle at 90% 0,rgba(216,173,104,.07),transparent 38%),linear-gradient(145deg,rgba(24,19,15,.96),rgba(12,10,9,.96))!important; box-shadow:var(--ik-shadow-sm)!important; }
-body.ik-hall-page .hall-grid > *:hover { border-color:rgba(216,173,104,.32)!important; transform:translateY(-2px); box-shadow:var(--ik-shadow-md)!important; }
+body.ik-hall-page .hall-grid > * { border-color:rgba(216,147,104,.16)!important; background:radial-gradient(circle at 90% 0,rgba(216,147,104,.07),transparent 38%),linear-gradient(145deg,rgba(20,19,19,.96),rgba(11,10,10,.96))!important; box-shadow:var(--ik-shadow-sm)!important; }
+body.ik-hall-page .hall-grid > *:hover { border-color:rgba(216,147,104,.32)!important; transform:translateY(-2px); box-shadow:var(--ik-shadow-md)!important; }
 
 /* Data visualization helpers */
 .ik-data-viz { margin:22px 0; padding:20px; border:1px solid var(--ik-border); border-radius:16px; background:linear-gradient(145deg,rgba(255,255,255,.026),rgba(255,255,255,.01)); }
@@ -165,7 +165,7 @@ img[src*="runescape" i],img[src*="osrs" i],.bounty-card-image img,.event-item-im
 .bounty-card-image,.event-item-image-wrap,.item-icon-wrap { border-color:var(--ik-border)!important; background:radial-gradient(circle at 50% 35%,rgba(255,145,55,.08),rgba(0,0,0,.2))!important; }
 
 /* Premium universal footer */
-.ik-footer { margin-top:64px; border-top:1px solid var(--ik-border); background:linear-gradient(180deg,rgba(13,10,8,.7),rgba(7,7,6,.98)); }
+.ik-footer { margin-top:64px; border-top:1px solid var(--ik-border); background:linear-gradient(180deg,rgba(11,10,10,.7),rgba(7,7,6,.98)); }
 .ik-footer-inner { width:min(1180px,calc(100% - 32px)); margin:auto; padding:38px 0 26px; display:grid; grid-template-columns:1.5fr repeat(3,1fr); gap:32px; }
 .ik-footer-brand { display:flex; gap:13px; align-items:flex-start; }
 .ik-footer-brand img { width:44px; height:44px; object-fit:contain; opacity:.9; filter:drop-shadow(0 0 10px rgba(255,122,26,.12)); }
@@ -305,9 +305,9 @@ h2,h3,h4 { letter-spacing:-.028em!important; }
 }
 .premium-nav-links > a.active {
   color:#fff!important;
-  border-color:rgba(255,132,38,.22)!important;
-  background:linear-gradient(180deg,rgba(255,129,31,.10),rgba(255,129,31,.045))!important;
-  box-shadow:inset 0 -2px #ff7a1a,0 6px 18px rgba(0,0,0,.1)!important;
+  border-color:transparent!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
 .nav-dropdown-toggle span { opacity:.52; margin-left:3px; transform:translateY(-.3em); }
 .nav-dropdown-menu {
@@ -365,7 +365,7 @@ h2,h3,h4 { letter-spacing:-.028em!important; }
   border-radius:20px!important;
   background:
     radial-gradient(520px 260px at 88% 10%,rgba(255,119,22,.075),transparent 70%),
-    linear-gradient(125deg,rgba(24,20,17,.9),rgba(13,12,11,.94))!important;
+    linear-gradient(125deg,rgba(22,20,19,.9),rgba(13,12,11,.94))!important;
   box-shadow:0 22px 60px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)!important;
 }
 .page-title.premium-page-hero::after {
@@ -611,7 +611,7 @@ body.home-ledger-v3 .home-hero-dashboard-integrated .home-ledger-hero{
   justify-content:center;
   background:
     radial-gradient(circle at 82% 45%,rgba(255,111,18,.10),transparent 31%),
-    linear-gradient(125deg,rgba(26,19,14,.97),rgba(11,10,9,.94))!important;
+    linear-gradient(125deg,rgba(21,20,19,.97),rgba(11,10,9,.94))!important;
 }
 body.home-ledger-v3 .home-ledger-hero h1{
   max-width:650px;
@@ -636,7 +636,7 @@ body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail article{
   min-height:76px!important;
   padding:14px 16px!important;
   align-items:center!important;
-  background:rgba(13,11,10,.82)!important;
+  background:rgba(12,11,11,.82)!important;
   backdrop-filter:blur(10px);
 }
 body.home-ledger-v3 .home-hero-dashboard-integrated .home-status-rail strong{

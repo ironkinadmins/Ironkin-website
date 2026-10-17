@@ -1,10 +1,10 @@
-.team-shell{max-width:1500px;margin:0 auto;padding:32px 18px 70px}.team-hero{display:flex;justify-content:space-between;gap:24px;align-items:end;margin:25px 0}.team-hero h1{font-size:clamp(2.3rem,6vw,5rem);margin:.15em 0}.team-card{background:rgba(18,12,9,.94);border:1px solid rgba(255,132,24,.35);border-radius:22px;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}.team-login{max-width:520px;margin:70px auto}.team-login label{display:block;font-weight:800;margin:18px 0 8px}.team-login input,.proof-dialog input,.proof-dialog textarea{width:100%;box-sizing:border-box;background:#090807;color:#fff;border:1px solid rgba(255,132,24,.45);border-radius:12px;padding:13px}.team-error{min-height:1.4em;color:#ff8d79;margin-top:12px}.team-toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.team-toggle{display:flex;gap:8px}.team-toggle button.active{background:#ff861b;color:#120b05}.team-meta{display:flex;gap:12px;flex-wrap:wrap;color:#d7c7ba}.team-meta b{color:#fff}.proof-dialog{border:1px solid rgba(255,132,24,.5);border-radius:18px;background:#17100c;color:#fff;max-width:480px;width:calc(100% - 32px);padding:22px}.proof-dialog::backdrop{background:rgba(0,0,0,.75)}.proof-dialog label{display:block;margin:12px 0 6px;font-weight:800}.proof-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.hidden{display:none!important}
+.team-shell{max-width:1500px;margin:0 auto;padding:32px 18px 70px}.team-hero{display:flex;justify-content:space-between;gap:24px;align-items:end;margin:25px 0}.team-hero h1{font-size:clamp(2.3rem,6vw,5rem);margin:.15em 0}.team-card{background:rgba(14,13,13,.94);border:1px solid rgba(255,132,24,.35);border-radius:22px;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.35)}.team-login{max-width:520px;margin:70px auto}.team-login label{display:block;font-weight:800;margin:18px 0 8px}.team-login input,.proof-dialog input,.proof-dialog textarea{width:100%;box-sizing:border-box;background:#080808;color:#fff;border:1px solid rgba(255,132,24,.45);border-radius:12px;padding:13px}.team-error{min-height:1.4em;color:#ff8d79;margin-top:12px}.team-toolbar{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.team-toggle{display:flex;gap:8px}.team-toggle button.active{background:#ff861b;color:#0c0b0b}.team-meta{display:flex;gap:12px;flex-wrap:wrap;color:#d7c7ba}.team-meta b{color:#fff}.proof-dialog{border:1px solid rgba(255,132,24,.5);border-radius:18px;background:#121111;color:#fff;max-width:480px;width:calc(100% - 32px);padding:22px}.proof-dialog::backdrop{background:rgba(0,0,0,.75)}.proof-dialog label{display:block;margin:12px 0 6px;font-weight:800}.proof-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.hidden{display:none!important}
 
 /* Keep private team boards centred and no wider than 980px. */
 .team-board{width:100%;max-width:980px;margin:0 auto;display:grid;grid-template-columns:repeat(10,minmax(76px,1fr));gap:7px;overflow:auto;padding:2px 2px 10px}
 
 /* Cleaner tile layout: images and names stay visible while status becomes a small badge. */
-.team-tile{position:relative;aspect-ratio:1/1;min-width:76px;border:1px solid rgba(255,132,24,.32);border-radius:9px;background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%);color:#fff;padding:5px 5px 17px;overflow:hidden;cursor:pointer;isolation:isolate;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.team-tile:not(:disabled):hover{transform:translateY(-1px);border-color:rgba(255,151,54,.75);box-shadow:0 4px 12px rgba(0,0,0,.35)}.team-tile:disabled{cursor:default}.team-tile img{display:block;width:100%;height:59%;object-fit:contain;margin-top:2px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}.team-tile .tile-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-top:1px;font-size:.66rem;line-height:1.02;font-weight:750;text-align:center;text-shadow:0 1px 2px #000}.team-tile.empty .tile-name{color:#8c837d;font-weight:500}.team-tile .qty-badge{position:absolute;top:4px;right:4px;z-index:8;display:grid;place-items:center;min-width:22px;height:20px;padding:0 5px;border-radius:999px;background:#ff861b;color:#111;font-size:.67rem;font-weight:1000;box-shadow:0 1px 4px rgba(0,0,0,.65)}
+.team-tile{position:relative;aspect-ratio:1/1;min-width:76px;border:1px solid rgba(255,132,24,.32);border-radius:9px;background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%);color:#fff;padding:5px 5px 17px;overflow:hidden;cursor:pointer;isolation:isolate;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.team-tile:not(:disabled):hover{transform:translateY(-1px);border-color:rgba(255,151,54,.75);box-shadow:0 4px 12px rgba(0,0,0,.35)}.team-tile:disabled{cursor:default}.team-tile img{display:block;width:100%;height:59%;object-fit:contain;margin-top:2px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}.team-tile .tile-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-top:1px;font-size:.66rem;line-height:1.02;font-weight:750;text-align:center;text-shadow:0 1px 2px #000}.team-tile.empty .tile-name{color:#8c837d;font-weight:500}.team-tile .qty-badge{position:absolute;top:4px;right:4px;z-index:8;display:grid;place-items:center;min-width:22px;height:20px;padding:0 5px;border-radius:999px;background:#ff861b;color:#111;font-size:.67rem;font-weight:1000;box-shadow:0 1px 4px rgba(0,0,0,.65)}
 
 /* High-contrast Battleship results. No full-tile shading: state is shown by a bright border, glow, and compact badge. */
 .team-tile .status-badge{
@@ -59,18 +59,18 @@
 
 /* Battleship result states always override the grey ship styling. */
 .team-tile.ship.hit {
-  background: linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
+  background: linear-gradient(180deg,#0c0b0b 0%,#070707 100%);
   border-color: #ff4d4f;
   box-shadow: 0 0 8px rgba(255,77,79,.45);
 }
 .team-tile.ship.miss {
-  background: linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
+  background: linear-gradient(180deg,#0c0b0b 0%,#070707 100%);
   border-color: #3da9fc;
   box-shadow: 0 0 8px rgba(61,169,252,.45);
 }
 
 /* Per-team quantity progress. The API only returns the signed-in team's progress. */
-.team-tile.partial,.team-tile.complete{background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%)}.team-tile .team-progress-count{position:absolute;right:5px;bottom:6px;z-index:8;display:block;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.84);color:#fff;font-size:.56rem;line-height:1.1;font-weight:900;pointer-events:none}.team-tile .team-progress-line{position:absolute;left:5px;right:5px;bottom:2px;z-index:7;display:block;height:3px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.18);pointer-events:none}.team-tile .team-progress-line i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff7a1a,#ffd2ad)}
+.team-tile.partial,.team-tile.complete{background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%)}.team-tile .team-progress-count{position:absolute;right:5px;bottom:6px;z-index:8;display:block;padding:1px 4px;border-radius:4px;background:rgba(0,0,0,.84);color:#fff;font-size:.56rem;line-height:1.1;font-weight:900;pointer-events:none}.team-tile .team-progress-line{position:absolute;left:5px;right:5px;bottom:2px;z-index:7;display:block;height:3px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.18);pointer-events:none}.team-tile .team-progress-line i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff7a1a,#ffd2ad)}
 
 @media(max-width:760px){.team-board{grid-template-columns:repeat(10,64px)}.team-shell{padding-left:10px;padding-right:10px}.team-hero{align-items:start;flex-direction:column}.team-card{padding:14px}.team-tile{min-width:64px;padding:4px 4px 15px}.team-tile .tile-name{font-size:.58rem}.team-tile .status-badge{font-size:.52rem;min-width:27px;height:17px}.team-tile .qty-badge{height:18px;min-width:20px;font-size:.6rem}}
 
@@ -85,7 +85,7 @@
 }
 
 .team-tile.progress-partial {
-  background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%);
+  background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%);
 }
 .team-tile.progress-partial img {
   opacity:1;
@@ -131,24 +131,24 @@
 /* Hit and miss always override the neutral ship-grey styling. */
 .team-board[data-view="waters"] .team-tile.ship.hit,
 .team-board.is-waters-view .team-tile.ship.hit {
-  background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%) !important;
+  background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%) !important;
   border:2px solid #ff3b30 !important;
   box-shadow:0 0 0 1px rgba(255,59,48,.5),0 0 12px rgba(255,59,48,.62) !important;
 }
 .team-board[data-view="waters"] .team-tile.ship.miss,
 .team-board.is-waters-view .team-tile.ship.miss {
-  background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%) !important;
+  background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%) !important;
   border:2px solid #26a7ff !important;
   box-shadow:0 0 0 1px rgba(38,167,255,.48),0 0 12px rgba(38,167,255,.58) !important;
 }
 
 /* Staff-only Battleship admin control center */
-.admin-game-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin:1rem 0}.admin-summary-card{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:1rem 1.25rem;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,18,30,.9);color:inherit;cursor:pointer}.admin-summary-card span{opacity:.72}.admin-summary-card strong{font-size:1.05rem}.admin-board-control-center{margin:1rem 0 1.5rem}.admin-board-heading{display:flex;justify-content:space-between;gap:2rem;align-items:end;margin-bottom:1rem}.admin-board-heading h2{margin:.1rem 0}.admin-board-heading>p{max-width:620px;opacity:.75}.admin-four-boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.admin-board-card{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(8,15,26,.92);padding:1rem;min-width:0}.admin-board-card header{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:.75rem}.admin-board-card header h3{margin:0}.admin-board-card header span{font-size:.82rem;opacity:.7}.admin-board-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.admin-board-tile{position:relative;aspect-ratio:1;border:1px solid rgba(255,255,255,.08);border-radius:5px;background:rgba(255,255,255,.035);overflow:hidden;padding:0;cursor:pointer;color:inherit}.admin-board-tile img{width:100%;height:100%;object-fit:contain;padding:3px}.admin-board-tile .admin-tile-result{position:absolute;inset:auto 1px 1px 1px;font-size:.58rem;line-height:1.1;background:rgba(0,0,0,.78);border-radius:3px;padding:2px;text-align:center}.admin-board-tile.hit{outline:2px solid #ef4444;outline-offset:-2px}.admin-board-tile.miss{outline:2px solid #38bdf8;outline-offset:-2px}.admin-board-tile.ship-cell{background:rgba(245,158,11,.2)}.admin-board-tile.sunk{background:rgba(239,68,68,.3)}.admin-board-tile[disabled]{cursor:default}.admin-tile-action-dialog{width:min(560px,calc(100vw - 2rem));border:1px solid rgba(255,255,255,.14);border-radius:16px;background:#0b1320;color:#fff;padding:1.25rem}.admin-tile-action-dialog::backdrop{background:rgba(0,0,0,.72)}.admin-tile-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:1rem 0}.admin-tile-status-grid>div{padding:.8rem;border-radius:10px;background:rgba(255,255,255,.05)}.admin-tile-status-grid span{display:block;font-size:.8rem;opacity:.7}.admin-tile-action-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;margin-top:1rem}.proof-list,.bingo-log,.active-sidebar-content{max-height:70vh;overflow:auto;overscroll-behavior:contain}.proof-card{align-items:flex-start}.proof-card .proof-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .9rem;margin:.6rem 0;font-size:.88rem}.proof-card .proof-meta-grid span{opacity:.78}.proof-card .proof-image-preview{display:block;max-width:280px;max-height:180px;object-fit:contain;border-radius:8px;margin-top:.6rem}.active-proof-list{max-height:55vh;overflow:auto}@media(max-width:1050px){.admin-four-boards{grid-template-columns:1fr}.admin-board-heading{display:block}.admin-board-grid{gap:2px}}@media(max-width:650px){.admin-game-summary{grid-template-columns:1fr}.admin-tile-action-buttons{grid-template-columns:1fr}.admin-board-card{padding:.65rem}}
+.admin-game-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin:1rem 0}.admin-summary-card{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:1rem 1.25rem;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,18,30,.9);color:inherit;cursor:pointer}.admin-summary-card span{opacity:.72}.admin-summary-card strong{font-size:1.05rem}.admin-board-control-center{margin:1rem 0 1.5rem}.admin-board-heading{display:flex;justify-content:space-between;gap:2rem;align-items:end;margin-bottom:1rem}.admin-board-heading h2{margin:.1rem 0}.admin-board-heading>p{max-width:620px;opacity:.75}.admin-four-boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.admin-board-card{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(8,15,26,.92);padding:1rem;min-width:0}.admin-board-card header{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:.75rem}.admin-board-card header h3{margin:0}.admin-board-card header span{font-size:.82rem;opacity:.7}.admin-board-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.admin-board-tile{position:relative;aspect-ratio:1;border:1px solid rgba(255,255,255,.08);border-radius:5px;background:rgba(255,255,255,.035);overflow:hidden;padding:0;cursor:pointer;color:inherit}.admin-board-tile img{width:100%;height:100%;object-fit:contain;padding:3px}.admin-board-tile .admin-tile-result{position:absolute;inset:auto 1px 1px 1px;font-size:.58rem;line-height:1.1;background:rgba(0,0,0,.78);border-radius:3px;padding:2px;text-align:center}.admin-board-tile.hit{outline:2px solid #ef4444;outline-offset:-2px}.admin-board-tile.miss{outline:2px solid #38bdf8;outline-offset:-2px}.admin-board-tile.ship-cell{background:rgba(245,100,11,.2)}.admin-board-tile.sunk{background:rgba(239,68,68,.3)}.admin-board-tile[disabled]{cursor:default}.admin-tile-action-dialog{width:min(560px,calc(100vw - 2rem));border:1px solid rgba(255,255,255,.14);border-radius:16px;background:#0b1320;color:#fff;padding:1.25rem}.admin-tile-action-dialog::backdrop{background:rgba(0,0,0,.72)}.admin-tile-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:1rem 0}.admin-tile-status-grid>div{padding:.8rem;border-radius:10px;background:rgba(255,255,255,.05)}.admin-tile-status-grid span{display:block;font-size:.8rem;opacity:.7}.admin-tile-action-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;margin-top:1rem}.proof-list,.bingo-log,.active-sidebar-content{max-height:70vh;overflow:auto;overscroll-behavior:contain}.proof-card{align-items:flex-start}.proof-card .proof-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .9rem;margin:.6rem 0;font-size:.88rem}.proof-card .proof-meta-grid span{opacity:.78}.proof-card .proof-image-preview{display:block;max-width:280px;max-height:180px;object-fit:contain;border-radius:8px;margin-top:.6rem}.active-proof-list{max-height:55vh;overflow:auto}@media(max-width:1050px){.admin-four-boards{grid-template-columns:1fr}.admin-board-heading{display:block}.admin-board-grid{gap:2px}}@media(max-width:650px){.admin-game-summary{grid-template-columns:1fr}.admin-tile-action-buttons{grid-template-columns:1fr}.admin-board-card{padding:.65rem}}
 
 
 /* Admin control-center boards intentionally mirror the Team 1/2 board presentation. */
 .admin-board-grid{display:grid;grid-template-columns:repeat(10,minmax(76px,1fr));gap:7px;overflow:auto;padding:2px 2px 10px}
-.admin-board-tile.team-tile{min-width:76px;border-radius:9px;padding:5px 5px 17px;background:linear-gradient(180deg,#0d0b0a 0%,#080706 100%);border:1px solid rgba(255,132,24,.32)}
+.admin-board-tile.team-tile{min-width:76px;border-radius:9px;padding:5px 5px 17px;background:linear-gradient(180deg,#0c0b0b 0%,#070707 100%);border:1px solid rgba(255,132,24,.32)}
 .admin-board-tile.team-tile img{display:block;width:100%;height:59%;object-fit:contain;margin-top:2px;padding:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
 .admin-board-tile.team-tile .tile-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-top:1px;font-size:.66rem;line-height:1.02;font-weight:750;text-align:center;text-shadow:0 1px 2px #000}
 .admin-board-tile.team-tile.hit{outline:none;border-color:#ff3f3f;box-shadow:0 0 0 2px rgba(255,63,63,.92),0 0 12px rgba(255,63,63,.48)}
@@ -167,17 +167,17 @@
 /* Team-page fleet status summary */
 .team-hero-actions{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;justify-content:flex-end}
 .team-fleet-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0 0 1.1rem}
-.team-fleet-card{border:1px solid rgba(249,115,22,.42);border-radius:15px;background:linear-gradient(145deg,rgba(28,13,7,.95),rgba(18,10,8,.92));padding:1rem 1.1rem;min-width:0}
+.team-fleet-card{border:1px solid rgba(249,115,22,.42);border-radius:15px;background:linear-gradient(145deg,rgba(18,17,17,.95),rgba(14,13,12,.92));padding:1rem 1.1rem;min-width:0}
 .fleet-card-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:.75rem}
 .fleet-team-icon{font-size:1.35rem;line-height:1.2}
 .fleet-team-copy h3{margin:0;color:#fff;font-size:1rem}
 .fleet-team-copy p{margin:.2rem 0 0;font-size:.8rem;opacity:.78}
-.fleet-card-top>strong{color:#ffb347;font-size:.76rem;white-space:nowrap;padding-top:.2rem}
+.fleet-card-top>strong{color:#ff8c47;font-size:.76rem;white-space:nowrap;padding-top:.2rem}
 .fleet-card-stats{display:flex;gap:.85rem;flex-wrap:wrap;margin:.75rem 0;color:#e5e7eb;font-size:.78rem}
 .fleet-card-stats span:nth-child(1){color:#4ade80}.fleet-card-stats span:nth-child(2){color:#fb923c}.fleet-card-stats span:nth-child(3){color:#fb7185}
 .fleet-ship-tags{display:flex;gap:.42rem;flex-wrap:wrap}
-.fleet-ship-tag{display:inline-flex;align-items:center;gap:.25rem;padding:.36rem .55rem;border:1px solid rgba(249,115,22,.4);border-radius:7px;background:rgba(112,48,8,.25);font-size:.72rem;font-weight:800;color:#ffe7c2}
-.fleet-ship-tag b{color:#ffb347}.fleet-ship-tag.sunk{border-color:rgba(239,68,68,.62);background:rgba(127,29,29,.35);color:#fecaca;text-decoration:line-through}
+.fleet-ship-tag{display:inline-flex;align-items:center;gap:.25rem;padding:.36rem .55rem;border:1px solid rgba(249,115,22,.4);border-radius:7px;background:rgba(63,59,57,.25);font-size:.72rem;font-weight:800;color:#ffd9c2}
+.fleet-ship-tag b{color:#ff8c47}.fleet-ship-tag.sunk{border-color:rgba(239,68,68,.62);background:rgba(127,29,29,.35);color:#fecaca;text-decoration:line-through}
 .fleet-empty{font-size:.78rem;opacity:.7}
 
 /* The legacy setup board remains available in setup phases, but never duplicates the four-board control center during an active/completed game. */
@@ -207,7 +207,7 @@ body.bingo-active #legacyBingoLayout.admin-sidebar-only{display:block!important}
   width:100%;
 }
 
-.admin-summary-static{cursor:default}.fleet-card-stats span:nth-child(4){color:#facc15}@media(max-width:1100px){.admin-game-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.admin-summary-static{cursor:default}.fleet-card-stats span:nth-child(4){color:#fa7415}@media(max-width:1100px){.admin-game-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* v3: dedicated controls rendered directly inside the visible Staff Control Center. */
 .admin-board-heading-tools .staff-control-dropdown {
