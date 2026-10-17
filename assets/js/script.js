@@ -829,7 +829,12 @@ function setupGlobalSearch() {
     document.body.classList.add("search-open");
     input.value = "";
     runGlobalSearch("");
-    requestAnimationFrame(() => input.focus());
+    // The overlay fades in from visibility:hidden, so a single early focus()
+    // can be dropped. Retry until the input actually has focus.
+    const focusInput = () => { if (palette.classList.contains("is-open") && document.activeElement !== input) input.focus({ preventScroll: true }); };
+    focusInput();
+    requestAnimationFrame(focusInput);
+    [60, 180, 320].forEach(ms => setTimeout(focusInput, ms));
   }
 
   function closeSearch() {
