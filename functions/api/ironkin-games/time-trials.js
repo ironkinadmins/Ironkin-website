@@ -19,13 +19,13 @@ export function scoreTimeTrials(state,rows){
   const best=[];
   for(const t of state.teams||[]){const mine=approved.filter(r=>r.kind==='activity'&&r.index===index&&r.teamId===t.id).sort((a,b)=>index===6?b.value-a.value:a.value-b.value)[0];if(mine)best.push({...mine,teamName:t.name});}
   best.sort((a,b)=>index===6?b.value-a.value:a.value-b.value);
-  return {name,results:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,value:r.value,rank:i+1,points:[10,7,4,1][i]||0}))};
+  return {name,results:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,value:r.value,rank:best.findIndex(x=>x.value===r.value)+1,points:[10,7,4,1][best.findIndex(x=>x.value===r.value)]||0}))};
  });
  const raidResults=raids.map((name,index)=>{
   const best=[];
   for(const t of state.teams||[]){const mine=approved.filter(r=>r.kind==='raid'&&r.index===index&&r.teamId===t.id&&Number.isFinite(r.value)&&r.value>0).sort((a,b)=>a.value-b.value)[0];if(mine)best.push({...mine,teamName:t.name});}
   best.sort((a,b)=>a.value-b.value);
-  return {name,teams:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,members:r.members,value:r.value,rank:i+1,speedPoints:[5,3,2,1][i]||0,completionPoints:3}))};
+  return {name,teams:best.map((r,i)=>({teamId:r.teamId,teamName:r.teamName,player:r.player,members:r.members,value:r.value,rank:best.findIndex(x=>x.value===r.value)+1,speedPoints:[5,3,2,1][best.findIndex(x=>x.value===r.value)]||0,completionPoints:3}))};
  });
  const standings=(state.teams||[]).map(t=>{
   const placements=result.map(a=>a.results.find(x=>x.teamId===t.id)?.points||0).sort((a,b)=>b-a);
