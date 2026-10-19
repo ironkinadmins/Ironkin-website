@@ -250,7 +250,7 @@ function renderResults(){
   const weekCards=weeks.map((week,index)=>{
     const published=isWeekPublished(week.id),weekSubs=(gamesState.submissions||[]).filter(s=>String(s.weekId)===String(week.id));
     let controls="";
-    if(gamesState.isStaff&&!gamesState.gamesCompleted)controls=published?`<button class="games-btn secondary" type="button" data-publish-results="hide" data-week-id="${esc(week.id)}">Hide Public Results</button>`:`<button class="games-btn" type="button" data-publish-results="publish" data-week-id="${esc(week.id)}">Preview & Publish</button>`;
+    if(gamesState.isStaff&&!gamesState.gamesCompleted)controls=published?`<button class="games-btn" type="button" data-publish-results="publish" data-week-id="${esc(week.id)}">Preview & Republish</button><button class="games-btn secondary" type="button" data-publish-results="hide" data-week-id="${esc(week.id)}">Hide Public Results</button>`:`<button class="games-btn" type="button" data-publish-results="publish" data-week-id="${esc(week.id)}">Preview & Publish</button>`;
     const detailed=published?publishedWeekResultsHtml(week):"";
     const testPreview=gamesState.testMode&&gamesState.isStaff&&!published?`<div class="results-test-preview" data-test-results-preview="${esc(week.id)}"><div class="games-contract-loading">Calculating private test results…</div></div>`:"";
     const rows=weekSubs.filter(s=>String(s.status||"").toLowerCase()==="approved");
