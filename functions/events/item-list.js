@@ -21,11 +21,9 @@ function summarizeEvent(event) {
     includedByActiveFilter:
       event?.id !== "pvm-entry" &&
       event?.type !== "pvm-entry" &&
-      event?.active === true &&
-      event?.dropsEnabled === true,
+      event?.active === true,
     exclusionReasons: [
       ...(event?.active === true ? [] : ["active is not true"]),
-      ...(event?.dropsEnabled === true ? [] : ["dropsEnabled is not true"]),
       ...((event?.id === "pvm-entry" || event?.type === "pvm-entry") ? ["pvm-entry is injected separately"] : [])
     ]
   };
@@ -91,7 +89,7 @@ export async function onRequestGet({ request, env }) {
     pluginOnly: true
   };
   const activeEvents = [
-    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true && event?.dropsEnabled === true),
+    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true),
     { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true }
   ];
   const dbRows = await listTrackedItems(env).catch(() => []);
