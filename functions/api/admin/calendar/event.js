@@ -655,8 +655,12 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
 
     const primaryCompetition = competitions.find(item => item.role === "primary") || competitions[0];
     const primaryIsCurrent = botwRole === "primary" || !existing;
+    // A new primary competition means a new BOTW week. Drop the previous week's
+    // pluginEventId so RuneLite drops are keyed to this week (botw-<womId>).
+    const newWeek = botwRole === "primary" && String(existing?.womCompetitionId || "") !== nextCompetition.competitionId;
     const activeEvent = {
       ...(existing || {}),
+      ...(newWeek ? { pluginEventId: null } : {}),
       id: canonicalId,
       calendarEventId: primaryIsCurrent ? calendarEvent.id : (existing?.calendarEventId || calendarEvent.id),
       type: "botw",
@@ -671,7 +675,8 @@ async function addOrUpdateActiveEvent(env, calendarEvent) {
       combinedMetric: competitions.map(item => item.metric).filter(Boolean).join(" + ") || null,
       featured: primaryIsCurrent ? calendarEvent.featured === true : existing?.featured === true,
       active: true,
-      dropsEnabled: primaryIsCurrent ? calendarEvent.dropsEnabled !== false : existing?.dropsEnabled !== false,
+      // BOTW pays bonus Embers for tracked drops, so calendar saves always keep drops on.
+      dropsEnabled: true,
       target: primaryIsCurrent ? (calendarEvent.target || null) : (existing?.target || null),
       startDate: primaryIsCurrent ? calendarEvent.start : (existing?.startDate || calendarEvent.start),
       endDate: primaryIsCurrent ? calendarEvent.end : (existing?.endDate || calendarEvent.end),
