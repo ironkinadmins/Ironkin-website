@@ -104,7 +104,8 @@ async function handlePluginSubmission(context) {
 
   const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
-  let event = configured.find(entry => entry?.active === true && entry?.dropsEnabled === true && makePluginEventId(entry) === requestedEventId);
+  // Must match /events/item-list: every active event the plugin is told to track accepts its drops.
+  let event = configured.find(entry => entry?.active === true && makePluginEventId(entry) === requestedEventId);
   if (requestedEventId === "pvm-entry") {
     const savedPvm = configured.find(entry => entry?.id === "pvm-entry" || entry?.type === "pvm-entry");
     event = {

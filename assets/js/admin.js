@@ -1198,7 +1198,9 @@ function ikSyncEventLifecycle(event) {
   let active = pvm ? true : bounty ? Boolean(event.active) : validDates ? now >= start && now <= end : Boolean(event.active);
   let featured = pvm ? false : bounty ? Boolean(event.featured) : validDates ? active : Boolean(event.featured);
   const configuredDrops = Array.isArray(event.drops) ? event.drops.length > 0 : null;
-  let drops = pvm ? true : configuredDrops === null ? Boolean(event.dropsEnabled) : configuredDrops;
+  // BOTW pays bonus Embers for tracked drops, so it always accepts plugin drops.
+  const botw = String(event.type || '') === 'botw';
+  let drops = pvm || botw ? true : configuredDrops === null ? Boolean(event.dropsEnabled) : configuredDrops;
   const status = pvm ? 'Always Active · not featured' : bounty ? 'Bounties · manually managed' : validDates ? (now < start ? 'Scheduled' : now > end ? 'Awaiting Results' : 'Live') : 'Dates unavailable · existing saved state retained';
   for (const [id,value] of [['eventActiveInput',active],['eventFeaturedInput',featured],['eventDropsInput',drops]]) {
     const el=document.getElementById(id); if(el) el.checked=value;

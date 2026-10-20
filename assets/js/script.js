@@ -5286,7 +5286,8 @@ async function saveCalendarEventForm(event) {
     target: (createWom || alreadyHasWom) && targetValue ? Number(targetValue) : null,
     goalKind: getCalendarCompetitionTypeForForm(),
     featured: document.getElementById("calendarFeaturedInput")?.checked === true,
-    dropsEnabled: eventType === "clan-goal",
+    // BOTW pays bonus Embers for tracked drops, so it needs plugin drops just like Clan Goals.
+    dropsEnabled: eventType === "clan-goal" || isCalendarBotwEventType(eventType),
     status: calendarEditingEvent?.status || "scheduled",
     recurrence: getCalendarRecurrenceForForm(),
     createDiscordScheduledEvent: document.getElementById("calendarCreateDiscordEventInput")?.checked === true,
