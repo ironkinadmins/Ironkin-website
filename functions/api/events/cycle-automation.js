@@ -50,7 +50,7 @@ async function createWom(env, kv, stateKey, event, state) {
   const payload = {
     title, metric:metricName(option.metrics[0]),
     startsAt:torontoInstant(event.date,event.start.slice(11)),
-    endsAt:torontoInstant(shift(event.date,14),event.start.slice(11)),
+    endsAt:torontoInstant(shift(event.date,7),event.start.slice(11)),
     groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)
   };
   // The coordinator owns the irreversible WOM POST and its durable receipt.
@@ -94,7 +94,7 @@ async function linkActiveEvent(kv, event, state) {
   }
   const option = state.options?.[state.winningIndex];
   const startDate = torontoInstant(event.date, event.start.slice(11));
-  const endDate = torontoInstant(shift(event.date, 14), event.start.slice(11));
+  const endDate = torontoInstant(shift(event.date, 7), event.start.slice(11));
   const record = {
     ...(previous || {}), id, type:event.type,
     ...(event.type === "botw" ? {botwTier:"elite",botwRole:"primary",label:"BOTW Elite"} : {label:"SOTW"}),
@@ -133,7 +133,7 @@ async function finalizeCompetition(env, kv, event, state) {
   if (state.websiteStatus !== "linked" || state.womStatus !== "created") return state;
   if (state.finalizationStatus === "completed" || state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") return state;
   const now = new Date();
-  const end = torontoInstant(shift(event.date,14), event.start.slice(11));
+  const end = torontoInstant(shift(event.date,7), event.start.slice(11));
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
   const active = parse(await kv.get("events:active"), []);
   const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
