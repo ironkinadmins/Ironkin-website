@@ -180,6 +180,20 @@ export async function onRequest({request,env}) {
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
   const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
+  // A completed poll belongs to the prior cycle once the next cycle becomes current.
+  // Reconcile it independently, without blocking the upcoming poll.
+  if (request.method === "GET") {
+    const previousDate = shift(event.date, -14);
+    const previousType = event.type;
+    const previousEvent = { ...event, date: previousDate, id: `${previousType}:${previousDate}`, start: `${previousDate}T${config.startTime || "15:00"}` };
+    const previousKey = PREFIX + previousEvent.id;
+    const previousState = parse(await kv.get(previousKey), {});
+    if (previousState.womStatus === "created" && previousState.websiteStatus !== "linked") {
+      await linkOrFlag(kv, previousEvent, previousState);
+    } else if (env.CYCLE_AUTO_FINALIZE_ENABLED === "true" && previousState.womStatus === "created" && previousState.websiteStatus === "linked") {
+      await finalizeCompetition(env, kv, previousEvent, previousState);
+    }
+  }
   if(request.method==="GET") {
     if (env.CYCLE_AUTO_FINALIZE_ENABLED === "true" && state.womStatus === "created" && state.websiteStatus === "linked") {
       const final = await finalizeCompetition(env,kv,event,state);
