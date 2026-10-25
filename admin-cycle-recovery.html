@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ironkin | Cycle Recovery</title><link rel="stylesheet" href="/assets/css/styles.css">
+<style>
+body{background:#100f0e;color:#eee1d1;font-family:system-ui,sans-serif}
+main{max-width:1060px;margin:auto;padding:28px 18px 80px}
+h1{color:#f3d1a8}a{color:#e6ad71}
+header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.panel{background:#1b1918;border:1px solid #4b4239;border-radius:14px;padding:18px;margin:18px 0}
+button{background:#b77a3f;color:#120f0d;border:0;border-radius:8px;padding:10px 15px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+input{padding:10px;background:#100f0e;border:1px solid #71604d;border-radius:7px;color:#fff;width:170px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #4b4239;vertical-align:top}
+small,.muted{color:#c1ae9b} .bad{color:#ffab95}.good{color:#a7dbb2}
+@media(max-width:760px){.scroll{overflow:auto}table{min-width:800px}}
+</style></head><body><main>
+<header><div><a href="/admin.html">← Admin dashboard</a><h1>SOTW / BOTW cycle recovery</h1>
+<p class="muted">Review automation activity and safely attach an existing WOM competition. This page cannot create competitions or announce results.</p></div>
+<button id="refresh">Refresh status</button></header>
+<section class="panel"><strong>Automation status</strong><p id="status" role="status">Loading…</p></section>
+<section class="panel"><h2>Recent cycles</h2><div class="scroll"><table><thead><tr>
+<th>Cycle</th><th>Vote</th><th>WOM</th><th>Website</th><th>Finalization</th><th>Review</th></tr></thead>
+<tbody id="cycles"></tbody></table></div></section>
+<section class="panel"><h2>Attach an existing WOM competition</h2>
+<p class="muted">Use only when WOM already created the competition but the website lost its ID. The server checks the WOM group, metric, and title before attaching.</p>
+<form id="attach"><label>Cycle <select id="cycle" required></select></label>
+<label> WOM competition ID <input id="competition" required inputmode="numeric" pattern="[0-9]{1,15}" placeholder="e.g. 123456"></label>
+<button type="submit">Verify and attach</button></form>
+<p id="feedback" role="status"></p></section>
+</main><script src="/assets/js/admin-cycle-recovery.js" defer></script></body></html>
