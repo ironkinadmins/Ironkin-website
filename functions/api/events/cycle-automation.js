@@ -50,7 +50,7 @@ async function createWom(env, kv, stateKey, event, state) {
     if (!response.ok) throw new Error(data?.message || data?.error || `WOM HTTP ${response.status}`);
     const competition = data.competition || data;
     if (!competition?.id) throw new Error("WOM response omitted competition ID");
-    const saved = {...pending,womStatus:"created",womCompetitionId:String(competition.id),womUrl:`https://wiseoldman.net/competitions/${competition.id}`,womCreatedAt:new Date().toISOString()};
+    const saved = {...pending,womStatus:"created",womMetric:payload.metric,womCompetitionId:String(competition.id),womUrl:`https://wiseoldman.net/competitions/${competition.id}`,womCreatedAt:new Date().toISOString()};
     await kv.put(stateKey, JSON.stringify(saved));
     return saved;
   } catch(error) {
@@ -60,12 +60,64 @@ async function createWom(env, kv, stateKey, event, state) {
   }
 }
 
+// Register a confirmed WOM competition in the same active-event store used by
+// the public website. This operation is repeatable and never creates a WOM event.
+async function linkActiveEvent(kv, event, state) {
+  if (state.womStatus !== "created" || !/^\d+$/.test(String(state.womCompetitionId || ""))) return state;
+  const activeKey = "events:active";
+  const existing = parse(await kv.get(activeKey), []);
+  if (!Array.isArray(existing)) throw new Error("Invalid active events registry");
+  const id = event.type === "sotw" ? "sotw-current" : "botw-elite";
+  const previous = existing.find(item => item.id === id);
+  // Never silently replace a different, still-active manual competition.
+  if (previous?.womCompetitionId && String(previous.womCompetitionId) !== String(state.womCompetitionId) &&
+      previous.endDate && Date.parse(previous.endDate) > Date.now()) {
+    throw new Error(`Active ${id} competition already exists; manual reconciliation required`);
+  }
+  const option = state.options?.[state.winningIndex];
+  const startDate = torontoInstant(event.date, event.start.slice(11));
+  const endDate = torontoInstant(shift(event.date, 7), event.start.slice(11));
+  const record = {
+    ...(previous || {}), id, type:event.type,
+    ...(event.type === "botw" ? {botwTier:"elite",botwRole:"primary",label:"BOTW Elite"} : {label:"SOTW"}),
+    title:state.womTitle || `Ironkin ${event.type.toUpperCase()} - ${option?.label || "Competition"}`,
+    description:"Automatically created from the Ironkin Discord voting cycle.",
+    womCompetitionId:String(state.womCompetitionId),
+    ...(event.type === "botw" ? {
+      womCompetitionIds:[String(state.womCompetitionId)],
+      womCompetitions:[{competitionId:String(state.womCompetitionId),metric:state.womMetric || metricName(option?.metrics?.[0]),role:"primary"}],
+      pluginEventId:null
+    } : {}),
+    metric:state.womMetric || metricName(option?.metrics?.[0]),
+    featured:false,active:true,dropsEnabled:event.type === "botw",
+    startDate,endDate
+  };
+  const updated = [...existing.filter(item => item.id !== id),record];
+  await kv.put(activeKey,JSON.stringify(updated));
+  const linked = {...state,websiteStatus:"linked",websiteEventId:id,websiteLinkedAt:new Date().toISOString()};
+  await kv.put(PREFIX + event.id,JSON.stringify(linked));
+  return linked;
+}
+async function linkOrFlag(kv,event,state) {
+  if (state.womStatus !== "created") return state;
+  try { return await linkActiveEvent(kv,event,state); }
+  catch (error) {
+    const flagged = {...state,websiteStatus:"needs_review",websiteError:String(error.message || error).slice(0,300)};
+    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+    return flagged;
+  }
+}
+
 export async function onRequest({request,env}) {
   if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
   const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
-  if(request.method==="GET"){
+  if(request.method==="GET") {
+    if (state.womStatus === "created" && state.websiteStatus !== "linked") {
+      const linked = await linkOrFlag(kv,event,state);
+      return Response.json({enabled:true,task:null,websiteStatus:linked.websiteStatus},{headers:{"Cache-Control":"no-store"}});
+    }
     if(!state.messageId && localTime(now)>=event.open && localTime(now)<event.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
       const pool=(pools[event.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,event.type),x])).values()];
@@ -87,12 +139,12 @@ export async function onRequest({request,env}) {
     const record={messageId:String(body.messageId),channelId:String(body.channelId),options:body.options,publishedAt:now.toISOString()};await kv.put(stateKey,JSON.stringify(record));return Response.json({success:true});
   }
   if(body.action==="closed"){
-    if(state.closedAt)return Response.json({success:true,state});
+    if(state.closedAt)return Response.json({success:true,state:await linkOrFlag(kv,event,state)});
     if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
     const updated = await createWom(env,kv,stateKey,event,record);
-    return Response.json({success:true,state:updated});
+    return Response.json({success:true,state:await linkOrFlag(kv,event,updated)});
   }
   return Response.json({error:"Unknown action"},{status:400});
 }
