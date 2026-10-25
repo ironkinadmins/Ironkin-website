@@ -1,4 +1,5 @@
 import { hybridKv } from "../../../_hybridKv.js";
+import { buildCyclePayoutDraft } from "../../../_cyclePayouts.js";
 import { syncRecordEmbeds } from "../../../_recordsAutoSync.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import {
@@ -238,6 +239,20 @@ export async function archiveEventInternal({env, body}) {
 
   archive.unshift(archiveEntry);
   await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
+  // Generate a staff-review payout draft. This never changes balances.
+  if (["sotw", "botw"].includes(archiveEntry.type)) {
+    try {
+      const kv = hybridKv(env, "drops");
+      const draftKey = `events:cycle-payout:${archiveRequestId}`;
+      if (!(await kv.get(draftKey))) {
+        const draft = await buildCyclePayoutDraft(kv, archiveEntry);
+        if (draft) await kv.put(draftKey, JSON.stringify(draft));
+      }
+    } catch (error) {
+      console.error("Cycle payout draft failed", String(error?.message || error));
+    }
+  }
+
 
   if (wantsAutomaticResults(event, body)) {
     try {

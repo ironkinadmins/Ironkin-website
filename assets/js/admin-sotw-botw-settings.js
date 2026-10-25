@@ -114,3 +114,47 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   update().catch(e=>status.textContent=e.message);
 });
+
+// Review archived SOTW/BOTW Ember payouts. Credits are performed by the bot
+// only after a staff member approves a fully resolved draft.
+document.addEventListener('DOMContentLoaded',()=>{
+  const anchor=document.getElementById('ikLiveTestStatus');
+  if(!anchor)return;
+  const panel=document.createElement('section');
+  panel.className='admin-card';
+  panel.style.marginTop='1.5rem';
+  const heading=document.createElement('h3');heading.textContent='SOTW/BOTW Ember payout approval';
+  const explanation=document.createElement('p');explanation.textContent='Payouts are calculated from archived WOM results and saved Event Rewards (02). No Embers are credited until you approve a fully matched draft.';
+  const refresh=document.createElement('button');refresh.type='button';refresh.className='btn';refresh.textContent='Refresh payout drafts';
+  const content=document.createElement('div');content.style.whiteSpace='pre-wrap';
+  panel.append(heading,explanation,refresh,content);anchor.parentElement.append(panel);
+  const load=async()=>{
+    content.replaceChildren();
+    const response=await fetch('/api/admin/events/cycle-payouts',{credentials:'same-origin',cache:'no-store'});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'Unable to load payouts');
+    if(!data.drafts.length){content.textContent='No archived cycle payout drafts yet.';return;}
+    for(const draft of data.drafts){
+      const box=document.createElement('div');box.style.margin='1rem 0';
+      const label=document.createElement('strong');label.textContent=`${draft.type.toUpperCase()} · ${draft.id} · ${draft.status}`;
+      const lines=document.createElement('pre');lines.style.whiteSpace='pre-wrap';
+      lines.textContent=(draft.payouts||[]).map(p=>`${p.rsn} — ${p.embers} Embers (${p.source}, rank ${p.rank}) · ${p.status||'pending'}`).join('\n')||'No payable linked members.';
+      if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
+      box.append(label,lines);
+      if(draft.status==='pending_review'){
+        for(const action of ['approve','reject']){
+          const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=action==='approve'?'Approve Ember payouts':'Reject payouts';button.style.marginRight='.5rem';
+          button.disabled=action==='approve'&&(!draft.payouts?.length||!!draft.unresolved?.length);
+          button.addEventListener('click',async()=>{
+            if(!confirm(`${action.toUpperCase()} payouts for ${draft.id}? Approval authorizes the bot to credit Embers.`))return;
+            button.disabled=true;
+            try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Review failed');await load();}
+            catch(error){alert(error.message);button.disabled=false;}
+          });box.append(button);
+        }
+      }
+      content.append(box);
+    }
+  };
+  refresh.addEventListener('click',()=>load().catch(e=>content.textContent=e.message));
+  load().catch(e=>content.textContent=e.message);
+});

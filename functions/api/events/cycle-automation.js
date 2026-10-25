@@ -41,41 +41,47 @@ async function createWom(env, kv, stateKey, event, state) {
   }
   const option = state.options?.[state.winningIndex];
   // Paired boss competitions require two metrics and must not be silently reduced to one.
-  if (option?.metrics?.length !== 1 || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095) {
-    const updated = {...state,womStatus:"needs_review",womError:"Paired metrics or missing/incorrect WOM group credentials require staff review"};
+  if (!option?.metrics?.length || option.metrics.length > 2 || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095) {
+    const updated = {...state,womStatus:"needs_review",womError:"Missing/invalid metrics or WOM group credentials require staff review"};
     await kv.put(stateKey, JSON.stringify(updated));
     return updated;
   }
   const title = `Ironkin ${event.type.toUpperCase()} - ${option.label} - ${event.date}`;
-  const payload = {
-    title, metric:metricName(option.metrics[0]),
-    startsAt:torontoInstant(event.date,event.start.slice(11)),
-    endsAt:torontoInstant(shift(event.date,7),event.start.slice(11)),
-    groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)
-  };
-  // The coordinator owns the irreversible WOM POST and its durable receipt.
-  // Replaying a request never creates another competition for the same cycle.
-  const pending = {...state,womStatus:"creating",womTitle:title,womMetric:payload.metric,womRequestedAt:new Date().toISOString()};
+  const metrics=option.metrics.map(metricName);
+  const startsAt=torontoInstant(event.date,event.start.slice(11));
+  const endsAt=torontoInstant(shift(event.date,7),event.start.slice(11));
+  const pending={...state,womStatus:"creating",womTitle:title,womMetric:metrics.join(" + "),womRequestedAt:new Date().toISOString(),womCompetitionIds:[]};
   await kv.put(stateKey,JSON.stringify(pending));
-  try {
-    const response = await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({id:event.id,payload})
-    });
-    const data = await response.json().catch(()=>({}));
-    if (!response.ok || data.status !== "created" || !/^\d+$/.test(String(data.competitionId||""))) {
-      const flagged = {...pending,womStatus:"needs_review",womError:String(data.error || data.status || `Coordinator HTTP ${response.status}`).slice(0,300)};
-      await kv.put(stateKey,JSON.stringify(flagged));
-      return flagged;
+  const created=[];
+  for(let index=0;index<metrics.length;index++) {
+    const metric=metrics[index];
+    const payload={title:metrics.length>1?`${title} (${option.metrics[index]})`:title,
+      metric,startsAt,endsAt,groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)};
+    // Each metric has a distinct Durable Object identity. An uncertain result
+    // blocks automatic retry of the whole pair; staff must reconcile it.
+    try {
+      const response=await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id:metrics.length>1?`${event.id}:${index}`:event.id,payload})
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||data.status!=="created"||!/^\d+$/.test(String(data.competitionId||""))) {
+        const flagged={...pending,womStatus:"needs_review",womCompetitionIds:created.map(c=>c.competitionId),
+          womError:`Metric ${metric} requires reconciliation: ${String(data.error||data.status||`HTTP ${response.status}`).slice(0,220)}`};
+        await kv.put(stateKey,JSON.stringify(flagged));return flagged;
+      }
+      created.push({competitionId:String(data.competitionId),metric,role:index===0?"primary":"paired"});
+      await kv.put(stateKey,JSON.stringify({...pending,womCompetitionIds:created.map(c=>c.competitionId),womCompetitions:created}));
+    }catch(error){
+      const flagged={...pending,womStatus:"needs_review",womCompetitionIds:created.map(c=>c.competitionId),womCompetitions:created,
+        womError:`Metric ${metric} outcome uncertain: ${String(error.message||error).slice(0,200)}`};
+      await kv.put(stateKey,JSON.stringify(flagged));return flagged;
     }
-    const saved = {...pending,womStatus:"created",womCompetitionId:String(data.competitionId),womUrl:`https://wiseoldman.net/competitions/${data.competitionId}`,womCreatedAt:new Date().toISOString()};
-    await kv.put(stateKey,JSON.stringify(saved));
-    return saved;
-  } catch(error) {
-    const flagged = {...pending,womStatus:"needs_review",womError:`Coordinator outcome uncertain: ${String(error.message || error).slice(0,240)}`};
-    await kv.put(stateKey,JSON.stringify(flagged));
-    return flagged;
   }
+  const saved={...pending,womStatus:"created",womCompetitionId:created[0].competitionId,
+    womCompetitionIds:created.map(c=>c.competitionId),womCompetitions:created,
+    womUrl:`https://wiseoldman.net/competitions/${created[0].competitionId}`,womCreatedAt:new Date().toISOString()};
+  await kv.put(stateKey,JSON.stringify(saved));return saved;
 }
 
 // Register a confirmed WOM competition in the same active-event store used by
@@ -105,8 +111,9 @@ async function linkActiveEvent(kv, event, state) {
     description:"Automatically created from the Ironkin Discord voting cycle.",
     womCompetitionId:String(state.womCompetitionId),
     ...(event.type === "botw" ? {
-      womCompetitionIds:[String(state.womCompetitionId)],
-      womCompetitions:[{competitionId:String(state.womCompetitionId),metric:state.womMetric || metricName(option?.metrics?.[0]),role:"primary"}],
+      womCompetitionIds:state.womCompetitionIds || [String(state.womCompetitionId)],
+      womCompetitions:state.womCompetitions || [{competitionId:String(state.womCompetitionId),metric:state.womMetric || metricName(option?.metrics?.[0]),role:"primary"}],
+      combinedMetric:(state.womCompetitions?.length>1)?state.womMetric:null,
       pluginEventId:null
     } : {}),
     metric:state.womMetric || metricName(option?.metrics?.[0]),
@@ -140,7 +147,8 @@ async function finalizeCompetition(env, kv, event, state) {
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
   const active = parse(await kv.get("events:active"), []);
   const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
-  if (!record || String(record.womCompetitionId) !== String(state.womCompetitionId)) {
+  if (!record || String(record.womCompetitionId) !== String(state.womCompetitionId) ||
+      (state.womCompetitionIds?.length>1 && JSON.stringify(record.womCompetitionIds)!==JSON.stringify(state.womCompetitionIds))) {
     const flagged = {...state, finalizationStatus:"needs_review", finalizationError:"Active website event no longer matches the automation competition."};
     await kv.put(PREFIX + event.id,JSON.stringify(flagged));
     return flagged;
