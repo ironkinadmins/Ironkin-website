@@ -82,3 +82,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }catch(e){result.textContent=e.message;}finally{prepare.disabled=false;}
   });
 });
+
+// Separate live-test namespace: never changes the official schedule or active event registry.
+document.addEventListener("DOMContentLoaded", () => {
+  const start=document.getElementById("ikLiveTestStart"), refresh=document.getElementById("ikLiveTestRefresh"), status=document.getElementById("ikLiveTestStatus");
+  if(!start||!refresh||!status)return;
+  const update=async()=>{
+    const r=await fetch("/api/admin/events/cycle-live-test",{credentials:"same-origin",cache:"no-store"});
+    const d=await r.json();if(!r.ok)throw Error(d.error||"Could not load test status");
+    const t=d.test;status.textContent=t?`Status: ${t.status}\nPoll closes: ${t.pollClosesAt}\nWOM starts: ${t.womStartsAt}\nWOM ends: ${t.womEndsAt}\nChoices: ${(t.options||[]).map(x=>x.label).join(" / ")}\nVotes: ${JSON.stringify(t.counts||[])}\nWOM: ${t.womUrl||t.womStatus||"Not created"}\n${t.error||""}`:"No live test started.";
+    start.disabled=!!t&&!["cancelled","completed","failed"].includes(t.status);
+  };
+  refresh.addEventListener("click",()=>update().catch(e=>status.textContent=e.message));
+  start.addEventListener("click",async()=>{
+    if(!confirm("Post a PUBLIC 3-minute SOTW test poll and attempt to create a REAL 15-minute WOM competition in group 12095? No rewards or nominations will be issued."))return;
+    start.disabled=true;
+    try{
+      const r=await fetch("/api/admin/events/cycle-live-test",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"start"})});
+      const d=await r.json();if(!r.ok)throw Error(d.error||"Test could not start");await update();
+    }catch(e){status.textContent=e.message;start.disabled=false;}
+  });
+  update().catch(e=>status.textContent=e.message);
+});

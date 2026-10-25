@@ -84,7 +84,7 @@ function votingWindow(startDate, startTime) {
   const before = days => new Date(anchor.getTime() - days * 86400000).toISOString().slice(0,10);
   return {
     nominationDeadline: {date: before(4), time: startTime, timeZone: TZ},
-    pollOpens: {date: before(3), time: startTime, timeZone: TZ},
+    pollOpens: {date: before(4), time: startTime, timeZone: TZ},
     pollCloses: {date: before(1), time: startTime, timeZone: TZ}
   };
 }

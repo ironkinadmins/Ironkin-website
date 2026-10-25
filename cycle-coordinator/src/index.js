@@ -8,7 +8,7 @@ export class CompetitionCoordinator {
     if (request.method !== "POST" || new URL(request.url).pathname !== "/create")
       return Response.json({error:"Not found"},{status:404});
     const body=await request.json().catch(()=>null);
-    if (!body || !/^(sotw|botw):\d{4}-\d{2}-\d{2}$/.test(String(body.id||"")))
+    if (!body || !/^(?:(sotw|botw):\d{4}-\d{2}-\d{2}|live-test:\d{13})$/.test(String(body.id||"")))
       return Response.json({error:"Invalid cycle"},{status:400});
     const p=body.payload;
     if (!p || Number(p.groupId)!==12095 || !/^[a-z0-9_]+$/.test(String(p.metric||"")) ||
