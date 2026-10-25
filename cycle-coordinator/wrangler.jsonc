@@ -1,0 +1,21 @@
+{
+  "name": "ironkin-cycle-coordinator",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-25",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CYCLES",
+        "class_name": "CycleCreation"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "CycleCreation"
+      ]
+    }
+  ]
+}

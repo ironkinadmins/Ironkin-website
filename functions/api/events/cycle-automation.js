@@ -28,15 +28,15 @@ function metricName(value) {
   return special[value] || String(value).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
 }
 async function createWom(env, kv, stateKey, event, state) {
-  if (state.womStatus || state.outcome !== "winner") return state;
-  // External WOM writes remain opt-in until the complete cycle is tested.
-  // Cloudflare KV is not a compare-and-swap lock: this flag alone does NOT
-  // make simultaneous close requests safe. Keep disabled until a durable
-  // single-writer mechanism is implemented and tested.
+  if ((state.womStatus && state.womStatus !== "awaiting_activation") || state.outcome !== "winner") return state;
   if (env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true") {
-    const updated = {...state, womStatus:"awaiting_activation",
-      womError:"Automatic WOM creation is disabled pending concurrency safeguards."};
-    await kv.put(stateKey, JSON.stringify(updated));
+    const updated = {...state,womStatus:"awaiting_activation",womError:"Automatic WOM creation is disabled."};
+    await kv.put(stateKey,JSON.stringify(updated));
+    return updated;
+  }
+  if (!env.CYCLE_COORDINATOR || typeof env.CYCLE_COORDINATOR.fetch !== "function") {
+    const updated = {...state,womStatus:"needs_review",womError:"Durable Object coordinator binding missing; WOM creation blocked."};
+    await kv.put(stateKey,JSON.stringify(updated));
     return updated;
   }
   const option = state.options?.[state.winningIndex];
@@ -53,22 +53,28 @@ async function createWom(env, kv, stateKey, event, state) {
     endsAt:torontoInstant(shift(event.date,7),event.start.slice(11)),
     groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)
   };
-  // Persist an intent before posting to WOM. Never retry an ambiguous external write.
-  const pending = {...state,womStatus:"creating",womTitle:title,womRequestedAt:new Date().toISOString()};
-  await kv.put(stateKey, JSON.stringify(pending));
+  // The coordinator owns the irreversible WOM POST and its durable receipt.
+  // Replaying a request never creates another competition for the same cycle.
+  const pending = {...state,womStatus:"creating",womTitle:title,womMetric:payload.metric,womRequestedAt:new Date().toISOString()};
+  await kv.put(stateKey,JSON.stringify(pending));
   try {
-    const response = await womFetch(env,"/competitions",{method:"POST",headers:{"Content-Type":"application/json","User-Agent":"Ironkin-Website-Cycle"},body:JSON.stringify(payload)});
+    const response = await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:event.id,payload})
+    });
     const data = await response.json().catch(()=>({}));
-    if (!response.ok) throw new Error(data?.message || data?.error || `WOM HTTP ${response.status}`);
-    const competition = data.competition || data;
-    if (!competition?.id) throw new Error("WOM response omitted competition ID");
-    const saved = {...pending,womStatus:"created",womMetric:payload.metric,womCompetitionId:String(competition.id),womUrl:`https://wiseoldman.net/competitions/${competition.id}`,womCreatedAt:new Date().toISOString()};
-    await kv.put(stateKey, JSON.stringify(saved));
+    if (!response.ok || data.status !== "created" || !/^\d+$/.test(String(data.competitionId||""))) {
+      const flagged = {...pending,womStatus:"needs_review",womError:String(data.error || data.status || `Coordinator HTTP ${response.status}`).slice(0,300)};
+      await kv.put(stateKey,JSON.stringify(flagged));
+      return flagged;
+    }
+    const saved = {...pending,womStatus:"created",womCompetitionId:String(data.competitionId),womUrl:`https://wiseoldman.net/competitions/${data.competitionId}`,womCreatedAt:new Date().toISOString()};
+    await kv.put(stateKey,JSON.stringify(saved));
     return saved;
   } catch(error) {
-    const saved = {...pending,womStatus:"needs_review",womError:String(error.message || error).slice(0,300)};
-    await kv.put(stateKey, JSON.stringify(saved));
-    return saved;
+    const flagged = {...pending,womStatus:"needs_review",womError:`Coordinator outcome uncertain: ${String(error.message || error).slice(0,240)}`};
+    await kv.put(stateKey,JSON.stringify(flagged));
+    return flagged;
   }
 }
 
@@ -219,7 +225,13 @@ export async function onRequest({request,env}) {
       const picks=nominations[event.type]?.discordId===winners[event.type]?nominations[event.type].options||[]:[];
       const selected=picks.filter(x=>unique.some(v=>key(v,event.type)===key(x,event.type))).slice(0,2);
       const distinct=[...new Map(selected.map(x=>[key(x,event.type),x])).values()];
-      try{const random=choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);const options=[...distinct.map(x=>label(x,event.type)),...random.result];return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:random.reset}},{headers:{"Cache-Control":"no-store"}});}catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
+      try {
+        const reserved = state.pollOptions;
+        const random = reserved ? null : choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);
+        const options = reserved || [...distinct.map(x=>label(x,event.type)),...random.result];
+        if (!reserved) await kv.put(stateKey,JSON.stringify({...state,pollOptions:options,rotationReset:random.reset,pollReservedAt:now.toISOString()}));
+        return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:state.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
+      } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
     if(state.messageId&&!state.closedAt&&localTime(now)>=event.close)return Response.json({enabled:true,task:{action:"close",...event,messageId:state.messageId,channelId:state.channelId,options:state.options}},{headers:{"Cache-Control":"no-store"}});
     return Response.json({enabled:true,task:null},{headers:{"Cache-Control":"no-store"}});
@@ -229,18 +241,18 @@ export async function onRequest({request,env}) {
   if(body.action==="published"){
     if(state.messageId)return Response.json({success:true,state});
     if(!/^\d{17,20}$/.test(String(body.messageId))||!/^\d{17,20}$/.test(String(body.channelId))||!Array.isArray(body.options)||body.options.length!==3)return Response.json({error:"Invalid poll receipt"},{status:400});
-    const expected=(await (async()=>{const r=new Request(request.url,{headers:{Authorization:`Bearer ${env.CYCLE_AUTOMATION_SECRET}`}});return onRequest({request:r,env});})()).json();
-    const task=(await expected).task;if(!task||task.action!=="publish"||JSON.stringify(task.options)!==JSON.stringify(body.options))return Response.json({error:"Options changed; poll requires review"},{status:409});
-    const record={messageId:String(body.messageId),channelId:String(body.channelId),options:body.options,publishedAt:now.toISOString()};await kv.put(stateKey,JSON.stringify(record));return Response.json({success:true});
+    if (!Array.isArray(state.pollOptions) || JSON.stringify(state.pollOptions) !== JSON.stringify(body.options))
+      return Response.json({error:"Poll options differ from reserved choices; staff review required"},{status:409});
+    const record={...state,messageId:String(body.messageId),channelId:String(body.channelId),options:state.pollOptions,publishedAt:now.toISOString()};await kv.put(stateKey,JSON.stringify(record));return Response.json({success:true});
   }
   if(body.action==="closed"){
-    if(state.closedAt)return Response.json({success:true,state:await linkOrFlag(kv,event,state)});
+    if(state.closedAt)return Response.json({success:true,alreadyClosed:true,state:await linkOrFlag(kv,event,state)});
     if (localTime(now) < event.close) return Response.json({error:"Voting is still open"},{status:409});
     if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
     const updated = await createWom(env,kv,stateKey,event,record);
-    return Response.json({success:true,state:await linkOrFlag(kv,event,updated)});
+    return Response.json({success:true,alreadyClosed:false,state:await linkOrFlag(kv,event,updated)});
   }
   return Response.json({error:"Unknown action"},{status:400});
 }

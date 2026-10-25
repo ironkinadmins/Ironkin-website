@@ -35,7 +35,7 @@ export async function onRequest({ request, env }) {
     const state = parse(await kv.get(stateKey), {});
     if (state.outcome !== "winner" || !state.closedAt ||
         (state.womCompetitionId && String(state.womCompetitionId) !== String(body.competitionId)) ||
-        !["creating", "needs_review", "created"].includes(state.womStatus)) {
+        !["creating", "needs_review", "created", "awaiting_activation"].includes(state.womStatus)) {
       return Response.json({ error: "Cycle cannot be reconciled safely." }, { status: 409 });
     }
     const [type, date] = body.id.split(":");

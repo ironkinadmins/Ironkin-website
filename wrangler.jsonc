@@ -10,5 +10,11 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "services": [
+    {
+      "binding": "CYCLE_COORDINATOR",
+      "service": "ironkin-cycle-coordinator"
+    }
   ]
 }
