@@ -282,7 +282,7 @@
 <button data-ik-stage="results" type="button"><span>04</span> Results</button>
 <button data-ik-stage="archive" type="button"><span>05</span> Finish</button>
 <button data-ik-stage="tracking" type="button"><span>•</span> Diagnostics</button></nav>
-<div class="ik-stage" data-ik-panel="setup"><section class="admin-card">
+<div class="ik-stage" data-ik-panel="setup"><div class="admin-card" id="ikCycleSettings" style="margin-bottom:18px"><h3>SOTW / BOTW Cycle</h3><p>Set the future launch date. Saving these settings does not start events or distribute rewards; automation remains inactive until its services are deployed.</p><div class="admin-form-grid"><div class="admin-field"><label for="ikCycleDate">First Friday</label><input id="ikCycleDate" type="date"></div><div class="admin-field"><label for="ikCycleTime">Eastern start time</label><input id="ikCycleTime" type="time" value="15:00"></div><div class="admin-field"><label for="ikCycleFirst">First competition</label><select id="ikCycleFirst"><option value="botw">BOTW</option><option value="sotw">SOTW</option></select></div></div><p id="ikCyclePreview" aria-live="polite"></p><button type="button" id="ikCycleSave">Save cycle schedule</button><p id="ikCycleStatus" role="status" aria-live="polite"></p></div><section class="admin-card">
 <div id="standardEventEditor">
 <div class="admin-form-grid admin-event-setup-simple">
 <div class="admin-field admin-field-wide ik-setup-event-picker"><div class="ik-event-picker"><div class="admin-field admin-field-wide">
