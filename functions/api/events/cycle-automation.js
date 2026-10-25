@@ -29,6 +29,16 @@ function metricName(value) {
 }
 async function createWom(env, kv, stateKey, event, state) {
   if (state.womStatus || state.outcome !== "winner") return state;
+  // External WOM writes remain opt-in until the complete cycle is tested.
+  // Cloudflare KV is not a compare-and-swap lock: this flag alone does NOT
+  // make simultaneous close requests safe. Keep disabled until a durable
+  // single-writer mechanism is implemented and tested.
+  if (env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true") {
+    const updated = {...state, womStatus:"awaiting_activation",
+      womError:"Automatic WOM creation is disabled pending concurrency safeguards."};
+    await kv.put(stateKey, JSON.stringify(updated));
+    return updated;
+  }
   const option = state.options?.[state.winningIndex];
   // Paired boss competitions require two metrics and must not be silently reduced to one.
   if (option?.metrics?.length !== 1 || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095) {
@@ -184,7 +194,7 @@ export async function onRequest({request,env}) {
   // Reconcile it independently, without blocking the upcoming poll.
   if (request.method === "GET") {
     const previousDate = shift(event.date, -14);
-    const previousType = event.type;
+    const previousType = event.type === "sotw" ? "botw" : "sotw";
     const previousEvent = { ...event, date: previousDate, id: `${previousType}:${previousDate}`, start: `${previousDate}T${config.startTime || "15:00"}` };
     const previousKey = PREFIX + previousEvent.id;
     const previousState = parse(await kv.get(previousKey), {});
@@ -225,6 +235,7 @@ export async function onRequest({request,env}) {
   }
   if(body.action==="closed"){
     if(state.closedAt)return Response.json({success:true,state:await linkOrFlag(kv,event,state)});
+    if (localTime(now) < event.close) return Response.json({error:"Voting is still open"},{status:409});
     if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
