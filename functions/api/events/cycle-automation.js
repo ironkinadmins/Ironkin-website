@@ -100,7 +100,7 @@ async function linkActiveEvent(kv, event, state) {
   await kv.put(PREFIX + event.id,JSON.stringify(linked));
   return linked;
 }
-async function linkOrFlag(kv,event,state) {
+export async function linkOrFlag(kv,event,state) {
   if (state.womStatus !== "created") return state;
   try { return await linkActiveEvent(kv,event,state); }
   catch (error) {
