@@ -18,12 +18,14 @@ export async function onRequest({request,env}) {
   if (request.method === "GET") {
     if (state.status === "polling") {
       if (!state.messageId) {
-        if (now >= iso(state.pollClosesAt)) {
-          const failed={...state,status:"failed",error:"Voting deadline passed before Discord poll publication was acknowledged",failedAt:new Date().toISOString()};
+        // Start the accelerated countdown on Discord publication, not test creation.
+        // A generous acknowledgement timeout avoids declaring a healthy bot poll expired.
+        if (now >= iso(state.createdAt) + 15 * 60000) {
+          const failed={...state,status:"failed",error:"Discord did not acknowledge the poll within 15 minutes",failedAt:new Date().toISOString()};
           await kv.put(KEY,JSON.stringify(failed));
           return json({task:null,testStatus:"failed"});
         }
-        return json({testStatus:"polling",task:{action:"publish",liveTest:true,id:state.id,type:"sotw",options:state.options,close:state.pollClosesAt}});
+        return json({testStatus:"polling",task:{action:"publish",liveTest:true,id:state.id,type:"sotw",options:state.options,close:null}});
       }
       if (now >= iso(state.pollClosesAt)) return json({testStatus:"polling",task:{action:"close",liveTest:true,id:state.id,type:"sotw",messageId:state.messageId,options:state.options}});
     }
@@ -35,7 +37,11 @@ export async function onRequest({request,env}) {
     if (state.status!=="polling") return json({error:"Poll no longer active"},409);
     if (!/^\d{15,22}$/.test(String(body.messageId||"")) || !/^\d{15,22}$/.test(String(body.channelId||""))) return json({error:"Invalid Discord identifiers"},400);
     if (state.messageId && String(state.messageId)!==String(body.messageId)) return json({error:"Poll already acknowledged with another message"},409);
-    const updated={...state,messageId:String(body.messageId),channelId:String(body.channelId),publishedAt:state.publishedAt||new Date().toISOString()};
+    const publishedAt=state.publishedAt||new Date().toISOString();
+    const pollClosesAt=state.messageId ? state.pollClosesAt : new Date(Date.parse(publishedAt)+3*60000).toISOString();
+    const womStartsAt=state.messageId ? state.womStartsAt : new Date(Date.parse(publishedAt)+5*60000).toISOString();
+    const womEndsAt=state.messageId ? state.womEndsAt : new Date(Date.parse(publishedAt)+20*60000).toISOString();
+    const updated={...state,messageId:String(body.messageId),channelId:String(body.channelId),publishedAt,pollClosesAt,womStartsAt,womEndsAt};
     await kv.put(KEY,JSON.stringify(updated));return json({testStatus:updated.status,test:updated});
   }
   if (body.action === "closed") {

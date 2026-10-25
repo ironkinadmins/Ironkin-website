@@ -97,6 +97,9 @@ async function linkActiveEvent(kv, event, state) {
   const endDate = torontoInstant(shift(event.date, 7), event.start.slice(11));
   const record = {
     ...(previous || {}), id, type:event.type,
+    // Retain the saved Event Rewards (02) settings on the canonical event record.
+    // Never invent default Ember amounts or silently replace configured rewards.
+    rewards: previous?.rewards || {placement:[],participation:[]},
     ...(event.type === "botw" ? {botwTier:"elite",botwRole:"primary",label:"BOTW Elite"} : {label:"SOTW"}),
     title:state.womTitle || `Ironkin ${event.type.toUpperCase()} - ${option?.label || "Competition"}`,
     description:"Automatically created from the Ironkin Discord voting cycle.",
