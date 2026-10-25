@@ -1,4 +1,5 @@
 import { hybridKv } from "../../_hybridKv.js";
+import { womFetch } from "../../_wom.js";
 
 const PREFIX = "events:sotw-botw-automation:v1:";
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
@@ -10,6 +11,55 @@ function localTime(instant) { const fields=new Intl.DateTimeFormat("en-CA",{time
 function shift(date,days){return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);}
 function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,7)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,-3)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
 function choose(pool,excluded,history,amount,type){let eligible=pool.filter(v=>!excluded.has(key(v,type))&&!history.includes(key(v,type)));let reset=false;if(eligible.length<amount){eligible=pool.filter(v=>!excluded.has(key(v,type)));reset=true;}if(eligible.length<amount)throw Error("At least three distinct eligible options are required.");const result=[];while(result.length<amount){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);const [pick]=eligible.splice(bytes[0]%eligible.length,1);result.push(label(pick,type));}return {result,reset};}
+
+function torontoInstant(date, time) {
+  const desired = `${date}T${time}`;
+  const utc = Date.parse(`${date}T${time}:00Z`);
+  for (const hours of [4, 5]) {
+    const instant = new Date(utc + hours * 3600000);
+    if (localTime(instant) === desired) return instant.toISOString();
+  }
+  throw new Error("Invalid local event time");
+}
+function metricName(value) {
+  const special = {"The Nightmare":"nightmare","Phosani's Nightmare":"phosanis_nightmare"};
+  return special[value] || String(value).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+}
+async function createWom(env, kv, stateKey, event, state) {
+  if (state.womStatus || state.outcome !== "winner") return state;
+  const option = state.options?.[state.winningIndex];
+  // Paired boss competitions require two metrics and must not be silently reduced to one.
+  if (option?.metrics?.length !== 1 || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095) {
+    const updated = {...state,womStatus:"needs_review",womError:"Paired metrics or missing/incorrect WOM group credentials require staff review"};
+    await kv.put(stateKey, JSON.stringify(updated));
+    return updated;
+  }
+  const title = `Ironkin ${event.type.toUpperCase()} - ${option.label} - ${event.date}`;
+  const payload = {
+    title, metric:metricName(option.metrics[0]),
+    startsAt:torontoInstant(event.date,event.start.slice(11)),
+    endsAt:torontoInstant(shift(event.date,7),event.start.slice(11)),
+    groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)
+  };
+  // Persist an intent before posting to WOM. Never retry an ambiguous external write.
+  const pending = {...state,womStatus:"creating",womTitle:title,womRequestedAt:new Date().toISOString()};
+  await kv.put(stateKey, JSON.stringify(pending));
+  try {
+    const response = await womFetch(env,"/competitions",{method:"POST",headers:{"Content-Type":"application/json","User-Agent":"Ironkin-Website-Cycle"},body:JSON.stringify(payload)});
+    const data = await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(data?.message || data?.error || `WOM HTTP ${response.status}`);
+    const competition = data.competition || data;
+    if (!competition?.id) throw new Error("WOM response omitted competition ID");
+    const saved = {...pending,womStatus:"created",womCompetitionId:String(competition.id),womUrl:`https://wiseoldman.net/competitions/${competition.id}`,womCreatedAt:new Date().toISOString()};
+    await kv.put(stateKey, JSON.stringify(saved));
+    return saved;
+  } catch(error) {
+    const saved = {...pending,womStatus:"needs_review",womError:String(error.message || error).slice(0,300)};
+    await kv.put(stateKey, JSON.stringify(saved));
+    return saved;
+  }
+}
+
 export async function onRequest({request,env}) {
   if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
@@ -41,8 +91,8 @@ export async function onRequest({request,env}) {
     if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
-    // Do not create WOM competitions from a tie or unsupported metric; staff resolution is required.
-    return Response.json({success:true,state:record});
+    const updated = await createWom(env,kv,stateKey,event,record);
+    return Response.json({success:true,state:updated});
   }
   return Response.json({error:"Unknown action"},{status:400});
 }
