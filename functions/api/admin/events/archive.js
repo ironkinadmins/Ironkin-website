@@ -103,8 +103,12 @@ export async function onRequestPost({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
+  return archiveEventInternal({env, body:await request.json()});
+}
 
-  const body = await request.json();
+// Trusted server-side entrypoint for the scheduled cycle; no public route.
+// It uses exactly the same validation and archival workflow as the admin route.
+export async function archiveEventInternal({env, body}) {
   const event = body.event;
   const events = Array.isArray(body.events) ? body.events : null;
   const archiveRequestId = String(body.archiveRequestId || "").trim() || crypto.randomUUID();

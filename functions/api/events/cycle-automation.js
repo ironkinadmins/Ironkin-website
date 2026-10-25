@@ -1,3 +1,5 @@
+import { archiveEventInternal } from "../admin/events/archive.js";
+import { buildEventResultsSnapshot, buildEventResultsContent, getResultsChannelId } from "../../_eventResultsAnnouncement.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { womFetch } from "../../_wom.js";
 
@@ -108,12 +110,81 @@ async function linkOrFlag(kv,event,state) {
   }
 }
 
+// Finalize only this automation's exact WOM competition, never a manually
+// configured event. The shared archive pipeline preserves results, winner
+// nomination mapping, record sync and Discord publishing behavior.
+async function finalizeCompetition(env, kv, event, state) {
+  if (state.websiteStatus !== "linked" || state.womStatus !== "created") return state;
+  if (state.finalizationStatus === "completed" || state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") return state;
+  const now = new Date();
+  const end = torontoInstant(shift(event.date,7), event.start.slice(11));
+  if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
+  const active = parse(await kv.get("events:active"), []);
+  const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
+  if (!record || String(record.womCompetitionId) !== String(state.womCompetitionId)) {
+    const flagged = {...state, finalizationStatus:"needs_review", finalizationError:"Active website event no longer matches the automation competition."};
+    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+    return flagged;
+  }
+  const archiveRequestId = `cycle-${event.id}-${state.womCompetitionId}`;
+  const archived = parse(await kv.get("events:archive"), []);
+  const existing = Array.isArray(archived) && archived.find(item => item.archiveRequestId === archiveRequestId || (String(item.womCompetitionId) === String(state.womCompetitionId) && item.eventId === record.id));
+  if (existing) {
+    const done = {...state,finalizationStatus:"completed",archiveId:existing.id,finalizedAt:new Date().toISOString()};
+    await kv.put(PREFIX + event.id,JSON.stringify(done));
+    return done;
+  }
+  // Verify WOM has returned actual final standings before changing any records.
+  let snapshot;
+  try {
+    snapshot = await buildEventResultsSnapshot(env,record);
+    if (!Array.isArray(snapshot.leaderboard) || !snapshot.leaderboard.length || !snapshot.endDate || Date.parse(snapshot.endDate) > Date.now()) {
+      throw new Error("Final WOM standings are not yet available.");
+    }
+  } catch (error) {
+    const pending = {...state,finalizationStatus:"pending",finalizationError:String(error.message || error).slice(0,250)};
+    await kv.put(PREFIX + event.id,JSON.stringify(pending));
+    return pending;
+  }
+  if (!getResultsChannelId(env,record) || !env.DISCORD_BOT_TOKEN) {
+    const pending = {...state,finalizationStatus:"needs_review",finalizationError:"Discord results channel or bot token is missing."};
+    await kv.put(PREFIX + event.id,JSON.stringify(pending));
+    return pending;
+  }
+  const content = buildEventResultsContent(snapshot);
+  if (!content || content.length > 1950) {
+    const pending = {...state,finalizationStatus:"needs_review",finalizationError:"Generated results content is missing or exceeds Discord limits."};
+    await kv.put(PREFIX + event.id,JSON.stringify(pending));
+    return pending;
+  }
+  // Mark an irreversible operation before calling the shared archiver.
+  // Unknown outcomes require manual reconciliation, never blind retry.
+  const processing = {...state,finalizationStatus:"processing",finalizationStartedAt:new Date().toISOString()};
+  await kv.put(PREFIX + event.id,JSON.stringify(processing));
+  try {
+    const result = await archiveEventInternal({env,body:{event:record,events:active,archiveRequestId,resultsContent:content,postResults:true}});
+    const response = await result.json();
+    if (!result.ok || !response.success) throw new Error(response.details || response.error || `Archive HTTP ${result.status}`);
+    const done = {...processing,finalizationStatus:"completed",archiveId:response.archiveEntry?.id,finalizedAt:new Date().toISOString(),announcementStatus:response.archiveEntry?.resultsAnnouncement?.status};
+    await kv.put(PREFIX + event.id,JSON.stringify(done));
+    return done;
+  } catch (error) {
+    const flagged = {...processing,finalizationStatus:"needs_review",finalizationError:String(error.message || error).slice(0,250)};
+    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+    return flagged;
+  }
+}
+
 export async function onRequest({request,env}) {
   if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
   const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
   if(request.method==="GET") {
+    if (env.CYCLE_AUTO_FINALIZE_ENABLED === "true" && state.womStatus === "created" && state.websiteStatus === "linked") {
+      const final = await finalizeCompetition(env,kv,event,state);
+      if (final.finalizationStatus) return Response.json({enabled:true,task:null,finalizationStatus:final.finalizationStatus,finalizationError:final.finalizationError || null},{headers:{"Cache-Control":"no-store"}});
+    }
     if (state.womStatus === "created" && state.websiteStatus !== "linked") {
       const linked = await linkOrFlag(kv,event,state);
       return Response.json({enabled:true,task:null,websiteStatus:linked.websiteStatus},{headers:{"Cache-Control":"no-store"}});
