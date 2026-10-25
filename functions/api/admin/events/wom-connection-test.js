@@ -18,9 +18,9 @@ export async function onRequest({request, env}) {
   const origin = request.headers.get("Origin");
   if (!origin || origin !== new URL(request.url).origin) return json({error:"Invalid origin"},403);
   const body = await request.json().catch(()=>null);
-  if (body?.action === "reset_private_service") {
+  if (body?.action === "reset_private_service" || body?.action === "reset_preflight_rejection") {
     if (body.confirmation !== "RESET FAILED TEST") return json({error:"Confirmation required"},400);
-    if (!existing || existing.status !== "needs_review" || existing.error !== "Private service" || existing.competitionId)
+    if (!existing || existing.status !== "needs_review" || !(["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(existing.error) && (existing.error === "Private service" || existing.safeToRetry === true || existing.error === "Invalid WOM request")) || existing.competitionId)
       return json({error:"Reset blocked: this result is not proven safe to retry. Reconcile WOM manually."},409);
     await kv.delete(KEY);
     return json({test:null,reset:true});
@@ -48,6 +48,7 @@ export async function onRequest({request, env}) {
       competitionId:created?String(result.competitionId):null,
       womUrl:created?`https://wiseoldman.net/competitions/${result.competitionId}`:null,
       error:created?null:String(result.error || result.status || `Coordinator HTTP ${response.status}`).slice(0,300),
+      reason:created?null:(result.reason || null), safeToRetry:!created && result.safeToRetry === true,
       checkedAt:new Date().toISOString()};
     await kv.put(KEY,JSON.stringify(updated));
     return json({test:updated},created?200:409);

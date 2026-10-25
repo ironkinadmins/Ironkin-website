@@ -13,10 +13,15 @@ export class CompetitionCoordinator {
     const p=body.payload;
     if (!p || Number(p.groupId)!==12095 || !/^[a-z0-9_]+$/.test(String(p.metric||"")) ||
         typeof p.title!=="string" || p.title.length>160 || !p.title.startsWith("Ironkin ") ||
-        !Number.isFinite(Date.parse(p.startsAt)) || !Number.isFinite(Date.parse(p.endsAt)) ||
-        !this.env.WOM_GROUP_VERIFICATION_CODE ||
-        String(p.groupVerificationCode)!==String(this.env.WOM_GROUP_VERIFICATION_CODE))
-      return Response.json({error:"Invalid WOM request"},{status:400});
+        !Number.isFinite(Date.parse(p.startsAt)) || !Number.isFinite(Date.parse(p.endsAt))) {
+      return Response.json({error:"Invalid WOM request", reason:"invalid_payload", safeToRetry:true},{status:400});
+    }
+    if (!this.env.WOM_GROUP_VERIFICATION_CODE) {
+      return Response.json({error:"Coordinator WOM verification secret not configured",reason:"missing_worker_secret",safeToRetry:true},{status:503});
+    }
+    if (String(p.groupVerificationCode)!==String(this.env.WOM_GROUP_VERIFICATION_CODE)) {
+      return Response.json({error:"Coordinator WOM verification secret mismatch",reason:"worker_secret_mismatch",safeToRetry:true},{status:403});
+    }
     const fingerprint=JSON.stringify({title:p.title,metric:p.metric,startsAt:p.startsAt,endsAt:p.endsAt,groupId:p.groupId});
     const id=this.env.CYCLES.idFromName(body.id);
     const stub=this.env.CYCLES.get(id);

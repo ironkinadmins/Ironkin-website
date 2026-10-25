@@ -10,12 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
   reset.style.marginLeft = "8px";
   refresh.insertAdjacentElement("afterend", reset);
   reset.addEventListener("click", async () => {
-    if (!confirm("Reset only the test that failed with 'Private service'? This does not delete WOM competitions.")) return;
+    if (!confirm("Reset only a coordinator-rejected test (before WOM creation)? This does not delete WOM competitions.")) return;
     reset.disabled = true;
     try {
       const response = await fetch("/api/admin/events/wom-connection-test", {
         method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:"reset_private_service",confirmation:"RESET FAILED TEST"})
+        body:JSON.stringify({action:"reset_preflight_rejection",confirmation:"RESET FAILED TEST"})
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error || "Reset failed");
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!response.ok) throw Error(data.error || "Could not load test status");
     const test = data.test;
     run.disabled = Boolean(test);
-    reset.hidden = !(test?.status === "needs_review" && test?.error === "Private service" && !test?.competitionId);
+    reset.hidden = !(test?.status === "needs_review" && ["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(test?.error) && !test?.competitionId);
     output.textContent = test ? `Status: ${test.status}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error || ""}\nDelete manually in WOM after verification.` : "No WOM connection test attempted.";
   }
   refresh.addEventListener("click", () => update().catch(e => {output.textContent=e.message;}));
