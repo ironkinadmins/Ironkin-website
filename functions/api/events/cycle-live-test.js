@@ -1,5 +1,5 @@
-import { hybridKv } from "../../../_hybridKv.js";
-import { getSession, isStaffSession } from "../../_auth.js";
+import { hybridKv } from "../../_hybridKv.js";
+import { getSession, isStaffSession } from "../_auth.js";
 const KEY = "events:sotw-botw-live-test:v1";
 const parse = (v, fallback) => { try { return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
 export async function onRequest({request,env}) {

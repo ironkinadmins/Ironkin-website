@@ -10,8 +10,15 @@ export async function onRequest({request,env}) {
   const origin=request.headers.get("Origin");
   if(!origin || new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:"Invalid origin"},{status:403});
   const body=await request.json().catch(()=>null);
-  if(body?.action!=="start" && body?.action!=="cancel")return Response.json({error:"Invalid action"},{status:400});
+  if(body?.action!=="start" && body?.action!=="cancel" && body?.action!=="reset")return Response.json({error:"Invalid action"},{status:400});
   const existing=parse(await kv.get(KEY),null);
+  if(body.action==="reset") {
+    if(!existing)return Response.json({error:"No test to reset"},{status:404});
+    if(!["needs_review","failed","cancelled","completed"].includes(existing.status))return Response.json({error:"Test is still active; wait for it to finish before resetting.",test:existing},{status:409});
+    if(existing.womCompetitionId || existing.womStatus==="created" || existing.womStatus==="attempted" || existing.womStatus==="needs_review" || existing.status==="competition")return Response.json({error:"A WOM competition may exist. Reconcile it before resetting; no automatic retry is safe.",test:existing},{status:409});
+    const reset={...existing,status:"cancelled",resetAt:new Date().toISOString(),resetFromStatus:existing.status};
+    await kv.put(KEY,JSON.stringify(reset));return Response.json({test:reset});
+  }
   if(body.action==="cancel") {
     if(existing?.status==="polling" && !existing.messageId){const cancelled={...existing,status:"cancelled",cancelledAt:new Date().toISOString()};await kv.put(KEY,JSON.stringify(cancelled));return Response.json({test:cancelled});}
     return Response.json({error:"Cannot cancel a posted poll or WOM competition. Review manually."},{status:409});
