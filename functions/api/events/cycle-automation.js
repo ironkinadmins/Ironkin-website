@@ -11,7 +11,7 @@ const label = (value,type) => { const pair=type==="botw"?pairs.find(p=>p.some(x=
 const tz="America/Toronto";
 function localTime(instant) { const fields=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(instant); const get=x=>fields.find(p=>p.type===x)?.value; return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`; }
 function shift(date,days){return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);}
-function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,7)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,-3)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
+function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,14)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,-4)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
 function choose(pool,excluded,history,amount,type){let eligible=pool.filter(v=>!excluded.has(key(v,type))&&!history.includes(key(v,type)));let reset=false;if(eligible.length<amount){eligible=pool.filter(v=>!excluded.has(key(v,type)));reset=true;}if(eligible.length<amount)throw Error("At least three distinct eligible options are required.");const result=[];while(result.length<amount){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);const [pick]=eligible.splice(bytes[0]%eligible.length,1);result.push(label(pick,type));}return {result,reset};}
 
 function torontoInstant(date, time) {
@@ -50,7 +50,7 @@ async function createWom(env, kv, stateKey, event, state) {
   const payload = {
     title, metric:metricName(option.metrics[0]),
     startsAt:torontoInstant(event.date,event.start.slice(11)),
-    endsAt:torontoInstant(shift(event.date,7),event.start.slice(11)),
+    endsAt:torontoInstant(shift(event.date,14),event.start.slice(11)),
     groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)
   };
   // The coordinator owns the irreversible WOM POST and its durable receipt.
@@ -94,7 +94,7 @@ async function linkActiveEvent(kv, event, state) {
   }
   const option = state.options?.[state.winningIndex];
   const startDate = torontoInstant(event.date, event.start.slice(11));
-  const endDate = torontoInstant(shift(event.date, 7), event.start.slice(11));
+  const endDate = torontoInstant(shift(event.date, 14), event.start.slice(11));
   const record = {
     ...(previous || {}), id, type:event.type,
     ...(event.type === "botw" ? {botwTier:"elite",botwRole:"primary",label:"BOTW Elite"} : {label:"SOTW"}),
@@ -133,7 +133,7 @@ async function finalizeCompetition(env, kv, event, state) {
   if (state.websiteStatus !== "linked" || state.womStatus !== "created") return state;
   if (state.finalizationStatus === "completed" || state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") return state;
   const now = new Date();
-  const end = torontoInstant(shift(event.date,7), event.start.slice(11));
+  const end = torontoInstant(shift(event.date,14), event.start.slice(11));
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
   const active = parse(await kv.get("events:active"), []);
   const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
