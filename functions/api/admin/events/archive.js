@@ -6,6 +6,85 @@ import {
   postEventResultsToDiscord
 } from "../../../_eventResultsAnnouncement.js";
 
+// Winner nomination eligibility is derived from the approved archive snapshot.
+// Never infer a Discord account from an unverified Discord display name.
+async function syncNominationWinner(env, entry) {
+  if (!["botw", "sotw"].includes(entry.type)) return null;
+  const kv = hybridKv(env, "drops");
+  const key = "events:sotw-botw-nomination-winners:v1";
+  const nominationsKey = "events:sotw-botw-nominations:v1";
+  const statusKey = "events:sotw-botw-winner-status:v1";
+  const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
+  const normalize = value => String(value || "").trim().toLowerCase().replace(/[ _-]+/g, " ");
+  const rows = (Array.isArray(entry.leaderboard) ? entry.leaderboard : [])
+    .filter(row => Number(row?.gained || 0) > 0)
+    .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
+  let status = { eventId: entry.eventId, archiveRequestId: entry.archiveRequestId, type: entry.type,
+    updatedAt: new Date().toISOString(), state: "unresolved", reason: "No positive WOM result." };
+  if (rows.length && rows[1] && Number(rows[0].gained) === Number(rows[1].gained)) {
+    status.reason = "First-place tie: no single winner can be assigned automatically.";
+  } else if (rows.length) {
+    status.rsn = rows[0].name;
+    const index = parse(await kv.get("member-profiles:index"), []);
+    const candidates = [];
+    for (const profile of Array.isArray(index) ? index : []) {
+      if (!/^\d{17,20}$/.test(String(profile?.discordId || ""))) continue;
+      const record = parse(await kv.get(`member-profile:${profile.discordId}`), {});
+      const names = [record.rsn, ...(Array.isArray(record.previousRsns) ? record.previousRsns : [])]
+        .map(normalize).filter(Boolean);
+      if (names.includes(normalize(rows[0].name))) candidates.push(String(profile.discordId));
+    }
+    if (candidates.length === 1) {
+      status = {...status, state: "resolved", discordId: candidates[0], reason: null};
+    } else {
+      status.reason = candidates.length ? "Multiple member profiles match the winning RSN." : "Winning RSN has no uniquely linked member profile.";
+    }
+  }
+  const [winnersRaw, nominationsRaw, statusesRaw] = await Promise.all([
+    kv.get(key), kv.get(nominationsKey), kv.get(statusKey)
+  ]);
+  const winners = parse(winnersRaw, {});
+  const nominations = parse(nominationsRaw, {});
+  const statuses = parse(statusesRaw, {});
+  // A correction or a new winner must invalidate nominations from the old winner.
+  if (winners[entry.type] !== (status.discordId || null)) delete nominations[entry.type];
+  winners[entry.type] = status.discordId || null;
+  statuses[entry.type] = status;
+  await kv.put(key, JSON.stringify(winners));
+  await kv.put(nominationsKey, JSON.stringify(nominations));
+  await kv.put(statusKey, JSON.stringify(statuses));
+  // Best-effort private nomination invitation; a failed DM never blocks results.
+  // A new winner receives a single invitation for this finalized event.
+  if (status.state === "resolved" && status.discordId && env.DISCORD_BOT_TOKEN) {
+    const noticeKey = `events:sotw-botw-winner-notice:${entry.type}:${entry.eventId}`;
+    if (!(await kv.get(noticeKey))) {
+      try {
+        const headers = { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" };
+        const dm = await fetch("https://discord.com/api/v10/users/@me/channels", {
+          method: "POST", headers, body: JSON.stringify({ recipient_id: status.discordId })
+        });
+        if (!dm.ok) throw Error(`Discord DM channel HTTP ${dm.status}`);
+        const channel = await dm.json();
+        const site = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+        const sent = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
+          method: "POST", headers,
+          body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${entry.type.toUpperCase()} picks`,
+            description: `Congratulations! Choose **two** options for the next ${entry.type.toUpperCase()} poll. The third option is selected automatically.\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
+            color: 15891968 }], allowed_mentions: { parse: [] } })
+        });
+        if (!sent.ok) throw Error(`Discord DM message HTTP ${sent.status}`);
+        await kv.put(noticeKey, JSON.stringify({ sentAt: new Date().toISOString(), discordId: status.discordId }));
+        status.notification = "sent";
+      } catch (error) {
+        status.notification = "failed";
+        status.notificationError = String(error?.message || error).slice(0, 180);
+        console.warn("Winner nomination DM failed:", error);
+      }
+    } else status.notification = "previously_sent";
+  }
+  return status;
+}
+
 function hasWomCompetition(event) {
   const ids = [
     event?.womCompetitionId,
@@ -175,6 +254,19 @@ export async function onRequestPost({ request, env }) {
       };
     }
     archive[0] = archiveEntry;
+    await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
+  }
+
+  // Resolve the next nomination winner from finalized standings, independently of
+  // whether the Discord announcement succeeds. Unmatched/tied winners stay blocked.
+  if (event.type === "botw" || event.type === "sotw") {
+    try { archiveEntry.nominationWinner = await syncNominationWinner(env, archiveEntry); }
+    catch (error) {
+      archiveEntry.nominationWinner = {state:"error", reason:String(error?.message || error).slice(0,250)};
+      console.error("Automatic winner mapping failed:", error);
+    }
+    const index = archive.findIndex(item => item.archiveRequestId === archiveRequestId);
+    if (index !== -1) archive[index] = archiveEntry;
     await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
   }
 

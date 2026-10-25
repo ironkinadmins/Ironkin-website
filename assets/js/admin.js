@@ -3922,9 +3922,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const save = document.getElementById("ikCycleSave");
   if (!date || !time || !first || !preview || !save) return;
   function showPreview() {
-    if (!date.value) { preview.textContent = "Choose a future Friday to preview the rotation."; return; }
+    if (!date.value) { preview.textContent = "Choose a start date to preview the rotation."; return; }
     const start = new Date(date.value + "T12:00:00Z");
-    if (Number.isNaN(start.getTime()) || start.getUTCDay() !== 5) { preview.textContent = "Start date must be a Friday."; return; }
+    if (Number.isNaN(start.getTime())) { preview.textContent = "Choose a valid calendar date."; return; }
     preview.textContent = Array.from({length: 4}, (_, i) => {
       const d = new Date(start.getTime() + i * 7 * 86400000).toISOString().slice(0,10);
       const type = i % 2 ? "Break" : i === 0 ? first.value.toUpperCase() : first.value === "botw" ? "SOTW" : "BOTW";
@@ -3949,18 +3949,19 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", () => {
   const type = document.getElementById("ikPollType");
   const pool = document.getElementById("ikPollPool");
-  const nominations = document.getElementById("ikPollNominations");
+  const winnerStatus = document.getElementById("ikPollWinnerStatus");
   const result = document.getElementById("ikPollDraftResult");
   const save = document.getElementById("ikPollSavePool");
   const prepare = document.getElementById("ikPollPrepare");
-  if (!type || !pool || !nominations || !result || !save || !prepare) return;
+  if (!type || !pool || !winnerStatus || !result || !save || !prepare) return;
   let pools = {botw:[],sotw:[]};
+  let winnerStates = {};
   const lines = value => value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
-  const refresh = () => {pool.value = (pools[type.value] || []).join("\n"); nominations.value = "";result.textContent="";};
+  const refresh = () => {pool.value = (pools[type.value] || []).join("\n"); const state=winnerStates[type.value];winnerStatus.textContent=state?.state === "resolved" ? `Automatically verified: ${state.rsn || "Winner"}` : (state?.reason || "Awaiting finalized event results.");result.textContent="";};
   type.addEventListener("change",refresh);
   fetch("/api/admin/events/cycle",{credentials:"same-origin",cache:"no-store"}).then(async r => {
     const data = await r.json();if(!r.ok) throw Error(data.error || "Could not load enabled options.");
-    pools = data.pools || pools;refresh();
+    pools = data.pools || pools;winnerStates = data.winnerStatus || {};refresh();
   }).catch(error => {result.textContent = error.message;});
   async function send(body) {
     const response = await fetch("/api/admin/events/cycle",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -3974,7 +3975,7 @@ document.addEventListener("DOMContentLoaded", () => {
   prepare.addEventListener("click",async () => {
     prepare.disabled = true;result.textContent = "Preparing draft…";
     try {
-      const data = await send({action:"prepare-draft",type:type.value,nominations:lines(nominations.value)});
+      const data = await send({action:"prepare-draft",type:type.value});
       result.textContent = `Draft ready (not posted): ${data.draft.options.map(item => item.label).join(" | ")}${data.draft.rotationResetSuggested ? " · Random pool reset required" : ""}`;
     } catch(error) {result.textContent = error.message;} finally {prepare.disabled = false;}
   });

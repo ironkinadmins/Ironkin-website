@@ -51,12 +51,33 @@
         </div>
       </section>
     </section>
+    <section id="ikNominationPanel" class="event-hub" hidden aria-label="Winner nomination" style="margin:24px auto;max-width:780px;padding:22px;border:1px solid var(--border-color,#555);border-radius:14px">
+      <h2>Your next SOTW/BOTW nomination</h2>
+      <p>As the previous winner, choose your options for the upcoming Discord poll.</p>
+      <label for="ikNominationType">Competition</label> <select id="ikNominationType"></select>
+      <div id="ikNominationChoices" style="display:grid;gap:12px;margin:14px 0"></div>
+      <button id="ikNominationSubmit" type="button">Save nomination</button>
+      <p id="ikNominationStatus" role="status" aria-live="polite"></p>
+    </section>
   </main>
 
   <footer>
     <p>© Ironkin Clan. Not affiliated with Jagex.</p>
   </footer>
 
+  <script>
+  document.addEventListener("DOMContentLoaded",async()=>{
+    const panel=document.getElementById("ikNominationPanel"),type=document.getElementById("ikNominationType"),choices=document.getElementById("ikNominationChoices"),status=document.getElementById("ikNominationStatus"),submit=document.getElementById("ikNominationSubmit");
+    let data;
+    try {const response=await fetch("/api/events/nomination",{credentials:"same-origin",cache:"no-store"});if(!response.ok)return;data=await response.json();}catch{return;}
+    if(!data.eligible?.length)return;
+    panel.hidden=false;
+    for(const value of data.eligible){const option=document.createElement("option");option.value=value;option.textContent=value.toUpperCase();type.append(option);}
+    const render=()=>{const window=data.windows?.[type.value];submit.disabled=window?.open===false;choices.replaceChildren();const count=2;for(let i=0;i<count;i++){const label=document.createElement("label");label.textContent=`Choice ${i+1} `;const select=document.createElement("select");select.required=true;select.style.maxWidth="100%";const blank=document.createElement("option");blank.value="";blank.textContent="Choose an option";select.append(blank);for(const name of data.pools[type.value]||[]){const option=document.createElement("option");option.value=name;option.textContent=name;select.append(option);}select.value=data.nominations[type.value]?.[i]||"";label.append(select);choices.append(label);}status.textContent=window?.open===false ? `Nominations closed. Deadline: ${window.deadline||"not scheduled"} Eastern.` : window?.deadline ? `Submit before ${window.deadline.replace("T"," at ")} Eastern.` : "";};
+    type.addEventListener("change",render);render();
+    submit.addEventListener("click",async()=>{const options=[...choices.querySelectorAll("select")].map(x=>x.value);if(options.some(x=>!x)){status.textContent="Choose every option.";return;}submit.disabled=true;status.textContent="Saving…";try{const response=await fetch("/api/events/nomination",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,options})});const result=await response.json();if(!response.ok)throw Error(result.error||"Could not save nomination.");data.nominations[type.value]=result.options;status.textContent="Nomination saved.";}catch(error){status.textContent=error.message;}finally{submit.disabled=false;}});
+  });
+  </script>
   <script src="/assets/js/script.js?v=20261017-p2"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
   <script>
