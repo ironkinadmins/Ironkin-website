@@ -3944,3 +3944,38 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch(e) {status.textContent = e.message;} finally {save.disabled = false;}
   });
 });
+
+// Staff-only poll draft preparation. No Discord side effects in this phase.
+document.addEventListener("DOMContentLoaded", () => {
+  const type = document.getElementById("ikPollType");
+  const pool = document.getElementById("ikPollPool");
+  const nominations = document.getElementById("ikPollNominations");
+  const result = document.getElementById("ikPollDraftResult");
+  const save = document.getElementById("ikPollSavePool");
+  const prepare = document.getElementById("ikPollPrepare");
+  if (!type || !pool || !nominations || !result || !save || !prepare) return;
+  let pools = {botw:[],sotw:[]};
+  const lines = value => value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+  const refresh = () => {pool.value = (pools[type.value] || []).join("\n"); nominations.value = "";result.textContent="";};
+  type.addEventListener("change",refresh);
+  fetch("/api/admin/events/cycle",{credentials:"same-origin",cache:"no-store"}).then(async r => {
+    const data = await r.json();if(!r.ok) throw Error(data.error || "Could not load enabled options.");
+    pools = data.pools || pools;refresh();
+  }).catch(error => {result.textContent = error.message;});
+  async function send(body) {
+    const response = await fetch("/api/admin/events/cycle",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const data = await response.json();if(!response.ok) throw Error(data.error || "Request failed.");return data;
+  }
+  save.addEventListener("click",async () => {
+    save.disabled = true;result.textContent = "Saving enabled options…";
+    try {pools[type.value] = lines(pool.value);const data = await send({action:"save-pools",...pools});pools = data.pools;refresh();result.textContent = "Enabled options saved. No live events were changed.";}
+    catch(error) {result.textContent = error.message;} finally {save.disabled = false;}
+  });
+  prepare.addEventListener("click",async () => {
+    prepare.disabled = true;result.textContent = "Preparing draft…";
+    try {
+      const data = await send({action:"prepare-draft",type:type.value,nominations:lines(nominations.value)});
+      result.textContent = `Draft ready (not posted): ${data.draft.options.map(item => item.label).join(" | ")}${data.draft.rotationResetSuggested ? " · Random pool reset required" : ""}`;
+    } catch(error) {result.textContent = error.message;} finally {prepare.disabled = false;}
+  });
+});
