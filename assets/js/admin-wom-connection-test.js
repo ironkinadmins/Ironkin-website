@@ -3,12 +3,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const refresh = document.getElementById("ikWomConnectionRefresh");
   const output = document.getElementById("ikWomConnectionStatus");
   if (!run || !refresh || !output) return;
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.textContent = "Reset Failed Connection Test";
+  reset.hidden = true;
+  reset.style.marginLeft = "8px";
+  refresh.insertAdjacentElement("afterend", reset);
+  reset.addEventListener("click", async () => {
+    if (!confirm("Reset only the test that failed with 'Private service'? This does not delete WOM competitions.")) return;
+    reset.disabled = true;
+    try {
+      const response = await fetch("/api/admin/events/wom-connection-test", {
+        method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"reset_private_service",confirmation:"RESET FAILED TEST"})
+      });
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Reset failed");
+      await update();
+    } catch (error) { output.textContent = error.message; }
+    finally { reset.disabled = false; }
+  });
   async function update() {
     const response = await fetch("/api/admin/events/wom-connection-test", {credentials:"same-origin",cache:"no-store"});
     const data = await response.json();
     if (!response.ok) throw Error(data.error || "Could not load test status");
     const test = data.test;
     run.disabled = Boolean(test);
+    reset.hidden = !(test?.status === "needs_review" && test?.error === "Private service" && !test?.competitionId);
     output.textContent = test ? `Status: ${test.status}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error || ""}\nDelete manually in WOM after verification.` : "No WOM connection test attempted.";
   }
   refresh.addEventListener("click", () => update().catch(e => {output.textContent=e.message;}));

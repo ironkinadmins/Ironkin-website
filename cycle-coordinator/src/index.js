@@ -57,4 +57,16 @@ export class CycleCreation {
     });
   }
 }
-export default {async fetch(){return Response.json({error:"Private service"},{status:403});}};
+// Service bindings invoke the Worker's default fetch handler. Route only the
+// internal creation endpoint; public GET requests remain inaccessible.
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (request.method !== "POST" || url.pathname !== "/create") {
+      return Response.json({error:"Private service"}, {status:403});
+    }
+    // This endpoint is only intended for a Cloudflare service binding. The
+    // coordinator validates the group verification code and cycle identity.
+    return new CompetitionCoordinator(null, env).fetch(request);
+  }
+};

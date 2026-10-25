@@ -18,6 +18,13 @@ export async function onRequest({request, env}) {
   const origin = request.headers.get("Origin");
   if (!origin || origin !== new URL(request.url).origin) return json({error:"Invalid origin"},403);
   const body = await request.json().catch(()=>null);
+  if (body?.action === "reset_private_service") {
+    if (body.confirmation !== "RESET FAILED TEST") return json({error:"Confirmation required"},400);
+    if (!existing || existing.status !== "needs_review" || existing.error !== "Private service" || existing.competitionId)
+      return json({error:"Reset blocked: this result is not proven safe to retry. Reconcile WOM manually."},409);
+    await kv.delete(KEY);
+    return json({test:null,reset:true});
+  }
   if (body?.action !== "create" || body?.confirmation !== "CREATE WOM TEST") return json({error:"Confirmation required"},400);
   if (existing) return json({error:"Test already attempted. Do not retry; check the recorded WOM ID and reconcile any uncertain result.",test:existing},409);
   if (!env.CYCLE_COORDINATOR?.fetch || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095)
