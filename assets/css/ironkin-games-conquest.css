@@ -107,3 +107,40 @@
 @media(max-width:950px){#conquestApp .cq-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){#conquestApp .cq-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:350px){#conquestApp .cq-summary{grid-template-columns:1fr}}
+
+/* Dark Resurrection task replacement workflow */
+#conquestApp .cq-replacement{margin:18px 0;padding:20px;border:1px solid #8b6d43;background:linear-gradient(120deg,#1c2030,#151e2a)}
+#conquestApp .cq-replacement-heading{display:flex;align-items:start;justify-content:space-between;gap:16px}
+#conquestApp .cq-replacement-heading h2{margin:5px 0 8px;font-size:20px}
+#conquestApp .cq-replacement-heading small{font-size:10px;color:#d9b878;letter-spacing:.12em}
+#conquestApp .cq-replacement-heading p{font-size:13px;color:#bfc9d8;max-width:75ch}
+#conquestApp .cq-replacement-pill{white-space:nowrap;border:1px solid #a38252;border-radius:20px;padding:6px 11px;font-size:11px;color:#f0d19a}
+#conquestApp .cq-replacement-form{display:grid;grid-template-columns:1fr 1.4fr 1.6fr auto;gap:12px;align-items:end;margin-top:15px}
+#conquestApp .cq-replacement-form label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#d3dbe7}
+#conquestApp .cq-replacement-form select{width:100%;min-width:0;max-width:100%;padding:10px;background:#101722;color:#f0f2f6;border:1px solid #526073;border-radius:8px}
+#conquestApp .cq-replacement-status{background:#273344;border-radius:8px;padding:12px;font-size:13px}
+#conquestApp .cq-replaced-label{display:block;color:#d8b775;font-size:11px}
+#conquestApp .cq-replacement-queue .cq-task{border-bottom:1px solid #354050}
+@media(max-width:1050px){#conquestApp .cq-replacement-form{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){#conquestApp .cq-replacement-form{grid-template-columns:1fr}#conquestApp .cq-replacement-heading{flex-direction:column}}
+
+/* Opening FAQ: shown once per page visit, dismissed only by the explicit button. */
+body.cq-welcome-open{overflow:hidden}
+.cq-welcome-overlay{position:fixed;inset:0;z-index:99999;background:rgba(3,7,13,.9);display:flex;justify-content:center;align-items:center;padding:clamp(10px,3vw,28px)}
+.cq-welcome-panel{width:min(940px,100%);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;background:#111b28;color:#f0e7d6;border:1px solid #aa844c;border-radius:18px;box-shadow:0 24px 90px rgba(0,0,0,.65);padding:clamp(14px,3vw,28px)}
+.cq-welcome-top h2{margin:4px 0 8px;font-size:clamp(23px,3vw,34px)}
+.cq-welcome-top p{margin:0 0 15px;color:#bac6d6}
+.cq-welcome-panel .cq-faq{margin:0 0 18px;padding:0;border:0;background:transparent}
+.cq-welcome-panel .cq-faq-heading{display:none}
+.cq-welcome-panel .cq-faq-list{display:grid;gap:8px}
+.cq-welcome-panel .cq-faq-item{background:#182230;border:1px solid #354252;border-radius:10px;overflow:hidden}
+.cq-welcome-panel .cq-faq-item summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;padding:15px;font-weight:700;list-style:none}
+.cq-welcome-panel .cq-faq-item summary::-webkit-details-marker{display:none}
+.cq-welcome-panel .cq-faq-item p{margin:0;padding:15px;border-top:1px solid #354252;line-height:1.6;color:#c5cfdd}
+.cq-welcome-close{display:block;position:sticky;bottom:0;width:100%;padding:15px 18px;border:1px solid #e2bc7a;border-radius:10px;background:#b98b42;color:#101722;font-size:16px;font-weight:800;cursor:pointer}
+.cq-welcome-close:hover,.cq-welcome-close:focus-visible{background:#e5b96e;outline:2px solid #f4dfb5;outline-offset:2px}
+
+/* First-visit FAQ: true centered viewport modal, not an in-page section. */
+html body #cqWelcomeOverlay.cq-welcome-overlay{position:fixed!important;inset:0!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:16px!important;box-sizing:border-box!important;background:rgba(2,7,15,.88)!important;overflow:hidden!important}
+html body #cqWelcomeOverlay .cq-welcome-panel{position:relative!important;display:block!important;flex:0 1 900px!important;width:min(900px,100%)!important;max-width:100%!important;max-height:calc(100dvh - 32px)!important;overflow-y:auto!important;box-sizing:border-box!important;margin:auto!important;background:#111b28!important;border:1px solid #aa844c!important;border-radius:16px!important;box-shadow:0 25px 100px rgba(0,0,0,.8)!important}
+html body #cqWelcomeOverlay .cq-welcome-close{position:sticky;bottom:0;z-index:1}
