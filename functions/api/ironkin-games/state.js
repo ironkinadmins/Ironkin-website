@@ -80,7 +80,10 @@ export async function onRequestGet({ request, env }) {
       const sideIsOpen = challenge.kind === "side" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
       const bossRushIsOpen = (challenge.trackingMode === "boss-rush" || challenge.trackerType === "timed-wom-attempt") && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
       const contractsAreOpen = challenge.trackerType === "contracts" && (!Number.isFinite(opensAtMs) || now >= opensAtMs);
-      const publicReveal = testMode || sideIsOpen || bossRushIsOpen || contractsAreOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
+      // Territory Conquest is a week-long main challenge: reveal it publicly at its scheduled opening time.
+      // Other main challenges retain their booked-attempt reveal rules.
+      const conquestIsOpen = challenge.trackerType === "territory-conquest" && Number.isFinite(opensAtMs) && now >= opensAtMs;
+      const publicReveal = testMode || sideIsOpen || bossRushIsOpen || contractsAreOpen || conquestIsOpen || challenge.status === "complete" || publishedWeeks.has(String(week.id));
       const teamReveal = challenge.kind !== "side" && team && started.has(`${week.id}:${challenge.id}`);
       const reveal = publicReveal || teamReveal;
       const item = safeChallenge(challenge, reveal);
