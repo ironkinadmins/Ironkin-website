@@ -106,15 +106,15 @@ export async function onRequestPost({request,env}){
    owner.participants ||= {};owner.participants[submission.taskId]=submission.participantIds||[];
    if(submission.metric!==null){owner.metrics ||= {};const old=owner.metrics[submission.taskId];const ascending=['morytania-14','zeah-14'].includes(submission.taskId);if(old==null||(ascending?submission.metric<old:submission.metric>old))owner.metrics[submission.taskId]=submission.metric}
    const declaration=(owner.declared||[]).find(d=>d.taskId===submission.taskId&&d.status==='active');
-   if(declaration){declaration.status='completed';const amount=declaration.power==='asgarnia'?25:declaration.power==='karamja'?(task(submission.taskId)?.tier==='Elite'?100:50):declaration.power==='wilderness'?150:declaration.power==='zeah'?100:0;if(amount)addBonus(owner,amount,declaration.power+' task bonus',declaration.power)}
-   if((eligible(owner,'kandarin')||(owner.copiedPassive||[]).includes('kandarin'))&&submission.participantIds?.length>=3&&(owner.powerBonuses||[]).filter(b=>b.source==='kandarin').length<5)addBonus(owner,15,'King\'s Alliance cooperative task','kandarin');
+   if(declaration){declaration.status='completed';/* task bonuses recomputed from approved tasks */}
+
   }
  }else if(body.action==='publish'){
   if(!staff)return fail('Staff only',403);s.published=!!body.published;
  }else if(body.action==='correct'){
   if(!staff)return fail('Staff only',403);const id=String(body.taskId||''),owner=stateFor(s,teamId);
   if(!task(id)&&!TERRITORIES.some(r=>id===r.id+'-secret'))return fail('Invalid task');
-  if(body.approved===false){delete owner.approved[id];if(owner.metrics)delete owner.metrics[id];if(owner.participants)delete owner.participants[id];owner.powerBonuses=(owner.powerBonuses||[]).filter(b=>b.taskId!==id);for(const d of owner.declared||[]){if(d.taskId===id&&d.status==='completed')d.status='active'}}
+  if(body.approved===false){for(const sub of s.submissions){if(sub.teamId===teamId&&sub.taskId===id&&sub.status==='approved'){sub.status='revoked';sub.reviewedAt=new Date().toISOString();sub.reviewedBy=String(session.id)}}delete owner.approved[id];if(owner.metrics)delete owner.metrics[id];if(owner.participants)delete owner.participants[id];owner.powerBonuses=(owner.powerBonuses||[]).filter(b=>b.taskId!==id);for(const d of owner.declared||[]){if(d.taskId===id&&d.status==='completed')d.status='active'}}
   else return fail('Only revoke supported; approve through evidence review');
  }else if(body.action==='award'){
   if(!staff)return fail('Staff only',403);const points=Number(body.points);if(!Number.isFinite(points)||Math.abs(points)>1000||!points)return fail('Invalid points');
