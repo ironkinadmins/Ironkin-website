@@ -10,7 +10,7 @@ export const derivedTaskBonuses = t => {
  for(const d of t.declared||[]){
   if(d.status!=='completed'||!approved[d.taskId])continue;
   const obj=task(d.taskId);
-  if(d.power==='asgarnia')points+=25;
+  if(d.power==='asgarnia')points+=75;
   if(d.power==='karamja')points+=obj?.tier==='Elite'?100:50;
   if(d.power==='wilderness')points+=150;
   if(d.power==='zeah')points+=100;
