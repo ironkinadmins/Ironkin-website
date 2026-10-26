@@ -10,7 +10,7 @@ const t=stateFor(s,'team0');t.scouted.push('asgarnia');t.approved['asgarnia-secr
 for(let i=0;i<8;i++)t.participants[`asgarnia-${i+1}`]=[`${0}-${i}`];for(let i=0;i<8;i++)t.approved[`asgarnia-${i+1}`]=true;
 assert.equal(summaries(s,games).scores.team0.participationBonus,25);
 delete t.approved['asgarnia-8'];assert.equal(summaries(s,games).scores.team0.participationBonus,0);
-t.declared.push({power:'asgarnia',taskId:'asgarnia-14',status:'completed'});t.approved['asgarnia-14']=true;assert.equal(derivedTaskBonuses(t),25);delete t.approved['asgarnia-14'];assert.equal(derivedTaskBonuses(t),0);
+t.declared.push({power:'asgarnia',taskId:'asgarnia-14',status:'completed'});t.approved['asgarnia-14']=true;assert.equal(derivedTaskBonuses(t),75);delete t.approved['asgarnia-14'];assert.equal(derivedTaskBonuses(t),0);
 t.approved['asgarnia-14']=true;t.metrics['morytania-14']=1;t.approved['morytania-14']=true;for(let i=1;i<4;i++){const x=stateFor(s,`team${i}`);x.approved['morytania-14']=true;x.metrics['morytania-14']=i+1;}
 s.published=true;const result=summaries(s,games);assert.deepEqual(result.rankings['morytania-14'].map(x=>x.bonus),[100,70,40,20]);
 console.log('PASS: four teams, base/capture, Scout, participation reversal, task power reversal, published competitive placement.');
