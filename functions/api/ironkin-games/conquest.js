@@ -91,14 +91,25 @@ export async function onRequestPost({request,env}){
  }else if(body.action==='submit'){
   if(!r||!t.unlocked.includes(r.id))return fail('Territory not unlocked');const objective=r.tasks.find(x=>x.id===body.taskId),secret=body.taskId===r.id+'-secret';
   if(!objective&&!secret)return fail('Invalid task');if(secret&&!t.scouted.includes(r.id))return fail('Scout objective first');
-  if(t.approved[body.taskId]&&!objective?.competitive)return fail('Already approved');const proofUrl=String(body.proofUrl||'').trim().slice(0,1000);if(!/^https?:\/\//i.test(proofUrl))return fail('A valid proof URL is required');
-  if((s.submissions||[]).some(x=>x.teamId===teamId&&x.taskId===body.taskId&&x.status==='pending'))return fail('Submission already pending');
+  const proofUrls=(Array.isArray(body.proofUrls)?body.proofUrls:[body.proofUrl]).map(x=>String(x||'').trim()).filter(Boolean);
+  if(!proofUrls.length||proofUrls.some(url=>url.length>1000||!/^https?:\/\//i.test(url)))return fail('Valid http(s) proof URLs are required');
+  const existingPending=(s.submissions||[]).find(x=>x.teamId===teamId&&x.taskId===body.taskId&&x.status==='pending');
+  const existingApproved=(s.submissions||[]).find(x=>x.teamId===teamId&&x.taskId===body.taskId&&x.status==='approved');
+  if(t.approved[body.taskId]&&!objective?.competitive&&!existingApproved)return fail('Already approved');
+  if(existingPending||(existingApproved&&!objective?.competitive)){
+   const target=existingPending||existingApproved;
+   target.proofUrls ||= target.proofUrl?[target.proofUrl]:[];
+   target.proofUrls.push(...proofUrls);
+   target.evidenceUpdates ||= [];target.evidenceUpdates.push({by:String(session.id),at:new Date().toISOString(),proofUrls,notes:String(body.notes||'').slice(0,1000)});
+   result.submission=target;result.evidenceAdded=proofUrls.length;
+  }else{
   const metric=body.metric===''||body.metric==null?null:Number(body.metric);
   if(objective?.competitive&&(!Number.isFinite(metric)||metric<0))return fail('Competitive tasks require a nonnegative numeric result');
   const participantIds=Array.isArray(body.participantIds)?[...new Set(body.participantIds.map(String))]:[String(session.id)];
   if(participantIds.length===0||participantIds.some(id=>!memberIds(teamRecord).has(id)))return fail('Participants must belong to this team');
-  const submission={id:crypto.randomUUID(),teamId,regionId:r.id,taskId:body.taskId,secret,proofUrl,notes:String(body.notes||'').slice(0,1000),metric:objective?.competitive?metric:null,participantIds,submittedBy:String(session.id),submittedAt:new Date().toISOString(),status:'pending'};
+  const submission={id:crypto.randomUUID(),teamId,regionId:r.id,taskId:body.taskId,secret,proofUrl:proofUrls[0],proofUrls,notes:String(body.notes||'').slice(0,1000),metric:objective?.competitive?metric:null,participantIds,submittedBy:String(session.id),submittedAt:new Date().toISOString(),status:'pending'};
   s.submissions.push(submission);result.submission=submission;
+  }
  }else if(body.action==='review'){
   if(!staff)return fail('Staff only',403);const submission=s.submissions.find(x=>x.id===body.submissionId);
   if(!submission||submission.status!=='pending')return fail('Pending submission not found');
