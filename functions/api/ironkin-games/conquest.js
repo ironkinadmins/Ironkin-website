@@ -20,7 +20,7 @@ export async function onRequestGet({request,env}){
  const t=teamId?stateFor(s,teamId):{scouted:[]};
  const regions=TERRITORIES.map(r=>({...r,secret:staff||t.scouted.includes(r.id)?r.secret:null}));
  // Rankings remain hidden from players until the event is explicitly published.
- return Response.json({rules:CONQUEST_RULES,regions,scores:staff?scores:Object.fromEntries(Object.entries(scores).map(([id,v])=>[id,{...v,metrics:id===teamId?v.metrics:{},participants:id===teamId?v.participants:{},declared:id===teamId?v.declared:[]} ])),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
+ return Response.json({rules:CONQUEST_RULES,regions,scores:staff?scores:(teamId&&scores[teamId]?{[teamId]:scores[teamId]}:{}),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
 }
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);

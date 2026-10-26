@@ -1,1 +1,34 @@
 #conquestApp{color:var(--text,#eee)}.cq-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}.cq-summary>div,.cq-panel{background:rgba(17,24,34,.82);border:1px solid rgba(210,175,96,.25);border-radius:14px;padding:18px;margin-bottom:14px}.cq-summary b,.cq-summary strong{display:block}.cq-summary b{font-size:12px;opacity:.75}.cq-summary strong{font-size:28px;margin-top:6px}.cq-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,2fr);gap:20px}.cq-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:22px}.cq-tile{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:105px;background:#1b2533;color:#f5f0e8;border:1px solid #465066;border-radius:12px;padding:13px;cursor:pointer;text-align:left}.cq-tile.chosen{outline:2px solid #d5ae59}.cq-tile.captured{border-color:#65ba8c}.cq-tile small,.cq-tile span,.cq-task small{font-size:11px;opacity:.75}.cq-panel h2,.cq-panel h3{margin:0 0 12px}.cq-regionhead{display:flex;justify-content:space-between;gap:12px;align-items:center}.cq-regionhead h2{margin:0}.cq-progress{height:9px;border-radius:20px;background:#394455;overflow:hidden;margin:16px 0}.cq-progress span{display:block;background:#d5ae59;height:100%}.cq-actions{display:flex;gap:10px;flex-wrap:wrap}.cq-panel button{padding:9px 12px;background:#b48b42;color:#111;border:0;border-radius:8px;font-weight:700;cursor:pointer}.cq-panel button:disabled{opacity:.45;cursor:not-allowed}.cq-task{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #39414e;padding:12px 0}.cq-task p{margin:5px 0}.cq-relic{display:flex;gap:10px;margin:12px 0}.cq-relic small{display:block;opacity:.75}.cq-panel input,.cq-panel select{padding:8px;border-radius:7px;max-width:100%}#conquestStatus{margin:12px 0}.cq-error{color:#ff9c9c}.cq-success{color:#83d9a4}@media(max-width:850px){.cq-layout{grid-template-columns:1fr}.cq-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:440px){.cq-map{grid-template-columns:repeat(2,1fr)}.cq-task{align-items:flex-start;flex-direction:column}}
+
+/* Week 4 conquest map and compact interface */
+#conquestApp .cq-world{margin:14px 0 18px}
+#conquestApp .cq-map-title{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 10px}
+#conquestApp .cq-map-title h2{margin:0;font-size:22px}
+#conquestApp .cq-map-title p,.cq-helper{margin:5px 0 0;font-size:12px;color:#b9c2d1;line-height:1.5}
+#conquestApp .cq-legend{display:flex;gap:13px;flex-wrap:wrap;font-size:12px;color:#c6ceda}
+#conquestApp .cq-legend span{display:inline-flex;align-items:center;gap:5px}
+#conquestApp .cq-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+#conquestApp .cq-dot-locked{background:#737c8a}#conquestApp .cq-dot-unlocked{background:#e5b75d}#conquestApp .cq-dot-captured{background:#55d59b}
+#conquestApp .cq-map{position:relative;display:block;aspect-ratio:749/403;min-height:350px;overflow:hidden;border:2px solid #9c7836;border-radius:14px;background:#202b35 url('/assets/images/conquest-gielinor-map.webp') center/100% 100% no-repeat;margin:0;isolation:isolate}
+#conquestApp .cq-map::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,19,.28),rgba(6,12,19,.12));pointer-events:none;z-index:-1}
+#conquestApp .cq-tile{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:clamp(74px,10vw,132px);min-height:0;padding:7px 5px 6px;border-radius:6px;background:rgba(17,22,30,.94);border:2px solid #8792a1;box-shadow:0 4px 12px #000a;text-align:center;z-index:1;transition:transform .15s,border-color .15s,box-shadow .15s}
+#conquestApp .cq-tile:hover,#conquestApp .cq-tile:focus-visible{transform:translate(-50%,-50%) scale(1.07);z-index:4;box-shadow:0 0 0 3px #0d111d,0 4px 20px #000}
+#conquestApp .cq-tile.chosen{outline:2px solid #f9da8b;outline-offset:2px;z-index:3}
+#conquestApp .cq-tile.unlocked{border-color:#f0b84e}#conquestApp .cq-tile.captured{border-color:#60d9a1}
+#conquestApp .cq-tile b{font-size:clamp(10px,1vw,13px);text-shadow:0 1px 2px #000}
+#conquestApp .cq-tile small{font-size:10px;opacity:.9}#conquestApp .cq-banner-icon{font-size:18px;line-height:1;color:#d2d6de}
+#conquestApp .cq-tile.unlocked .cq-banner-icon{color:#f0b84e}#conquestApp .cq-tile.captured .cq-banner-icon{color:#60d9a1}
+#conquestApp .cq-layout{grid-template-columns:minmax(0,1fr) minmax(235px,290px);gap:14px;align-items:start}
+#conquestApp .cq-main{min-width:0}#conquestApp .cq-side{min-width:0;position:sticky;top:16px}
+#conquestApp .cq-panel{padding:14px;margin-bottom:10px}
+#conquestApp .cq-task{padding:7px 0;gap:12px}#conquestApp .cq-task p{margin:2px 0;font-size:13px;line-height:1.35}
+#conquestApp .cq-task button{white-space:nowrap;padding:7px 10px;font-size:12px}
+#conquestApp .cq-relic{padding:9px 0;border-top:1px solid #39414e;margin:0;align-items:flex-start}
+#conquestApp .cq-relic input{margin:3px 0 0;flex:none}#conquestApp .cq-relic span{min-width:0}#conquestApp .cq-relic b{font-size:13px}
+#conquestApp .cq-relic small{font-size:11px;line-height:1.4;margin-top:3px}#conquestApp .cq-relic em{font-size:10px;color:#dcb86b;display:block;margin-top:3px}
+#conquestApp .cq-powers button{margin-top:10px}#conquestApp .cq-active-powers{margin-top:12px;border-top:1px solid #39414e;padding-top:10px}
+#conquestApp .cq-active-powers label{display:block;font-size:12px;margin-bottom:6px}#conquestApp .cq-active-powers select{width:100%}
+#conquestApp .cq-locked-message{padding:16px;border:1px dashed #657183;border-radius:8px;color:#bdc8d7;font-size:12px;line-height:1.5;margin-top:12px}
+#conquestApp .cq-summary{margin:12px 0;gap:10px}#conquestApp .cq-summary>div{padding:12px;margin:0}#conquestApp .cq-summary strong{font-size:23px}
+@media(max-width:800px){#conquestApp .cq-layout{grid-template-columns:1fr}#conquestApp .cq-side{position:static}#conquestApp .cq-map{min-height:0;aspect-ratio:749/480}#conquestApp .cq-tile{width:clamp(64px,13vw,100px);padding:5px 3px}#conquestApp .cq-tile small{font-size:9px}}
+@media(max-width:520px){#conquestApp .cq-map{aspect-ratio:1/1.05;background-size:auto 100%;background-position:center}#conquestApp .cq-tile{width:70px}#conquestApp .cq-tile b{font-size:10px}#conquestApp .cq-tile small{font-size:8px}#conquestApp .cq-banner-icon{font-size:14px}#conquestApp .cq-task{align-items:center;flex-direction:row}#conquestApp .cq-task button{max-width:95px;white-space:normal}}
