@@ -5,6 +5,7 @@ export async function onRequestPost({request,env}){
   const body=await request.json().catch(()=>({})),state=await loadGames(env);
   const week=(state.weeks||[]).find(w=>String(w.id)===String(body.weekId)),lib=(state.challengeLibrary||[]).find(c=>String(c.id)===String(body.libraryId));
   if(!week||!lib) return Response.json({error:"Week or challenge definition not found."},{status:404});
+  if(lib.trackerType==="territory-conquest"&&(week.challenges||[]).some(c=>c.trackerType==="territory-conquest"))return Response.json({error:"Territory Conquest is already assigned to this week."},{status:409});
   const instanceId=crypto.randomUUID();
   const instance={...lib,id:instanceId,libraryId:lib.id,sourceChallengeId:undefined,opensAt:week.startDate||"",closesAt:week.endDate||"",results:[]};
   week.challenges=Array.isArray(week.challenges)?week.challenges:[]; week.challenges.push(instance);

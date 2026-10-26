@@ -5,7 +5,7 @@ const clean = c => ({
   id:String(c.id||crypto.randomUUID()), name:String(c.name||"New Challenge"), publicName:String(c.publicName||"Mystery Challenge"),
   kind:c.kind==="side"?"side":"main", durationMode:c.durationMode==="week"?"week":"timed", durationMinutes:Math.max(1,Number(c.durationMinutes)||60),
   trackingMethod:["automatic","admin"].includes(c.trackingMethod)?c.trackingMethod:"submissions",
-  trackerType:["timed-wom-attempt","wom-clues","wom-metric","contracts","shopping-list","location-hunt","trivia-hunt","boss-rush","clue-progress","time-trials"].includes(c.trackerType)?c.trackerType:"none",
+  trackerType:["timed-wom-attempt","wom-clues","wom-metric","contracts","shopping-list","location-hunt","trivia-hunt","boss-rush","clue-progress","time-trials","territory-conquest"].includes(c.trackerType)?c.trackerType:"none",
   trackerConfig:{metric:String(c.trackerConfig?.metric||""),metricLabel:String(c.trackerConfig?.metricLabel||"")},
   contracts:(Array.isArray(c.contracts)?c.contracts:[]).map((x,i)=>({id:String(x.id||`contract-${i+1}`),name:String(x.name||`Contract ${i+1}`),tier:["safe","risky","all-in"].includes(x.tier)?x.tier:"safe",metric:String(x.metric||""),metricLabel:String(x.metricLabel||x.metric||""),target:Math.max(1,Number(x.target)||1)})).filter(x=>x.metric),
   locationHunt:(Array.isArray(c.locationHunt)?c.locationHunt:[]).map((x,i)=>({id:String(x.id||`location-${i+1}`),title:String(x.title||`Location ${i+1}`),image:String(x.image||""),requirement:String(x.requirement||"Recreate the screenshot with your team."),minimumPlayers:Math.max(1,Number(x.minimumPlayers)||4),revealsAt:String(x.revealsAt||"")})),
