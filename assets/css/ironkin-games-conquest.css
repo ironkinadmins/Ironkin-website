@@ -35,3 +35,39 @@
 
 /* Week 4 consolidated player UX */
 .cq-strategy-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.cq-strategy-card{border:1px solid #4a4132;border-radius:10px;padding:14px;background:#111720}.cq-strategy-card h3{font-size:15px;margin:0 0 6px}.cq-strategy-card p{font-size:12px;line-height:1.5;color:#b9c0cc;min-height:52px}.cq-top-powers{margin:12px 0}.cq-top-powers .cq-powers{margin:0}.cq-task-group{padding:12px!important}.cq-task-group summary{cursor:pointer;font-size:16px;font-weight:700;padding:4px 0 10px}.cq-task-group .cq-task{padding:8px 0}.cq-task-group .cq-task p{margin:3px 0}.cq-task-group .cq-task button{white-space:nowrap}@media(max-width:650px){.cq-strategy-actions{grid-template-columns:1fr}.cq-strategy-card p{min-height:0}}
+
+/* Final layout polish */
+#conquestApp .cq-layout{display:block;grid-template-columns:none}
+#conquestApp .cq-main{width:100%;max-width:none}
+#conquestApp .cq-side{width:100%;position:static}
+#conquestApp .cq-side:empty{display:none}
+#conquestApp .cq-regionhead h2{font-size:clamp(23px,2.4vw,31px)}
+#conquestApp .cq-main>section>.cq-panel:first-child{padding:clamp(18px,2.5vw,30px);border-color:rgba(216,173,89,.4);background:linear-gradient(135deg,#192332,#111923 75%)}
+#conquestApp .cq-strategy-actions{gap:16px}
+#conquestApp .cq-strategy-card{display:flex;flex-direction:column;align-items:flex-start;min-height:180px;padding:20px;border-color:#415168;background:linear-gradient(150deg,#1d2939,#131c29)}
+#conquestApp .cq-strategy-card h3{font-size:17px}
+#conquestApp .cq-strategy-card p{font-size:13px;min-height:0;max-width:58ch;flex:1}
+#conquestApp .cq-strategy-card button{margin-top:12px}
+#conquestApp .cq-top-powers .cq-powers{padding:20px 24px}
+#conquestApp .cq-task-group{padding:14px 20px!important}
+#conquestApp .cq-task-group summary{padding:8px 0 14px}
+#conquestApp .cq-task{padding:11px 0}
+#conquestApp .cq-task p{font-size:14px}
+.cq-return-nav{margin:10px 0 16px}
+.cq-return-link{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid rgba(212,172,95,.4);border-radius:10px;background:#151c26;color:#e9c17c;text-decoration:none;font-weight:700;font-size:13px}
+.cq-return-link:hover,.cq-return-link:focus-visible{background:#263246;border-color:#e4b766;color:#ffe0a2}
+#conquestApp .cq-faq{margin:30px 0 50px;border:1px solid rgba(212,172,95,.3);border-radius:16px;background:#101722;padding:clamp(18px,2.5vw,30px)}
+#conquestApp .cq-faq-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+#conquestApp .cq-faq-heading h2{margin:3px 0 6px;font-size:clamp(22px,2.3vw,30px)}
+#conquestApp .cq-faq-heading p{font-size:13px;color:#b6c1d0;margin:0}
+#conquestApp .cq-eyebrow{font-size:10px;letter-spacing:.16em;color:#d8ad65;font-weight:800}
+#conquestApp .cq-faq-count{white-space:nowrap;font-size:12px;color:#e0bc7c;border:1px solid #57462f;border-radius:30px;padding:7px 11px}
+#conquestApp .cq-faq-list{display:grid;gap:8px}
+#conquestApp .cq-faq-item{background:#182230;border:1px solid #354252;border-radius:10px;overflow:hidden}
+#conquestApp .cq-faq-item[open]{border-color:#aa844c;background:#1b2634}
+#conquestApp .cq-faq-item summary{display:flex;justify-content:space-between;align-items:center;gap:16px;cursor:pointer;padding:15px 18px;font-size:14px;font-weight:700;list-style:none}
+#conquestApp .cq-faq-item summary::-webkit-details-marker{display:none}
+#conquestApp .cq-faq-item summary span{font-size:20px;color:#d9b06c}
+#conquestApp .cq-faq-item[open] summary span{transform:rotate(45deg)}
+#conquestApp .cq-faq-item p{border-top:1px solid #354252;padding:15px 18px;margin:0;color:#c5cfdd;line-height:1.65;font-size:13px}
+@media(max-width:650px){#conquestApp .cq-strategy-actions{grid-template-columns:1fr}#conquestApp .cq-strategy-card{min-height:0}#conquestApp .cq-faq-heading{align-items:flex-start;flex-direction:column}}
