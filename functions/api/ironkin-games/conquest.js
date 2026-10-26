@@ -5,6 +5,8 @@ import { TERRITORIES, CONQUEST_RULES } from './_conquestConfig.js';
 import { region,task,stateFor,progress,captured,total,eligible,summaries } from './_conquestEngine.js';
 const KEY='ironkin-games:conquest:2026:week4';
 const TEST_KEY=KEY+':sandbox';
+const accessWindow=games=>{const week=(games.weeks||[]).find(w=>(w.challenges||[]).some(c=>c.trackerType==='territory-conquest'));const challenge=week?.challenges?.find(c=>c.trackerType==='territory-conquest');const start=Date.parse(challenge?.opensAt||week?.startDate||'');const end=Date.parse(challenge?.closesAt||week?.endDate||'');return {assigned:!!challenge,open:Number.isFinite(start)&&Date.now()>=start,closed:Number.isFinite(end)&&Date.now()>end,opensAt:Number.isFinite(start)?new Date(start).toISOString():null};};
+
 const sandboxRequest=request=>new URL(request.url).searchParams.get('sandbox')==='1';
 const initial=()=>({teams:{},submissions:[],audit:[],published:false,updatedAt:''});
 const read=async(env,key=KEY)=>{try{return {...initial(),...JSON.parse(await hybridKv(env,'drops').get(key)||'{}')}}catch{return initial()}};
@@ -15,7 +17,7 @@ const memberIds=team=>new Set([team?.captainDiscordId,...(team?.members||[]).map
 const isCompetitive=id=>Boolean(task(id)?.competitive);
 export async function onRequestGet({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session),sandbox=staff&&sandboxRequest(request),s=await read(env,sandbox?TEST_KEY:KEY);
- const {scores,rankings}=summaries(s,games),url=new URL(request.url),requested=staff?url.searchParams.get('teamId'):null;
+ const access=accessWindow(games);if(!staff&&(!team||!access.assigned||!access.open))return fail('Territory Conquest is not available to your team until Week 4 opens.',403);const {scores,rankings}=summaries(s,games),url=new URL(request.url),requested=staff?url.searchParams.get('teamId'):null;
  const teamId=requested&&scores[requested]?requested:team?.id||null;
  const t=teamId?stateFor(s,teamId):{scouted:[]};
  const regions=TERRITORIES.map(r=>({...r,secret:staff||t.scouted.includes(r.id)?r.secret:null}));
@@ -24,7 +26,7 @@ export async function onRequestGet({request,env}){
 }
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);
- if(!session)return fail('Discord sign-in required.',401);
+ if(!session)return fail('Discord sign-in required.',401);const access=accessWindow(games);if(!staff&&(!team||!access.assigned||!access.open||access.closed))return fail('Territory Conquest is not currently open for your team.',403);
  const body=await request.json().catch(()=>({})),sandbox=sandboxRequest(request);if(sandbox&&!staff)return fail('Admin Test Mode is staff only.',403);const storageKey=sandbox?TEST_KEY:KEY;const s=await read(env,storageKey),teamId=staff&&body.teamId?String(body.teamId):team?.id;
  const teamRecord=(games.teams||[]).find(x=>x.id===teamId);
  if(!teamRecord)return fail('Team membership required.',403);
