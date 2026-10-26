@@ -27,9 +27,13 @@ export async function onRequestGet({request,env}){
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);
  if(!session)return fail('Discord sign-in required.',401);const access=accessWindow(games);if(!staff&&(!team||!access.assigned||!access.open||access.closed))return fail('Territory Conquest is not currently open for your team.',403);
- const body=await request.json().catch(()=>({})),sandbox=sandboxRequest(request);if(sandbox&&!staff)return fail('Admin Test Mode is staff only.',403);const storageKey=sandbox?TEST_KEY:KEY;const s=await read(env,storageKey),teamId=staff&&body.teamId?String(body.teamId):team?.id;
+ const body=await request.json().catch(()=>({})),sandbox=sandboxRequest(request);if(sandbox&&!staff)return fail('Admin Test Mode is staff only.',403);const storageKey=sandbox?TEST_KEY:KEY;const s=await read(env,storageKey);
+ // Staff review actions target the submission's team, not the reviewer's roster membership.
+ const reviewSubmission=body.action==='review'&&staff?(s.submissions||[]).find(x=>x.id===body.submissionId):null;
+ const teamId=reviewSubmission?.teamId||(staff&&body.teamId?String(body.teamId):team?.id);
  const teamRecord=(games.teams||[]).find(x=>x.id===teamId);
- if(!teamRecord)return fail('Team membership required.',403);
+ const teamlessStaffAction=staff&&['review','resetSandbox','publish','resolveWagers'].includes(body.action);
+ if(!teamRecord&&!teamlessStaffAction)return fail('Team membership required.',403);
  if(body.action==='resetSandbox'){if(!sandbox||!staff)return fail('Sandbox admin only',403);await write(env,initial(),TEST_KEY);return Response.json({ok:true})}
  if(s.published&&!staff)return fail('Week 4 results have been finalized. Submissions and actions are closed.',403);
  const t=stateFor(s,teamId),r=region(body.regionId),now=Date.now();let result={};
