@@ -99,3 +99,11 @@
 #conquestApp .cq-power-foot b{color:#f4d294}
 #conquestApp .cq-competitive-hint{display:block;color:#b8c3d1;font-size:11px;margin:8px 0 2px}
 @media(max-width:700px){#conquestApp .cq-power-hero{flex-wrap:wrap;gap:12px}#conquestApp .cq-power-emblem{width:58px;height:58px;font-size:31px}#conquestApp .cq-power-stat{min-width:100%;min-height:70px;flex-direction:row;gap:14px}#conquestApp .cq-power-stat small{margin:0}#conquestApp .cq-power-intro h3{font-size:22px}}
+
+/* Five Conquest counters: single desktop row, responsive smaller screens */
+#conquestApp .cq-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:stretch}
+#conquestApp .cq-summary>div{min-width:0;margin:0;padding:12px 13px}
+#conquestApp .cq-summary strong{font-size:clamp(19px,1.8vw,25px);line-height:1.2}
+@media(max-width:950px){#conquestApp .cq-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){#conquestApp .cq-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:350px){#conquestApp .cq-summary{grid-template-columns:1fr}}
