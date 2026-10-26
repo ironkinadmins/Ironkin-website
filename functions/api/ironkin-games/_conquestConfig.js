@@ -6,7 +6,7 @@ export const TERRITORIES = [
     "captureThreshold": 125,
     "captureBonus": 25,
     "power": "White Knight's Arsenal",
-    "powerDescription": "+25 on one competitive task; declare before submission.",
+    "powerDescription": "+75 on one competitive task; declare before submission.",
     "secret": "Defeat a Black Knight while wearing full White Knight armour",
     "tasks": [
       {
