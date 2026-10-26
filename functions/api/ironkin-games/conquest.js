@@ -4,28 +4,31 @@ import { hybridKv } from '../../_hybridKv.js';
 import { TERRITORIES, CONQUEST_RULES } from './_conquestConfig.js';
 import { region,task,stateFor,progress,captured,total,eligible,summaries } from './_conquestEngine.js';
 const KEY='ironkin-games:conquest:2026:week4';
+const TEST_KEY=KEY+':sandbox';
+const sandboxRequest=request=>new URL(request.url).searchParams.get('sandbox')==='1';
 const initial=()=>({teams:{},submissions:[],audit:[],published:false,updatedAt:''});
-const read=async env=>{try{return {...initial(),...JSON.parse(await hybridKv(env,'drops').get(KEY)||'{}')}}catch{return initial()}};
-const write=async(env,s)=>{s.updatedAt=new Date().toISOString();await hybridKv(env,'drops').put(KEY,JSON.stringify(s))};
+const read=async(env,key=KEY)=>{try{return {...initial(),...JSON.parse(await hybridKv(env,'drops').get(key)||'{}')}}catch{return initial()}};
+const write=async(env,s,key=KEY)=>{s.updatedAt=new Date().toISOString();await hybridKv(env,'drops').put(key,JSON.stringify(s))};
 const fail=(error,status=400)=>Response.json({error},{status});
 const addBonus=(t,points,reason,source)=>{if(!t.powerBonuses)t.powerBonuses=[];t.powerBonuses.push({id:crypto.randomUUID(),points,reason,source,at:new Date().toISOString()})};
 const memberIds=team=>new Set([team?.captainDiscordId,...(team?.members||[]).map(m=>m.discordId||m.id)].filter(Boolean).map(String));
 const isCompetitive=id=>Boolean(task(id)?.competitive);
 export async function onRequestGet({request,env}){
- const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session),s=await read(env);
+ const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session),sandbox=staff&&sandboxRequest(request),s=await read(env,sandbox?TEST_KEY:KEY);
  const {scores,rankings}=summaries(s,games),url=new URL(request.url),requested=staff?url.searchParams.get('teamId'):null;
  const teamId=requested&&scores[requested]?requested:team?.id||null;
  const t=teamId?stateFor(s,teamId):{scouted:[]};
  const regions=TERRITORIES.map(r=>({...r,secret:staff||t.scouted.includes(r.id)?r.secret:null}));
  // Rankings remain hidden from players until the event is explicitly published.
- return Response.json({rules:CONQUEST_RULES,regions,scores:staff?scores:Object.fromEntries(Object.entries(scores).map(([id,v])=>[id,{...v,metrics:id===teamId?v.metrics:{},participants:id===teamId?v.participants:{},declared:id===teamId?v.declared:[]} ])),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
+ return Response.json({rules:CONQUEST_RULES,regions,scores:staff?scores:Object.fromEntries(Object.entries(scores).map(([id,v])=>[id,{...v,metrics:id===teamId?v.metrics:{},participants:id===teamId?v.participants:{},declared:id===teamId?v.declared:[]} ])),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
 }
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);
  if(!session)return fail('Discord sign-in required.',401);
- const body=await request.json().catch(()=>({})),s=await read(env),teamId=staff&&body.teamId?String(body.teamId):team?.id;
+ const body=await request.json().catch(()=>({})),sandbox=sandboxRequest(request);if(sandbox&&!staff)return fail('Admin Test Mode is staff only.',403);const storageKey=sandbox?TEST_KEY:KEY;const s=await read(env,storageKey),teamId=staff&&body.teamId?String(body.teamId):team?.id;
  const teamRecord=(games.teams||[]).find(x=>x.id===teamId);
  if(!teamRecord)return fail('Team membership required.',403);
+ if(body.action==='resetSandbox'){if(!sandbox||!staff)return fail('Sandbox admin only',403);await write(env,initial(),TEST_KEY);return Response.json({ok:true})}
  if(s.published&&!staff)return fail('Week 4 results have been finalized. Submissions and actions are closed.',403);
  const t=stateFor(s,teamId),r=region(body.regionId),now=Date.now();let result={};
  const available=()=>total(t)>=100;
@@ -55,15 +58,32 @@ export async function onRequestPost({request,env}){
    if(power==='morytania'&&!staff)return fail('Organizer approval required for a replacement task',403);
    const replacement=power==='morytania'?String(body.replacement||'').trim().slice(0,400):'';
    if(power==='morytania'&&!replacement)return fail('Enter the approved replacement objective');
+   if(power==='morytania'&&targetRegion.id!==body.regionId&&body.regionId)return fail('Replacement must remain in the same territory');
    t.declared ||= [];t.declared.push({power,taskId:target.id,replacement,status:'active',at:new Date().toISOString()});
   }else if(power==='fremennik'){
-   if(!available())return fail('At least 100 points required to buy the sixth action');
+   if((t.extraActions||0)>=1)return fail('Sixth Conquest Action already purchased');if(!available())return fail('At least 100 points required to buy the sixth action');
    t.extraActions=(t.extraActions||0)+1;t.penalties=(t.penalties||0)+100;
   }else if(power==='desert'){
    const source=String(body.copyPower||'');if(source==='desert'||!region(source)||!captured(t,region(source)))return fail('Choose another captured territory');
-   // A copy is a separate, single use of a target power. Restricted to powers with unambiguous instant effects.
-   if(!['fremennik'].includes(source))return fail('This copied power requires a task declaration. Use the organizer approval workflow.',400);
-   if(!available())return fail('At least 100 points required');t.extraActions=(t.extraActions||0)+1;t.penalties=(t.penalties||0)+100;
+   if((t.usedPowers||[]).includes(source))return fail('Cannot copy a spent power');
+   if(source==='fremennik'){
+    if((t.extraActions||0)>=1)return fail('Sixth action already purchased');
+    if(!available())return fail('At least 100 points required');t.extraActions=(t.extraActions||0)+1;t.penalties=(t.penalties||0)+100;
+   }else if(['asgarnia','karamja','wilderness','zeah','morytania'].includes(source)){
+    const target=task(body.taskId),targetRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===body.taskId));
+    if(!target||!targetRegion||!t.unlocked.includes(targetRegion.id)||t.approved[target.id])return fail('Choose unfinished task in unlocked territory');
+    if((t.declared||[]).some(x=>x.taskId===target.id&&x.status==='active'))return fail('Task already has a power declaration');
+    if(source==='asgarnia'&&!target.competitive)return fail('Competitive task required');
+    if(source==='karamja'&&!['Medium','Elite'].includes(target.tier))return fail('Medium or Elite required');
+    if(['wilderness','zeah'].includes(source)&&target.tier!=='Elite')return fail('Elite task required');
+    if(source==='morytania'){
+     if(!staff)return fail('Staff approval required for replacement',403);
+     if(!['Hard','Elite'].includes(target.tier)||!String(body.replacement||'').trim())return fail('Approved Hard/Elite replacement required');
+    }
+    t.declared ||= [];t.declared.push({power:source,via:'desert',taskId:target.id,replacement:source==='morytania'?String(body.replacement).trim().slice(0,400):'',status:'active',at:new Date().toISOString()});
+   }else if(source==='kandarin'||source==='varlamore'){
+    t.copiedPassive ||= [];t.copiedPassive.push(source);
+   }else return fail('Unsupported copied power');
   }else return fail('This power applies automatically to eligible approved tasks, or needs an organizer-reviewed activation.');
   t.usedPowers ||= [];t.usedPowers.push(power);
  }else if(body.action==='submit'){
@@ -87,14 +107,14 @@ export async function onRequestPost({request,env}){
    if(submission.metric!==null){owner.metrics ||= {};const old=owner.metrics[submission.taskId];const ascending=['morytania-14','zeah-14'].includes(submission.taskId);if(old==null||(ascending?submission.metric<old:submission.metric>old))owner.metrics[submission.taskId]=submission.metric}
    const declaration=(owner.declared||[]).find(d=>d.taskId===submission.taskId&&d.status==='active');
    if(declaration){declaration.status='completed';const amount=declaration.power==='asgarnia'?25:declaration.power==='karamja'?(task(submission.taskId)?.tier==='Elite'?100:50):declaration.power==='wilderness'?150:declaration.power==='zeah'?100:0;if(amount)addBonus(owner,amount,declaration.power+' task bonus',declaration.power)}
-   if(eligible(owner,'kandarin')&&submission.participantIds?.length>=3&&(owner.powerBonuses||[]).filter(b=>b.source==='kandarin').length<5)addBonus(owner,15,'King\'s Alliance cooperative task','kandarin');
+   if((eligible(owner,'kandarin')||(owner.copiedPassive||[]).includes('kandarin'))&&submission.participantIds?.length>=3&&(owner.powerBonuses||[]).filter(b=>b.source==='kandarin').length<5)addBonus(owner,15,'King\'s Alliance cooperative task','kandarin');
   }
  }else if(body.action==='publish'){
   if(!staff)return fail('Staff only',403);s.published=!!body.published;
  }else if(body.action==='correct'){
   if(!staff)return fail('Staff only',403);const id=String(body.taskId||''),owner=stateFor(s,teamId);
   if(!task(id)&&!TERRITORIES.some(r=>id===r.id+'-secret'))return fail('Invalid task');
-  if(body.approved===false){delete owner.approved[id];if(owner.metrics)delete owner.metrics[id];if(owner.participants)delete owner.participants[id];owner.powerBonuses=(owner.powerBonuses||[]).filter(b=>b.taskId!==id)}
+  if(body.approved===false){delete owner.approved[id];if(owner.metrics)delete owner.metrics[id];if(owner.participants)delete owner.participants[id];owner.powerBonuses=(owner.powerBonuses||[]).filter(b=>b.taskId!==id);for(const d of owner.declared||[]){if(d.taskId===id&&d.status==='completed')d.status='active'}}
   else return fail('Only revoke supported; approve through evidence review');
  }else if(body.action==='award'){
   if(!staff)return fail('Staff only',403);const points=Number(body.points);if(!Number.isFinite(points)||Math.abs(points)>1000||!points)return fail('Invalid points');
@@ -104,5 +124,5 @@ export async function onRequestPost({request,env}){
  }else return fail('Unknown action');
  s.audit.push({action:body.action,teamId,by:String(session.id),at:new Date().toISOString(),details:String(body.taskId||body.power||'').slice(0,80)});
  if(s.audit.length>3000)s.audit=s.audit.slice(-3000);
- await write(env,s);return Response.json({ok:true,...result});
+ await write(env,s,storageKey);return Response.json({ok:true,...result});
 }

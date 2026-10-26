@@ -22,11 +22,13 @@ export function summaries(s,games){
  for(const team of games.teams||[]){
   const t=stateFor(s,team.id),captures=TERRITORIES.filter(r=>captured(t,r));
   const rankingBonus=s.published?Object.values(ranks).flat().filter(x=>x.teamId===team.id).reduce((n,x)=>n+x.bonus,0):0;
+  const gloryBonus=s.published&&(eligible(t,'varlamore')||(t.copiedPassive||[]).includes('varlamore'))?Math.min(2,Object.values(ranks).flat().filter(x=>x.teamId===team.id&&x.place===1).length)*20:0;
+  const secretBonus=TERRITORIES.reduce((n,r)=>n+(t.scouted.includes(r.id)&&t.approved[r.id+'-secret']?20:0),0);
   const members=new Set([team.captainDiscordId,...(team.members||[]).map(m=>m.discordId||m.id)].filter(Boolean).map(String));
   const participation=new Set(Object.values(t.participants||{}).flat().map(String));
   const participationBonus=members.size>=8&&[...members].every(id=>participation.has(id))?25:0;
   const base=TERRITORIES.reduce((n,r)=>n+progress(t,r),0),captureBonus=captures.reduce((n,r)=>n+r.captureBonus,0),powerBonus=(t.powerBonuses||[]).reduce((n,b)=>n+Number(b.points||0),0);
-  output[team.id]={teamName:team.name,unlocked:t.unlocked,scouted:t.scouted,equipped:t.equipped,lastSwap:t.lastSwap,usedPowers:t.usedPowers,actionsLeft:5+(t.extraActions||0)-t.unlocked.length,scoutsLeft:2-t.scouted.length,captured:captures.map(r=>r.id),progress:Object.fromEntries(TERRITORIES.map(r=>[r.id,progress(t,r)])),basePoints:base,captureBonus,powerBonus,rankingBonus,participationBonus,penalties:t.penalties||0,total:base+captureBonus+powerBonus+rankingBonus+participationBonus-(t.penalties||0),approved:t.approved,declared:t.declared||[],metrics:t.metrics||{},participants:t.participants||{}};
+  output[team.id]={teamName:team.name,unlocked:t.unlocked,scouted:t.scouted,equipped:t.equipped,lastSwap:t.lastSwap,usedPowers:t.usedPowers,actionsLeft:5+(t.extraActions||0)-t.unlocked.length,scoutsLeft:2-t.scouted.length,captured:captures.map(r=>r.id),progress:Object.fromEntries(TERRITORIES.map(r=>[r.id,progress(t,r)])),basePoints:base,captureBonus,powerBonus:powerBonus+gloryBonus,secretBonus,rankingBonus,participationBonus,penalties:t.penalties||0,total:base+captureBonus+powerBonus+gloryBonus+secretBonus+rankingBonus+participationBonus-(t.penalties||0),approved:t.approved,declared:t.declared||[],metrics:t.metrics||{},participants:t.participants||{}};
  }
  return {scores:output,rankings:ranks};
 }
