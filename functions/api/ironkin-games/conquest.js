@@ -71,10 +71,10 @@ export async function onRequestPost({request,env}){
    t.extraActions=(t.extraActions||0)+1;t.penalties=(t.penalties||0)+100;
   }else if(power==='desert'){
    const source=String(body.copyPower||'');if(source==='desert'||!region(source)||!captured(t,region(source)))return fail('Choose another captured territory');
-   if((t.usedPowers||[]).includes(source))return fail('Cannot copy a spent power');
+   if((t.usedPowers||[]).includes(source)&&source!=='fremennik')return fail('Cannot copy a spent power');
    if(source==='fremennik'){
-    if((t.extraActions||0)>=1)return fail('Sixth action already purchased');
-    if(!available())return fail('At least 100 points required');t.extraActions=(t.extraActions||0)+1;t.penalties=(t.penalties||0)+100;
+    if((t.extraActions||0)!==1||(t.usedPowers||[]).includes('fremennik')===false)return fail('Use Viking Conquest for the sixth action before copying it for the seventh');
+    if(!available())return fail('At least 100 points required for the seventh action');t.extraActions=2;t.penalties=(t.penalties||0)+100;
    }else if(['asgarnia','karamja','wilderness','zeah','morytania'].includes(source)){
     const target=task(body.taskId),targetRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===body.taskId));
     if(!target||!targetRegion||!t.unlocked.includes(targetRegion.id)||t.approved[target.id])return fail('Choose unfinished task in unlocked territory');

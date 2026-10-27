@@ -798,7 +798,7 @@ export const TERRITORIES = [
     "captureThreshold": 275,
     "captureBonus": 75,
     "power": "Desert Mirage",
-    "powerDescription": "Copy a captured territory's power once, following its restrictions.",
+    "powerDescription": "Copy another captured power once. Viking Conquest can be copied after use to purchase a seventh territory unlock for another 100 points; other spent powers cannot be copied.",
     "secret": "Reach Room 8 of Pyramid Plunder and loot its golden chest",
     "tasks": [
       {
