@@ -144,3 +144,48 @@ body.cq-welcome-open{overflow:hidden}
 html body #cqWelcomeOverlay.cq-welcome-overlay{position:fixed!important;inset:0!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:16px!important;box-sizing:border-box!important;background:rgba(2,7,15,.88)!important;overflow:hidden!important}
 html body #cqWelcomeOverlay .cq-welcome-panel{position:relative!important;display:block!important;flex:0 1 900px!important;width:min(900px,100%)!important;max-width:100%!important;max-height:calc(100dvh - 32px)!important;overflow-y:auto!important;box-sizing:border-box!important;margin:auto!important;background:#111b28!important;border:1px solid #aa844c!important;border-radius:16px!important;box-shadow:0 25px 100px rgba(0,0,0,.8)!important}
 html body #cqWelcomeOverlay .cq-welcome-close{position:sticky;bottom:0;z-index:1}
+
+/* Mobile-first Conquest readability and touch controls — desktop untouched. */
+@media (max-width: 700px) {
+ html,body{max-width:100%;overflow-x:clip}
+ body.games-page .games-shell{width:100%;max-width:100%;padding-left:12px!important;padding-right:12px!important;box-sizing:border-box}
+ #conquestApp,#conquestApp *{box-sizing:border-box}
+ #conquestApp .cq-layout,#conquestApp .cq-main,#conquestApp .cq-panel,#conquestApp .cq-strategy-card{min-width:0;max-width:100%}
+ #conquestApp .cq-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #conquestApp .cq-summary>div{padding:12px 10px}
+ #conquestApp .cq-summary b{font-size:12px;line-height:1.35}
+ #conquestApp .cq-summary strong{font-size:clamp(19px,5vw,25px);overflow-wrap:anywhere}
+ #conquestApp .cq-panel{padding:14px 12px;margin-bottom:12px}
+ #conquestApp .cq-map-title{align-items:flex-start;gap:8px}
+ #conquestApp .cq-map-title h2{font-size:21px}
+ /* Map pins remain selectable, but a readable region list is provided below the map. */
+ #conquestApp .cq-map{aspect-ratio:1/1;min-height:310px;overflow:hidden}
+ #conquestApp .cq-tile{width:clamp(54px,17vw,76px);min-height:48px;padding:6px 3px;line-height:1.15}
+ #conquestApp .cq-tile b{font-size:10px;overflow-wrap:anywhere}
+ #conquestApp .cq-tile small{font-size:9px}
+ #conquestApp .cq-tile:focus-visible{outline:3px solid #ffe0a2;outline-offset:2px}
+ #conquestApp .cq-regionhead{flex-wrap:wrap;align-items:flex-start}
+ #conquestApp .cq-task-group{padding:12px!important}
+ #conquestApp .cq-task-group summary{font-size:16px;line-height:1.4;min-height:44px}
+ #conquestApp .cq-task{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:14px 0}
+ #conquestApp .cq-task p{font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+ #conquestApp .cq-task button{width:100%;max-width:none;min-height:44px;white-space:normal;font-size:14px}
+ #conquestApp .cq-actions{display:grid;grid-template-columns:1fr;gap:10px}
+ #conquestApp .cq-actions button,#conquestApp .cq-strategy-card button,#conquestApp .cq-powers button,#conquestApp .cq-replacement-form button{min-height:44px;width:100%;font-size:14px}
+ #conquestApp input,#conquestApp select,#conquestApp textarea{max-width:100%;width:100%;min-height:44px;font-size:16px}
+ #conquestApp input[type=checkbox],#conquestApp input[type=radio]{width:auto;min-height:0}
+ #conquestApp .cq-relic{gap:12px;align-items:flex-start}
+ #conquestApp .cq-relic small{font-size:12px}
+ #conquestApp .cq-power-hero{padding:14px 12px}
+ #conquestApp .cq-power-details{padding:12px}
+ #conquestApp .cq-power-topline{padding:12px}
+ #conquestApp .cq-power-intro p{font-size:13px}
+ #conquestApp .cq-power-foot span{font-size:12px;line-height:1.4}
+ #conquestApp .cq-faq{padding:14px;margin:18px 0 30px}
+ #conquestApp .cq-faq-item summary{padding:14px 12px;min-height:48px;line-height:1.4}
+ #conquestApp .cq-faq-item p{padding:14px 12px}
+ #cqWelcomeOverlay .cq-welcome-panel{padding:14px!important;max-height:calc(100dvh - 20px)!important}
+ #cqWelcomeOverlay .cq-welcome-close{min-height:52px}
+ .cq-return-link{min-height:44px;align-items:center}
+}
+@media(max-width:390px){#conquestApp .cq-map{min-height:285px}#conquestApp .cq-tile{width:54px}#conquestApp .cq-tile b{font-size:9px}}
