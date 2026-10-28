@@ -12,6 +12,16 @@ import { hasSupabase, supabaseRest } from "./api/_supabase.js";
 const TABLE = "website_store";
 const cache = new WeakMap();
 
+// Plugin drop screenshots are kept only until the drop is reviewed: the
+// Discord bot deletes the Supabase row on decision, and a TTL covers the rest.
+// So they live in Supabase alone. A legacy KV copy would outlive that delete,
+// and lazy migration would write a deleted image straight back.
+const EPHEMERAL_PREFIXES = ["event-submission-image:"];
+
+function isEphemeral(key) {
+  return EPHEMERAL_PREFIXES.some(prefix => key.startsWith(prefix));
+}
+
 function oldBinding(env, namespace) {
   if (namespace === "calendar") return env?.CALENDAR_KV || null;
   return env?.DROPS_KV || null;
@@ -129,7 +139,7 @@ function makeHybridKv(env, namespace) {
       if (legacyValue === null || legacyValue === undefined) return null;
 
       // Lazy migration. A failure here does not block the current request.
-      if (supabaseEnabled) {
+      if (supabaseEnabled && !isEphemeral(key)) {
         try {
           await writeSupabase(env, namespace, key, legacyValue);
         } catch (error) {
@@ -156,7 +166,7 @@ function makeHybridKv(env, namespace) {
         }
       }
 
-      if (legacy) {
+      if (legacy && !isEphemeral(key)) {
         try {
           await legacy.put(key, value, options);
           legacyOk = true;
