@@ -88,6 +88,18 @@ x-api-key: ik_...
 
 `201` means the drop is stored. The screenshot is attached in the background. Do not poll for the image and do not wait for proof before marking success.
 
+### Screenshot lifecycle
+
+The screenshot is review evidence, not an archive. It is kept only while the drop awaits review:
+
+| Drop state | Screenshot |
+| --- | --- |
+| pending / processing | Stored in `website_store` as `drops / event-submission-image:<submissionId>` (Supabase only, never the legacy KV) |
+| approved, rejected, failed | Deleted by the Discord bot in the same transaction as the decision; `proof_url` is blanked |
+| undecided after 14 days | Expires (`expires_at`); the bot's hourly sweep deletes it. The drop itself stays pending |
+
+Nothing else may hold a copy: `insertEventSubmission` / `updateEventSubmission` refuse `data:` URLs, base64 image data, and any non-http(s) `proof_url`.
+
 A request that times out on the client may still have inserted the row. Retrying with the same `timestamp` then returns **200 duplicate**, which is correct.
 
 ---

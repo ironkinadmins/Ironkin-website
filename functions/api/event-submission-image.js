@@ -6,7 +6,7 @@ export async function onRequestGet({ request, env }) {
   if (!image) return new Response("Image not found.", { status: 404 });
   try {
     const bytes = Uint8Array.from(atob(image), c => c.charCodeAt(0));
-    return new Response(bytes, { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=604800" } });
+    return new Response(bytes, { headers: { "Content-Type": "image/png", "Cache-Control": "private, no-store" } });
   } catch {
     return new Response("Invalid image.", { status: 500 });
   }

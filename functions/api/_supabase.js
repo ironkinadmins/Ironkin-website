@@ -1,3 +1,5 @@
+import { assertNoImagePayload } from "./_noImagePayload.js";
+
 function cleanBaseUrl(value) {
   return String(value || "").trim().replace(/\/$/, "");
 }
@@ -159,6 +161,7 @@ export async function findActiveDuplicateSubmission(env, { pluginEventId, itemId
 }
 
 export async function insertEventSubmission(env, submission) {
+  assertNoImagePayload(submission);
   const response = await supabaseRest(env, "ironkin_event_submissions", {
     method: "POST",
     headers: { Prefer: "return=representation" },
@@ -171,6 +174,7 @@ export async function insertEventSubmission(env, submission) {
 export async function updateEventSubmission(env, id, fields) {
   const submissionId = String(id || "").trim();
   if (!hasSupabase(env) || !submissionId || !fields || typeof fields !== "object") return;
+  assertNoImagePayload(fields);
   await supabaseRest(env, `ironkin_event_submissions?id=eq.${encodeURIComponent(submissionId)}`, {
     method: "PATCH",
     headers: { Prefer: "return=minimal" },

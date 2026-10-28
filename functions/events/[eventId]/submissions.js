@@ -70,12 +70,17 @@ function scheduleBackground(context, task) {
   return promise;
 }
 
+// Kept for review only. The key is the submission's own id so the Discord bot
+// can delete it when the drop is approved, rejected or parked; the TTL is the
+// cleanup for a drop nobody ever decides (the bot sweeps expired rows hourly).
+const PROOF_IMAGE_TTL_SECONDS = 14 * 24 * 60 * 60;
+
 async function attachProofImage(env, origin, submissionId, imageData) {
-  const proofId = crypto.randomUUID();
-  await hybridKv(env, "drops").put(`event-submission-image:${proofId}`, imageData, {
+  await hybridKv(env, "drops").put(`event-submission-image:${submissionId}`, imageData, {
+    expirationTtl: PROOF_IMAGE_TTL_SECONDS,
     metadata: { contentType: "image/png", createdAt: new Date().toISOString() }
   });
-  const proofUrl = `${origin}/api/event-submission-image?id=${encodeURIComponent(proofId)}`;
+  const proofUrl = `${origin}/api/event-submission-image?id=${encodeURIComponent(submissionId)}`;
   await updateEventSubmission(env, submissionId, { proof_url: proofUrl });
 }
 
