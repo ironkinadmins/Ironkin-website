@@ -189,3 +189,7 @@ html body #cqWelcomeOverlay .cq-welcome-close{position:sticky;bottom:0;z-index:1
  .cq-return-link{min-height:44px;align-items:center}
 }
 @media(max-width:390px){#conquestApp .cq-map{min-height:285px}#conquestApp .cq-tile{width:54px}#conquestApp .cq-tile b{font-size:9px}}
+#conquestApp .cq-task-badge{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;line-height:1.5;border:1px solid transparent}
+#conquestApp .cq-task-badge.is-pending{color:#e9c97f;background:rgba(210,175,96,.12);border-color:rgba(210,175,96,.35)}
+#conquestApp .cq-task-badge.is-approved{color:#8fd19e;background:rgba(80,170,100,.12);border-color:rgba(80,170,100,.35)}
+#conquestApp .cq-task-badge.is-rejected{color:#e89a8f;background:rgba(200,80,70,.12);border-color:rgba(200,80,70,.35)}
