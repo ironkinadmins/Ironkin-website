@@ -47,9 +47,14 @@ export async function onRequestPost({request,env}){
   const powers=Array.isArray(body.powers)?[...new Set(body.powers.map(String))]:[];
   if(powers.length>2)return fail('Maximum two powers');if(powers.some(id=>!TERRITORIES.some(r=>r.id===id&&captured(t,r))))return fail('Power not captured');
   if(powers.some(id=>(t.usedPowers||[]).includes(id)&&id!=='kandarin'&&id!=='varlamore'))return fail('Consumed power cannot be equipped');
-  if(JSON.stringify([...powers].sort())===JSON.stringify([...t.equipped].sort()))return fail('No loadout change');
-  if(t.lastSwap&&now-Date.parse(t.lastSwap)<86400000)return fail('Power swap on 24-hour cooldown');
-  t.equipped=powers;t.lastSwap=new Date(now).toISOString();
+  // Legacy state may still contain spent powers in equipped. Treat those slots as empty.
+  const active=(t.equipped||[]).filter(id=>!(t.usedPowers||[]).includes(id));
+  if(JSON.stringify([...powers].sort())===JSON.stringify([...active].sort()))return fail('No loadout change');
+  // Filling vacancies without removing an active power is not a voluntary swap.
+  const voluntarySwap=active.some(id=>!powers.includes(id));
+  if(voluntarySwap&&t.lastSwap&&now-Date.parse(t.lastSwap)<86400000)return fail('Power swap on 24-hour cooldown');
+  t.equipped=powers;
+  if(voluntarySwap)t.lastSwap=new Date(now).toISOString();
  }else if(body.action==='activate'){
   const power=String(body.power||'');if(!eligible(t,power))return fail('Equip and capture this power first');
   if((t.usedPowers||[]).includes(power))return fail('Power already used');
@@ -92,6 +97,8 @@ export async function onRequestPost({request,env}){
    }else return fail('Unsupported copied power');
   }else return fail('This power applies automatically to eligible approved tasks, or needs an organizer-reviewed activation.');
   t.usedPowers ||= [];t.usedPowers.push(power);
+  // A consumed single-use power immediately releases its equipment slot.
+  t.equipped=(t.equipped||[]).filter(id=>id!==power);
  }else if(body.action==='submit'){
   if(!r||!t.unlocked.includes(r.id))return fail('Territory not unlocked');const objective=r.tasks.find(x=>x.id===body.taskId),secret=body.taskId===r.id+'-secret';
   if(!objective&&!secret)return fail('Invalid task');if(secret&&!t.scouted.includes(r.id))return fail('Scout objective first');
