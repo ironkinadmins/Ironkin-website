@@ -15,6 +15,9 @@ const fail=(error,status=400)=>Response.json({error},{status});
 const addBonus=(t,points,reason,source)=>{if(!t.powerBonuses)t.powerBonuses=[];t.powerBonuses.push({id:crypto.randomUUID(),points,reason,source,at:new Date().toISOString()})};
 const memberIds=team=>new Set([team?.captainDiscordId,...(team?.members||[]).map(m=>m.discordId||m.id)].filter(Boolean).map(String));
 const isCompetitive=id=>Boolean(task(id)?.competitive);
+// Accept pasted Discord mentions and raw Discord IDs; always credit the submitting player.
+const normalizeParticipants=(values,submitter)=>[...new Set([String(submitter),...(Array.isArray(values)?values:[]).map(v=>String(v||'').trim().replace(/^<@!?(\d+)>$/,'$1'))].filter(Boolean))];
+
 export async function onRequestGet({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session),sandbox=staff&&sandboxRequest(request),s=await read(env,sandbox?TEST_KEY:KEY);
  const access=accessWindow(games);if(!staff&&(!team||!access.assigned||!access.open))return fail('Territory Conquest is not available to your team until Week 4 opens.',403);const {scores,rankings}=summaries(s,games),url=new URL(request.url),requested=staff?url.searchParams.get('teamId'):null;
@@ -105,6 +108,22 @@ export async function onRequestPost({request,env}){
   if(!objective&&!secret)return fail('Invalid task');if(secret&&!t.scouted.includes(r.id))return fail('Scout objective first');
   const proofUrls=(Array.isArray(body.proofUrls)?body.proofUrls:[body.proofUrl]).map(x=>String(x||'').trim()).filter(Boolean);
   if(!proofUrls.length||proofUrls.some(url=>url.length>1000||!/^https?:\/\//i.test(url)))return fail('Valid http(s) proof URLs are required');
+  // Resolve player names only against this team's roster; reject ambiguous matches.
+  const roster=[...(teamRecord.members||[]),...(teamRecord.captainDiscordId?[{discordId:teamRecord.captainDiscordId,name:teamRecord.captainName||''}]:[])];
+  const resolveParticipant=value=>{
+   const raw=String(value||'').trim(),id=raw.replace(/^<@!?(\d+)>$/,'$1');
+   if(memberIds(teamRecord).has(id))return id;
+   const key=raw.toLowerCase();
+   const matches=[...new Set(roster.filter(m=>[m.rsn,m.displayName,m.name,m.username,m.discordName].some(n=>String(n||'').trim().toLowerCase()===key)).map(m=>String(m.discordId||m.discord_id||m.id||'')).filter(Boolean))];
+   if(matches.length>1)throw new Error('Multiple teammates match "'+raw+'". Use a Discord ID.');
+   if(matches.length===1)return matches[0];
+   throw new Error('Teammate "'+raw+'" was not found. Use an exact roster name, mention, or Discord ID.');
+  };
+  let participantIds;
+  try{participantIds=[...new Set(normalizeParticipants(body.participantIds,session.id).map(resolveParticipant))]}
+  catch(error){return fail(error.message+' No proof was saved.');}
+  const invalidParticipants=participantIds.filter(id=>!memberIds(teamRecord).has(id));
+  if(invalidParticipants.length)return fail('One or more tagged participants are not registered on your team. Use roster names, Discord mentions, or numeric Discord IDs. No proof was saved.');
   const existingPending=(s.submissions||[]).find(x=>x.teamId===teamId&&x.taskId===body.taskId&&x.status==='pending');
   const existingApproved=(s.submissions||[]).find(x=>x.teamId===teamId&&x.taskId===body.taskId&&x.status==='approved');
   if(t.approved[body.taskId]&&!objective?.competitive&&!existingApproved)return fail('Already approved');
@@ -112,13 +131,12 @@ export async function onRequestPost({request,env}){
    const target=existingPending||existingApproved;
    target.proofUrls ||= target.proofUrl?[target.proofUrl]:[];
    target.proofUrls.push(...proofUrls);
+   target.participantIds=[...new Set([...(target.participantIds||[]),...participantIds])];
    target.evidenceUpdates ||= [];target.evidenceUpdates.push({by:String(session.id),at:new Date().toISOString(),proofUrls,notes:String(body.notes||'').slice(0,1000)});
    result.submission=target;result.evidenceAdded=proofUrls.length;
   }else{
   const metric=body.metric===''||body.metric==null?null:Number(body.metric);
   if(objective?.competitive&&(!Number.isFinite(metric)||metric<0))return fail('Competitive tasks require a nonnegative numeric result');
-  const participantIds=Array.isArray(body.participantIds)?[...new Set(body.participantIds.map(String))]:[String(session.id)];
-  if(participantIds.length===0||participantIds.some(id=>!memberIds(teamRecord).has(id)))return fail('Participants must belong to this team');
   const submission={id:crypto.randomUUID(),teamId,regionId:r.id,taskId:body.taskId,secret,proofUrl:proofUrls[0],proofUrls,notes:String(body.notes||'').slice(0,1000),metric:objective?.competitive?metric:null,participantIds,submittedBy:String(session.id),submittedAt:new Date().toISOString(),status:'pending'};
   s.submissions.push(submission);result.submission=submission;
   }
