@@ -22,7 +22,8 @@ export async function onRequestGet({request,env}){
  const t=teamId?stateFor(s,teamId):{scouted:[]};
  const regions=TERRITORIES.map(r=>({...r,secret:staff||t.scouted.includes(r.id)?r.secret:null}));
  // Rankings remain hidden from players until the event is explicitly published.
- return Response.json({rules:CONQUEST_RULES,regions,scores:staff?scores:(teamId&&scores[teamId]?{[teamId]:scores[teamId]}:{}),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
+ const playerNames={};if(staff){for(const t of games.teams||[]){for(const m of t.members||[]){if(m&&typeof m==='object'){const id=String(m.discordId||m.discord_id||m.id||'');if(id)playerNames[id]=String(m.rsn||m.displayName||m.name||m.username||id)}}}for(const p of games.players||[]){const id=String(p.discordId||p.discord_id||p.id||'');if(id)playerNames[id]=String(p.rsn||p.displayName||p.name||p.username||id)}}
+ return Response.json({playerNames:staff?playerNames:{},rules:CONQUEST_RULES,regions,scores:staff?scores:(teamId&&scores[teamId]?{[teamId]:scores[teamId]}:{}),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
 }
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);
