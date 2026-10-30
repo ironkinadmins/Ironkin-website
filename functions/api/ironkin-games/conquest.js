@@ -8,7 +8,7 @@ const TEST_KEY=KEY+':sandbox';
 const accessWindow=games=>{const week=(games.weeks||[]).find(w=>(w.challenges||[]).some(c=>c.trackerType==='territory-conquest'));const challenge=week?.challenges?.find(c=>c.trackerType==='territory-conquest');const start=Date.parse(challenge?.opensAt||week?.startDate||'');const end=Date.parse(challenge?.closesAt||week?.endDate||'');return {assigned:!!challenge,open:Number.isFinite(start)&&Date.now()>=start,closed:Number.isFinite(end)&&Date.now()>end,opensAt:Number.isFinite(start)?new Date(start).toISOString():null};};
 
 const sandboxRequest=request=>new URL(request.url).searchParams.get('sandbox')==='1';
-const initial=()=>({teams:{},submissions:[],audit:[],published:false,updatedAt:''});
+const initial=()=>({teams:{},submissions:[],replacementRequests:[],audit:[],published:false,updatedAt:''});
 const read=async(env,key=KEY)=>{try{return {...initial(),...JSON.parse(await hybridKv(env,'drops').get(key)||'{}')}}catch{return initial()}};
 const write=async(env,s,key=KEY)=>{s.updatedAt=new Date().toISOString();await hybridKv(env,'drops').put(key,JSON.stringify(s))};
 const fail=(error,status=400)=>Response.json({error},{status});
@@ -26,17 +26,18 @@ export async function onRequestGet({request,env}){
  const regions=TERRITORIES.map(r=>({...r,secret:staff||t.scouted.includes(r.id)?r.secret:null}));
  // Rankings remain hidden from players until the event is explicitly published.
  const playerNames={};if(staff){for(const t of games.teams||[]){for(const m of t.members||[]){if(m&&typeof m==='object'){const id=String(m.discordId||m.discord_id||m.id||'');if(id)playerNames[id]=String(m.rsn||m.displayName||m.name||m.username||id)}}}for(const p of games.players||[]){const id=String(p.discordId||p.discord_id||p.id||'');if(id)playerNames[id]=String(p.rsn||p.displayName||p.name||p.username||id)}}
- return Response.json({playerNames:staff?playerNames:{},rules:CONQUEST_RULES,regions,scores:staff?scores:(teamId&&scores[teamId]?{[teamId]:scores[teamId]}:{}),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
+ return Response.json({playerNames:staff?playerNames:{},rules:CONQUEST_RULES,regions,scores:staff?scores:(teamId&&scores[teamId]?{[teamId]:scores[teamId]}:{}),rankings:staff||s.published?rankings:null,published:!!s.published,teamId,staff,sandbox,replacementRequests:staff?(s.replacementRequests||[]):(s.replacementRequests||[]).filter(x=>x.teamId===teamId),submissions:staff?s.submissions:(s.submissions||[]).filter(x=>x.teamId===teamId)}, {headers:{'Cache-Control':'no-store'}});
 }
 export async function onRequestPost({request,env}){
  const session=await getSession(request,env),staff=isGamesAdminSession(session),games=await loadGames(env),team=memberTeam(games,session);
  if(!session)return fail('Discord sign-in required.',401);const access=accessWindow(games);if(!staff&&(!team||!access.assigned||!access.open||access.closed))return fail('Territory Conquest is not currently open for your team.',403);
  const body=await request.json().catch(()=>({})),sandbox=sandboxRequest(request);if(sandbox&&!staff)return fail('Admin Test Mode is staff only.',403);const storageKey=sandbox?TEST_KEY:KEY;const s=await read(env,storageKey);
  // Staff review actions target the submission's team, not the reviewer's roster membership.
+ const replacementReview=body.action==='reviewReplacement'&&staff?(s.replacementRequests||[]).find(x=>x.id===body.requestId):null;
  const reviewSubmission=body.action==='review'&&staff?(s.submissions||[]).find(x=>x.id===body.submissionId):null;
- const teamId=reviewSubmission?.teamId||(staff&&body.teamId?String(body.teamId):team?.id);
+ const teamId=replacementReview?.teamId||reviewSubmission?.teamId||(staff&&body.teamId?String(body.teamId):team?.id);
  const teamRecord=(games.teams||[]).find(x=>x.id===teamId);
- const teamlessStaffAction=staff&&['review','resetSandbox','publish','resolveWagers'].includes(body.action);
+ const teamlessStaffAction=staff&&['review','reviewReplacement','resetSandbox','publish','resolveWagers'].includes(body.action);
  if(!teamRecord&&!teamlessStaffAction)return fail('Team membership required.',403);
  if(body.action==='resetSandbox'){if(!sandbox||!staff)return fail('Sandbox admin only',403);await write(env,initial(),TEST_KEY);return Response.json({ok:true})}
  if(s.published&&!staff)return fail('Week 4 results have been finalized. Submissions and actions are closed.',403);
@@ -73,7 +74,7 @@ export async function onRequestPost({request,env}){
    if(power==='morytania'&&!staff)return fail('Organizer approval required for a replacement task',403);
    const replacement=power==='morytania'?String(body.replacement||'').trim().slice(0,400):'';
    if(power==='morytania'&&!replacement)return fail('Enter the approved replacement objective');
-   if(power==='morytania'&&targetRegion.id!==body.regionId&&body.regionId)return fail('Replacement must remain in the same territory');
+   
    t.declared ||= [];t.declared.push({power,taskId:target.id,replacement,status:'active',at:new Date().toISOString()});
   }else if(power==='fremennik'){
    if((t.extraActions||0)>=1)return fail('Sixth Conquest Action already purchased');if(!available())return fail('At least 100 points required to buy the sixth action');
@@ -103,9 +104,33 @@ export async function onRequestPost({request,env}){
   t.usedPowers ||= [];t.usedPowers.push(power);
   // A consumed single-use power immediately releases its equipment slot.
   t.equipped=(t.equipped||[]).filter(id=>id!==power);
+ }else if(body.action==='requestReplacement'){
+  const via=String(body.via||'morytania'),target=task(body.taskId),targetRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===body.taskId));
+  if(!['morytania','desert'].includes(via)||!eligible(t,via))return fail('Equip an unused replacement power first');
+  if(via==='desert'&&!captured(t,region('morytania')))return fail('Capture Morytania before copying its power');
+  if(!target||!targetRegion||!t.unlocked.includes(targetRegion.id)||t.approved[target.id]||!['Hard','Elite'].includes(target.tier))return fail('Select an unfinished Hard or Elite task in an unlocked territory');
+  if((s.replacementRequests||[]).some(q=>q.teamId===teamId&&q.status==='pending'))return fail('A replacement request is already pending');
+  const replacement=String(body.replacement||'').trim().slice(0,400);
+  if(!replacement)return fail('Describe the proposed same-tier alternative');
+  s.replacementRequests ||= [];
+  s.replacementRequests.push({id:crypto.randomUUID(),teamId,via,taskId:target.id,replacement,tier:target.tier,status:'pending',at:new Date().toISOString(),by:String(session.id)});
+ }else if(body.action==='reviewReplacement'){
+  if(!staff)return fail('Staff only',403);
+  const req=(s.replacementRequests||[]).find(x=>x.id===body.requestId);
+  if(!req||req.status!=='pending')return fail('Pending request not found');
+  if(!['approved','rejected'].includes(body.decision))return fail('Invalid decision');
+  const owner=stateFor(s,req.teamId);
+  if(body.decision==='approved'){
+   const original=task(req.taskId),originalRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===req.taskId));
+   if(!original||!originalRegion||!owner.unlocked.includes(originalRegion.id)||owner.approved[req.taskId])return fail('Task is no longer eligible');
+   if(!eligible(owner,req.via)||(owner.usedPowers||[]).includes(req.via))return fail('Power no longer available');
+   owner.usedPowers ||= [];owner.usedPowers.push(req.via);owner.equipped=(owner.equipped||[]).filter(x=>x!==req.via);
+  }
+  req.status=body.decision;req.reviewedAt=new Date().toISOString();req.reviewedBy=String(session.id);
  }else if(body.action==='submit'){
   if(!r||!t.unlocked.includes(r.id))return fail('Territory not unlocked');const objective=r.tasks.find(x=>x.id===body.taskId),secret=body.taskId===r.id+'-secret';
   if(!objective&&!secret)return fail('Invalid task');if(secret&&!t.scouted.includes(r.id))return fail('Scout objective first');
+  if(body.replacementId&&!(s.replacementRequests||[]).some(q=>q.teamId===teamId&&q.taskId===body.taskId&&q.status==='approved'))return fail('Replacement is not approved');
   const proofUrls=(Array.isArray(body.proofUrls)?body.proofUrls:[body.proofUrl]).map(x=>String(x||'').trim()).filter(Boolean);
   if(!proofUrls.length||proofUrls.some(url=>url.length>1000||!/^https?:\/\//i.test(url)))return fail('Valid http(s) proof URLs are required');
   // Resolve player names only against this team's roster; reject ambiguous matches.
