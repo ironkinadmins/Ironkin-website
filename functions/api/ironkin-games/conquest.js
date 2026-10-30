@@ -87,7 +87,7 @@ export async function onRequestPost({request,env}){
     if(!available())return fail('At least 100 points required for the seventh action');t.extraActions=2;t.penalties=(t.penalties||0)+100;
    }else if(['asgarnia','karamja','wilderness','zeah','morytania'].includes(source)){
     const target=task(body.taskId),targetRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===body.taskId));
-    if(!target||!targetRegion||!t.unlocked.includes(targetRegion.id)||t.approved[target.id])return fail('Choose unfinished task in unlocked territory');
+    if(!target||!targetRegion||t.approved[target.id])return fail('Choose unfinished task in unlocked territory');
     if((t.declared||[]).some(x=>x.taskId===target.id&&x.status==='active'))return fail('Task already has a power declaration');
     if(source==='asgarnia'&&!target.competitive)return fail('Competitive task required');
     if(source==='karamja'&&!['Medium','Elite'].includes(target.tier))return fail('Medium or Elite required');
@@ -108,7 +108,7 @@ export async function onRequestPost({request,env}){
   const via=String(body.via||'morytania'),target=task(body.taskId),targetRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===body.taskId));
   if(!['morytania','desert'].includes(via)||!eligible(t,via))return fail('Equip an unused replacement power first');
   if(via==='desert'&&!captured(t,region('morytania')))return fail('Capture Morytania before copying its power');
-  if(!target||!targetRegion||!t.unlocked.includes(targetRegion.id)||t.approved[target.id]||!['Hard','Elite'].includes(target.tier))return fail('Select an unfinished Hard or Elite task in an unlocked territory');
+  if(!target||!targetRegion||t.approved[target.id]||!['Hard','Elite'].includes(target.tier))return fail('Select an unfinished Hard or Elite task in any territory');
   if((s.replacementRequests||[]).some(q=>q.teamId===teamId&&q.status==='pending'))return fail('A replacement request is already pending');
   const replacement=String(body.replacement||'').trim().slice(0,400);
   if(!replacement)return fail('Describe the proposed same-tier alternative');
@@ -122,13 +122,13 @@ export async function onRequestPost({request,env}){
   const owner=stateFor(s,req.teamId);
   if(body.decision==='approved'){
    const original=task(req.taskId),originalRegion=TERRITORIES.find(r=>r.tasks.some(x=>x.id===req.taskId));
-   if(!original||!originalRegion||!owner.unlocked.includes(originalRegion.id)||owner.approved[req.taskId])return fail('Task is no longer eligible');
+   if(!original||!originalRegion||owner.approved[req.taskId])return fail('Task is no longer eligible');
    if(!eligible(owner,req.via)||(owner.usedPowers||[]).includes(req.via))return fail('Power no longer available');
    owner.usedPowers ||= [];owner.usedPowers.push(req.via);owner.equipped=(owner.equipped||[]).filter(x=>x!==req.via);
   }
   req.status=body.decision;req.reviewedAt=new Date().toISOString();req.reviewedBy=String(session.id);
  }else if(body.action==='submit'){
-  if(!r||!t.unlocked.includes(r.id))return fail('Territory not unlocked');const objective=r.tasks.find(x=>x.id===body.taskId),secret=body.taskId===r.id+'-secret';
+  if(!r||(!t.unlocked.includes(r.id)&&!(s.replacementRequests||[]).some(q=>q.teamId===teamId&&q.taskId===body.taskId&&q.status==='approved')))return fail('Territory not unlocked');const objective=r.tasks.find(x=>x.id===body.taskId),secret=body.taskId===r.id+'-secret';
   if(!objective&&!secret)return fail('Invalid task');if(secret&&!t.scouted.includes(r.id))return fail('Scout objective first');
   if(body.replacementId&&!(s.replacementRequests||[]).some(q=>q.teamId===teamId&&q.taskId===body.taskId&&q.status==='approved'))return fail('Replacement is not approved');
   const proofUrls=(Array.isArray(body.proofUrls)?body.proofUrls:[body.proofUrl]).map(x=>String(x||'').trim()).filter(Boolean);
