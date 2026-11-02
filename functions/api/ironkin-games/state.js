@@ -128,6 +128,7 @@ export async function onRequestGet({ request, env }) {
     }) : [],
     signedIn:Boolean(session), isStaff:staff, testMode:Boolean(testMode), testPlayerDiscordId:testMode?testPlayerDiscordId:"",
     publishedResultWeeks:[...publishedWeeks],
+    publishedConquestResults:fullGamesAccess?Object.fromEntries(Object.entries(state.publishedConquestResults||{}).filter(([id])=>publishedWeeks.has(String(id)))):{},
     hasPublishedResults:publishedWeeks.size > 0,
     gamesCompleted:Boolean(state.gamesCompleted),
     completedAt:state.completedAt || "",
