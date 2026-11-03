@@ -6,6 +6,32 @@ import { loadGames, saveGames } from "../../ironkin-games/_store.js";
 import { readTimeTrials, scoreTimeTrials } from "../../ironkin-games/time-trials.js";
 import { calculateAutomaticChallenge, automaticSubmission } from "../../ironkin-games/_autoScoring.js";
 
+// Week 5 Grand Heist uses a special 1.5x MAIN placement scale (100/70/50/30).
+// Its 1,000 internal points are used for ranking, never added directly to season totals.
+const HEIST_PLACEMENT_POINTS=[150,105,75,45];
+async function heistPreview(state,week,env){
+ const isHeist=(week.challenges||[]).some(c=>/grand[\s-]*heist/i.test(String(c.name||''))||/heist/i.test(String(c.trackerType||'')));
+ if(!isHeist)return null;
+ const raw=await hybridKv(env,'drops').get('ironkin-games:grand-heist:week5:v1');
+ if(!raw)throw new Error('Grand Heist has no live event records yet. Cannot publish placements.');
+ let heist;try{heist=JSON.parse(raw)}catch{throw new Error('Grand Heist event records could not be parsed.');}
+ if(!heist.startedAt)throw new Error('Grand Heist has not started. Cannot publish placements.');
+ const {HEIST_PHASES}=await import('../../ironkin-games/_heistConfig.js');
+ const rows=(state.teams||[]).map(team=>{
+  const t=heist.teams?.[team.id]||{};const approved=t.approved||{};const risks=t.risks||{};
+  const core=HEIST_PHASES.flatMap(p=>p.tasks).reduce((sum,task)=>sum+(approved[task[0]]?Number(task[3])||0:0),0);
+  const coreCompleted=HEIST_PHASES.flatMap(p=>p.tasks).filter(task=>approved[task[0]]).length;
+  const risk=HEIST_PHASES.reduce((sum,p,i)=>sum+(approved['risk-'+i]?(risks[i]==='allin'?20:risks[i]==='calculated'?10:0):0),0);
+  const heat=HEIST_PHASES.reduce((sum,p,i)=>sum+(approved['risk-'+i]?(risks[i]==='allin'?25:risks[i]==='calculated'?10:0):0),0);
+  const members=new Set([team.captainDiscordId,...(team.members||[]).map(x=>x.discordId||x.id)].filter(Boolean).map(String));
+  const participants=new Set(Object.entries(t.participants||{}).filter(([id])=>approved[id]).flatMap(([,ids])=>Array.isArray(ids)?ids:[]).map(String).filter(id=>members.has(id)));
+  const participation=participants.size>=5?50:participants.size===4?25:participants.size===3?15:0;
+  const fashion=Number(heist.judging?.[team.id])||0;
+  return {teamId:team.id,teamName:team.name,score:core+risk+participation+fashion,core,risk,heat,participation,fashion,coreCompleted,uniqueMembers:participants.size};
+ }).sort((a,b)=>b.score-a.score||b.fashion-a.fashion||a.heat-b.heat||b.coreCompleted-a.coreCompleted||b.uniqueMembers-a.uniqueMembers||a.teamName.localeCompare(b.teamName));
+ rows.forEach((row,i)=>{row.placement=i+1;row.points=HEIST_PLACEMENT_POINTS[i]||0;});
+ return {name:'The Grand Heist',rows,placementScale:HEIST_PLACEMENT_POINTS};
+}
 async function conquestPreview(state,week,env){
  if(!(week.challenges||[]).some(c=>c.trackerType==="territory-conquest") && !/^(week\s*)?4$/i.test(String(week.name||"")) && (state.weeks||[]).indexOf(week)!==3)return null;
  const raw=await hybridKv(env,"drops").get("ironkin-games:conquest:2026:week4");
@@ -28,8 +54,8 @@ async function calculateWeek(state,week,env){const challenges=[];for(const chall
  challenges.push({challengeId:challenge.id,name:challenge.name,kind:challenge.kind||'main',rows});
  }return challenges;}
 export async function onRequestPost({request,env}){const session=await getSession(request,env);if(!isGamesAdminSession(session))return Response.json({error:"Staff only."},{status:403});const body=await request.json().catch(()=>({})),weekId=String(body.weekId||""),action=String(body.action||"publish"),state=await loadGames(env);if(state.gamesCompleted)return Response.json({error:"The Ironkin Games are complete. Published results are locked."},{status:409});const week=(state.weeks||[]).find(w=>String(w.id)===weekId);if(!week)return Response.json({error:"Week not found."},{status:404});
- if(action==="preview"){try{return Response.json({ok:true,weekId,challenges:await calculateWeek(state,week,env),conquest:await conquestPreview(state,week,env)});}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results."},{status:502});}}
- const published=new Set((state.publishedResultWeeks||[]).map(String));if(action==="hide")published.delete(weekId);else{let calculated=[],conquest=null;try{calculated=await calculateWeek(state,week,env);conquest=await conquestPreview(state,week,env);}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results. Nothing was published."},{status:502});}const autoIds=new Set((week.challenges||[]).filter(c=>(String(c.trackingMethod||"")==="automatic"||/time[\s-]*trials/i.test(String(c.trackerType||""))||/ironkin time trials/i.test(String(c.name||"")))).map(c=>String(c.id)));state.submissions=(state.submissions||[]).filter(s=>!(String(s.weekId)===weekId&&autoIds.has(String(s.challengeId))&&String(s.source||"")==="automatic"));for(const result of calculated){const challenge=(week.challenges||[]).find(c=>String(c.id)===String(result.challengeId));for(const row of result.rows)state.submissions.push(automaticSubmission(week,challenge,row));}if(conquest){
+ if(action==="preview"){try{return Response.json({ok:true,weekId,challenges:await calculateWeek(state,week,env),conquest:await conquestPreview(state,week,env),heist:await heistPreview(state,week,env)});}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results."},{status:502});}}
+ const published=new Set((state.publishedResultWeeks||[]).map(String));if(action==="hide")published.delete(weekId);else{let calculated=[],conquest=null,heist=null;try{calculated=await calculateWeek(state,week,env);conquest=await conquestPreview(state,week,env);heist=await heistPreview(state,week,env);}catch(e){return Response.json({error:e?.message||"Could not calculate automatic results. Nothing was published."},{status:502});}const autoIds=new Set((week.challenges||[]).filter(c=>(String(c.trackingMethod||"")==="automatic"||/time[\s-]*trials/i.test(String(c.trackerType||""))||/ironkin time trials/i.test(String(c.name||"")))).map(c=>String(c.id)));state.submissions=(state.submissions||[]).filter(s=>!(String(s.weekId)===weekId&&autoIds.has(String(s.challengeId))&&String(s.source||"")==="automatic"));for(const result of calculated){const challenge=(week.challenges||[]).find(c=>String(c.id)===String(result.challengeId));for(const row of result.rows)state.submissions.push(automaticSubmission(week,challenge,row));}if(conquest){
    // Replace only our own previously generated Conquest placements on republish.
    // Never touch manually reviewed submissions for other challenges.
    state.submissions=state.submissions.filter(s=>!(String(s.weekId)===weekId&&s.source==="conquest-placement"));
@@ -39,5 +65,11 @@ export async function onRequestPost({request,env}){const session=await getSessio
    }
    state.publishedConquestResults ||= {};
    state.publishedConquestResults[weekId]={...conquest,publishedAt:new Date().toISOString()};
+ }if(heist){
+   state.submissions=state.submissions.filter(s=>!(String(s.weekId)===weekId&&s.source==='heist-placement'));
+   const heistChallenge=(week.challenges||[]).find(c=>/grand[\s-]*heist/i.test(String(c.name||''))||/heist/i.test(String(c.trackerType||'')));
+   for(const row of heist.rows)state.submissions.push({id:`heist-placement:${weekId}:${row.teamId}`,weekId,challengeId:String(heistChallenge?.id||`grand-heist-${weekId}`),teamId:row.teamId,status:'approved',source:'heist-placement',placement:row.placement,points:row.points,score:row.score,scoreLabel:`${row.score}/1000 Grand Heist points`,reviewedAt:new Date().toISOString(),breakdown:{core:row.core,risk:row.risk,participation:row.participation,fashion:row.fashion,heat:row.heat,coreCompleted:row.coreCompleted,uniqueMembers:row.uniqueMembers}});
+   state.publishedHeistResults ||= {};
+   state.publishedHeistResults[weekId]={...heist,publishedAt:new Date().toISOString()};
  }published.add(weekId);}
  state.publishedResultWeeks=[...published];state.resultsUnlocked=false;for(const team of state.teams||[])team.points=(state.submissions||[]).filter(s=>String(s.teamId)===String(team.id)&&String(s.status)==="approved").reduce((n,s)=>n+(Number(s.points)||0),0);await saveGames(env,state);return Response.json({ok:true,weekId,published:action!=="hide",publishedResultWeeks:state.publishedResultWeeks});}
