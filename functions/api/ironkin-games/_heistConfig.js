@@ -1,5 +1,4 @@
-// Confirmed event scoring and Phase 1 objectives; unverified details are clearly marked.
-// DO NOT LAUNCH until original Phase 2–5 tasks, Phase 1 bank riddles and Phase 1–4 risks are restored.
+// Grand Heist finalized event configuration; evidence requires admin verification.
 export const HEIST_PHASES = [
   {
     "name": "Case the Joint",
@@ -7,32 +6,32 @@ export const HEIST_PHASES = [
     "tasks": [
       [
         "thieving",
-        "Thieving Reconnaissance",
-        "Gain 100,000 Thieving XP during the event.",
+        "Inside Information",
+        "Gain 100,000 Thieving XP collectively. WOM XP evidence.",
         25,
         "thieving_xp",
         100000
       ],
       [
         "banks",
-        "Bank Reconnaissance",
-        "Solve three bank clues by entering the correct bank names.",
+        "Establish Surveillance",
+        "Solve all three bank clues by typing their names.",
         25,
         null,
         null
       ],
       [
         "pvm-drop",
-        "Valuable PvM Drop",
-        "Obtain one PvM drop worth at least 500,000 GP.",
+        "Bribe the Informants",
+        "Obtain one new PvM drop worth at least 500,000 GP; Loot Logger evidence.",
         25,
         "drop_value",
         500000
       ],
       [
         "bosses",
-        "Boss Surveillance",
-        "Defeat 20 different bosses during the event.",
+        "Study the Security",
+        "Defeat 20 different bosses collectively; verified unique boss kills.",
         25,
         "unique_bosses",
         20
@@ -41,11 +40,11 @@ export const HEIST_PHASES = [
     "risk": [
       [
         "calculated",
-        "Calculated Risk: phase-specific objective requires original approved rules"
+        "Obtain a SECOND separate PvM drop worth 500,000+ GP; no reuse of core drop."
       ],
       [
         "allin",
-        "All-In: phase-specific objective requires original approved rules"
+        "Obtain a separate PvM drop worth 1,000,000+ GP AND defeat five additional unique bosses; no core overlap."
       ]
     ]
   },
@@ -54,46 +53,46 @@ export const HEIST_PHASES = [
     "points": 150,
     "tasks": [
       [
-        "crew",
-        "Recruit the Crew [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a group activity with your team and submit proof.",
-        37,
+        "fish",
+        "Prepare the Supplies I",
+        "Cook 1,000 fish collectively. Before/after or RuneLite production evidence.",
+        35,
         null,
-        null
+        1000
       ],
       [
-        "equipment",
-        "Acquire Equipment [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Obtain equipment for the operation and submit proof.",
-        37,
+        "ham",
+        "Undercover Operation",
+        "Three different members obtain and wear full HAM outfits; visible RSNs and screenshots.",
+        40,
         null,
-        null
+        3
       ],
       [
-        "training",
-        "Practice the Plan [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a team preparation challenge and submit proof.",
-        37,
+        "potions",
+        "Prepare the Supplies II",
+        "Create 300 potions collectively; production evidence.",
+        40,
         null,
-        null
+        300
       ],
       [
-        "contacts",
-        "Build Contacts [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a coordinated team objective and submit proof.",
-        39,
-        null,
-        null
+        "construction",
+        "Build the Safehouse",
+        "Gain 250,000 Construction XP collectively; WOM.",
+        35,
+        "construction_xp",
+        250000
       ]
     ],
     "risk": [
       [
         "calculated",
-        "Calculated Risk: phase-specific objective requires original approved rules"
+        "Obtain 5 Brimstone keys; screenshots proving new acquisitions."
       ],
       [
         "allin",
-        "All-In: phase-specific objective requires original approved rules"
+        "Create 300 ADDITIONAL potions, separate from the 300 core potions."
       ]
     ]
   },
@@ -102,46 +101,46 @@ export const HEIST_PHASES = [
     "points": 200,
     "tasks": [
       [
-        "entry",
-        "Find an Entry [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a team entry challenge and submit proof.",
+        "mining",
+        "Break Through the Walls",
+        "Gain 100,000 Mining XP collectively; WOM.",
         50,
-        null,
-        null
+        "mining_xp",
+        100000
       ],
       [
-        "guards",
-        "Evade the Guards [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a combat or evasion objective and submit proof.",
+        "superiors",
+        "Eliminate the Elite Guards",
+        "Kill 3 Superior Slayer creatures collectively; proof of kills.",
         50,
         null,
-        null
+        3
       ],
       [
-        "distraction",
-        "Create a Distraction [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a coordinated distraction objective and submit proof.",
+        "dragon",
+        "Secure the Weaponry",
+        "Present one dragon equipment item; existing banked item permitted.",
         50,
         null,
-        null
+        1
       ],
       [
-        "breach",
-        "Breach the Perimeter [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a group challenge and submit proof.",
+        "cannonballs",
+        "Prepare the Artillery",
+        "Smith 10,000 cannonballs collectively; production evidence.",
         50,
         null,
-        null
+        10000
       ]
     ],
     "risk": [
       [
         "calculated",
-        "Calculated Risk: phase-specific objective requires original approved rules"
+        "Kill 3 ADDITIONAL Superior Slayer creatures beyond the three core kills."
       ],
       [
         "allin",
-        "All-In: phase-specific objective requires original approved rules"
+        "Smith 5,000 ADDITIONAL cannonballs beyond the 10,000 core cannonballs."
       ]
     ]
   },
@@ -150,46 +149,46 @@ export const HEIST_PHASES = [
     "points": 200,
     "tasks": [
       [
-        "lock",
-        "Pick the Lock [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a skill-based objective and submit proof.",
+        "smithing",
+        "Forge the Vault Tools",
+        "Gain 150,000 Smithing XP collectively; WOM.",
         50,
-        null,
-        null
+        "smithing_xp",
+        150000
       ],
       [
-        "vault",
-        "Open the Vault [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a team vault objective and submit proof.",
+        "runes",
+        "Break the Magical Seal",
+        "Screenshot one stack of 100,000 runes; banked runes allowed.",
         50,
         null,
-        null
+        100000
       ],
       [
-        "loot",
-        "Secure the Loot [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a loot-gathering objective and submit proof.",
+        "treasure",
+        "Secure the Treasure",
+        "Obtain 5,000,000 GP in new PvM drops collectively; Loot Logger.",
         50,
-        null,
-        null
+        "pvm_loot",
+        5000000
       ],
       [
-        "escapeplan",
-        "Plan the Escape [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete an escape preparation objective and submit proof.",
+        "chests",
+        "Crack the Final Lock",
+        "Open 150 qualifying chests collectively; Rogues’ Castle chests count; opening evidence.",
         50,
         null,
-        null
+        150
       ]
     ],
     "risk": [
       [
         "calculated",
-        "Calculated Risk: phase-specific objective requires original approved rules"
+        "Obtain 1,000,000 GP ADDITIONAL PvM loot beyond the 5M core."
       ],
       [
         "allin",
-        "All-In: phase-specific objective requires original approved rules"
+        "Open 25 ADDITIONAL qualifying chests beyond the 150 core chests."
       ]
     ]
   },
@@ -198,62 +197,63 @@ export const HEIST_PHASES = [
     "points": 150,
     "tasks": [
       [
-        "revenants",
-        "Revenant Run [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a Revenant challenge and submit screenshots.",
-        37,
+        "slayer",
+        "Fight Through the Pursuit",
+        "Complete one Slayer assignment worth at least 40,000 Slayer XP; same-assignment start and completion screenshots.",
+        50,
         null,
-        null
+        40000
       ],
       [
-        "wildslayer",
-        "Wilderness Slayer [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Obtain an eligible Wilderness Slayer drop and submit proof.",
-        37,
-        null,
-        null
+        "hunter",
+        "Cover Your Tracks",
+        "Gain 150,000 Hunter XP collectively; WOM.",
+        50,
+        "hunter_xp",
+        150000
       ],
       [
-        "extraction",
-        "Extract the Loot [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete a team extraction objective and submit proof.",
-        37,
+        "bones",
+        "Destroy the Evidence",
+        "Sacrifice 500 bones at the Chaos Altar collectively; before/after or RuneLite evidence.",
+        50,
         null,
-        null
-      ],
-      [
-        "getaway",
-        "Make the Getaway [RULES NEED VERIFICATION]",
-        "UNVERIFIED PLACEHOLDER \u2014 replace with the original approved challenge before launching. Complete the final team getaway challenge and submit proof.",
-        39,
-        null,
-        null
+        500
       ]
     ],
     "risk": [
       [
         "calculated",
-        "Calculated Risk: 150 Revenant kills (+10 points, +10 Heat)"
+        "Kill 150 Revenants; verified kills and no overlap with core objectives."
       ],
       [
         "allin",
-        "All-In: 3 eligible Wilderness Slayer drops (+20 points, +25 Heat)"
+        "Obtain 3 eligible Wilderness Slayer drops while on Wilderness Slayer assignments; Loot Logger and assignment proof; no overlap with core."
       ]
     ]
   }
 ];
 export const HEIST_RIDDLES = [
   {
-    "clue": "UNVERIFIED: original bank clue 1 must be restored.",
-    "answer": "__unverified_1__"
+    "clue": "Beneath the watch of a kingdom’s white walls, where eastern vaults safeguard the realm’s riches, name this bank.",
+    "answer": "falador east bank"
   },
   {
-    "clue": "UNVERIFIED: original bank clue 2 must be restored.",
-    "answer": "__unverified_2__"
+    "clue": "Beyond the sands, where traders gather and desert gates open to the market, name this bank.",
+    "answer": "al kharid bank"
   },
   {
-    "clue": "UNVERIFIED: original bank clue 3 must be restored.",
-    "answer": "__unverified_3__"
+    "clue": "Within a city of stone, near the grand exchange of merchants, find the western vault and name this bank.",
+    "answer": "varrock west bank"
   }
 ];
-export const HEIST_BANK = {"finalExtraction": "Varrock West Bank", "minimumMembers": 3, "placementPoints": [50, 35, 20, 10]};
+export const HEIST_BANK = {
+  "finalExtraction": "Varrock West Bank",
+  "minimumMembers": 3,
+  "placementPoints": [
+    50,
+    35,
+    20,
+    10
+  ]
+};
