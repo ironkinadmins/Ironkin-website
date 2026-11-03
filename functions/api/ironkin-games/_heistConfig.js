@@ -235,15 +235,15 @@ export const HEIST_PHASES = [
 ];
 export const HEIST_RIDDLES = [
   {
-    "clue": "Beneath the watch of a kingdom’s white walls, where eastern vaults safeguard the realm’s riches, name this bank.",
+    "clue": "A city of knights guards its treasures in twin houses. Seek the one closer to the rising sun, not the one beside the western road. Name the vault.",
     "answer": "falador east bank"
   },
   {
-    "clue": "Beyond the sands, where traders gather and desert gates open to the market, name this bank.",
+    "clue": "A toll once divided two peoples; now coins pass freely where a furnace burns near a palace of the sands. Name the bank.",
     "answer": "al kharid bank"
   },
   {
-    "clue": "Within a city of stone, near the grand exchange of merchants, find the western vault and name this bank.",
+    "clue": "Where a great market draws merchants from across Gielinor, seek the older city’s vault on the side of the setting sun. Name the bank.",
     "answer": "varrock west bank"
   }
 ];
