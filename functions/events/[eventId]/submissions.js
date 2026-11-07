@@ -1,3 +1,4 @@
+import { isEventAcceptingSubmissions } from "../../api/_eventEligibility.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { requirePluginUser } from "../../api/_pluginAuth.js";
 import {
@@ -110,7 +111,7 @@ async function handlePluginSubmission(context) {
   const events = safeJson(await hybridKv(env, "drops").get("events:active"), []);
   const configured = Array.isArray(events) ? events : [];
   // Must match /events/item-list: every active event the plugin is told to track accepts its drops.
-  let event = configured.find(entry => entry?.active === true && makePluginEventId(entry) === requestedEventId);
+  let event = configured.find(entry => isEventAcceptingSubmissions(entry) && makePluginEventId(entry) === requestedEventId);
   if (requestedEventId === "pvm-entry") {
     const savedPvm = configured.find(entry => entry?.id === "pvm-entry" || entry?.type === "pvm-entry");
     event = {
@@ -133,11 +134,9 @@ async function handlePluginSubmission(context) {
   }
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
-  // A stale active flag must never permit submissions after the competition ended.
-  // Apply to SOTW/BOTW regardless of how the plugin cached the event ID.
-  if (["sotw","botw"].includes(String(event.type||"").toLowerCase())) {
-    const end=Date.parse(event.endDate||"");
-    if (!Number.isFinite(end) || Date.now()>=end) return Response.json({error:"This SOTW/BOTW competition has ended. Submissions are closed."},{status:409});
+  // Revalidate at proof intake even when a client cached an older item list.
+  if (!shopping && !isEventAcceptingSubmissions(event)) {
+    return Response.json({ error: "Event submissions are closed." }, { status: 409 });
   }
 
   let websiteEventId = String(event.id || "");

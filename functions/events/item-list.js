@@ -1,3 +1,4 @@
+import { isEventAcceptingSubmissions, isPermanentSubmissionEvent } from "../api/_eventEligibility.js";
 import { hybridKv } from "../_hybridKv.js";
 import { requirePluginUser } from "../api/_pluginAuth.js";
 import { hasSupabase, supabaseRest, listTrackedItems } from "../api/_supabase.js";
@@ -88,9 +89,11 @@ export async function onRequestGet({ request, env }) {
     pluginEventId: "pvm-entry",
     pluginOnly: true
   };
+  const bounty = configured.find(event => event?.id === "bounties" || event?.type === "bounties");
   const activeEvents = [
-    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true && (!event.endDate || (Number.isFinite(Date.parse(event.endDate)) && Date.parse(event.endDate)>Date.now()))),
-    { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true }
+    ...configured.filter(event => !isPermanentSubmissionEvent(event) && isEventAcceptingSubmissions(event)),
+    { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true },
+    ...(bounty ? [{ ...bounty, id: "bounties", type: "bounties", active: true, dropsEnabled: true, pluginEventId: bounty.pluginEventId || "bounties" }] : [])
   ];
   const dbRows = await listTrackedItems(env).catch(() => []);
   const dbByEvent = new Map();
@@ -105,12 +108,12 @@ export async function onRequestGet({ request, env }) {
     const websiteEventId = String(event.id || "").trim();
     if (!websiteEventId) continue;
     const isPvmEntry = websiteEventId === "pvm-entry" || event?.type === "pvm-entry";
-    let itemIds = isPvmEntry ? [] : (dbByEvent.get(websiteEventId) || []).filter(id => Number.isInteger(id) && id > 0);
+    let itemIds = [];
 
     // PvM Entry uses the website drop list as the canonical order so staff can
     // maintain boss/item order in Admin and RuneLite receives that exact sequence.
     // Other events retain the Supabase-first compatibility behavior.
-    if (isPvmEntry || !itemIds.length) {
+    {
       const dropResult = await readDropsWithClanGoalFallback(env, websiteEventId);
       // RuneLite polls this endpoint frequently, so keep the GET path read-heavy
       // and fast. In particular, do not upsert every tracked item into Supabase
@@ -147,6 +150,7 @@ export async function onRequestGet({ request, env }) {
       }
     }
 
+    // Never resurrect deleted event items from stale Supabase catalog rows.
     itemIds = [...new Set(itemIds)];
     if (itemIds.length) {
       const responseEvent = { eventId: makePluginEventId(event), items: itemIds };
