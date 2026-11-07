@@ -1286,7 +1286,17 @@
          if(!response.ok)throw Error(data.details||data.error||"Discord post failed");
          await refresh();
        }catch(error){alert(error.message||"Could not publish");button.disabled=false;button.textContent="Retry Discord Post";}
-     });row.append(button);list.append(row);
+     });row.append(button);
+     if(event.kind==="archive"){
+       const skip=document.createElement("button");skip.type="button";skip.className="btn secondary compact";skip.textContent="Ignore / Post Manually";
+       skip.addEventListener("click",async()=>{
+         if(!confirm(`Ignore the automatic Discord results for ${event.title}? This removes the pending message from this queue. You can post results manually; archived standings are preserved.`))return;
+         skip.disabled=true;
+         try{const response=await fetch("/api/admin/events/results/skip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({archiveId:event.id})});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Could not ignore announcement");await refresh();}
+         catch(error){alert(error.message);skip.disabled=false;}
+       });row.append(skip);
+     }
+     list.append(row);
    });
  }
  async function refresh(){

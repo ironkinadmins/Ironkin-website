@@ -133,6 +133,13 @@ async function handlePluginSubmission(context) {
   }
   if (!event) return Response.json({ error: "Event is not active or does not accept plugin drops." }, { status: 404 });
 
+  // A stale active flag must never permit submissions after the competition ended.
+  // Apply to SOTW/BOTW regardless of how the plugin cached the event ID.
+  if (["sotw","botw"].includes(String(event.type||"").toLowerCase())) {
+    const end=Date.parse(event.endDate||"");
+    if (!Number.isFinite(end) || Date.now()>=end) return Response.json({error:"This SOTW/BOTW competition has ended. Submissions are closed."},{status:409});
+  }
+
   let websiteEventId = String(event.id || "");
   let shoppingObjective = shopping ? shoppingObjectiveForItem(shopping.challenge, itemId) : null;
   let tracked = shopping ? shopping.progress.find(entry => entry.id === shoppingObjective?.id) : await getTrackedItem(env, websiteEventId, itemId);

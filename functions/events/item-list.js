@@ -89,7 +89,7 @@ export async function onRequestGet({ request, env }) {
     pluginOnly: true
   };
   const activeEvents = [
-    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true),
+    ...configured.filter(event => event?.id !== "pvm-entry" && event?.type !== "pvm-entry" && event?.active === true && (!event.endDate || (Number.isFinite(Date.parse(event.endDate)) && Date.parse(event.endDate)>Date.now()))),
     { ...pvmEntry, id: "pvm-entry", type: "pvm-entry", active: true, dropsEnabled: true, pluginEventId: "pvm-entry", pluginOnly: true }
   ];
   const dbRows = await listTrackedItems(env).catch(() => []);

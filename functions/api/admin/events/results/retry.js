@@ -15,6 +15,7 @@ export async function onRequestPost({ request, env }) {
   if (index < 0) return Response.json({ error: "Archive entry not found." }, { status: 404 });
 
   const entry = archive[index];
+  if (entry?.resultsAnnouncement?.status === "skipped") return Response.json({error:"Announcement was intentionally ignored by staff."},{status:409});
   if (entry?.resultsAnnouncement?.status === "posted" && entry?.resultsAnnouncement?.messageId) {
     return Response.json({ success: true, announcement: entry.resultsAnnouncement, alreadyPosted: true });
   }
