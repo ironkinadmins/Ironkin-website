@@ -173,23 +173,17 @@ async function finalizeCompetition(env, kv, event, state) {
     await kv.put(PREFIX + event.id,JSON.stringify(pending));
     return pending;
   }
-  if (!getResultsChannelId(env,record) || !env.DISCORD_BOT_TOKEN) {
-    const pending = {...state,finalizationStatus:"needs_review",finalizationError:"Discord results channel or bot token is missing."};
-    await kv.put(PREFIX + event.id,JSON.stringify(pending));
-    return pending;
-  }
-  const content = buildEventResultsContent(snapshot);
-  if (!content || content.length > 1950) {
-    const pending = {...state,finalizationStatus:"needs_review",finalizationError:"Generated results content is missing or exceeds Discord limits."};
-    await kv.put(PREFIX + event.id,JSON.stringify(pending));
-    return pending;
-  }
+  // Discord announcements are optional: an unavailable channel must not keep
+  // a completed WOM competition active or open for submissions.
+  const canPost=Boolean(getResultsChannelId(env,record) && env.DISCORD_BOT_TOKEN);
+  const content=canPost ? buildEventResultsContent(snapshot) : null;
+  const postResults=Boolean(canPost && content && content.length<=1950);
   // Mark an irreversible operation before calling the shared archiver.
   // Unknown outcomes require manual reconciliation, never blind retry.
   const processing = {...state,finalizationStatus:"processing",finalizationStartedAt:new Date().toISOString()};
   await kv.put(PREFIX + event.id,JSON.stringify(processing));
   try {
-    const result = await archiveEventInternal({env,body:{event:record,events:active,archiveRequestId,resultsContent:content,postResults:true}});
+    const result = await archiveEventInternal({env,body:{event:record,events:active,archiveRequestId,resultsContent:postResults?content:null,postResults}});
     const response = await result.json();
     if (!result.ok || !response.success) throw new Error(response.details || response.error || `Archive HTTP ${result.status}`);
     const done = {...processing,finalizationStatus:"completed",archiveId:response.archiveEntry?.id,finalizedAt:new Date().toISOString(),announcementStatus:response.archiveEntry?.resultsAnnouncement?.status};
