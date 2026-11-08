@@ -83,8 +83,8 @@ function votingWindow(startDate, startTime) {
   const anchor = new Date(`${startDate}T12:00:00Z`);
   const before = days => new Date(anchor.getTime() - days * 86400000).toISOString().slice(0,10);
   return {
-    nominationDeadline: {date: before(4), time: startTime, timeZone: TZ},
-    pollOpens: {date: before(4), time: startTime, timeZone: TZ},
+    nominationDeadline: {date: before(startDate === "2026-11-13" ? 4 : 7), time: startTime, timeZone: TZ},
+    pollOpens: {date: before(startDate === "2026-11-13" ? 4 : 7), time: startTime, timeZone: TZ},
     pollCloses: {date: before(1), time: startTime, timeZone: TZ}
   };
 }
@@ -144,7 +144,17 @@ export async function onRequest({ request, env }) {
         const reset = remaining.length < needed;
         if (reset) remaining = pool.filter(item => !excluded.has(identity(item,type)));
         const random = draw(remaining, excluded, needed, type);
-        const draft = {type,authorizedWinnerId:winners[type] || null,options:[...nominations.map(item => canonical(item,type)),...random],winnerPicks:nominations.length,rotationResetSuggested:reset,createdAt:new Date().toISOString(),status:"draft"};
+        // Bind the draft to the next scheduled cycle of this competition type.
+        // Prevents a stale draft from silently becoming a later live poll.
+        const today = new Intl.DateTimeFormat("en-CA", {timeZone: TZ, year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+        let cycleId = null;
+        for (let i=0;i<208;i+=2) {
+          const date=new Date(Date.parse(`${cycle.startDate}T12:00:00Z`)+i*7*86400000).toISOString().slice(0,10);
+          const eventType=i%4===0?cycle.firstEvent:(cycle.firstEvent==="botw"?"sotw":"botw");
+          if (eventType===type && date>=today) {cycleId=`${type}:${date}`;break;}
+        }
+        if (!cycleId) throw Error("No upcoming cycle found for this competition type.");
+        const draft = {cycleId,type,authorizedWinnerId:winners[type] || null,options:[...nominations.map(item => canonical(item,type)),...random],winnerPicks:nominations.length,rotationResetSuggested:reset,createdAt:new Date().toISOString(),status:"draft"};
         const drafts = parse(await kv.get(DRAFT_KEY), {});
         drafts[type] = draft;
         await kv.put(DRAFT_KEY, JSON.stringify(drafts));

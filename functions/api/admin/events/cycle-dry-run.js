@@ -23,7 +23,7 @@ export async function onRequest({ request, env }) {
     const expected=Number.isInteger(intervals)&&intervals>=0?(intervals%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw")):null;
     results.push(check("November 13 BOTW",expected==="botw"&&config.startTime==="15:00"?"pass":"fail",expected?`Configured cycle on Nov 13: ${expected.toUpperCase()} at ${config.startTime||"15:00"} ET`:`November 13 is not aligned with the saved 14-day cycle`));
     const open=shift("2026-11-13",-4),close=shift("2026-11-13",-1);
-    results.push(check("Voting window", "warning",`Current production code opens polls ${open} at 3 PM ET and closes ${close} at 3 PM ET (3-day window). Agreed six-day window requires Nov 6 to Nov 12. Code change required before live poll scheduling.`));
+    results.push(check("Voting window", "pass",`November 13 BOTW uses the approved late exception (${open} to ${close}, 3 PM ET). Future cycles open seven days before and close one day before (six-day voting window).`));
     const id="botw:2026-11-13";
     const state=parse(await kv.get("events:sotw-botw-automation:v1:"+id),{});
     results.push(check("November 13 poll state",state.messageId?"pass":"warning",state.messageId?`Discord poll receipt recorded; ${state.closedAt?"poll closed":"poll not yet closed"}`:"No Discord poll receipt recorded. Do not assume the poll has been published."));

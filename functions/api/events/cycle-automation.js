@@ -11,7 +11,7 @@ const label = (value,type) => { const pair=type==="botw"?pairs.find(p=>p.some(x=
 const tz="America/Toronto";
 function localTime(instant) { const fields=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(instant); const get=x=>fields.find(p=>p.type===x)?.value; return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`; }
 function shift(date,days){return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);}
-function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,14)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,-4)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
+function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,14)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,date==="2026-11-13"&&type==="botw"?-4:-7)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
 function choose(pool,excluded,history,amount,type){let eligible=pool.filter(v=>!excluded.has(key(v,type))&&!history.includes(key(v,type)));let reset=false;if(eligible.length<amount){eligible=pool.filter(v=>!excluded.has(key(v,type)));reset=true;}if(eligible.length<amount)throw Error("At least three distinct eligible options are required.");const result=[];while(result.length<amount){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);const [pick]=eligible.splice(bytes[0]%eligible.length,1);result.push(label(pick,type));}return {result,reset};}
 
 function torontoInstant(date, time) {
@@ -227,14 +227,20 @@ export async function onRequest({request,env}) {
     if(!state.messageId && localTime(now)>=event.open && localTime(now)<event.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
       const pool=(pools[event.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,event.type),x])).values()];
+      // A staff-prepared draft is authoritative only for its explicitly bound cycle.
+      // Legacy unbound drafts cannot silently alter a future competition.
+      const drafts=parse(await kv.get("events:sotw-botw-poll-drafts:v1"),{});
+      const prepared=drafts[event.type];
+      const draftOptions=prepared?.cycleId===event.id && Array.isArray(prepared.options) && prepared.options.length===3 ? prepared.options : null;
       const picks=nominations[event.type]?.discordId===winners[event.type]?nominations[event.type].options||[]:[];
       const selected=picks.filter(x=>unique.some(v=>key(v,event.type)===key(x,event.type))).slice(0,2);
       const distinct=[...new Map(selected.map(x=>[key(x,event.type),x])).values()];
       try {
         const reserved = state.pollOptions;
-        const random = reserved ? null : choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);
-        const options = reserved || [...distinct.map(x=>label(x,event.type)),...random.result];
-        if (!reserved) await kv.put(stateKey,JSON.stringify({...state,pollOptions:options,rotationReset:random.reset,pollReservedAt:now.toISOString()}));
+        const validDraft = draftOptions && new Set(draftOptions.map(x=>key(x.metrics?.[0]||x.label,event.type))).size===3 && draftOptions.every(x=>unique.some(v=>key(v,event.type)===key(x.metrics?.[0]||x.label,event.type)));
+        const random = reserved || validDraft ? null : choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);
+        const options = reserved || (validDraft ? draftOptions : [...distinct.map(x=>label(x,event.type)),...random.result]);
+        if (!reserved) await kv.put(stateKey,JSON.stringify({...state,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
         return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:state.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
       } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
