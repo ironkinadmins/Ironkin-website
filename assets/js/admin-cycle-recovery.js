@@ -56,6 +56,29 @@ async function refresh() {
     $("readiness").textContent = "Unable to load readiness checks.";
   } finally { $("refresh").disabled=false; }
 }
+const womButton = $("testWomReadOnly");
+if (womButton) womButton.addEventListener("click", async () => {
+  const output = $("testWomResult");
+  womButton.disabled = true;
+  output.textContent = "Checking WOM group and prerequisites…";
+  try {
+    const response = await fetch("/api/admin/events/wom-readiness-test", {credentials:"same-origin",cache:"no-store"});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    const checks = result.checks || {};
+    const lines = [
+      `WOM group ${result.groupId}: ${result.reachable ? `Connected (${result.groupName || "unnamed group"})` : "Connection failed"}`,
+      `API key configured: ${checks.apiKeyConfigured ? "Yes" : "No"}`,
+      `Group verification configured: ${checks.groupVerificationConfigured ? "Yes" : "No"}`,
+      `Coordinator binding: ${checks.coordinatorBindingConfigured ? "Configured" : "Missing"}`,
+      `Automatic WOM creation: ${checks.automaticCreationEnabled ? "Enabled" : "Disabled"}`,
+      `Automatic finalization: ${checks.automaticFinalizationEnabled ? "Enabled" : "Disabled"}`,
+      result.error || result.note || ""
+    ];
+    output.textContent = lines.join("\n");
+  } catch (error) { output.textContent = `Unable to complete check: ${error.message}`; }
+  finally { womButton.disabled = false; }
+});
 $("refresh").addEventListener("click",refresh);
 $("attach").addEventListener("submit", async event => {
   event.preventDefault();
