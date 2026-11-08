@@ -2,6 +2,28 @@
  * The Pages project connects using a service binding named CYCLE_COORDINATOR.
  * A durable "attempted" record prevents retries after an uncertain WOM response.
  */
+// Verify a creation response against the authoritative WOM read endpoint.
+// A returned ID alone is not evidence that the competition persisted.
+async function verifyWomCreation(env, id, expected) {
+  const headers = {Accept:"application/json", "User-Agent":"IronkinCycleCoordinator/1.0"};
+  if (env.WOM_API_KEY) headers["x-api-key"] = env.WOM_API_KEY;
+  try {
+    const response = await fetch(`https://api.wiseoldman.net/v2/competitions/${encodeURIComponent(id)}`, {headers});
+    const data = await response.json().catch(() => null);
+    if (!response.ok) return {verified:false, httpStatus:response.status,
+      reason:`Competition lookup returned HTTP ${response.status}`};
+    const competition = data?.competition || data;
+    if (String(competition?.id) !== String(id)) return {verified:false, httpStatus:response.status, reason:"Competition ID mismatch"};
+    if (String(competition?.groupId ?? competition?.group?.id ?? "") !== String(expected.groupId))
+      return {verified:false, httpStatus:response.status, reason:"Competition group not confirmed"};
+    if (String(competition?.metric) !== String(expected.metric))
+      return {verified:false, httpStatus:response.status, reason:"Competition metric mismatch"};
+    if (String(competition?.title) !== String(expected.title))
+      return {verified:false, httpStatus:response.status, reason:"Competition title mismatch"};
+    return {verified:true, httpStatus:response.status};
+  } catch(error) {return {verified:false, reason:`Lookup failed: ${String(error?.message || error).slice(0,160)}`};}
+}
+
 export class CompetitionCoordinator {
   constructor(state, env) { this.state=state; this.env=env; }
   async fetch(request) {
@@ -53,7 +75,18 @@ export class CycleCreation {
         const failed={...attempted,status:"needs_review",error:String(result.message||result.error||`WOM HTTP ${response.status}`).slice(0,300)};
         await this.state.storage.put("creation",failed);return Response.json(failed,{status:409});
       }
-      const created={...attempted,status:"created",competitionId:String(competition.id),createdAt:new Date().toISOString()};
+      const verification = await verifyWomCreation(this.env, competition.id, body.payload);
+      if (!verification.verified) {
+        // Keep the ID for manual reconciliation. Never retry the POST automatically.
+        const flagged={...attempted,status:"needs_review",competitionId:String(competition.id),
+          womCreateHttpStatus:response.status,verificationHttpStatus:verification.httpStatus || null,
+          error:verification.reason || "WOM creation could not be verified",verified:false,
+          checkedAt:new Date().toISOString()};
+        await this.state.storage.put("creation",flagged);
+        return Response.json(flagged,{status:409});
+      }
+      const created={...attempted,status:"created",competitionId:String(competition.id),
+        womCreateHttpStatus:response.status,verified:true,createdAt:new Date().toISOString()};
       await this.state.storage.put("creation",created);return Response.json(created);
     }catch(error){
       const failed={...attempted,status:"needs_review",error:`WOM response uncertain: ${String(error.message||error).slice(0,200)}`};
