@@ -66,6 +66,23 @@ export async function onRequest({request, env}) {
     await kv.put(KEY,JSON.stringify(resolved));
     return json({test:resolved,historySaved:true,warning:"Local record reconciled; WOM rate limits remain in force. Check WOM again before any new creation."});
   }
+  if (body?.action === "resolve_missing_api_key") {
+    if (body.confirmation !== "RESOLVE MISSING API KEY")
+      return json({error:"Explicit confirmation required"},400);
+    // Coordinator checks WOM_API_KEY before calling WOM. Only this exact
+    // preflight rejection is safe to resolve without an external lookup.
+    if (!existing || existing.status !== "needs_review" ||
+        existing.error !== "Coordinator WOM_API_KEY secret is missing" ||
+        Number(existing.coordinatorHttpStatus) !== 503 ||
+        existing.competitionId != null || existing.womCreateHttpStatus != null)
+      return json({error:"Not a confirmed preflight API-key rejection; manual reconciliation required."},409);
+    const history = parse(await kv.get(HISTORY_KEY)) || [];
+    const resolved = {...existing,status:"resolved_missing",resolvedAt:new Date().toISOString(),
+      resolution:"Missing API key rejected by coordinator before WOM creation; admin resolved stored preflight failure. No WOM API request made."};
+    await kv.put(HISTORY_KEY,JSON.stringify([...history.slice(-19),resolved]));
+    await kv.put(KEY,JSON.stringify(resolved));
+    return json({test:resolved,historySaved:true});
+  }
   if (body?.action === "reset_private_service" || body?.action === "reset_preflight_rejection") {
     if (body.confirmation !== "RESET FAILED TEST") return json({error:"Confirmation required"},400);
     if (!existing || existing.status !== "needs_review" || !(["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(existing.error) && (existing.error === "Private service" || existing.safeToRetry === true || existing.error === "Invalid WOM request")) || existing.competitionId)

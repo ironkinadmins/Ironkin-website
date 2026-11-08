@@ -9,6 +9,12 @@ document.addEventListener("DOMContentLoaded", () => {
   reset.hidden = true;
   reset.style.marginLeft = "8px";
   refresh.insertAdjacentElement("afterend", reset);
+  const configReset = document.createElement("button");
+  configReset.type = "button";
+  configReset.textContent = "Resolve API Key Configuration Failure";
+  configReset.hidden = true;
+  configReset.style.marginLeft = "8px";
+  refresh.insertAdjacentElement("afterend", configReset);
   const resolve = document.createElement("button");
   resolve.type = "button";
   resolve.textContent = "Resolve missing WOM test";
@@ -41,6 +47,22 @@ document.addEventListener("DOMContentLoaded", () => {
       feedback.textContent = "Attempt archived locally. WOM rate limits are unchanged; verify WOM before any new creation.";
     } catch(error) { feedback.textContent = error.message; }
     finally { rateResolve.disabled = false; }
+  });
+  configReset.addEventListener("click", async () => {
+    if (!confirm("The previous test was rejected before reaching WOM because the coordinator had no API key. Have you confirmed WOM_API_KEY is now configured in the deployed Worker?")) return;
+    configReset.disabled = true;
+    feedback.textContent = "Archiving the configuration failure without contacting WOM…";
+    try {
+      const response = await fetch("/api/admin/events/wom-connection-test",{
+        method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"resolve_missing_api_key",confirmation:"RESOLVE MISSING API KEY"})
+      });
+      const data = await response.json();
+      if (!response.ok) throw Error(data.error || "Could not resolve configuration failure");
+      await update();
+      feedback.textContent = "Configuration failure archived. No WOM request was made. You may now perform one controlled creation test.";
+    } catch(error) { feedback.textContent = error.message; }
+    finally { configReset.disabled = false; }
   });
   resolve.addEventListener("click", async () => {
     if (!confirm("WOM competition was not found. Recheck its ID and archive this failed attempt? This does not delete anything in WOM.")) return;
@@ -79,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
     run.disabled = Boolean(test && test.status !== "resolved_missing");
     run.dataset.resolved = String(test?.status === "resolved_missing");
     resolve.hidden = !(test?.status === "needs_review" && test?.competitionId && test?.verificationError === "WOM returned 404: competition not found");
+    configReset.hidden = !(test?.status === "needs_review" && test?.error === "Coordinator WOM_API_KEY secret is missing" && Number(test?.coordinatorHttpStatus) === 503 && test?.competitionId == null && test?.womCreateHttpStatus == null);
     rateResolve.hidden = !(test?.status === "needs_review" && !test?.competitionId && /Too Many Requests|rate.limit|HTTP 429/i.test(test?.error || ""));
     reset.hidden = !(test?.status === "needs_review" && ["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(test?.error) && !test?.competitionId);
     feedback.textContent = `Status refreshed at ${new Date().toLocaleTimeString()}. No WOM API request was made.`;
