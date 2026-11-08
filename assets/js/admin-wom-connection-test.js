@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const test = data.test;
     run.disabled = Boolean(test);
     reset.hidden = !(test?.status === "needs_review" && ["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(test?.error) && !test?.competitionId);
-    output.textContent = test ? `Status: ${test.status}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error || ""}\nDelete manually in WOM after verification.` : "No WOM connection test attempted.";
+    output.textContent = test ? `Status: ${test.status}\nVerification: ${test.verificationError || (test.status === "verified" ? "Verified against WOM" : "Not verified")}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error || ""}\nDelete manually in WOM after verification.` : "No WOM connection test attempted.";
   }
   refresh.addEventListener("click", () => update().catch(e => {output.textContent=e.message;}));
   run.addEventListener("click", async () => {

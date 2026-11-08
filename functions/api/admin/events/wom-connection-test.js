@@ -1,5 +1,6 @@
 import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
+import { womFetch } from "../../../_wom.js";
 
 // One-shot, staff-only WOM integration test. The fixed coordinator ID ensures
 // repeated requests cannot create multiple WOM competitions.
@@ -9,12 +10,35 @@ const TITLE = "Ironkin AUTOMATION TEST - DELETE AFTER";
 const json = (data, status = 200) => Response.json(data, {status, headers:{"Cache-Control":"no-store"}});
 const parse = (raw) => { try { return raw ? JSON.parse(raw) : null; } catch { return null; } };
 
+async function verifyCompetition(env, id) {
+  try {
+    const response = await womFetch(env, `/competitions/${encodeURIComponent(id)}`);
+    const data = await response.json().catch(() => null);
+    const competition = data?.competition || data;
+    if (response.status === 404) return {verified:false, reason:"WOM returned 404: competition not found"};
+    if (!response.ok) return {verified:false, reason:`WOM verification HTTP ${response.status}`};
+    if (String(competition?.id) !== String(id)) return {verified:false, reason:"WOM ID mismatch"};
+    if (String(competition?.groupId ?? competition?.group?.id) !== "12095") return {verified:false, reason:"WOM group 12095 not verified"};
+    if (String(competition?.metric || "") !== "attack") return {verified:false, reason:"Unexpected competition metric"};
+    if (String(competition?.title || "") !== TITLE) return {verified:false, reason:"Unexpected competition title"};
+    return {verified:true, reason:null};
+  } catch (error) {return {verified:false, reason:`Verification failed: ${String(error.message || error).slice(0,160)}`};}
+}
+
 export async function onRequest({request, env}) {
   if (!isStaffSession(await getSession(request, env))) return json({error:"Staff only"}, 403);
   if (request.method !== "GET" && request.method !== "POST") return json({error:"Method not allowed"}, 405);
   const kv = hybridKv(env, "drops");
   const existing = parse(await kv.get(KEY));
-  if (request.method === "GET") return json({test:existing});
+  if (request.method === "GET") {
+    if (existing?.competitionId) {
+      const check = await verifyCompetition(env, existing.competitionId);
+      const updated = {...existing, status:check.verified?"verified":"needs_review", verificationError:check.reason, checkedAt:new Date().toISOString()};
+      await kv.put(KEY, JSON.stringify(updated));
+      return json({test:updated});
+    }
+    return json({test:existing});
+  }
   const origin = request.headers.get("Origin");
   if (!origin || origin !== new URL(request.url).origin) return json({error:"Invalid origin"},403);
   const body = await request.json().catch(()=>null);
@@ -44,14 +68,16 @@ export async function onRequest({request, env}) {
     });
     const result = await response.json().catch(()=>({}));
     const created = response.ok && result.status === "created" && /^\d+$/.test(String(result.competitionId || ""));
-    const updated = {...attempted,status:created?"created":"needs_review",
+    const check = created ? await verifyCompetition(env, result.competitionId) : null;
+    const verified = created && check.verified;
+    const updated = {...attempted,status:verified?"verified":"needs_review", verificationError:created&&!verified?check.reason:null,
       competitionId:created?String(result.competitionId):null,
       womUrl:created?`https://wiseoldman.net/competitions/${result.competitionId}`:null,
       error:created?null:String(result.error || result.status || `Coordinator HTTP ${response.status}`).slice(0,300),
       reason:created?null:(result.reason || null), safeToRetry:!created && result.safeToRetry === true,
       checkedAt:new Date().toISOString()};
     await kv.put(KEY,JSON.stringify(updated));
-    return json({test:updated},created?200:409);
+    return json({test:updated},verified?200:409);
   } catch(error) {
     const updated={...attempted,status:"needs_review",error:`Coordinator response uncertain: ${String(error.message || error).slice(0,200)}`};
     await kv.put(KEY,JSON.stringify(updated));
