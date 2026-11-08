@@ -1,4 +1,4 @@
-// SOTW/BOTW cycle schedule configuration and explicit activation.
+// SOTW/BOTW cycle schedule configuration (planning only; no live job activation).
 document.addEventListener("DOMContentLoaded", () => {
   const date = document.getElementById("ikCycleDate");
   const time = document.getElementById("ikCycleTime");
@@ -6,8 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const preview = document.getElementById("ikCyclePreview");
   const status = document.getElementById("ikCycleStatus");
   const save = document.getElementById("ikCycleSave");
-  const enabled = document.getElementById("ikCycleEnabled");
-  if (!date || !time || !first || !preview || !save || !enabled) return;
+  if (!date || !time || !first || !preview || !save) return;
   function showPreview() {
     if (!date.value) { preview.textContent = "Choose a start date to preview the rotation."; return; }
     const start = new Date(date.value + "T12:00:00Z");
@@ -20,14 +19,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   [date,time,first].forEach(el => el.addEventListener("change", showPreview));
   fetch("/api/admin/events/cycle", {credentials:"same-origin",cache:"no-store"}).then(r => {if (!r.ok) throw Error("Unable to load cycle settings.");return r.json();}).then(data => {
-    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; enabled.checked = data.config.enabled === true; showPreview();
+    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; showPreview();
   }).catch(e => {status.textContent = e.message;});
   save.addEventListener("click", async () => {
     save.disabled = true; status.textContent = "Saving…";
     try {
-      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,enabled:enabled.checked})});
+      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,enabled:false})});
       const data = await r.json(); if (!r.ok) throw Error(data.error || "Could not save cycle.");
-      status.textContent = data.config.enabled ? "Cycle scheduling enabled. The Discord bot can publish during the voting window; WOM creation and finalization retain their separate settings." : "Schedule saved (inactive). No events or polls have been created.";showPreview();
+      status.textContent = "Schedule saved (inactive). No events or polls have been created.";showPreview();
     } catch(e) {status.textContent = e.message;} finally {save.disabled = false;}
   });
 });
@@ -158,4 +157,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   refresh.addEventListener('click',()=>load().catch(e=>content.textContent=e.message));
   load().catch(e=>content.textContent=e.message);
+});
+
+// Isolated BOTW Discord poll test: deletion is confirmed by the Fly.io bot.
+document.addEventListener("DOMContentLoaded",()=>{
+ const host=document.getElementById("ikBotwPollTest");if(!host)return;
+ const start=host.querySelector("[data-start]"),del=host.querySelector("[data-delete]"),refresh=host.querySelector("[data-refresh]"),out=host.querySelector("[data-status]");
+ const api=async(action)=>{const r=await fetch("/api/admin/events/cycle-poll-test",{method:action?"POST":"GET",credentials:"same-origin",cache:"no-store",headers:action?{"Content-Type":"application/json"}:{},body:action?JSON.stringify({action}):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||"Test request failed");return d.test};
+ const render=t=>{out.textContent=t?`Status: ${t.status}\nOptions: ${(t.options||[]).map(x=>x.label).join(" / ")}\nDiscord message: ${t.messageId||"Not confirmed"}\n${t.status==="delete_requested"?"Waiting for bot to confirm Discord deletion. Refresh shortly.":""}`:"No test created.";start.disabled=!!t&&!(["deleted","cancelled"].includes(t.status));del.disabled=!t||!["pending","published","delete_requested"].includes(t.status);};
+ const reload=async()=>render(await api());refresh.onclick=()=>reload().catch(e=>out.textContent=e.message);
+ start.onclick=async()=>{if(!confirm("Post a REAL, clearly marked BOTW TEST poll to Discord? This will not affect the November 13 BOTW or WOM."))return;start.disabled=true;try{render(await api("start"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
+ del.onclick=async()=>{if(!confirm("Delete the TEST poll message from Discord? The bot must confirm deletion before the test can be repeated."))return;del.disabled=true;try{render(await api("delete"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
+ reload().catch(e=>out.textContent=e.message);
 });
