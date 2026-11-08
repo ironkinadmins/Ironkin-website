@@ -1,4 +1,4 @@
-// SOTW/BOTW cycle schedule configuration (planning only; no live job activation).
+// SOTW/BOTW cycle schedule configuration and explicit activation.
 document.addEventListener("DOMContentLoaded", () => {
   const date = document.getElementById("ikCycleDate");
   const time = document.getElementById("ikCycleTime");
@@ -6,7 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const preview = document.getElementById("ikCyclePreview");
   const status = document.getElementById("ikCycleStatus");
   const save = document.getElementById("ikCycleSave");
-  if (!date || !time || !first || !preview || !save) return;
+  const enabled = document.getElementById("ikCycleEnabled");
+  if (!date || !time || !first || !preview || !save || !enabled) return;
   function showPreview() {
     if (!date.value) { preview.textContent = "Choose a start date to preview the rotation."; return; }
     const start = new Date(date.value + "T12:00:00Z");
@@ -19,14 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   [date,time,first].forEach(el => el.addEventListener("change", showPreview));
   fetch("/api/admin/events/cycle", {credentials:"same-origin",cache:"no-store"}).then(r => {if (!r.ok) throw Error("Unable to load cycle settings.");return r.json();}).then(data => {
-    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; showPreview();
+    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; enabled.checked = data.config.enabled === true; showPreview();
   }).catch(e => {status.textContent = e.message;});
   save.addEventListener("click", async () => {
     save.disabled = true; status.textContent = "Saving…";
     try {
-      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,enabled:false})});
+      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,enabled:enabled.checked})});
       const data = await r.json(); if (!r.ok) throw Error(data.error || "Could not save cycle.");
-      status.textContent = "Schedule saved (inactive). No events or polls have been created.";showPreview();
+      status.textContent = data.config.enabled ? "Cycle scheduling enabled. The Discord bot can publish during the voting window; WOM creation and finalization retain their separate settings." : "Schedule saved (inactive). No events or polls have been created.";showPreview();
     } catch(e) {status.textContent = e.message;} finally {save.disabled = false;}
   });
 });
