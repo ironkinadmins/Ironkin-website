@@ -16,6 +16,18 @@ async function refresh() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
     $("status").textContent = `Cycle automation: ${data.enabled ? "enabled" : "disabled"} · Automatic finalization: ${data.autoFinalizeEnabled ? "enabled" : "disabled"}`;
+    const readiness = $("readiness");
+    readiness.replaceChildren();
+    for (const check of data.checks || []) {
+      const line = document.createElement("div"); line.className = "check";
+      const description = document.createElement("div");
+      description.append(el("strong", check.label));
+      description.append(el("small", check.detail));
+      line.append(description);
+      line.append(el("strong", check.ready ? "Ready" : "Needs attention", check.ready ? "good" : "bad"));
+      readiness.append(line);
+    }
+    if (!data.checks) readiness.textContent = data.message || "Readiness checks unavailable.";
     const tbody = $("cycles"), select = $("cycle");
     tbody.replaceChildren(); select.replaceChildren();
     for (const cycle of data.cycles || []) {
@@ -41,6 +53,7 @@ async function refresh() {
   } catch(error) {
     $("status").textContent = `Unable to load: ${error.message}`;
     $("cycles").replaceChildren();
+    $("readiness").textContent = "Unable to load readiness checks.";
   } finally { $("refresh").disabled=false; }
 }
 $("refresh").addEventListener("click",refresh);

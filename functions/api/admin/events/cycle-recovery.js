@@ -91,5 +91,12 @@ export async function onRequest({ request, env }) {
       errors: [state.womError, state.websiteError, state.finalizationError].filter(Boolean)
     });
   }
-  return Response.json({ enabled: !!config.enabled, autoFinalizeEnabled: env.CYCLE_AUTO_FINALIZE_ENABLED === "true", cycles }, { headers: { "Cache-Control": "no-store" } });
+  const checks = [
+    { id: "schedule", label: "Cycle schedule", ready: !!config.enabled, detail: config.enabled ? `${config.firstEvent?.toUpperCase()} starts ${config.startDate} at ${config.startTime || "15:00"} ET` : "Cycle is disabled" },
+    { id: "secret", label: "Automation authentication", ready: !!env.CYCLE_AUTOMATION_SECRET, detail: env.CYCLE_AUTOMATION_SECRET ? "Secret configured" : "CYCLE_AUTOMATION_SECRET is missing" },
+    { id: "wom", label: "Automatic WOM creation", ready: env.CYCLE_AUTO_WOM_CREATE_ENABLED === "true" && !!env.CYCLE_COORDINATOR && !!env.WOM_GROUP_VERIFICATION_CODE, detail: env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true" ? "Automatic WOM creation is disabled" : !env.CYCLE_COORDINATOR ? "CYCLE_COORDINATOR binding missing" : !env.WOM_GROUP_VERIFICATION_CODE ? "WOM group verification secret missing" : "WOM creation prerequisites configured" },
+    { id: "finalize", label: "Automatic finalization", ready: env.CYCLE_AUTO_FINALIZE_ENABLED === "true", detail: env.CYCLE_AUTO_FINALIZE_ENABLED === "true" ? "Enabled" : "CYCLE_AUTO_FINALIZE_ENABLED is not true" },
+    { id: "review", label: "Cycle review queue", ready: !cycles.some(c => c.needsReview), detail: cycles.some(c => c.needsReview) ? "One or more cycles require staff review" : "No flagged cycles in the recent window" }
+  ];
+  return Response.json({ enabled: !!config.enabled, autoFinalizeEnabled: env.CYCLE_AUTO_FINALIZE_ENABLED === "true", checks, cycles }, { headers: { "Cache-Control": "no-store" } });
 }
