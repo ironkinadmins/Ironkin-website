@@ -49,6 +49,9 @@ export class CompetitionCoordinator {
         !Number.isFinite(Date.parse(p.startsAt)) || !Number.isFinite(Date.parse(p.endsAt))) {
       return Response.json({error:"Invalid WOM request", reason:"invalid_payload", safeToRetry:true},{status:400});
     }
+    if (!String(this.env.WOM_API_KEY || "").trim()) {
+      return Response.json({error:"Coordinator WOM_API_KEY secret is missing",reason:"missing_wom_api_key",safeToRetry:true},{status:503});
+    }
     if (!this.env.WOM_GROUP_VERIFICATION_CODE) {
       return Response.json({error:"Coordinator WOM verification secret not configured",reason:"missing_worker_secret",safeToRetry:true},{status:503});
     }
@@ -73,6 +76,12 @@ export class CycleCreation {
       if(existing.fingerprint!==body.fingerprint)return Response.json({error:"Cycle payload changed after creation was attempted",status:"needs_review"},{status:409});
       return Response.json(existing);
     }
+    const cooldownUntil = Number(await this.state.storage.get("womCooldownUntil") || 0);
+    if (cooldownUntil > Date.now()) {
+      const seconds = Math.ceil((cooldownUntil-Date.now())/1000);
+      return Response.json({error:"WOM cooldown is active",retryAfterSeconds:seconds,safeToRetry:false},
+        {status:429,headers:{"Retry-After":String(seconds)}});
+    }
     const attempted={status:"attempted",fingerprint:body.fingerprint,attemptedAt:new Date().toISOString()};
     // Durable write completes before the external WOM POST; never automatically retry.
     await this.state.storage.put("creation",attempted);
@@ -84,6 +93,7 @@ export class CycleCreation {
       const competition=result.competition||result;
       if(!response.ok || !competition?.id){
         const limited = response.status === 429;
+        if (limited) await this.state.storage.put("womCooldownUntil",Date.now()+rateLimitDetails(response).retryAfterSeconds*1000);
         const failed={...attempted,status:"needs_review",womCreateHttpStatus:response.status,
           ...(limited ? rateLimitDetails(response) : {}),
           error:limited ? "WOM rate limit (HTTP 429). Do not retry automatically." : String(result.message||result.error||`WOM HTTP ${response.status}`).slice(0,300)};

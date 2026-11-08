@@ -75,33 +75,34 @@ export async function onRequestGet({ request, env }) {
       .filter(Boolean)
       .slice(0, SAMPLE_MEMBERS);
 
-    const achievementResults = await Promise.allSettled(
-      usernames.map(async username => {
+    // Bounded batches prevent 25 simultaneous requests on a cold cache.
+    // Keep the original response shape and ordering.
+    const achievementResults = [];
+    for (let offset = 0; offset < usernames.length; offset += 3) {
+      const batch = await Promise.allSettled(usernames.slice(offset, offset + 3).map(async username => {
         try {
           const response = await womFetch(env, `/players/${encodeURIComponent(username)}/achievements`);
-
-          if (!response.ok) return [];
-
+          if (response.status === 429) return {rateLimited:true, achievements:[]};
+          if (!response.ok) return {achievements:[]};
           const achievements = await response.json();
-
-          if (!Array.isArray(achievements)) return [];
-
-          return achievements.map(achievement => ({
-            player: username,
-            name: achievement.name || achievement.metric || "Achievement unlocked",
-            metric: achievement.metric || null,
-            measure: achievement.measure || null,
-            createdAt: achievement.createdAt || null
-          }));
-        } catch {
-          return [];
-        }
-      })
-    );
+          if (!Array.isArray(achievements)) return {achievements:[]};
+          return {achievements:achievements.map(achievement => ({
+            player:username, name:achievement.name || achievement.metric || "Achievement unlocked",
+            metric:achievement.metric || null, measure:achievement.measure || null,
+            createdAt:achievement.createdAt || null
+          }))};
+        } catch { return {achievements:[]}; }
+      }));
+      achievementResults.push(...batch);
+      // Stop immediately on rate limiting; do not cache an incomplete result.
+      if (batch.some(result => result.status === "fulfilled" && result.value.rateLimited))
+        return Response.json({error:"WOM rate limited recent activity; try again later"},
+          {status:503,headers:{"Cache-Control":"no-store"}});
+    }
 
     const achievements = achievementResults
       .flatMap(result =>
-        result.status === "fulfilled" ? result.value : []
+        result.status === "fulfilled" ? result.value.achievements : []
       )
       .filter(item =>
         item.createdAt &&
