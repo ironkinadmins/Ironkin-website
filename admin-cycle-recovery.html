@@ -29,6 +29,11 @@ small,.muted{color:#c1ae9b}.check{padding:11px 0;border-bottom:1px solid #4b4239
 <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" id="ikWomConnectionCreate">Create one test competition</button><button type="button" id="ikWomConnectionRefresh">Refresh test status</button></div>
 <pre id="ikWomConnectionStatus" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere;color:#eee1d1"></pre>
 <p class="muted">If creation returns an uncertain result, check WOM before attempting anything else. The system blocks automatic retries to avoid duplicates.</p></section>
+<section class="panel"><h2>Automation Test Center</h2>
+<p class="muted">Read-only simulations using the saved cycle configuration and records. No WOM calls, Discord messages, event changes, or Ember payments. PASS means a local prerequisite passed, not that the external integration has been live-tested.</p>
+<button type="button" id="runCycleDryRuns">Run all dry runs</button>
+<p id="cycleDrySummary" role="status" aria-live="polite"></p>
+<div id="cycleDryResults" aria-live="polite"></div></section>
 <section class="panel"><h2>Recent cycles</h2><div class="scroll"><table><thead><tr>
 <th>Cycle</th><th>Vote</th><th>WOM</th><th>Website</th><th>Finalization</th><th>Review</th></tr></thead>
 <tbody id="cycles"></tbody></table></div></section>
@@ -38,4 +43,4 @@ small,.muted{color:#c1ae9b}.check{padding:11px 0;border-bottom:1px solid #4b4239
 <label> WOM competition ID <input id="competition" required inputmode="numeric" pattern="[0-9]{1,15}" placeholder="e.g. 123456"></label>
 <button type="submit">Verify and attach</button></form>
 <p id="feedback" role="status"></p></section>
-</main><script src="/assets/js/admin-cycle-recovery.js" defer></script><script src="/assets/js/admin-wom-connection-test.js" defer></script></body></html>
+</main><script src="/assets/js/admin-cycle-dry-run.js" defer></script><script src="/assets/js/admin-cycle-recovery.js" defer></script><script src="/assets/js/admin-wom-connection-test.js" defer></script></body></html>
