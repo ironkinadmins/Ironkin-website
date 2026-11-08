@@ -4,6 +4,16 @@
  */
 // Verify a creation response against the authoritative WOM read endpoint.
 // A returned ID alone is not evidence that the competition persisted.
+function rateLimitDetails(response) {
+  const raw = response.headers.get("Retry-After");
+  let seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    const parsed = Date.parse(raw || "");
+    seconds = Number.isFinite(parsed) ? Math.max(0, Math.ceil((parsed - Date.now()) / 1000)) : 300;
+  }
+  seconds = Math.max(30, Math.min(86400, Math.ceil(seconds)));
+  return {retryAfterSeconds:seconds, retryAfterAt:new Date(Date.now()+seconds*1000).toISOString()};
+}
 async function verifyWomCreation(env, id, expected) {
   const headers = {Accept:"application/json", "User-Agent":"IronkinCycleCoordinator/1.0"};
   if (env.WOM_API_KEY) headers["x-api-key"] = env.WOM_API_KEY;
@@ -11,6 +21,7 @@ async function verifyWomCreation(env, id, expected) {
     const response = await fetch(`https://api.wiseoldman.net/v2/competitions/${encodeURIComponent(id)}`, {headers});
     const data = await response.json().catch(() => null);
     if (!response.ok) return {verified:false, httpStatus:response.status,
+      ...(response.status === 429 ? rateLimitDetails(response) : {}),
       reason:`Competition lookup returned HTTP ${response.status}`};
     const competition = data?.competition || data;
     if (String(competition?.id) !== String(id)) return {verified:false, httpStatus:response.status, reason:"Competition ID mismatch"};
@@ -72,7 +83,10 @@ export class CycleCreation {
       const result=await response.json().catch(()=>({}));
       const competition=result.competition||result;
       if(!response.ok || !competition?.id){
-        const failed={...attempted,status:"needs_review",error:String(result.message||result.error||`WOM HTTP ${response.status}`).slice(0,300)};
+        const limited = response.status === 429;
+        const failed={...attempted,status:"needs_review",womCreateHttpStatus:response.status,
+          ...(limited ? rateLimitDetails(response) : {}),
+          error:limited ? "WOM rate limit (HTTP 429). Do not retry automatically." : String(result.message||result.error||`WOM HTTP ${response.status}`).slice(0,300)};
         await this.state.storage.put("creation",failed);return Response.json(failed,{status:409});
       }
       const verification = await verifyWomCreation(this.env, competition.id, body.payload);
@@ -80,6 +94,7 @@ export class CycleCreation {
         // Keep the ID for manual reconciliation. Never retry the POST automatically.
         const flagged={...attempted,status:"needs_review",competitionId:String(competition.id),
           womCreateHttpStatus:response.status,verificationHttpStatus:verification.httpStatus || null,
+          ...(verification.retryAfterAt ? {retryAfterAt:verification.retryAfterAt,retryAfterSeconds:verification.retryAfterSeconds} : {}),
           error:verification.reason || "WOM creation could not be verified",verified:false,
           checkedAt:new Date().toISOString()};
         await this.state.storage.put("creation",flagged);

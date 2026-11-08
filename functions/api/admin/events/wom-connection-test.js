@@ -31,12 +31,6 @@ export async function onRequest({request, env}) {
   const kv = hybridKv(env, "drops");
   const existing = parse(await kv.get(KEY));
   if (request.method === "GET") {
-    if (existing?.competitionId && existing.status !== "resolved_missing") {
-      const check = await verifyCompetition(env, existing.competitionId);
-      const updated = {...existing, status:check.verified?"verified":"needs_review", verificationError:check.reason, checkedAt:new Date().toISOString()};
-      await kv.put(KEY, JSON.stringify(updated));
-      return json({test:updated});
-    }
     return json({test:existing});
   }
   const origin = request.headers.get("Origin");
@@ -56,6 +50,22 @@ export async function onRequest({request, env}) {
     await kv.put(HISTORY_KEY,JSON.stringify([...history.slice(-19),resolved]));
     await kv.put(KEY,JSON.stringify(resolved));
     return json({test:resolved,historySaved:true});
+  }
+  if (body?.action === "resolve_rate_limited_attempt") {
+    if (body.confirmation !== "I CHECKED WOM AND ACCEPT THE DUPLICATE RISK")
+      return json({error:"Explicit manual reconciliation confirmation required"},400);
+    if (!existing || existing.status !== "needs_review" || existing.competitionId ||
+        !/Too Many Requests|rate.limit|HTTP 429/i.test(String(existing.error || "")))
+      return json({error:"Only an unconfirmed rate-limited attempt without a competition ID can be reviewed here"},409);
+    const attemptedMs = Date.parse(existing.attemptedAt || "");
+    if (!Number.isFinite(attemptedMs) || Date.now() - attemptedMs < 60 * 60 * 1000)
+      return json({error:"Wait at least 60 minutes after the attempt before resolving. This does not guarantee WOM's limit has reset."},429);
+    const history = parse(await kv.get(HISTORY_KEY)) || [];
+    const resolved = {...existing,status:"resolved_missing",resolvedAt:new Date().toISOString(),
+      resolution:"Admin manually checked WOM group and acknowledged an unconfirmed 429 attempt may have created a competition. No WOM API call made."};
+    await kv.put(HISTORY_KEY,JSON.stringify([...history.slice(-19),resolved]));
+    await kv.put(KEY,JSON.stringify(resolved));
+    return json({test:resolved,historySaved:true,warning:"This was an uncertain attempt. Check WOM again before any new creation."});
   }
   if (body?.action === "reset_private_service" || body?.action === "reset_preflight_rejection") {
     if (body.confirmation !== "RESET FAILED TEST") return json({error:"Confirmation required"},400);
