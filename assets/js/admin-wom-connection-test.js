@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!confirm("Have you checked WOM group 12095 and confirmed there is no matching test competition? HTTP 429 does NOT prove WOM did not create it.")) return;
     if (!confirm("Resolving this uncertain attempt may allow a new competition later, with a duplicate risk. Continue?")) return;
     rateResolve.disabled = true;
-    feedback.textContent = "Reviewing stored attempt without contacting WOM…";
+    feedback.textContent = "Archiving reviewed attempt locally; no WOM request will be made…";
     try {
       const response = await fetch("/api/admin/events/wom-connection-test",{
         method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
@@ -37,8 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error || "Could not resolve rate-limited attempt");
-      feedback.textContent = "Attempt archived. Check WOM again before creating a new competition.";
       await update();
+      feedback.textContent = "Attempt archived locally. WOM rate limits are unchanged; verify WOM before any new creation.";
     } catch(error) { feedback.textContent = error.message; }
     finally { rateResolve.disabled = false; }
   });
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     rateResolve.hidden = !(test?.status === "needs_review" && !test?.competitionId && /Too Many Requests|rate.limit|HTTP 429/i.test(test?.error || ""));
     reset.hidden = !(test?.status === "needs_review" && ["Private service", "Invalid WOM request", "Coordinator WOM verification secret not configured", "Coordinator WOM verification secret mismatch"].includes(test?.error) && !test?.competitionId);
     feedback.textContent = `Status refreshed at ${new Date().toLocaleTimeString()}. No WOM API request was made.`;
-    output.textContent = test ? `Status: ${test.status}\nCoordinator: ${test.coordinatorStatus || "Not recorded"} (HTTP ${test.coordinatorHttpStatus ?? "unknown"})\nWOM create HTTP: ${test.womCreateHttpStatus ?? "unknown"}\nVerification: ${test.verificationError || (test.status === "verified" ? "Verified against WOM" : "Not verified")}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error || ""}\nDelete manually in WOM after verification.` : "No WOM connection test attempted.";
+    output.textContent = test ? `Status: ${test.status}\n${test.status === "resolved_missing" ? "LOCAL REVIEW COMPLETED — historical result only. WOM rate limits are NOT cleared.\n" : ""}Coordinator: ${test.coordinatorStatus || "Not recorded"} (HTTP ${test.coordinatorHttpStatus ?? "unknown"})\nWOM create HTTP: ${test.womCreateHttpStatus ?? "unknown"}\nVerification: ${test.verificationError || (test.status === "verified" ? "Verified against WOM" : "Not verified")}\nWOM ID: ${test.competitionId || "Not confirmed"}\nCompetition: ${test.womUrl || test.title}\n${test.error ? (test.status === "resolved_missing" ? "Previous error (archived): " : "Error: ") + test.error : ""}\n${test.resolution || ""}\n${test.status === "verified" ? "Delete test competition manually in WOM after verification." : "Do not create another test until WOM permits requests and any existing competition is reconciled."}` : "No WOM connection test attempted.";
   }
   refresh.addEventListener("click", () => update().catch(e => {output.textContent=e.message;}));
   run.addEventListener("click", async () => {

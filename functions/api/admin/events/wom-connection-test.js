@@ -57,15 +57,14 @@ export async function onRequest({request, env}) {
     if (!existing || existing.status !== "needs_review" || existing.competitionId ||
         !/Too Many Requests|rate.limit|HTTP 429/i.test(String(existing.error || "")))
       return json({error:"Only an unconfirmed rate-limited attempt without a competition ID can be reviewed here"},409);
-    const attemptedMs = Date.parse(existing.attemptedAt || "");
-    if (!Number.isFinite(attemptedMs) || Date.now() - attemptedMs < 60 * 60 * 1000)
-      return json({error:"Wait at least 60 minutes after the attempt before resolving. This does not guarantee WOM's limit has reset."},429);
+    // Reconciliation only archives the local record. It makes no WOM request and
+    // does not override a rate limit imposed by WOM or the coordinator.
     const history = parse(await kv.get(HISTORY_KEY)) || [];
     const resolved = {...existing,status:"resolved_missing",resolvedAt:new Date().toISOString(),
-      resolution:"Admin manually checked WOM group and acknowledged an unconfirmed 429 attempt may have created a competition. No WOM API call made."};
+      resolution:"Admin manually checked WOM group 12095 and acknowledged that a 429 response cannot rule out creation. No WOM API call made."};
     await kv.put(HISTORY_KEY,JSON.stringify([...history.slice(-19),resolved]));
     await kv.put(KEY,JSON.stringify(resolved));
-    return json({test:resolved,historySaved:true,warning:"This was an uncertain attempt. Check WOM again before any new creation."});
+    return json({test:resolved,historySaved:true,warning:"Local record reconciled; WOM rate limits remain in force. Check WOM again before any new creation."});
   }
   if (body?.action === "reset_private_service" || body?.action === "reset_preflight_rejection") {
     if (body.confirmation !== "RESET FAILED TEST") return json({error:"Confirmation required"},400);
