@@ -162,11 +162,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 // Isolated BOTW Discord poll test: deletion is confirmed by the Fly.io bot.
 document.addEventListener("DOMContentLoaded",()=>{
  const host=document.getElementById("ikBotwPollTest");if(!host)return;
- const start=host.querySelector("[data-start]"),del=host.querySelector("[data-delete]"),refresh=host.querySelector("[data-refresh]"),out=host.querySelector("[data-status]");
+ const start=host.querySelector("[data-start]"),close=host.querySelector("[data-close]"),del=host.querySelector("[data-delete]"),refresh=host.querySelector("[data-refresh]"),out=host.querySelector("[data-status]");
  const api=async(action)=>{const r=await fetch("/api/admin/events/cycle-poll-test",{method:action?"POST":"GET",credentials:"same-origin",cache:"no-store",headers:action?{"Content-Type":"application/json"}:{},body:action?JSON.stringify({action}):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||"Test request failed");return d.test};
- const render=t=>{out.textContent=t?`Status: ${t.status}\nOptions: ${(t.options||[]).map(x=>x.label).join(" / ")}\nDiscord message: ${t.messageId||"Not confirmed"}\n${t.status==="delete_requested"?"Waiting for bot to confirm Discord deletion. Refresh shortly.":""}`:"No test created.";start.disabled=!!t&&!(["deleted","cancelled"].includes(t.status));del.disabled=!t||!["pending","published","delete_requested"].includes(t.status);};
+ const render=t=>{
+  const result=t?.status==="closed"?`\nVote totals:\n${(t.options||[]).map((o,i)=>`${o.label}: ${t.counts?.[i]??0}`).join("\n")}\nResult: ${t.result==="winner"?`Winner - ${t.winnerLabel}`:t.result==="tie"?"Tie - council decision required":"No valid votes"}`:"";
+  out.textContent=t?`Status: ${t.status}\nOptions: ${(t.options||[]).map(x=>x.label).join(" / ")}\nDiscord message: ${t.messageId||"Not confirmed"}${result}\n${t.status==="delete_requested"?"Waiting for bot to confirm Discord deletion. Refresh shortly.":t.status==="close_requested"?"Waiting for bot to count reactions. Refresh shortly.":""}`:"No test created.";
+  start.disabled=!!t&&!(["deleted","cancelled"].includes(t.status));
+  close.disabled=!t||t.status!=="published";
+  del.disabled=!t||!["pending","published","close_requested","closed","delete_requested"].includes(t.status);
+ };
  const reload=async()=>render(await api());refresh.onclick=()=>reload().catch(e=>out.textContent=e.message);
  start.onclick=async()=>{if(!confirm("Post a REAL, clearly marked BOTW TEST poll to Discord? This will not affect the November 13 BOTW or WOM."))return;start.disabled=true;try{render(await api("start"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
+ close.onclick=async()=>{if(!confirm("Close this TEST poll now and count Discord reactions? This will not affect the live BOTW."))return;close.disabled=true;try{render(await api("close"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
  del.onclick=async()=>{if(!confirm("Delete the TEST poll message from Discord? The bot must confirm deletion before the test can be repeated."))return;del.disabled=true;try{render(await api("delete"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
  reload().catch(e=>out.textContent=e.message);
 });

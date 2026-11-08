@@ -18,6 +18,12 @@ export async function onRequest({request,env}){
   const state={id:`poll-test:${Date.now()}`,status:"pending",options:draft.options,createdAt:new Date().toISOString(),cycleId:"botw:2026-11-13"};
   await kv.put(KEY,JSON.stringify(state));return json({test:state});
  }
+ if(body?.action==="close"){
+  if(!existing)return json({error:"No test exists"},404);
+  if(existing.status==="closed")return json({test:existing});
+  if(existing.status!=="published"||!existing.messageId)return json({error:"Only a published test poll can be closed",test:existing},409);
+  const state={...existing,status:"close_requested",closeRequestedAt:new Date().toISOString()};await kv.put(KEY,JSON.stringify(state));return json({test:state});
+ }
  if(body?.action==="delete"){
   if(!existing)return json({error:"No test exists"},404);
   if(existing.status==="deleted")return json({test:existing});
