@@ -74,6 +74,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   saveBosses.addEventListener("click",()=>save("botw",saveBosses));
   saveSkills.addEventListener("click",()=>save("sotw",saveSkills));
+  // Explicitly remove an unreserved production draft left over from testing.
+  const clearDraft=document.createElement("button");
+  clearDraft.type="button";clearDraft.className="btn";
+  clearDraft.textContent="Clear Unpublished Draft";
+  prepare.insertAdjacentElement("afterend",clearDraft);
+  clearDraft.addEventListener("click",async()=>{
+    const selected=type.value;
+    if(!confirm(`Clear the ${selected.toUpperCase()} production draft? Only allowed before official reservation/publication. This does not delete Discord polls.`))return;
+    clearDraft.disabled=true;
+    try{const d=await request("PUT",{action:"clear-draft",type:selected});result.textContent=d.cleared?`Cleared unreserved ${selected.toUpperCase()} draft for ${d.cycleId}. The real poll will select fresh eligible options at publication.`:"No draft to clear.";}
+    catch(e){result.textContent=e.message;}finally{clearDraft.disabled=false;}
+  });
   prepare.addEventListener("click",async()=>{
     prepare.disabled=true;result.textContent="Preparing draft…";
     try {

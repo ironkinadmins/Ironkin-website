@@ -12,10 +12,16 @@ export async function onRequest({request,env}){
  const body=await request.json().catch(()=>null);
  if(body?.action==="start"){
   if(existing&&!(["deleted","cancelled"].includes(existing.status)))return json({error:"Previous test must be deleted before starting another",test:existing},409);
-  const drafts=read(await kv.get("events:sotw-botw-poll-drafts:v1"))||{};
-  const draft=drafts.botw;
-  if(draft?.cycleId!=="botw:2026-11-13"||!Array.isArray(draft.options)||draft.options.length!==3||new Set(draft.options.map(x=>x.label)).size!==3)return json({error:"Prepare three distinct November 13 BOTW options on Settings first"},409);
-  const state={id:`poll-test:${Date.now()}`,status:"pending",options:draft.options,createdAt:new Date().toISOString(),cycleId:"botw:2026-11-13"};
+  // TEST ONLY: generate options from the eligible pool. Never read or write
+  // production drafts, nominations, reservation state, or rotation history.
+  const pools=read(await kv.get("events:sotw-botw-pools:v1"))||{};
+  const source=Array.isArray(pools.botw)?pools.botw:[];
+  const unique=[...new Map(source.filter(x=>typeof x==="string"&&x.trim()).map(x=>[x.trim().toLowerCase(),x.trim()])).values()];
+  if(unique.length<3)return json({error:"At least three eligible BOTW options are required for a test."},409);
+  const selected=[];
+  for(let i=0;i<3;i++){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);selected.push(unique.splice(bytes[0]%unique.length,1)[0]);}
+  const options=selected.map(value=>({label:value,metrics:[value]}));
+  const state={id:`poll-test:${Date.now()}`,status:"pending",options,createdAt:new Date().toISOString(),testOnly:true};
   await kv.put(KEY,JSON.stringify(state));return json({test:state});
  }
  if(body?.action==="close"){

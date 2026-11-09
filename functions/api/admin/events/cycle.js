@@ -119,6 +119,21 @@ export async function onRequest({ request, env }) {
         await kv.put(POOL_KEY, JSON.stringify(pools));
         return Response.json({success:true,pools});
       }
+      if (body.action === "clear-draft") {
+        const type = body.type;
+        if (!["botw", "sotw"].includes(type)) throw Error("Invalid competition type.");
+        const drafts = parse(await kv.get(DRAFT_KEY), {});
+        const draft = drafts[type];
+        if (!draft) return Response.json({success:true,cleared:false});
+        const cycleId = String(draft.cycleId || "");
+        if (!/^((botw)|(sotw)):\d{4}-\d{2}-\d{2}$/.test(cycleId) || !cycleId.startsWith(type+":")) throw Error("Draft cycle is invalid; staff review required.");
+        const state = parse(await kv.get(`events:sotw-botw-automation:v1:${cycleId}`), {});
+        if (state.messageId || state.publishedAt || state.pollReservedAt || (Array.isArray(state.pollOptions) && state.pollOptions.length))
+          return Response.json({error:"Official poll is already reserved or published. Draft cannot be cleared safely."},{status:409});
+        delete drafts[type];
+        await kv.put(DRAFT_KEY, JSON.stringify(drafts));
+        return Response.json({success:true,cleared:true,cycleId});
+      }
       if (body.action === "prepare-draft") {
         const type = body.type;
         if (!["botw", "sotw"].includes(type)) throw Error("Choose BOTW or SOTW.");
