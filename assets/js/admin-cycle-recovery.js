@@ -42,7 +42,7 @@ async function refresh() {
       ];
       fields.forEach((value, index) => row.append(el("td",value,index === 5 && cycle.needsReview ? "bad" : "")));
       tbody.append(row);
-      if (cycle.pollClosed && cycle.outcome === "winner" && !cycle.womCompetitionId && ["creating","needs_review"].includes(cycle.womStatus)) {
+      if (cycle.pollClosed && cycle.outcome === "winner" && ["creating","needs_review","awaiting_activation","created"].includes(cycle.womStatus) && cycle.finalizationStatus !== "completed") {
         const option = document.createElement("option"); option.value = cycle.id; option.textContent = `${cycle.type.toUpperCase()} · ${cycle.date}`; select.append(option);
       }
     }
@@ -82,15 +82,15 @@ if (womButton) womButton.addEventListener("click", async () => {
 $("refresh").addEventListener("click",refresh);
 $("attach").addEventListener("submit", async event => {
   event.preventDefault();
-  const id=$("cycle").value, competitionId=$("competition").value.trim();
-  if (!id || !/^\\d{1,15}$/.test(competitionId)) return;
-  if (!confirm(`Attach WOM competition ${competitionId} to ${id}? Confirm the competition is correct in WOM first.`)) return;
+  const id=$("cycle").value, competitionId=$("competition").value.trim(), metricIndex=Number($("metricIndex").value);
+  if (!id || !/^[0-9]{1,15}$/.test(competitionId)) return;
+  if (!confirm(`Attach WOM competition ${competitionId} as metric ${metricIndex + 1} to ${id}? Confirm the competition is correct in WOM first.`)) return;
   const button=$("attach").querySelector('button[type="submit"]'); button.disabled=true;
   $("feedback").textContent="Verifying competition with WOM…";
   try {
     const response=await fetch(api,{method:"POST",credentials:"same-origin",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"attach_existing_wom",id,competitionId})});
+      body:JSON.stringify({action:"attach_existing_wom",id,competitionId,metricIndex})});
     const data=await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
     $("feedback").textContent=`Competition #${data.womCompetitionId} verified. Website status: ${data.websiteStatus || "pending"}. ${data.websiteError || ""}`;

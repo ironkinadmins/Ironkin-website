@@ -35,7 +35,6 @@ export async function onRequest({ request, env }) {
     const stateKey = PREFIX + body.id;
     const state = parse(await kv.get(stateKey), {});
     if (state.outcome !== "winner" || !state.closedAt ||
-        (state.womCompetitionId && String(state.womCompetitionId) !== String(body.competitionId)) ||
         !["creating", "needs_review", "created", "awaiting_activation"].includes(state.womStatus)) {
       return Response.json({ error: "Cycle cannot be reconciled safely." }, { status: 409 });
     }
@@ -47,6 +46,8 @@ export async function onRequest({ request, env }) {
     const metricIndex = Number(body.metricIndex ?? 0);
     if (metricIndex >= option.metrics.length) return Response.json({error:"Invalid metric index."},{status:400});
     const expectedIds = option.metrics.map((_,index)=>String(state.womCompetitions?.[index]?.competitionId || state.womCompetitionIds?.[index] || ""));
+    if (state.womStatus === "created" && state.websiteStatus === "linked")
+      return Response.json({error:"This cycle is already linked. Reconciliation is blocked to protect the active event."},{status:409});
     if (expectedIds[metricIndex] && expectedIds[metricIndex] !== String(body.competitionId))
       return Response.json({error:"This metric already has a different WOM competition ID; staff review required."},{status:409});
     const response = await womFetch(env, `/competitions/${body.competitionId}`);

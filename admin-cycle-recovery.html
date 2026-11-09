@@ -41,6 +41,7 @@ small,.muted{color:#c1ae9b}.check{padding:11px 0;border-bottom:1px solid #4b4239
 <section class="panel"><h2>Attach an existing WOM competition</h2>
 <p class="muted">Use only when WOM already created the competition but the website lost its ID. The server checks the WOM group, metric, and title before attaching.</p>
 <form id="attach"><label>Cycle <select id="cycle" required></select></label>
+<label> Metric slot <select id="metricIndex"><option value="0">Primary metric (1)</option><option value="1">Paired metric (2)</option></select></label>
 <label> WOM competition ID <input id="competition" required inputmode="numeric" pattern="[0-9]{1,15}" placeholder="e.g. 123456"></label>
 <button type="submit">Verify and attach</button></form>
 <p id="feedback" role="status"></p></section>
