@@ -44,7 +44,8 @@ export async function onRequest({request,env}) {
     const eventDate=nextEvent(cycle,type);
     if (!eventDate) return [type,{open:false,reason:"Cycle not configured"}];
     const anchor=new Date(`${eventDate}T12:00:00Z`);
-    const deadline=new Date(anchor.getTime()-4*86400000).toISOString().slice(0,10)+"T"+(cycle.startTime||"15:00");
+    const leadDays=eventDate === "2026-11-13" && type === "botw" ? 4 : 7;
+    const deadline=new Date(anchor.getTime()-leadDays*86400000).toISOString().slice(0,10)+"T"+(cycle.startTime||"15:00");
     return [type,{open:localParts()<deadline && drafts[type]?.status!=="published",deadline}];
   }));
   if (request.method==="GET") return Response.json({eligible, pools:Object.fromEntries(eligible.map(type=>[type,pools[type]||[]])), nominations:Object.fromEntries(eligible.map(type=>[type,nominations[type]?.options||[]])),windows},{headers:{"Cache-Control":"no-store"}});

@@ -7,6 +7,24 @@ import {
   postEventResultsToDiscord
 } from "../../../_eventResultsAnnouncement.js";
 
+// Match the production poll-opening cutoff. Nominations cannot change after options are reserved.
+function nextNominationDeadline(cycle, type, now = new Date()) {
+  if (!cycle?.startDate || !["botw", "sotw"].includes(type)) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {timeZone:"America/Toronto",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now);
+  const today = ["year","month","day"].map(k=>parts.find(p=>p.type===k)?.value).join("-");
+  const anchor = Date.parse(`${cycle.startDate}T12:00:00Z`);
+  if (!Number.isFinite(anchor)) return null;
+  for (let i=0;i<208;i+=2) {
+    const date = new Date(anchor+i*7*86400000).toISOString().slice(0,10);
+    const kind = i%4===0 ? cycle.firstEvent : cycle.firstEvent==="botw" ? "sotw" : "botw";
+    if (kind!==type || date<today) continue;
+    const lead = date==="2026-11-13" && type==="botw" ? 4 : 7;
+    const cutoff = new Date(Date.parse(`${date}T12:00:00Z`)-lead*86400000).toISOString().slice(0,10);
+    return `${cutoff} ${cycle.startTime||"15:00"} Eastern`;
+  }
+  return null;
+}
+
 // Winner nomination eligibility is derived from the approved archive snapshot.
 // Never infer a Discord account from an unverified Discord display name.
 async function syncNominationWinner(env, entry) {
@@ -67,18 +85,21 @@ async function syncNominationWinner(env, entry) {
         if (!dm.ok) throw Error(`Discord DM channel HTTP ${dm.status}`);
         const channel = await dm.json();
         const site = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
+        const cycle = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
+        const deadline = nextNominationDeadline(cycle, entry.type);
         const sent = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
           method: "POST", headers,
           body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${entry.type.toUpperCase()} picks`,
-            description: `Congratulations! Choose **two** options for the next ${entry.type.toUpperCase()} poll. The third option is selected automatically.\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
+            description: `Congratulations! Choose **two** options for the next ${entry.type.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
             color: 15891968 }], allowed_mentions: { parse: [] } })
         });
         if (!sent.ok) throw Error(`Discord DM message HTTP ${sent.status}`);
-        await kv.put(noticeKey, JSON.stringify({ sentAt: new Date().toISOString(), discordId: status.discordId }));
+        await kv.put(noticeKey, JSON.stringify({ sentAt: new Date().toISOString(), discordId: status.discordId, deadline, state:"sent" }));
         status.notification = "sent";
       } catch (error) {
         status.notification = "failed";
         status.notificationError = String(error?.message || error).slice(0, 180);
+        await kv.put(noticeKey, JSON.stringify({state:"failed",discordId:status.discordId,failedAt:new Date().toISOString(),error:status.notificationError}));
         console.warn("Winner nomination DM failed:", error);
       }
     } else status.notification = "previously_sent";
