@@ -25,6 +25,49 @@ export async function onRequest({ request, env }) {
       return Response.json({ error: "Invalid origin." }, { status: 403 });
     }
     const body = await request.json().catch(() => null);
+    if (body?.action === "reconcile_archive") {
+      if (!/^(sotw|botw):\d{4}-\d{2}-\d{2}$/.test(String(body.id || "")))
+        return Response.json({error:"Invalid cycle."},{status:400});
+      const kv = hybridKv(env,"drops");
+      const stateKey = PREFIX + body.id;
+      const state = parse(await kv.get(stateKey),{});
+      if (state.finalizationStatus === "completed")
+        return Response.json({success:true,status:"completed",archiveId:state.archiveId});
+      if (!state.closedAt || state.outcome !== "winner" || state.womStatus !== "created" ||
+          !["processing","needs_review"].includes(state.finalizationStatus) || state.websiteStatus !== "linked")
+        return Response.json({error:"Cycle is not eligible for archive reconciliation."},{status:409});
+      const active = parse(await kv.get("events:active"),[]);
+      const archive = parse(await kv.get("events:archive"),[]);
+      if (!Array.isArray(active) || !Array.isArray(archive))
+        return Response.json({error:"Invalid event storage; no changes made."},{status:409});
+      const record = active.find(item=>item.id === state.websiteEventId);
+      const requestId = `cycle-${body.id}-${state.womCompetitionId}`;
+      const matches = archive.filter(item=>item.archiveRequestId === requestId ||
+        (String(item.eventId) === String(state.websiteEventId) &&
+         String(item.womCompetitionId) === String(state.womCompetitionId)));
+      if (matches.length !== 1)
+        return Response.json({error:matches.length ? "Multiple matching archives require manual investigation." : "No matching archive found. An uncertain operation must be investigated manually; automatic retry is blocked."},{status:409});
+      const entry=matches[0];
+      if (record?.active && String(record.womCompetitionId) === String(state.womCompetitionId)) {
+        // Only reset the exact archived event; never modify a newer competition.
+        const updated=active.map(item=>item.id === record.id ? {...item,
+          title:item.type === "botw" ? "Boss of the Week" : "Skill of the Week",
+          description:"",womCompetitionId:null,womCompetitionIds:[],womCompetitions:[],
+          combinedMetric:null,eventPassword:null,target:null,startDate:null,endDate:null,
+          active:false,featured:false,dropsEnabled:false} : item);
+        await kv.put("events:active",JSON.stringify(updated));
+      } else if (record?.active) {
+        return Response.json({error:"Another event is active in this slot. No changes made."},{status:409});
+      }
+      const completed={...state,finalizationStatus:"completed",archiveId:entry.id,
+        finalizedAt:new Date().toISOString(),finalizationError:null,
+        announcementStatus:entry.resultsAnnouncement?.status || "unknown",
+        archiveReconciledAt:new Date().toISOString()};
+      await kv.put(stateKey,JSON.stringify(completed));
+      return Response.json({success:true,status:"completed",archiveId:entry.id,
+        announcementStatus:completed.announcementStatus,
+        note:"Existing archive confirmed; no Discord message, WOM competition or Ember credit was created."});
+    }
     if (body?.action !== "attach_existing_wom" ||
         !/^(sotw|botw):\d{4}-\d{2}-\d{2}$/.test(String(body?.id || "")) ||
         !/^\d{1,15}$/.test(String(body?.competitionId || "")) ||

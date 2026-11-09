@@ -28,8 +28,8 @@ async function refresh() {
       readiness.append(line);
     }
     if (!data.checks) readiness.textContent = data.message || "Readiness checks unavailable.";
-    const tbody = $("cycles"), select = $("cycle");
-    tbody.replaceChildren(); select.replaceChildren();
+    const tbody = $("cycles"), select = $("cycle"), archiveSelect = $("archiveCycle");
+    tbody.replaceChildren(); select.replaceChildren(); archiveSelect.replaceChildren();
     for (const cycle of data.cycles || []) {
       const row = document.createElement("tr");
       const fields = [
@@ -42,6 +42,10 @@ async function refresh() {
       ];
       fields.forEach((value, index) => row.append(el("td",value,index === 5 && cycle.needsReview ? "bad" : "")));
       tbody.append(row);
+      if (["processing","needs_review"].includes(cycle.finalizationStatus)) {
+        const option=document.createElement("option");option.value=cycle.id;
+        option.textContent=`${cycle.type.toUpperCase()} · ${cycle.date}`;archiveSelect.append(option);
+      }
       if (cycle.pollClosed && cycle.outcome === "winner" && ["creating","needs_review","awaiting_activation","created"].includes(cycle.womStatus) && cycle.finalizationStatus !== "completed") {
         const option = document.createElement("option"); option.value = cycle.id; option.textContent = `${cycle.type.toUpperCase()} · ${cycle.date}`; select.append(option);
       }
@@ -50,6 +54,7 @@ async function refresh() {
       const row=document.createElement("tr"), cell=el("td","No recent cycles available.");cell.colSpan=6;row.append(cell);tbody.append(row);
     }
     $("attach").querySelector('button[type="submit"]').disabled = !select.options.length;
+    $("reconcileArchive").querySelector('button[type="submit"]').disabled = !archiveSelect.options.length;
   } catch(error) {
     $("status").textContent = `Unable to load: ${error.message}`;
     $("cycles").replaceChildren();
@@ -97,6 +102,21 @@ $("attach").addEventListener("submit", async event => {
     await refresh();
   } catch(error) {$("feedback").textContent=`Recovery failed: ${error.message}`;}
   finally {button.disabled=false;}
+});
+$("reconcileArchive").addEventListener("submit",async event=>{
+  event.preventDefault();
+  const id=$("archiveCycle").value;
+  if (!id || !confirm(`Confirm you inspected WOM and the existing archive for ${id}? This will close the matching archived event without re-posting results.`)) return;
+  const button=$("reconcileArchive").querySelector('button[type="submit"]');button.disabled=true;
+  $("archiveFeedback").textContent="Verifying archive and active event…";
+  try {
+    const response=await fetch(api,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reconcile_archive",id})});
+    const data=await response.json();
+    if (!response.ok) throw Error(data.error || `HTTP ${response.status}`);
+    $("archiveFeedback").textContent=`Archive ${data.archiveId} reconciled. ${data.note || ""}`;
+    await refresh();
+  } catch(error){$("archiveFeedback").textContent=`Reconciliation blocked: ${error.message}`;}
+  finally{button.disabled=false;}
 });
 refresh();
 })();

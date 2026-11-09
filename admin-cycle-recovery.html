@@ -45,4 +45,9 @@ small,.muted{color:#c1ae9b}.check{padding:11px 0;border-bottom:1px solid #4b4239
 <label> WOM competition ID <input id="competition" required inputmode="numeric" pattern="[0-9]{1,15}" placeholder="e.g. 123456"></label>
 <button type="submit">Verify and attach</button></form>
 <p id="feedback" role="status"></p></section>
+<section class="panel"><h2>Reconcile an interrupted archive</h2>
+<p class="muted">Use only after checking the archive and WOM results. This action requires an existing matching archive, closes its exact active event if needed, and marks the cycle completed. It never posts Discord results, creates WOM competitions, or awards Embers. If no archive exists, the cycle remains blocked for manual investigation.</p>
+<form id="reconcileArchive"><label>Cycle <select id="archiveCycle" required></select></label>
+<button type="submit">Verify existing archive and reconcile</button></form>
+<p id="archiveFeedback" role="status"></p></section>
 </main><script src="/assets/js/admin-cycle-dry-run.js" defer></script><script src="/assets/js/admin-cycle-poll-preview.js" defer></script><script src="/assets/js/admin-cycle-recovery.js" defer></script><script src="/assets/js/admin-wom-connection-test.js" defer></script></body></html>
