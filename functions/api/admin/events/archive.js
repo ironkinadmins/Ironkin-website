@@ -75,6 +75,7 @@ async function syncNominationWinner(env, entry) {
   await kv.put(key, JSON.stringify(winners));
   await kv.put(nominationsKey, JSON.stringify(nominations));
   await kv.put(statusKey, JSON.stringify(statuses));
+  await kv.put(`${statusKey}:${category}`, JSON.stringify(status));
   // Best-effort private nomination invitation; a failed DM never blocks results.
   // A new winner receives a single invitation for this finalized event.
   if (status.state === "resolved" && status.discordId && env.DISCORD_BOT_TOKEN) {
