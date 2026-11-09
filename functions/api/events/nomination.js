@@ -1,3 +1,4 @@
+import { sendNominationDm } from "../../_winnerNominationNotifications.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession } from "../_auth.js";
 
@@ -70,5 +71,29 @@ export async function onRequest({request,env}) {
     delete drafts[type];
     await kv.put(DRAFT_KEY,JSON.stringify(drafts));
   }
-  return Response.json({success:true,options:labels});
+  // The nomination is authoritative even if Discord delivery fails. The receipt
+  // is keyed to the upcoming event and exact picks, so repeated submissions do
+  // not generate duplicate confirmations. Uncertain sends require review.
+  const confirmationKey=`events:sotw-botw-nomination-confirmation:${type}:${nextEvent(cycle,type)}:${session.id}`;
+  const fingerprint=JSON.stringify(labels.map(x=>canonical(x,type)));
+  let confirmation="already_sent";
+  try {
+    const existing=parse(await kv.get(confirmationKey),null);
+    if (existing?.fingerprint!==fingerprint) {
+      const claim={fingerprint,state:"sending",attemptedAt:new Date().toISOString()};
+      await kv.put(confirmationKey,JSON.stringify(claim));
+      try {
+        const receipt=await sendNominationDm(env,String(session.id),type,windows[type].deadline,"confirmation",labels);
+        await kv.put(confirmationKey,JSON.stringify({...claim,state:"sent",sentAt:new Date().toISOString(),...receipt}));
+        confirmation="sent";
+      } catch(error) {
+        await kv.put(confirmationKey,JSON.stringify({...claim,state:"needs_review",error:String(error?.message||error).slice(0,200)}));
+        confirmation="needs_review";
+      }
+    } else confirmation=existing.state||"needs_review";
+  } catch(error) {
+    console.warn("Nomination saved but confirmation tracking failed",error);
+    confirmation="needs_review";
+  }
+  return Response.json({success:true,options:labels,confirmation});
 }

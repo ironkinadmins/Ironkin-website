@@ -13,7 +13,7 @@ export function nextNominationWindow(config,type,now=new Date()) {
     return {date,deadline,open:localTime(now)<deadline,reminderDue:localTime(now)>=`${shift(date,-lead-2)}T${config.startTime||"15:00"}`&&localTime(now)<deadline};
   }return null;
 }
-export async function sendNominationDm(env,discordId,type,deadline,kind){
+export async function sendNominationDm(env,discordId,type,deadline,kind,options=[]){
   if(!env.DISCORD_BOT_TOKEN)throw Error("Discord bot token not configured");
   const headers={Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`,"Content-Type":"application/json"};
   const dm=await fetch("https://discord.com/api/v10/users/@me/channels",{method:"POST",headers,body:JSON.stringify({recipient_id:discordId})});
@@ -21,8 +21,8 @@ export async function sendNominationDm(env,discordId,type,deadline,kind){
   const channel=await dm.json();
   const site=String(env.SITE_URL||"https://ironkinclan.com").replace(/\/+$/,"");
   const pretty=deadline?`${deadline.replace("T"," ")} Eastern`:"the published deadline";
-  const description=kind==="reminder"?`Your two ${type.toUpperCase()} nominations are still missing. Please submit them before **${pretty}**. If you do not submit, eligible random options will fill the remaining slots.`:`Congratulations! You can choose **two** options for the next ${type.toUpperCase()} poll. The third option is selected randomly.\n\n**Nomination deadline:** ${pretty}.`;
-  const sent=await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`,{method:"POST",headers,body:JSON.stringify({embeds:[{title:kind==="reminder"?`Reminder: ${type.toUpperCase()} nominations`:`Your next ${type.toUpperCase()} picks`,description:`${description}\n\n[Submit your nominations](${site}/events.html#ikNominationPanel)`,color:15891968}],allowed_mentions:{parse:[]}})});
+  const description=kind==="confirmation"?`Your two ${type.toUpperCase()} nominations have been saved.\n\n**Your selections:**\n${options.map((x,i)=>`${i+1}. ${x}`).join("\n")}\n\nYou can update your nominations until **${pretty}**.`:kind==="reminder"?`Your two ${type.toUpperCase()} nominations are still missing. Please submit them before **${pretty}**. If you do not submit, eligible random options will fill the remaining slots.`:`Congratulations! You can choose **two** options for the next ${type.toUpperCase()} poll. The third option is selected randomly.\n\n**Nomination deadline:** ${pretty}.`;
+  const sent=await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`,{method:"POST",headers,body:JSON.stringify({embeds:[{title:kind==="confirmation"?`${type.toUpperCase()} nominations confirmed`:kind==="reminder"?`Reminder: ${type.toUpperCase()} nominations`:`Your next ${type.toUpperCase()} picks`,description:`${description}\n\n[Submit your nominations](${site}/events.html#ikNominationPanel)`,color:15891968}],allowed_mentions:{parse:[]}})});
   if(!sent.ok)throw Error(`Discord DM message HTTP ${sent.status}`);
   const result=await sent.json().catch(()=>({}));return {messageId:String(result.id||""),channelId:String(channel.id)};
 }
