@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const raw=(await fs.readFile(new URL('../functions/_winnerNominationNotifications.js',import.meta.url),'utf8')).replace(/^import .*?;\s*$/gm,'');
+const db=new Map();
+globalThis.__winnerRegression={hybridKv:()=>({get:async key=>db.get(key)??null})};
+const moduleText=`const hybridKv=globalThis.__winnerRegression.hybridKv;\n${raw}`;
+const {nominationNoticeStatus,nextNominationWindow}=await import(`data:text/javascript;base64,${Buffer.from(moduleText).toString('base64')}`);
+const key='events:sotw-botw-winner-status:v1';
+const standard={state:'resolved',rsn:'Lawfishgoat',discordId:'123456789012345678',eventId:'botw-standard',updatedAt:'2026-11-09T19:00:00Z'};
+const elite={state:'resolved',rsn:'Pyro M0nkey',discordId:'123456789012345679',eventId:'botw-elite',updatedAt:'2026-11-09T19:00:00Z'};
+test('category records remain visible even if shared status is stale',async()=>{db.clear();db.set(key,'{}');db.set(`${key}:botw-standard`,JSON.stringify(standard));db.set(`${key}:botw-elite`,JSON.stringify(elite));assert.equal((await nominationNoticeStatus({},'botw-standard')).status.rsn,'Lawfishgoat');assert.equal((await nominationNoticeStatus({},'botw-elite')).status.rsn,'Pyro M0nkey');});
+test('newer category record wins over stale shared map',async()=>{db.clear();db.set(key,JSON.stringify({'botw-standard':{...standard,rsn:'Old Winner',updatedAt:'2026-11-08T19:00:00Z'}}));db.set(`${key}:botw-standard`,JSON.stringify(standard));assert.equal((await nominationNoticeStatus({},'botw-standard')).status.rsn,'Lawfishgoat');});
+test('older category record does not override newer shared record',async()=>{db.clear();db.set(key,JSON.stringify({'botw-standard':standard}));db.set(`${key}:botw-standard`,JSON.stringify({...standard,rsn:'Old Winner',updatedAt:'2026-11-08T19:00:00Z'}));assert.equal((await nominationNoticeStatus({},'botw-standard')).status.rsn,'Lawfishgoat');});
+test('initial BOTW nomination deadline remains November 11',()=>{const config={startDate:'2026-11-13',firstEvent:'botw',rotationDays:14,startTime:'15:00'};assert.equal(nextNominationWindow(config,'botw-standard',new Date('2026-11-09T18:00:00Z')).deadline,'2026-11-11T15:00');assert.equal(nextNominationWindow(config,'botw-elite',new Date('2026-11-09T18:00:00Z')).deadline,'2026-11-11T15:00');});

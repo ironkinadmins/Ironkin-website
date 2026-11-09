@@ -161,6 +161,7 @@ export async function onRequest({ request, env }) {
         await kv.put(WINNERS_KEY,JSON.stringify(winners));
         await kv.put(NOMINATIONS_KEY,JSON.stringify(nominations));
         await kv.put(WINNER_STATUS_KEY,JSON.stringify(statuses));
+        await kv.put(`${WINNER_STATUS_KEY}:${type}`,JSON.stringify(statuses[type]));
         // Hybrid storage may accept a legacy KV write while its preferred Supabase
         // copy is stale. Never claim verification succeeded until the same read
         // path used by the notification dashboard sees the exact winner.
