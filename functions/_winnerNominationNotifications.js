@@ -4,11 +4,11 @@ const tz="America/Toronto";
 function localTime(date=new Date()) {const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(date);const f=k=>p.find(x=>x.type===k)?.value;return `${f("year")}-${f("month")}-${f("day")}T${f("hour")}:${f("minute")}`;}
 const shift=(d,n)=>new Date(Date.parse(`${d}T12:00:00Z`)+n*86400000).toISOString().slice(0,10);
 export function nextNominationWindow(config,type,now=new Date()) {
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(config?.startDate||"")||!["botw","sotw"].includes(type))return null;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(config?.startDate||"")||!["botw-standard","botw-elite","sotw"].includes(type))return null;
   const today=localTime(now).slice(0,10);
-  for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);const kind=i%4===0?config.firstEvent:config.firstEvent==="botw"?"sotw":"botw";
-    if(kind!==type||date<today)continue;
-    const lead=date==="2026-11-13"&&type==="botw"?4:7;
+  for(let i=0;i<208;i++){const date=shift(config.startDate,i*(config.rotationDays||14));const kind=i%2===0?config.firstEvent:config.firstEvent==="botw"?"sotw":"botw";
+    if(kind!==(type.startsWith("botw-")?"botw":type)||date<today)continue;
+    const lead=date==="2026-11-13"&&type.startsWith("botw")?4:7;
     const deadline=`${shift(date,-lead)}T${config.startTime||"15:00"}`;
     return {date,deadline,open:localTime(now)<deadline,reminderDue:localTime(now)>=`${shift(date,-lead-2)}T${config.startTime||"15:00"}`&&localTime(now)<deadline};
   }return null;

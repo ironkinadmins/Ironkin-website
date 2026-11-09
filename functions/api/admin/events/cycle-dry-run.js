@@ -19,20 +19,25 @@ export async function onRequest({ request, env }) {
   if(validDate&&validType&&validTime){
     const nov13=Date.parse("2026-11-13T12:00:00Z");
     const base=Date.parse(`${config.startDate}T12:00:00Z`);
-    const intervals=(nov13-base)/1209600000;
+    const intervals=(nov13-base)/((config.rotationDays||14)*86400000);
     const expected=Number.isInteger(intervals)&&intervals>=0?(intervals%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw")):null;
     results.push(check("November 13 BOTW",expected==="botw"&&config.startTime==="15:00"?"pass":"fail",expected?`Configured cycle on Nov 13: ${expected.toUpperCase()} at ${config.startTime||"15:00"} ET`:`November 13 is not aligned with the saved 14-day cycle`));
     const open=shift("2026-11-13",-4),close=shift("2026-11-13",-1);
     results.push(check("Voting window", "pass",`November 13 BOTW uses the approved late exception (${open} to ${close}, 3 PM ET). Future cycles open seven days before and close one day before (six-day voting window).`));
-    const id="botw:2026-11-13";
-    const state=parse(await kv.get("events:sotw-botw-automation:v1:"+id),{});
-    results.push(check("November 13 poll state",state.messageId?"pass":"warning",state.messageId?`Discord poll receipt recorded; ${state.closedAt?"poll closed":"poll not yet closed"}`:"No Discord poll receipt recorded. Do not assume the poll has been published."));
-    results.push(check("Competition creation record",state.womStatus==="created"?"pass":"warning",`Cycle WOM status: ${state.womStatus||"not started"}; this check makes no WOM API request.`));
-    results.push(check("Finalization record",state.finalizationStatus==="completed"?"pass":"warning",`Finalization status: ${state.finalizationStatus||"not started"}; no awards or announcements are issued.`));
+    for(const type of ["botw-standard","botw-elite"]){
+      const id=`${type}:2026-11-13`;
+      const state=parse(await kv.get("events:sotw-botw-automation:v1:"+id),{});
+      results.push(check(`${type} poll state`,state.messageId?"pass":"warning",state.messageId?`Discord poll receipt recorded; ${state.closedAt?"poll closed":"poll not yet closed"}`:"No Discord poll receipt recorded."));
+      results.push(check(`${type} WOM creation`,state.womStatus==="created"?"pass":"warning",`WOM status: ${state.womStatus||"not started"}.`));
+      results.push(check(`${type} finalization`,state.finalizationStatus==="completed"?"pass":"warning",`Finalization: ${state.finalizationStatus||"not started"}.`));
+    }
   }
   const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});
-  const botw=Array.isArray(pools.botw)?pools.botw.filter(x=>typeof x==="string"&&x.trim()):[];
-  results.push(check("BOTW nomination pool",new Set(botw.map(x=>x.toLowerCase())).size>=3?"pass":"fail",`${new Set(botw.map(x=>x.toLowerCase())).size} distinct configured BOTW options; at least 3 needed.`));
+  for(const type of ["botw-standard","botw-elite"]){
+    const names=Array.isArray(pools[type])?pools[type].filter(x=>typeof x==="string"&&x.trim()):[];
+    const count=new Set(names.map(x=>x.toLowerCase())).size;
+    results.push(check(`${type} eligible bosses`,count>=3?"pass":"fail",`${count} distinct configured options; at least 3 required.`));
+  }
   results.push(check("WOM creation prerequisites",env.CYCLE_COORDINATOR&&env.WOM_GROUP_VERIFICATION_CODE?"pass":"fail",`Coordinator binding: ${env.CYCLE_COORDINATOR?"present":"missing"}; group verification secret: ${env.WOM_GROUP_VERIFICATION_CODE?"present":"missing"}; auto-create: ${env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true"?"enabled":"disabled"}. No external call made.`));
   results.push(check("Finalization gate",env.CYCLE_AUTO_FINALIZE_ENABLED==="true"?"warning":"pass",`Automatic finalization ${env.CYCLE_AUTO_FINALIZE_ENABLED==="true"?"enabled; avoid live testing until reviewed":"disabled for safe testing"}.`));
   results.push(check("Cycle execution gate",config.enabled?"warning":"pass",`Cycle schedule ${config.enabled?"enabled; live actions may occur if an external scheduler calls it":"disabled"}. Dry run itself does not trigger the scheduler.`));

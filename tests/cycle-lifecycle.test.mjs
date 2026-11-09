@@ -23,7 +23,7 @@ globalThis.__lifecycle={
 const injected=`const {processNominationReminder,hybridKv,buildEventResultsSnapshot,buildEventResultsContent,getResultsChannelId,archiveEventInternal,womFetch}=globalThis.__lifecycle;\n${stripped}`;
 const {onRequest}=await import(`data:text/javascript;base64,${Buffer.from(injected).toString('base64')}`);
 const prefix='events:sotw-botw-automation:v1:';
-const id='botw:2026-11-13';
+const id='botw-elite:2026-11-13';
 const env=()=>({CYCLE_AUTOMATION_SECRET:'secret',CYCLE_AUTO_WOM_CREATE_ENABLED:'true',CYCLE_AUTO_FINALIZE_ENABLED:'true',WOM_GROUP_VERIFICATION_CODE:'verified',CYCLE_COORDINATOR:{fetch:async(_url,opts)=>{coordinatorCalls++;const {id:requestId}=JSON.parse(opts.body);return Response.json({status:'created',competitionId:requestId.endsWith(':1')?'202':'101'});}}});
 function reset(time='2026-11-12T21:00:00Z'){
  clock=RealDate.parse(time);store=new Map();coordinatorCalls=0;archiveCalls=0;snapshotFails=false;archiveFails=false;archivedPartial=false;

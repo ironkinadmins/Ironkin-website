@@ -9,16 +9,16 @@ import {
 
 // Match the production poll-opening cutoff. Nominations cannot change after options are reserved.
 function nextNominationDeadline(cycle, type, now = new Date()) {
-  if (!cycle?.startDate || !["botw", "sotw"].includes(type)) return null;
+  if (!cycle?.startDate || !["botw-standard", "botw-elite", "sotw"].includes(type)) return null;
   const parts = new Intl.DateTimeFormat("en-CA", {timeZone:"America/Toronto",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now);
   const today = ["year","month","day"].map(k=>parts.find(p=>p.type===k)?.value).join("-");
   const anchor = Date.parse(`${cycle.startDate}T12:00:00Z`);
   if (!Number.isFinite(anchor)) return null;
-  for (let i=0;i<208;i+=2) {
-    const date = new Date(anchor+i*7*86400000).toISOString().slice(0,10);
-    const kind = i%4===0 ? cycle.firstEvent : cycle.firstEvent==="botw" ? "sotw" : "botw";
-    if (kind!==type || date<today) continue;
-    const lead = date==="2026-11-13" && type==="botw" ? 4 : 7;
+  for (let i=0;i<208;i++) {
+    const date = new Date(anchor+i*(cycle.rotationDays||14)*86400000).toISOString().slice(0,10);
+    const kind = i%2===0 ? cycle.firstEvent : cycle.firstEvent==="botw" ? "sotw" : "botw";
+    if (kind!==(type.startsWith("botw-")?"botw":type) || date<today) continue;
+    const lead = date==="2026-11-13" && type.startsWith("botw") ? 4 : 7;
     const cutoff = new Date(Date.parse(`${date}T12:00:00Z`)-lead*86400000).toISOString().slice(0,10);
     return `${cutoff} ${cycle.startTime||"15:00"} Eastern`;
   }
@@ -29,6 +29,9 @@ function nextNominationDeadline(cycle, type, now = new Date()) {
 // Never infer a Discord account from an unverified Discord display name.
 async function syncNominationWinner(env, entry) {
   if (!["botw", "sotw"].includes(entry.type)) return null;
+  const category = entry.type === "botw" ? (entry.botwTier === "standard" ? "botw-standard" : entry.botwTier === "elite" ? "botw-elite" : null) : "sotw";
+  // Historical BOTW archives without a verified tier are intentionally not migrated.
+  if (!category) return {state:"unresolved",reason:"Historical BOTW tier is unknown; staff verification required."};
   const kv = hybridKv(env, "drops");
   const key = "events:sotw-botw-nomination-winners:v1";
   const nominationsKey = "events:sotw-botw-nominations:v1";
@@ -38,7 +41,7 @@ async function syncNominationWinner(env, entry) {
   const rows = (Array.isArray(entry.leaderboard) ? entry.leaderboard : [])
     .filter(row => Number(row?.gained || 0) > 0)
     .sort((a, b) => Number(b.gained || 0) - Number(a.gained || 0));
-  let status = { eventId: entry.eventId, archiveRequestId: entry.archiveRequestId, type: entry.type,
+  let status = { eventId: entry.eventId, archiveRequestId: entry.archiveRequestId, type: category,
     updatedAt: new Date().toISOString(), state: "unresolved", reason: "No positive WOM result." };
   if (rows.length && rows[1] && Number(rows[0].gained) === Number(rows[1].gained)) {
     status.reason = "First-place tie: no single winner can be assigned automatically.";
@@ -66,16 +69,16 @@ async function syncNominationWinner(env, entry) {
   const nominations = parse(nominationsRaw, {});
   const statuses = parse(statusesRaw, {});
   // A correction or a new winner must invalidate nominations from the old winner.
-  if (winners[entry.type] !== (status.discordId || null)) delete nominations[entry.type];
-  winners[entry.type] = status.discordId || null;
-  statuses[entry.type] = status;
+  if (winners[category] !== (status.discordId || null)) delete nominations[category];
+  winners[category] = status.discordId || null;
+  statuses[category] = status;
   await kv.put(key, JSON.stringify(winners));
   await kv.put(nominationsKey, JSON.stringify(nominations));
   await kv.put(statusKey, JSON.stringify(statuses));
   // Best-effort private nomination invitation; a failed DM never blocks results.
   // A new winner receives a single invitation for this finalized event.
   if (status.state === "resolved" && status.discordId && env.DISCORD_BOT_TOKEN) {
-    const noticeKey = `events:sotw-botw-winner-notice:${entry.type}:${entry.eventId}`;
+    const noticeKey = `events:sotw-botw-winner-notice:${category}:${entry.eventId}`;
     if (!(await kv.get(noticeKey))) {
       try {
         const headers = { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" };
@@ -86,11 +89,11 @@ async function syncNominationWinner(env, entry) {
         const channel = await dm.json();
         const site = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
         const cycle = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
-        const deadline = nextNominationDeadline(cycle, entry.type);
+        const deadline = nextNominationDeadline(cycle, category);
         const sent = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
           method: "POST", headers,
-          body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${entry.type.toUpperCase()} picks`,
-            description: `Congratulations! Choose **two** options for the next ${entry.type.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
+          body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${category.toUpperCase()} picks`,
+            description: `Congratulations! Choose **two** options for the next ${category.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
             color: 15891968 }], allowed_mentions: { parse: [] } })
         });
         if (!sent.ok) throw Error(`Discord DM message HTTP ${sent.status}`);

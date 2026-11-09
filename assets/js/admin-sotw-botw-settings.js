@@ -37,13 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", () => {
   const bosses = document.getElementById("ikBotwPool");
   const skills = document.getElementById("ikSotwPool");
+  const elite = document.getElementById("ikElitePool");
+  const saveElite = document.getElementById("ikSaveElite");
   const type = document.getElementById("ikPollType");
   const result = document.getElementById("ikPollDraftResult");
   const winner = document.getElementById("ikPollWinnerStatus");
   const prepare = document.getElementById("ikPollPrepare");
   const saveBosses = document.getElementById("ikSaveBotw");
   const saveSkills = document.getElementById("ikSaveSotw");
-  let pools = {botw:[],sotw:[]}, states = {};
+  let pools = {"botw-standard":[],"botw-elite":[],sotw:[]}, states = {};
   const lines = v => v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const showWinner = () => {
     const state=states[type.value];
@@ -55,9 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const data=await response.json();if(!response.ok)throw Error(data.error||"Request failed.");return data;
   };
   request("GET").then(data=>{
-    pools={botw:data.pools?.botw||[],sotw:data.pools?.sotw||[]};
+    pools={"botw-standard":data.pools?.["botw-standard"]||[],"botw-elite":data.pools?.["botw-elite"]||[],sotw:data.pools?.sotw||[]};
     states=data.winnerStatus||{};
-    bosses.value=pools.botw.join("\n");skills.value=pools.sotw.join("\n");showWinner();
+    bosses.value=pools["botw-standard"].join("\n");elite.value=pools["botw-elite"].join("\n");skills.value=pools.sotw.join("\n");showWinner();
   }).catch(e=>{result.textContent=e.message;});
   async function save(which,button) {
     button.disabled=true;result.textContent=`Saving ${which.toUpperCase()} options…`;
@@ -65,16 +67,26 @@ document.addEventListener("DOMContentLoaded", () => {
       // Preserve the other list's unsaved edits in the UI, but never overwrite
       // its stored version with an out-of-date copy from this page.
       const latest=await request("GET");
-      const next={botw:latest.pools?.botw||[],sotw:latest.pools?.sotw||[]};
-      next[which]=lines(which==="botw"?bosses.value:skills.value);
+      const next={"botw-standard":latest.pools?.["botw-standard"]||[],"botw-elite":latest.pools?.["botw-elite"]||[],sotw:latest.pools?.sotw||[]};
+      next[which]=lines(which==="botw-standard"?bosses.value:which==="botw-elite"?elite.value:skills.value);
       const saved=await request("PUT",{action:"save-pools",...next});
       pools=saved.pools;
-      if(which==="botw")bosses.value=pools.botw.join("\n");
+      if(which==="botw-standard")bosses.value=pools["botw-standard"].join("\n");
+      else if(which==="botw-elite")elite.value=pools["botw-elite"].join("\n");
       else skills.value=pools.sotw.join("\n");
       result.textContent=`${which.toUpperCase()} options saved. The other list was not changed.`;
     }catch(e){result.textContent=e.message;}finally{button.disabled=false;}
   }
-  saveBosses.addEventListener("click",()=>save("botw",saveBosses));
+  document.getElementById("ikVerifyBotwWinner")?.addEventListener("click",async()=>{
+    const button=document.getElementById("ikVerifyBotwWinner"),status=document.getElementById("ikWinnerVerifyStatus");
+    const category=document.getElementById("ikWinnerVerifyType").value,archiveId=document.getElementById("ikWinnerVerifyArchive").value.trim();
+    if(!archiveId){status.textContent="Enter an archived event ID.";return;}
+    if(!confirm(`Verify the ${category} winner using archived event ${archiveId}?`))return;
+    button.disabled=true;
+    try{const data=await request("PUT",{action:"verify-category-winner",type:category,archiveId});states[category]=data.status;showWinner();status.textContent=`Verified ${data.status.rsn} for ${category}.`;}catch(e){status.textContent=e.message;}finally{button.disabled=false;}
+  });
+  saveBosses.addEventListener("click",()=>save("botw-standard",saveBosses));
+  saveElite.addEventListener("click",()=>save("botw-elite",saveElite));
   saveSkills.addEventListener("click",()=>save("sotw",saveSkills));
   // Explicitly remove an unreserved production draft left over from testing.
   const clearDraft=document.createElement("button");

@@ -8,8 +8,8 @@ const PREFIX = "events:sotw-botw-automation:v1:";
 const CONTROL_DEFAULTS = {polling:true,womCreation:true,finalization:true,nominationReminders:true,resultsAnnouncements:true};
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
 const pairs = [["Artio","Callisto"],["Calvar'ion","Vet'ion"],["Spindel","Venenatis"],["The Nightmare","Phosani's Nightmare"],["Gauntlet","Corrupted Gauntlet"],["Chambers of Xeric","Chambers of Xeric Challenge Mode"],["Theatre of Blood","Theatre of Blood Hard Mode"],["Tombs of Amascut","Tombs of Amascut Expert Mode"]];
-const key = (value,type) => { const name=String(value||"").trim().toLowerCase(); const pair=type==="botw"?pairs.find(p=>p.some(x=>x.toLowerCase()===name)):null; return pair?pair[0].toLowerCase():name; };
-const label = (value,type) => { const pair=type==="botw"?pairs.find(p=>p.some(x=>x.toLowerCase()===String(value).toLowerCase())):null; return pair?{label:pair.join(" + "),metrics:pair}:{label:value,metrics:[value]}; };
+const key = (value,type) => { const name=String(value||"").trim().toLowerCase(); const pair=type.startsWith("botw")?pairs.find(p=>p.some(x=>x.toLowerCase()===name)):null; return pair?pair[0].toLowerCase():name; };
+const label = (value,type) => { const pair=type.startsWith("botw")?pairs.find(p=>p.some(x=>x.toLowerCase()===String(value).toLowerCase())):null; return pair?{label:pair.join(" + "),metrics:pair}:{label:value,metrics:[value]}; };
 const tz="America/Toronto";
 function localTime(instant) { const fields=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(instant); const get=x=>fields.find(p=>p.type===x)?.value; return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`; }
 function shift(date,days){return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);}
@@ -69,7 +69,7 @@ async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAU
     await kv.put(stateKey, JSON.stringify(updated));
     return updated;
   }
-  const title = `Ironkin ${event.type.toUpperCase()} - ${option.label} - ${event.date}`;
+  const title = `Ironkin ${event.type.replace("-", " ").toUpperCase()} - ${option.label} - ${event.date}`;
   const metrics=option.metrics.map(metricName);
   const startsAt=torontoInstant(event.date,event.start.slice(11));
   const endsAt=torontoInstant(shift(event.date,event.durationDays||7),event.start.slice(11));
@@ -114,7 +114,7 @@ async function linkActiveEvent(kv, event, state) {
   const activeKey = "events:active";
   const existing = parse(await kv.get(activeKey), []);
   if (!Array.isArray(existing)) throw new Error("Invalid active events registry");
-  const id = event.type === "sotw" ? "sotw-current" : "botw-elite";
+  const id = event.type === "sotw" ? "sotw-current" : event.type;
   const previous = existing.find(item => item.id === id);
   // Never silently replace a different, still-active manual competition.
   if (previous?.womCompetitionId && String(previous.womCompetitionId) !== String(state.womCompetitionId) &&
@@ -125,22 +125,22 @@ async function linkActiveEvent(kv, event, state) {
   const startDate = torontoInstant(event.date, event.start.slice(11));
   const endDate = torontoInstant(shift(event.date,event.durationDays||7), event.start.slice(11));
   const record = {
-    ...(previous || {}), id, type:event.type,
+    ...(previous || {}), id, type:event.type.startsWith("botw-") ? "botw" : "sotw",
     // Retain the saved Event Rewards (02) settings on the canonical event record.
     // Never invent default Ember amounts or silently replace configured rewards.
     rewards: previous?.rewards || {placement:[],participation:[]},
-    ...(event.type === "botw" ? {botwTier:"elite",botwRole:"primary",label:"BOTW Elite"} : {label:"SOTW"}),
+    ...(event.type.startsWith("botw-") ? {botwTier:event.type.slice(5),botwRole:"primary",label:`BOTW ${event.type.slice(5) === "elite" ? "Elite" : "Standard"}`} : {label:"SOTW"}),
     title:state.womTitle || `Ironkin ${event.type.toUpperCase()} - ${option?.label || "Competition"}`,
     description:"Automatically created from the Ironkin Discord voting cycle.",
     womCompetitionId:String(state.womCompetitionId),
-    ...(event.type === "botw" ? {
+    ...(event.type.startsWith("botw-") ? {
       womCompetitionIds:state.womCompetitionIds || [String(state.womCompetitionId)],
       womCompetitions:state.womCompetitions || [{competitionId:String(state.womCompetitionId),metric:state.womMetric || metricName(option?.metrics?.[0]),role:"primary"}],
       combinedMetric:(state.womCompetitions?.length>1)?state.womMetric:null,
       pluginEventId:null
     } : {}),
     metric:state.womMetric || metricName(option?.metrics?.[0]),
-    featured:false,active:true,dropsEnabled:event.type === "botw",
+    featured:false,active:true,dropsEnabled:event.type.startsWith("botw-"),
     startDate,endDate
   };
   const updated = [...existing.filter(item => item.id !== id),record];
@@ -236,12 +236,21 @@ export async function onRequest({request,env}) {
   const controls={...CONTROL_DEFAULTS,...parse(await kv.get("events:sotw-botw-controls:v1"),{})};
   const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
-  const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
+  const variants = base => base.type === "botw" ? ["botw-standard","botw-elite"].map(type=>({...base,type,id:`${type}:${base.date}`})) : [base];
+  const currentEvents=variants(event);
+  // Never publish two replacement BOTW polls while a legacy shared poll is active.
+  if (event.type === "botw") {
+    const legacy=parse(await kv.get(PREFIX+event.id),{});
+    if (legacy.messageId || legacy.pollReservedAt || legacy.closedAt || legacy.womStatus) {
+      return Response.json({enabled:true,task:null,error:"Legacy shared BOTW cycle exists. Staff must reconcile it before activating Standard/Elite polls."},{headers:{"Cache-Control":"no-store"},status:409});
+    }
+  }
+  
   // Reconcile recent completed cycles independently of the current poll. A
   // competition can finish after the next poll has opened, and WOM can take
   // time to publish final standings. Never let maintenance block poll tasks.
   if (request.method === "GET") {
-    try { if (controls.nominationReminders) await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); }
+    try { if (controls.nominationReminders) await Promise.all(["botw-standard","botw-elite","sotw"].map(type=>processNominationReminder(env,type))); }
     catch(error) { console.warn("Nomination reminder check failed",error); }
     // Examine recent scheduled cycles, not fixed 14-day offsets. This remains
     // correct when the staff changes the interval before the first official poll.
@@ -252,9 +261,10 @@ export async function onRequest({request,env}) {
     for (let index=Math.max(0,latest-4);index<=latest;index++) {
       const date=shift(config.startDate,index*rotation);
       const type=index%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
-      const past={date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,durationDays:config.durationDays||7};
+      const basePast={date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,durationDays:config.durationDays||7};
+      for (const past of variants(basePast)) {
       const pastKey=PREFIX+past.id;
-      let pastState=past.id===event.id?state:parse(await kv.get(pastKey),{});
+      let pastState=parse(await kv.get(pastKey),{});
       if (!pastState.closedAt || pastState.outcome!=="winner") continue;
       try {
         if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
@@ -264,51 +274,58 @@ export async function onRequest({request,env}) {
         if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && controls.finalization && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
           await finalizeCompetition(env,kv,past,pastState);
       } catch(error) { console.warn(`Cycle maintenance ${past.id} requires review:`,error); }
+      }
     }
   }
   if(request.method==="GET") {
-    const current=parse(await kv.get(stateKey),state);
-    if(controls.polling && !current.messageId && localTime(now)>=event.open && localTime(now)<event.close){
+    for (const candidate of currentEvents) {
+    const candidateKey=PREFIX+candidate.id;
+    const current=parse(await kv.get(candidateKey),{});
+    if(controls.polling && !current.messageId && localTime(now)>=candidate.open && localTime(now)<candidate.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
-      const pool=(pools[event.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,event.type),x])).values()];
+      const pool=(pools[candidate.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,candidate.type),x])).values()];
       // A staff-prepared draft is authoritative only for its explicitly bound cycle.
       // Legacy unbound drafts cannot silently alter a future competition.
       const drafts=parse(await kv.get("events:sotw-botw-poll-drafts:v1"),{});
-      const prepared=drafts[event.type];
-      const draftOptions=prepared?.cycleId===event.id && Array.isArray(prepared.options) && prepared.options.length===3 ? prepared.options : null;
-      const picks=nominations[event.type]?.discordId===winners[event.type]?nominations[event.type].options||[]:[];
-      const selected=picks.filter(x=>unique.some(v=>key(v,event.type)===key(x,event.type))).slice(0,2);
-      const distinct=[...new Map(selected.map(x=>[key(x,event.type),x])).values()];
+      const prepared=drafts[candidate.type];
+      const draftOptions=prepared?.cycleId===candidate.id && Array.isArray(prepared.options) && prepared.options.length===3 ? prepared.options : null;
+      const picks=nominations[candidate.type]?.discordId===winners[candidate.type]?nominations[candidate.type].options||[]:[];
+      const selected=picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).slice(0,2);
+      const distinct=[...new Map(selected.map(x=>[key(x,candidate.type),x])).values()];
       try {
         const reserved = current.pollOptions;
-        const validDraft = draftOptions && new Set(draftOptions.map(x=>key(x.metrics?.[0]||x.label,event.type))).size===3 && draftOptions.every(x=>unique.some(v=>key(v,event.type)===key(x.metrics?.[0]||x.label,event.type)));
-        const random = reserved || validDraft ? null : choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);
-        const options = reserved || (validDraft ? draftOptions : [...distinct.map(x=>label(x,event.type)),...random.result]);
-        if (!reserved) await kv.put(stateKey,JSON.stringify({...current,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
-        return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:current.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
+        const validDraft = draftOptions && new Set(draftOptions.map(x=>key(x.metrics?.[0]||x.label,candidate.type))).size===3 && draftOptions.every(x=>unique.some(v=>key(v,candidate.type)===key(x.metrics?.[0]||x.label,candidate.type)));
+        const random = reserved || validDraft ? null : choose(unique,new Set(distinct.map(x=>key(x,candidate.type))),history[candidate.type]||[],3-distinct.length,candidate.type);
+        const options = reserved || (validDraft ? draftOptions : [...distinct.map(x=>label(x,candidate.type)),...random.result]);
+        if (!reserved) await kv.put(candidateKey,JSON.stringify({...current,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
+        return Response.json({enabled:true,task:{action:"publish",...candidate,options,rotationReset:current.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
       } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
-    if(current.messageId&&!current.closedAt&&localTime(now)>=event.close)return Response.json({enabled:true,task:{action:"close",...event,messageId:current.messageId,channelId:current.channelId,options:current.options}},{headers:{"Cache-Control":"no-store"}});
+    if(current.messageId&&!current.closedAt&&localTime(now)>=candidate.close)return Response.json({enabled:true,task:{action:"close",...candidate,messageId:current.messageId,channelId:current.channelId,options:current.options}},{headers:{"Cache-Control":"no-store"}});
+    }
     return Response.json({enabled:true,paused:!controls.polling,task:null},{headers:{"Cache-Control":"no-store"}});
   }
   if(request.method!=="POST")return Response.json({error:"Method not allowed"},{status:405});
-  const body=await request.json();if(body.id!==event.id)return Response.json({error:"Unexpected event"},{status:409});
+  const body=await request.json();const target=currentEvents.find(item=>item.id===body.id);
+  if(!target)return Response.json({error:"Unexpected event"},{status:409});
+  const targetKey=PREFIX+target.id;
+  const targetState=parse(await kv.get(targetKey),{});
   if(body.action==="published"){
-    if(!controls.polling && !state.pollReservedAt)return Response.json({error:"Polling is paused and no poll was reserved."},{status:409});
-    if(state.messageId)return Response.json({success:true,state});
+    if(!controls.polling && !targetState.pollReservedAt)return Response.json({error:"Polling is paused and no poll was reserved."},{status:409});
+    if(targetState.messageId)return Response.json({success:true,state:targetState});
     if(!/^\d{17,20}$/.test(String(body.messageId))||!/^\d{17,20}$/.test(String(body.channelId))||!Array.isArray(body.options)||body.options.length!==3)return Response.json({error:"Invalid poll receipt"},{status:400});
-    if (!Array.isArray(state.pollOptions) || JSON.stringify(state.pollOptions) !== JSON.stringify(body.options))
+    if (!Array.isArray(targetState.pollOptions) || JSON.stringify(targetState.pollOptions) !== JSON.stringify(body.options))
       return Response.json({error:"Poll options differ from reserved choices; staff review required"},{status:409});
-    const record={...state,messageId:String(body.messageId),channelId:String(body.channelId),options:state.pollOptions,publishedAt:now.toISOString()};await kv.put(stateKey,JSON.stringify(record));return Response.json({success:true});
+    const record={...targetState,messageId:String(body.messageId),channelId:String(body.channelId),options:targetState.pollOptions,publishedAt:now.toISOString()};await kv.put(targetKey,JSON.stringify(record));return Response.json({success:true});
   }
   if(body.action==="closed"){
-    if(state.closedAt)return Response.json({success:true,alreadyClosed:true,state:await linkOrFlag(kv,event,state)});
-    if (localTime(now) < event.close) return Response.json({error:"Voting is still open"},{status:409});
-    if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
+    if(targetState.closedAt)return Response.json({success:true,alreadyClosed:true,state:await linkOrFlag(kv,target,targetState)});
+    if (localTime(now) < target.close) return Response.json({error:"Voting is still open"},{status:409});
+    if(!targetState.messageId||String(body.messageId)!==targetState.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
-    const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
-    const updated = await createWom(env,kv,stateKey,event,record,controls);
-    return Response.json({success:true,alreadyClosed:false,state:await linkOrFlag(kv,event,updated)});
+    const record={...targetState,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(targetKey,JSON.stringify(record));
+    const updated = await createWom(env,kv,targetKey,target,record,controls);
+    return Response.json({success:true,alreadyClosed:false,state:await linkOrFlag(kv,target,updated)});
   }
   return Response.json({error:"Unknown action"},{status:400});
 }

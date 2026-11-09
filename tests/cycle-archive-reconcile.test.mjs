@@ -9,7 +9,7 @@ globalThis.__archiveTest={
  getSession:async()=>({}),isStaffSession:()=>staff,womFetch:async()=>({ok:false}),linkOrFlag:async()=>{throw Error('Must not link');}
 };
 const {onRequest}=await import(`data:text/javascript;base64,${Buffer.from('const {hybridKv,getSession,isStaffSession,womFetch,linkOrFlag}=globalThis.__archiveTest;\n'+code).toString('base64')}`);
-const id='botw:2026-11-13',prefix='events:sotw-botw-automation:v1:';
+const id='botw-elite:2026-11-13',prefix='events:sotw-botw-automation:v1:';
 const active=()=>({id:'botw-elite',type:'botw',womCompetitionId:'101',womCompetitionIds:['101','202'],active:true});
 function setup({archive=true,activeId='101',staffAccess=true}={}){
  store=new Map();staff=staffAccess;

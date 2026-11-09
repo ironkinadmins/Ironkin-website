@@ -26,7 +26,7 @@ export async function onRequest({ request, env }) {
     }
     const body = await request.json().catch(() => null);
     if (body?.action === "reconcile_archive") {
-      if (!/^(sotw|botw):\d{4}-\d{2}-\d{2}$/.test(String(body.id || "")))
+      if (!/^(sotw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}$/.test(String(body.id || "")))
         return Response.json({error:"Invalid cycle."},{status:400});
       const kv = hybridKv(env,"drops");
       const stateKey = PREFIX + body.id;
@@ -69,7 +69,7 @@ export async function onRequest({ request, env }) {
         note:"Existing archive confirmed; no Discord message, WOM competition or Ember credit was created."});
     }
     if (body?.action !== "attach_existing_wom" ||
-        !/^(sotw|botw):\d{4}-\d{2}-\d{2}$/.test(String(body?.id || "")) ||
+        !/^(sotw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}$/.test(String(body?.id || "")) ||
         !/^\d{1,15}$/.test(String(body?.competitionId || "")) ||
         (body?.metricIndex != null && ![0,1].includes(body.metricIndex))) {
       return Response.json({ error: "Invalid request." }, { status: 400 });
@@ -136,16 +136,17 @@ export async function onRequest({ request, env }) {
   }
   const cycles = [];
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  const elapsed = Math.max(0, Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${config.startDate}T12:00:00Z`)) / (14 * 86400000)));
+  const elapsed = Math.max(0, Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${config.startDate}T12:00:00Z`)) / ((config.rotationDays||14) * 86400000)));
   for (let n = Math.max(0, elapsed - 3); n <= elapsed + 1; n++) {
-    const date = shift(config.startDate, n * 14);
+    const date = shift(config.startDate, n * (config.rotationDays||14));
     const type = n % 2 === 0 ? config.firstEvent : config.firstEvent === "botw" ? "sotw" : "botw";
     if (!['sotw', 'botw'].includes(type)) continue;
-    const id = `${type}:${date}`;
+    for (const category of type === "botw" ? ["botw-standard","botw-elite"] : ["sotw"]) {
+    const id = `${category}:${date}`;
     const state = parse(await kv.get(PREFIX + id), {});
     const issue = state.womStatus === "needs_review" || state.websiteStatus === "needs_review" || state.finalizationStatus === "needs_review" || state.finalizationStatus === "processing" || state.womStatus === "creating";
     cycles.push({
-      id, type, date, pollPublished: !!state.messageId, pollClosed: !!state.closedAt,
+      id, type:category, date, pollPublished: !!state.messageId, pollClosed: !!state.closedAt,
       outcome: state.outcome || null, winner: state.options?.[state.winningIndex]?.label || null,
       womStatus: state.womStatus || null, womError: state.womError || null, womCompetitionId: state.womCompetitionId || null,
       websiteStatus: state.websiteStatus || null, websiteEventId: state.websiteEventId || null,
@@ -158,6 +159,7 @@ export async function onRequest({ request, env }) {
       needsReview: !!issue,
       errors: [state.womError, state.websiteError, state.finalizationError].filter(Boolean)
     });
+    }
   }
   const checks = [
     { id: "schedule", label: "Cycle schedule", ready: !!config.enabled, detail: config.enabled ? `${config.firstEvent?.toUpperCase()} starts ${config.startDate} at ${config.startTime || "15:00"} ET` : "Cycle is disabled" },

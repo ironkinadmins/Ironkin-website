@@ -18,10 +18,10 @@ function nextEvent(cycle, type) {
   if (!cycle?.startDate) return null;
   const anchor = new Date(`${cycle.startDate}T12:00:00Z`);
   const today = localParts().slice(0,10);
-  for (let i=0;i<208;i+=2) {
-    const date = new Date(anchor.getTime()+i*7*86400000).toISOString().slice(0,10);
-    const kind = i%4===0 ? cycle.firstEvent : cycle.firstEvent === "botw" ? "sotw" : "botw";
-    if (kind === type && date >= today) return date;
+  for (let i=0;i<208;i++) {
+    const date = new Date(anchor.getTime()+i*(cycle.rotationDays||14)*86400000).toISOString().slice(0,10);
+    const kind = i%2===0 ? cycle.firstEvent : cycle.firstEvent === "botw" ? "sotw" : "botw";
+    if (kind === (type.startsWith("botw-") ? "botw" : type) && date >= today) return date;
   }
   return null;
 }
@@ -29,7 +29,7 @@ function nextEvent(cycle, type) {
 const PAIRS = [["artio","callisto"],["calvar'ion","vet'ion"],["spindel","venenatis"],["the nightmare","phosani's nightmare"],["gauntlet","corrupted gauntlet"],["chambers of xeric","chambers of xeric challenge mode"],["theatre of blood","theatre of blood hard mode"],["tombs of amascut","tombs of amascut expert mode"]];
 const canonical = (name,type) => {
   const key=String(name||"").trim().replace(/\s+/g," ").toLowerCase();
-  const pair=type==="botw"?PAIRS.find(p=>p.includes(key)):null;
+  const pair=type.startsWith("botw")?PAIRS.find(p=>p.includes(key)):null;
   return pair ? pair[0] : key;
 };
 const parse=(raw,fallback)=>{try{return raw?JSON.parse(raw):fallback;}catch{return fallback;}};
@@ -41,12 +41,12 @@ export async function onRequest({request,env}) {
   const [winnersRaw,nominationsRaw,poolsRaw,cycleRaw,draftsRaw]=await Promise.all([kv.get(WINNERS_KEY),kv.get(NOMINATIONS_KEY),kv.get(POOL_KEY),kv.get(CYCLE_KEY),kv.get(DRAFT_KEY)]);
   const winners=parse(winnersRaw,{}), nominations=parse(nominationsRaw,{}), pools=parse(poolsRaw,{botw:[],sotw:[]});
   const cycle=parse(cycleRaw,{}), drafts=parse(draftsRaw,{});
-  const eligible=["botw","sotw"].filter(type=>winners[type]===String(session.id));
+  const eligible=["botw-standard","botw-elite","sotw"].filter(type=>winners[type]===String(session.id));
   const windows=Object.fromEntries(eligible.map(type=>{
     const eventDate=nextEvent(cycle,type);
     if (!eventDate) return [type,{open:false,reason:"Cycle not configured"}];
     const anchor=new Date(`${eventDate}T12:00:00Z`);
-    const leadDays=eventDate === "2026-11-13" && type === "botw" ? 4 : 7;
+    const leadDays=eventDate === "2026-11-13" && type.startsWith("botw") ? 4 : 7;
     const deadline=new Date(anchor.getTime()-leadDays*86400000).toISOString().slice(0,10)+"T"+(cycle.startTime||"15:00");
     const cycleId=`${type}:${eventDate}`;
     return [type,{open:localParts()<deadline && !(drafts[type]?.cycleId===cycleId && drafts[type]?.status==="published"),deadline,cycleId}];

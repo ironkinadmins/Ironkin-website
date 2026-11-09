@@ -20,12 +20,12 @@ const pairLookup = new Map(BOSS_PAIRS.flatMap(pair => pair.map(name => [name.toL
 const normalize = value => String(value || "").trim().replace(/\s+/g, " ");
 const identity = (value, type) => {
   const label = normalize(value);
-  const pair = type === "botw" ? pairLookup.get(label.toLowerCase()) : null;
+  const pair = type.startsWith("botw") ? pairLookup.get(label.toLowerCase()) : null;
   return pair ? pair[0].toLowerCase() : label.toLowerCase();
 };
 const canonical = (value, type) => {
   const label = normalize(value);
-  const pair = type === "botw" ? pairLookup.get(label.toLowerCase()) : null;
+  const pair = type.startsWith("botw") ? pairLookup.get(label.toLowerCase()) : null;
   return pair ? { label: pair.join(" + "), metrics: pair } : { label, metrics: [label] };
 };
 function cleanPool(input, type) {
@@ -133,19 +133,50 @@ export async function onRequest({ request, env }) {
         try { await kv.put(`events:sotw-botw-controls-audit:${Date.now()}`,JSON.stringify({before:previous,after:next,at:next.updatedAt}),{expirationTtl:90*86400}); } catch(error) { console.warn("Cycle controls audit write failed",error); }
         return Response.json({success:true,controls:next});
       }
+      if (body.action === "verify-category-winner") {
+        const origin = request.headers.get("Origin");
+        if (!origin || new URL(origin).origin !== new URL(request.url).origin) return Response.json({error:"Invalid origin."},{status:403});
+        const type=String(body.type||"");
+        if (!["botw-standard","botw-elite"].includes(type)) throw Error("Choose Standard or Elite.");
+        const archiveId=String(body.archiveId||"").trim();
+        if (!archiveId || archiveId.length>128) throw Error("A matching archived competition ID is required.");
+        const archives=parse(await kv.get("events:archive"),[]);
+        const entry=Array.isArray(archives)?archives.find(x=>String(x.id)===archiveId):null;
+        if (!entry || entry.type!=="botw" || entry.botwTier!==type.slice(5)) throw Error("Archive does not match the selected BOTW category.");
+        const rows=(Array.isArray(entry.leaderboard)?entry.leaderboard:[]).filter(x=>Number(x.gained)>0).sort((a,b)=>Number(b.gained)-Number(a.gained));
+        if (!rows.length || (rows[1] && Number(rows[0].gained)===Number(rows[1].gained))) throw Error("Archived results have no unique positive first-place winner.");
+        const normalized=value=>String(value||"").trim().toLowerCase().replace(/[ _-]+/g," ");
+        const index=parse(await kv.get("member-profiles:index"),[]);
+        const matches=[];
+        for(const profile of Array.isArray(index)?index:[]){
+          if(!/^\d{17,20}$/.test(String(profile.discordId||"")))continue;
+          const record=parse(await kv.get(`member-profile:${profile.discordId}`),{});
+          if([record.rsn,...(Array.isArray(record.previousRsns)?record.previousRsns:[])].map(normalized).includes(normalized(rows[0].name)))matches.push(String(profile.discordId));
+        }
+        if(matches.length!==1)throw Error("Winning RSN is not uniquely linked to a Discord member; manual investigation required.");
+        const winners=parse(await kv.get(WINNERS_KEY),{}),nominations=parse(await kv.get(NOMINATIONS_KEY),{}),statuses=parse(await kv.get(WINNER_STATUS_KEY),{});
+        if(winners[type]!==matches[0])delete nominations[type];
+        winners[type]=matches[0];
+        statuses[type]={state:"resolved",discordId:matches[0],rsn:rows[0].name,eventId:entry.eventId,archiveId,verifiedBy:"staff-archive-reconciliation",updatedAt:new Date().toISOString()};
+        await kv.put(WINNERS_KEY,JSON.stringify(winners));
+        await kv.put(NOMINATIONS_KEY,JSON.stringify(nominations));
+        await kv.put(WINNER_STATUS_KEY,JSON.stringify(statuses));
+        await kv.put(`events:sotw-botw-winner-verification-audit:${type}:${Date.now()}`,JSON.stringify({type,archiveId,discordId:matches[0],at:statuses[type].updatedAt}),{expirationTtl:365*86400});
+        return Response.json({success:true,status:statuses[type]});
+      }
       if (body.action === "save-pools") {
-        const pools = {botw:cleanPool(body.botw, "botw"), sotw:cleanPool(body.sotw, "sotw")};
+        const pools = {"botw-standard":cleanPool(body["botw-standard"], "botw-standard"), "botw-elite":cleanPool(body["botw-elite"], "botw-elite"), sotw:cleanPool(body.sotw, "sotw")};
         await kv.put(POOL_KEY, JSON.stringify(pools));
         return Response.json({success:true,pools});
       }
       if (body.action === "clear-draft") {
         const type = body.type;
-        if (!["botw", "sotw"].includes(type)) throw Error("Invalid competition type.");
+        if (!["botw-standard", "botw-elite", "sotw"].includes(type)) throw Error("Invalid competition type.");
         const drafts = parse(await kv.get(DRAFT_KEY), {});
         const draft = drafts[type];
         if (!draft) return Response.json({success:true,cleared:false});
         const cycleId = String(draft.cycleId || "");
-        if (!/^((botw)|(sotw)):\d{4}-\d{2}-\d{2}$/.test(cycleId) || !cycleId.startsWith(type+":")) throw Error("Draft cycle is invalid; staff review required.");
+        if (!/^(botw-standard|botw-elite|sotw):\d{4}-\d{2}-\d{2}$/.test(cycleId) || !cycleId.startsWith(type+":")) throw Error("Draft cycle is invalid; staff review required.");
         const state = parse(await kv.get(`events:sotw-botw-automation:v1:${cycleId}`), {});
         if (state.messageId || state.publishedAt || state.pollReservedAt || (Array.isArray(state.pollOptions) && state.pollOptions.length))
           return Response.json({error:"Official poll is already reserved or published. Draft cannot be cleared safely."},{status:409});
@@ -155,7 +186,7 @@ export async function onRequest({ request, env }) {
       }
       if (body.action === "prepare-draft") {
         const type = body.type;
-        if (!["botw", "sotw"].includes(type)) throw Error("Choose BOTW or SOTW.");
+        if (!["botw-standard", "botw-elite", "sotw"].includes(type)) throw Error("Choose BOTW or SOTW.");
         const cycle = parse(await kv.get(KEY), DEFAULT);
         if (!cycle.startDate) throw Error("Save the cycle schedule before preparing a poll.");
         const pools = parse(await kv.get(POOL_KEY), {botw:[],sotw:[]});
@@ -182,10 +213,10 @@ export async function onRequest({ request, env }) {
         // Prevents a stale draft from silently becoming a later live poll.
         const today = new Intl.DateTimeFormat("en-CA", {timeZone: TZ, year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
         let cycleId = null;
-        for (let i=0;i<208;i+=2) {
-          const date=new Date(Date.parse(`${cycle.startDate}T12:00:00Z`)+i*7*86400000).toISOString().slice(0,10);
-          const eventType=i%4===0?cycle.firstEvent:(cycle.firstEvent==="botw"?"sotw":"botw");
-          if (eventType===type && date>=today) {cycleId=`${type}:${date}`;break;}
+        for (let i=0;i<208;i++) {
+          const date=new Date(Date.parse(`${cycle.startDate}T12:00:00Z`)+i*(cycle.rotationDays||14)*86400000).toISOString().slice(0,10);
+          const eventType=i%2===0?cycle.firstEvent:(cycle.firstEvent==="botw"?"sotw":"botw");
+          if (eventType===(type.startsWith("botw-")?"botw":type) && date>=today) {cycleId=`${type}:${date}`;break;}
         }
         if (!cycleId) throw Error("No upcoming cycle found for this competition type.");
         const draft = {cycleId,type,authorizedWinnerId:winners[type] || null,options:[...nominations.map(item => canonical(item,type)),...random],winnerPicks:nominations.length,rotationResetSuggested:reset,createdAt:new Date().toISOString(),status:"draft"};
@@ -209,8 +240,10 @@ export async function onRequest({ request, env }) {
         const date=new Date(Date.parse(`${existing.startDate}T12:00:00Z`)+i*(existing.rotationDays||14)*86400000).toISOString().slice(0,10);
         if(date>new Date(Date.parse(`${currentDay}T12:00:00Z`)+4*(existing.rotationDays||14)*86400000).toISOString().slice(0,10))break;
         const type=i%2===0?existing.firstEvent:existing.firstEvent==="botw"?"sotw":"botw";
-        const record=parse(await kv.get(`events:sotw-botw-automation:v1:${type}:${date}`),{});
-        if(record.messageId || record.pollReservedAt || record.closedAt || record.womStatus) return Response.json({error:"Schedule is locked by an existing official cycle. Do not change its dates without a migration."},{status:409});
+        for (const category of type === "botw" ? ["botw-standard","botw-elite","botw"] : ["sotw"]) {
+          const record=parse(await kv.get(`events:sotw-botw-automation:v1:${category}:${date}`),{});
+          if(record.messageId || record.pollReservedAt || record.closedAt || record.womStatus) return Response.json({error:"Schedule is locked by an existing official cycle. Do not change its dates without a migration."},{status:409});
+        }
       }
     }
     // The schedule editor is not an activation switch. Preserve the deployed state.

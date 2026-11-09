@@ -15,12 +15,12 @@ globalThis.__cycleTest = {
 const moduleText = `const {hybridKv,getSession,isStaffSession,womFetch,linkOrFlag}=globalThis.__cycleTest;\n${code}`;
 const {onRequest} = await import(`data:text/javascript;base64,${Buffer.from(moduleText).toString('base64')}`);
 const prefix='events:sotw-botw-automation:v1:';
-const id='botw:2026-11-13';
+const id='botw-elite:2026-11-13';
 function setup() {
   store=new Map();remote={};linked=0;staff=true;
   store.set('events:sotw-botw-cycle:v1',JSON.stringify({enabled:true,startDate:'2026-11-13',firstEvent:'botw',startTime:'15:00'}));
-  store.set(prefix+id,JSON.stringify({outcome:'winner',closedAt:'2026-11-12T20:00:00Z',womStatus:'needs_review',womTitle:'Ironkin BOTW - Artio + Callisto - 2026-11-13',winningIndex:0,options:[{label:'Artio + Callisto',metrics:['Artio','Callisto']}]}));
-  for (const [n,metric] of [['101','artio'],['202','callisto']]) remote[n]={id:Number(n),groupId:12095,metric,title:`Ironkin BOTW - Artio + Callisto - 2026-11-13 (${metric==='artio'?'Artio':'Callisto'})`};
+  store.set(prefix+id,JSON.stringify({outcome:'winner',closedAt:'2026-11-12T20:00:00Z',womStatus:'needs_review',womTitle:'Ironkin BOTW ELITE - Artio + Callisto - 2026-11-13',winningIndex:0,options:[{label:'Artio + Callisto',metrics:['Artio','Callisto']}]}));
+  for (const [n,metric] of [['101','artio'],['202','callisto']]) remote[n]={id:Number(n),groupId:12095,metric,title:`Ironkin BOTW ELITE - Artio + Callisto - 2026-11-13 (${metric==='artio'?'Artio':'Callisto'})`};
 }
 async function attach(competitionId,metricIndex,origin='https://ironkinclan.com') {
   const request=new Request('https://ironkinclan.com/api/admin/events/cycle-recovery',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'attach_existing_wom',id,competitionId,metricIndex})});
@@ -37,7 +37,7 @@ test('second reconciliation completes both slots in correct order and links once
   assert.equal(r.status,200);assert.deepEqual(r.state.womCompetitionIds,['101','202']);assert.equal(r.state.womCompetitionId,'101');assert.equal(linked,1);
 });
 test('same competition cannot occupy both metrics',async()=>{
-  setup();await attach('101',0);remote['101'].metric='callisto';remote['101'].title='Ironkin BOTW - Artio + Callisto - 2026-11-13 (Callisto)';
+  setup();await attach('101',0);remote['101'].metric='callisto';remote['101'].title='Ironkin BOTW ELITE - Artio + Callisto - 2026-11-13 (Callisto)';
   const r=await attach('101',1);assert.equal(r.status,409);assert.equal(linked,0);
 });
 test('wrong origin is rejected',async()=>{setup();const r=await attach('101',0,'https://other.example');assert.equal(r.status,403);});

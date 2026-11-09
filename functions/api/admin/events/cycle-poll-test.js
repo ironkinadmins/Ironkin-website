@@ -15,7 +15,7 @@ export async function onRequest({request,env}){
   // TEST ONLY: generate options from the eligible pool. Never read or write
   // production drafts, nominations, reservation state, or rotation history.
   const pools=read(await kv.get("events:sotw-botw-pools:v1"))||{};
-  const source=Array.isArray(pools.botw)?pools.botw:[];
+  const source=Array.isArray(pools["botw-standard"])?pools["botw-standard"]:[];
   const unique=[...new Map(source.filter(x=>typeof x==="string"&&x.trim()).map(x=>[x.trim().toLowerCase(),x.trim()])).values()];
   if(unique.length<3)return json({error:"At least three eligible BOTW options are required for a test."},409);
   const selected=[];

@@ -4,11 +4,11 @@ export async function onRequest({request,env}){
  if(!isStaffSession(await getSession(request,env)))return Response.json({error:"Staff only"},{status:403});
  if(!["GET","POST"].includes(request.method))return Response.json({error:"Method not allowed"},{status:405});
  if(request.method==="GET"){
-   const statuses=await Promise.all(["botw","sotw"].map(async type=>{const x=await nominationNoticeStatus(env,type);return {type,winner:x.status||null,window:x.window||null,notice:x.notice||null,nominationsComplete:x.complete};}));
+   const statuses=await Promise.all(["botw-standard","botw-elite","sotw"].map(async type=>{const x=await nominationNoticeStatus(env,type);return {type,winner:x.status||null,window:x.window||null,notice:x.notice||null,nominationsComplete:x.complete};}));
    return Response.json({statuses},{headers:{"Cache-Control":"no-store"}});
  }
  const origin=request.headers.get("Origin");if(!origin||new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:"Invalid origin"},{status:403});
- const body=await request.json().catch(()=>null);if(body?.action!=="retry_failed_invitation"||!["botw","sotw"].includes(body?.type))return Response.json({error:"Invalid action"},{status:400});
+ const body=await request.json().catch(()=>null);if(body?.action!=="retry_failed_invitation"||!["botw-standard","botw-elite","sotw"].includes(body?.type))return Response.json({error:"Invalid action"},{status:400});
  const x=await nominationNoticeStatus(env,body.type);
  if(x.status?.state!=="resolved"||!x.status.discordId||!x.noticeKey||!x.window?.open||x.complete)return Response.json({error:"No eligible pending winner invitation"},{status:409});
  if(x.notice?.state!=="failed")return Response.json({error:"Only confirmed failed invitations can be retried. Unknown delivery outcomes require manual review."},{status:409});

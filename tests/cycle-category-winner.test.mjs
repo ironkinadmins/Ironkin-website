@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const source=(await fs.readFile(new URL('../functions/api/admin/events/cycle.js',import.meta.url),'utf8')).replace(/^import .*?;\s*$/gm,'');
+const store=new Map();let staff=true;
+globalThis.__categoryAdmin={hybridKv:()=>({get:async k=>store.get(k)??null,put:async(k,v)=>store.set(k,v)}),getSession:async()=>({id:'staff'}),isStaffSession:()=>staff};
+const {onRequest}=await import(`data:text/javascript;base64,${Buffer.from(`const {hybridKv,getSession,isStaffSession}=globalThis.__categoryAdmin;\n${source}`).toString('base64')}`);
+function setup(){store.clear();staff=true;store.set('events:archive',JSON.stringify([{id:'a-standard',type:'botw',botwTier:'standard',eventId:'botw-standard',leaderboard:[{name:'MoleWinner',gained:100},{name:'Other',gained:50}]},{id:'a-elite',type:'botw',botwTier:'elite',eventId:'botw-elite',leaderboard:[{name:'EliteWinner',gained:150}]}]));store.set('member-profiles:index',JSON.stringify([{discordId:'123456789012345678'},{discordId:'123456789012345679'}]));store.set('member-profile:123456789012345678',JSON.stringify({rsn:'MoleWinner'}));store.set('member-profile:123456789012345679',JSON.stringify({rsn:'EliteWinner'}));}
+async function verify(type,archiveId){const response=await onRequest({request:new Request('https://ironkinclan.com/api/admin/events/cycle',{method:'PUT',headers:{Origin:'https://ironkinclan.com'},body:JSON.stringify({action:'verify-category-winner',type,archiveId})}),env:{}});return {status:response.status,data:await response.json()};}
+test('verified Standard and Elite archive winners remain separate',async()=>{setup();assert.equal((await verify('botw-standard','a-standard')).status,200);assert.equal((await verify('botw-elite','a-elite')).status,200);const winners=JSON.parse(store.get('events:sotw-botw-nomination-winners:v1'));assert.equal(winners['botw-standard'],'123456789012345678');assert.equal(winners['botw-elite'],'123456789012345679');assert.equal(winners.botw,undefined);});
+test('an Elite archive cannot authorize Standard nominations',async()=>{setup();const result=await verify('botw-standard','a-elite');assert.equal(result.status,400);assert.equal(store.has('events:sotw-botw-nomination-winners:v1'),false);});
