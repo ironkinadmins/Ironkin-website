@@ -40,6 +40,13 @@ async function createWom(env, kv, stateKey, event, state) {
     await kv.put(stateKey,JSON.stringify(updated));
     return updated;
   }
+  // A delayed activation must not silently create a competition whose start
+  // time is already in the past. Staff can reconcile or explicitly reschedule.
+  if (Date.now() >= Date.parse(torontoInstant(event.date, event.start.slice(11)))) {
+    const flagged={...state,womStatus:"needs_review",womError:"Competition start has passed; creation requires staff review and rescheduling."};
+    await kv.put(stateKey,JSON.stringify(flagged));
+    return flagged;
+  }
   const option = state.options?.[state.winningIndex];
   // Paired boss competitions require two metrics and must not be silently reduced to one.
   if (!option?.metrics?.length || option.metrics.length > 2 || !env.WOM_GROUP_VERIFICATION_CODE || Number(env.WOM_GROUP_ID || 12095) !== 12095) {
@@ -148,19 +155,29 @@ async function finalizeCompetition(env, kv, event, state) {
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
   const active = parse(await kv.get("events:active"), []);
   const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
-  if (!record || String(record.womCompetitionId) !== String(state.womCompetitionId) ||
-      (state.womCompetitionIds?.length>1 && JSON.stringify(record.womCompetitionIds)!==JSON.stringify(state.womCompetitionIds))) {
-    const flagged = {...state, finalizationStatus:"needs_review", finalizationError:"Active website event no longer matches the automation competition."};
-    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
-    return flagged;
-  }
   const archiveRequestId = `cycle-${event.id}-${state.womCompetitionId}`;
   const archived = parse(await kv.get("events:archive"), []);
-  const existing = Array.isArray(archived) && archived.find(item => item.archiveRequestId === archiveRequestId || (String(item.womCompetitionId) === String(state.womCompetitionId) && item.eventId === record.id));
+  const existing = Array.isArray(archived) && archived.find(item => item.archiveRequestId === archiveRequestId ||
+    (String(item.womCompetitionId) === String(state.womCompetitionId) && item.eventId === state.websiteEventId));
   if (existing) {
-    const done = {...state,finalizationStatus:"completed",archiveId:existing.id,finalizedAt:new Date().toISOString()};
+    // Archiving resets the canonical active event. An archived snapshot with
+    // a still-active matching event indicates a partial write and needs review.
+    if (record?.active && String(record.womCompetitionId) === String(state.womCompetitionId)) {
+      const flagged={...state,finalizationStatus:"needs_review",finalizationError:"Archive exists but the WOM event remains active; staff reconciliation required."};
+      await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+      return flagged;
+    }
+    const done={...state,finalizationStatus:"completed",archiveId:existing.id,finalizedAt:new Date().toISOString(),announcementStatus:existing.resultsAnnouncement?.status};
     await kv.put(PREFIX + event.id,JSON.stringify(done));
     return done;
+  }
+  if (!record || String(record.womCompetitionId) !== String(state.womCompetitionId) ||
+      record.startDate !== torontoInstant(event.date,event.start.slice(11)) ||
+      record.endDate !== end ||
+      (state.womCompetitionIds?.length>1 && JSON.stringify(record.womCompetitionIds)!==JSON.stringify(state.womCompetitionIds))) {
+    const flagged={...state,finalizationStatus:"needs_review",finalizationError:"Active website event no longer matches this automation cycle."};
+    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+    return flagged;
   }
   // Verify WOM has returned actual final standings before changing any records.
   let snapshot;
@@ -202,32 +219,38 @@ export async function onRequest({request,env}) {
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
   const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
-  // A completed poll belongs to the prior cycle once the next cycle becomes current.
-  // Reconcile it independently, without blocking the upcoming poll.
+  // Reconcile recent completed cycles independently of the current poll. A
+  // competition can finish after the next poll has opened, and WOM can take
+  // time to publish final standings. Never let maintenance block poll tasks.
   if (request.method === "GET") {
-    // Best effort, nonblocking. Reminder errors never interrupt poll publication.
-    try { await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); } catch(error) { console.warn("Nomination reminder check failed",error); }
-    const previousDate = shift(event.date, -14);
-    const previousType = event.type === "sotw" ? "botw" : "sotw";
-    const previousEvent = { ...event, date: previousDate, id: `${previousType}:${previousDate}`, start: `${previousDate}T${config.startTime || "15:00"}` };
-    const previousKey = PREFIX + previousEvent.id;
-    const previousState = parse(await kv.get(previousKey), {});
-    if (previousState.womStatus === "created" && previousState.websiteStatus !== "linked") {
-      await linkOrFlag(kv, previousEvent, previousState);
-    } else if (env.CYCLE_AUTO_FINALIZE_ENABLED === "true" && previousState.womStatus === "created" && previousState.websiteStatus === "linked") {
-      await finalizeCompetition(env, kv, previousEvent, previousState);
+    try { await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); }
+    catch(error) { console.warn("Nomination reminder check failed",error); }
+    for (const offset of [42,28,14,0]) {
+      const date=shift(event.date,-offset);
+      const cycleIndex=Math.round((Date.parse(`${date}T12:00:00Z`)-Date.parse(`${config.startDate}T12:00:00Z`))/(14*86400000));
+      if (cycleIndex<0) continue;
+      const type=cycleIndex%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
+      const past={date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`};
+      const pastKey=PREFIX+past.id;
+      let pastState=offset===0?state:parse(await kv.get(pastKey),{});
+      if (!pastState.closedAt || pastState.outcome!=="winner") continue;
+      try {
+        // A poll may have closed while WOM auto-creation was deliberately
+        // disabled. Enablement must safely resume that exact saved winner.
+        if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true")
+          pastState=await createWom(env,kv,pastKey,past,pastState);
+        if (pastState.womStatus==="created" && pastState.websiteStatus!=="linked")
+          pastState=await linkOrFlag(kv,past,pastState);
+        if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
+          await finalizeCompetition(env,kv,past,pastState);
+      } catch(error) {
+        console.warn(`Cycle maintenance ${past.id} requires review:`,error);
+      }
     }
   }
   if(request.method==="GET") {
-    if (env.CYCLE_AUTO_FINALIZE_ENABLED === "true" && state.womStatus === "created" && state.websiteStatus === "linked") {
-      const final = await finalizeCompetition(env,kv,event,state);
-      if (final.finalizationStatus) return Response.json({enabled:true,task:null,finalizationStatus:final.finalizationStatus,finalizationError:final.finalizationError || null},{headers:{"Cache-Control":"no-store"}});
-    }
-    if (state.womStatus === "created" && state.websiteStatus !== "linked") {
-      const linked = await linkOrFlag(kv,event,state);
-      return Response.json({enabled:true,task:null,websiteStatus:linked.websiteStatus},{headers:{"Cache-Control":"no-store"}});
-    }
-    if(!state.messageId && localTime(now)>=event.open && localTime(now)<event.close){
+    const current=parse(await kv.get(stateKey),state);
+    if(!current.messageId && localTime(now)>=event.open && localTime(now)<event.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
       const pool=(pools[event.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,event.type),x])).values()];
       // A staff-prepared draft is authoritative only for its explicitly bound cycle.
@@ -239,15 +262,15 @@ export async function onRequest({request,env}) {
       const selected=picks.filter(x=>unique.some(v=>key(v,event.type)===key(x,event.type))).slice(0,2);
       const distinct=[...new Map(selected.map(x=>[key(x,event.type),x])).values()];
       try {
-        const reserved = state.pollOptions;
+        const reserved = current.pollOptions;
         const validDraft = draftOptions && new Set(draftOptions.map(x=>key(x.metrics?.[0]||x.label,event.type))).size===3 && draftOptions.every(x=>unique.some(v=>key(v,event.type)===key(x.metrics?.[0]||x.label,event.type)));
         const random = reserved || validDraft ? null : choose(unique,new Set(distinct.map(x=>key(x,event.type))),history[event.type]||[],3-distinct.length,event.type);
         const options = reserved || (validDraft ? draftOptions : [...distinct.map(x=>label(x,event.type)),...random.result]);
-        if (!reserved) await kv.put(stateKey,JSON.stringify({...state,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
-        return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:state.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
+        if (!reserved) await kv.put(stateKey,JSON.stringify({...current,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
+        return Response.json({enabled:true,task:{action:"publish",...event,options,rotationReset:current.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
       } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
-    if(state.messageId&&!state.closedAt&&localTime(now)>=event.close)return Response.json({enabled:true,task:{action:"close",...event,messageId:state.messageId,channelId:state.channelId,options:state.options}},{headers:{"Cache-Control":"no-store"}});
+    if(current.messageId&&!current.closedAt&&localTime(now)>=event.close)return Response.json({enabled:true,task:{action:"close",...event,messageId:current.messageId,channelId:current.channelId,options:current.options}},{headers:{"Cache-Control":"no-store"}});
     return Response.json({enabled:true,task:null},{headers:{"Cache-Control":"no-store"}});
   }
   if(request.method!=="POST")return Response.json({error:"Method not allowed"},{status:405});
