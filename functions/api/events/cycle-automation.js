@@ -5,7 +5,7 @@ import { hybridKv } from "../../_hybridKv.js";
 import { womFetch } from "../../_wom.js";
 
 const PREFIX = "events:sotw-botw-automation:v1:";
-const CONTROL_DEFAULTS = {polling:true,womCreation:true,finalization:true,nominationReminders:true};
+const CONTROL_DEFAULTS = {polling:true,womCreation:true,finalization:true,nominationReminders:true,resultsAnnouncements:true};
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
 const pairs = [["Artio","Callisto"],["Calvar'ion","Vet'ion"],["Spindel","Venenatis"],["The Nightmare","Phosani's Nightmare"],["Gauntlet","Corrupted Gauntlet"],["Chambers of Xeric","Chambers of Xeric Challenge Mode"],["Theatre of Blood","Theatre of Blood Hard Mode"],["Tombs of Amascut","Tombs of Amascut Expert Mode"]];
 const key = (value,type) => { const name=String(value||"").trim().toLowerCase(); const pair=type==="botw"?pairs.find(p=>p.some(x=>x.toLowerCase()===name)):null; return pair?pair[0].toLowerCase():name; };
@@ -13,7 +13,21 @@ const label = (value,type) => { const pair=type==="botw"?pairs.find(p=>p.some(x=
 const tz="America/Toronto";
 function localTime(instant) { const fields=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(instant); const get=x=>fields.find(p=>p.type===x)?.value; return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`; }
 function shift(date,days){return new Date(Date.parse(`${date}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);}
-function eventFor(config, now) { if(!config?.startDate || !config.enabled)return null; const today=localTime(now).slice(0,10); for(let i=0;i<208;i+=2){const date=shift(config.startDate,i*7);if(date<today && shift(date,14)<today)continue;const type=i%4===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,open:`${shift(date,date==="2026-11-13"&&type==="botw"?-4:-7)}T${config.startTime||"15:00"}`,close:`${shift(date,-1)}T${config.startTime||"15:00"}`};}return null; }
+function eventFor(config, now) {
+  if (!config?.startDate || !config.enabled) return null;
+  const today=localTime(now).slice(0,10);
+  const rotation=config.rotationDays||14, duration=config.durationDays||7;
+  for(let i=0;i<104;i++) {
+    const date=shift(config.startDate,i*rotation);
+    if (shift(date,rotation)<today) continue;
+    const type=i%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
+    return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,
+      durationDays:duration,rotationDays:rotation,
+      open:`${shift(date,date==="2026-11-13"&&type==="botw"?-4:-7)}T${config.startTime||"15:00"}`,
+      close:`${shift(date,-1)}T${config.startTime||"15:00"}`};
+  }
+  return null;
+}
 function choose(pool,excluded,history,amount,type){let eligible=pool.filter(v=>!excluded.has(key(v,type))&&!history.includes(key(v,type)));let reset=false;if(eligible.length<amount){eligible=pool.filter(v=>!excluded.has(key(v,type)));reset=true;}if(eligible.length<amount)throw Error("At least three distinct eligible options are required.");const result=[];while(result.length<amount){const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);const [pick]=eligible.splice(bytes[0]%eligible.length,1);result.push(label(pick,type));}return {result,reset};}
 
 function torontoInstant(date, time) {
@@ -58,7 +72,7 @@ async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAU
   const title = `Ironkin ${event.type.toUpperCase()} - ${option.label} - ${event.date}`;
   const metrics=option.metrics.map(metricName);
   const startsAt=torontoInstant(event.date,event.start.slice(11));
-  const endsAt=torontoInstant(shift(event.date,7),event.start.slice(11));
+  const endsAt=torontoInstant(shift(event.date,event.durationDays||7),event.start.slice(11));
   const pending={...state,womStatus:"creating",womTitle:title,womMetric:metrics.join(" + "),womRequestedAt:new Date().toISOString(),womCompetitionIds:[]};
   await kv.put(stateKey,JSON.stringify(pending));
   const created=[];
@@ -109,7 +123,7 @@ async function linkActiveEvent(kv, event, state) {
   }
   const option = state.options?.[state.winningIndex];
   const startDate = torontoInstant(event.date, event.start.slice(11));
-  const endDate = torontoInstant(shift(event.date, 7), event.start.slice(11));
+  const endDate = torontoInstant(shift(event.date,event.durationDays||7), event.start.slice(11));
   const record = {
     ...(previous || {}), id, type:event.type,
     // Retain the saved Event Rewards (02) settings on the canonical event record.
@@ -152,7 +166,7 @@ async function finalizeCompetition(env, kv, event, state) {
   if (state.websiteStatus !== "linked" || state.womStatus !== "created") return state;
   if (state.finalizationStatus === "completed" || state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") return state;
   const now = new Date();
-  const end = torontoInstant(shift(event.date,7), event.start.slice(11));
+  const end = torontoInstant(shift(event.date,event.durationDays||7), event.start.slice(11));
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
   const active = parse(await kv.get("events:active"), []);
   const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
@@ -194,7 +208,8 @@ async function finalizeCompetition(env, kv, event, state) {
   }
   // Discord announcements are optional: an unavailable channel must not keep
   // a completed WOM competition active or open for submissions.
-  const canPost=Boolean(getResultsChannelId(env,record) && env.DISCORD_BOT_TOKEN);
+  const controls={...CONTROL_DEFAULTS,...parse(await kv.get("events:sotw-botw-controls:v1"),{})};
+  const canPost=Boolean(controls.resultsAnnouncements && getResultsChannelId(env,record) && env.DISCORD_BOT_TOKEN);
   const content=canPost ? buildEventResultsContent(snapshot) : null;
   const postResults=Boolean(canPost && content && content.length<=1950);
   // Mark an irreversible operation before calling the shared archiver.
@@ -228,27 +243,27 @@ export async function onRequest({request,env}) {
   if (request.method === "GET") {
     try { if (controls.nominationReminders) await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); }
     catch(error) { console.warn("Nomination reminder check failed",error); }
-    for (const offset of [42,28,14,0]) {
-      const date=shift(event.date,-offset);
-      const cycleIndex=Math.round((Date.parse(`${date}T12:00:00Z`)-Date.parse(`${config.startDate}T12:00:00Z`))/(14*86400000));
-      if (cycleIndex<0) continue;
-      const type=cycleIndex%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
-      const past={date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`};
+    // Examine recent scheduled cycles, not fixed 14-day offsets. This remains
+    // correct when the staff changes the interval before the first official poll.
+    const rotation=config.rotationDays||14;
+    const first=Date.parse(`${config.startDate}T12:00:00Z`);
+    const today=Date.parse(`${localTime(now).slice(0,10)}T12:00:00Z`);
+    const latest=Math.max(0,Math.floor((today-first)/(rotation*86400000)));
+    for (let index=Math.max(0,latest-4);index<=latest;index++) {
+      const date=shift(config.startDate,index*rotation);
+      const type=index%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
+      const past={date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,durationDays:config.durationDays||7};
       const pastKey=PREFIX+past.id;
-      let pastState=offset===0?state:parse(await kv.get(pastKey),{});
+      let pastState=past.id===event.id?state:parse(await kv.get(pastKey),{});
       if (!pastState.closedAt || pastState.outcome!=="winner") continue;
       try {
-        // A poll may have closed while WOM auto-creation was deliberately
-        // disabled. Enablement must safely resume that exact saved winner.
         if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
           pastState=await createWom(env,kv,pastKey,past,pastState,controls);
         if (pastState.womStatus==="created" && pastState.websiteStatus!=="linked")
           pastState=await linkOrFlag(kv,past,pastState);
         if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && controls.finalization && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
           await finalizeCompetition(env,kv,past,pastState);
-      } catch(error) {
-        console.warn(`Cycle maintenance ${past.id} requires review:`,error);
-      }
+      } catch(error) { console.warn(`Cycle maintenance ${past.id} requires review:`,error); }
     }
   }
   if(request.method==="GET") {

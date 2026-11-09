@@ -3,9 +3,9 @@ import { getSession, isStaffSession } from "../../_auth.js";
 
 const KEY = "events:sotw-botw-cycle:v1";
 const CONTROLS_KEY = "events:sotw-botw-controls:v1";
-const CONTROL_DEFAULTS = {polling:true, womCreation:true, finalization:true, nominationReminders:true};
+const CONTROL_DEFAULTS = {polling:true, womCreation:true, finalization:true, nominationReminders:true,resultsAnnouncements:true};
 const controlKeys = Object.keys(CONTROL_DEFAULTS);
-const DEFAULT = { enabled: false, startDate: "", startTime: "15:00", firstEvent: "botw" };
+const DEFAULT = { enabled: false, startDate: "", startTime: "15:00", firstEvent: "botw", durationDays:7, rotationDays:14 };
 const TZ = "America/Toronto";
 // Canonical poll identities. Both WOM metrics are retained for later event creation.
 const BOSS_PAIRS = [
@@ -78,7 +78,11 @@ function validate(input) {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) throw Error("Choose a valid 24-hour start time.");
   if (!["botw", "sotw"].includes(firstEvent)) throw Error("Choose BOTW or SOTW.");
   if (enabled && startDate < new Intl.DateTimeFormat("en-CA", {timeZone: TZ, year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())) throw Error("Cannot activate a cycle starting in the past.");
-  return { enabled, startDate, startTime, firstEvent };
+  const durationDays=Number(input?.durationDays ?? 7), rotationDays=Number(input?.rotationDays ?? 14);
+  if (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 28) throw Error("Duration must be 1–28 days.");
+  if (!Number.isInteger(rotationDays) || rotationDays < 7 || rotationDays > 56 || rotationDays % 7) throw Error("Rotation must be 7–56 days in weekly increments.");
+  if (durationDays > rotationDays) throw Error("Competition duration cannot exceed the rotation interval.");
+  return { enabled, startDate, startTime, firstEvent, durationDays, rotationDays };
 }
 function votingWindow(startDate, startTime) {
   // Break-week voting is relative to the next competition, regardless of weekday.
@@ -95,10 +99,10 @@ function preview(config) {
   if (!config.startDate) return [];
   const date = new Date(`${config.startDate}T12:00:00Z`);
   return Array.from({length: 12}, (_, i) => {
-    const d = new Date(date.getTime() + i * 7 * 86400000);
+    const d = new Date(date.getTime() + i * (config.rotationDays || 14) * 86400000);
     const week = d.toISOString().slice(0, 10);
-    const type = i % 2 ? "break" : i % 4 === 0 ? config.firstEvent : config.firstEvent === "botw" ? "sotw" : "botw";
-    return { startDate: week, endDate: new Date(d.getTime() + 7 * 86400000).toISOString().slice(0, 10), startTime: config.startTime, timeZone: TZ, type, ...(type === "break" ? {} : {voting: votingWindow(week, config.startTime)}) };
+    const type = i % 2 === 0 ? config.firstEvent : config.firstEvent === "botw" ? "sotw" : "botw";
+    return { startDate: week, endDate: new Date(d.getTime() + (config.durationDays || 7) * 86400000).toISOString().slice(0, 10), startTime: config.startTime, timeZone: TZ, type, ...(type === "break" ? {} : {voting: votingWindow(week, config.startTime)}) };
   });
 }
 export async function onRequest({ request, env }) {
@@ -120,9 +124,9 @@ export async function onRequest({ request, env }) {
       if (body.action === "save-controls") {
         const origin = request.headers.get("Origin");
         if (!origin || new URL(origin).origin !== new URL(request.url).origin) return Response.json({error:"Invalid origin."},{status:403});
-        if (!body.controls || typeof body.controls !== "object" || Array.isArray(body.controls) || Object.keys(body.controls).some(k=>!controlKeys.includes(k)) || controlKeys.some(k=>typeof body.controls[k] !== "boolean")) throw Error("Invalid automation controls.");
+        if (!body.controls || typeof body.controls !== "object" || Array.isArray(body.controls) || Object.keys(body.controls).some(k=>!controlKeys.includes(k)) || Object.values(body.controls).some(v=>typeof v !== "boolean")) throw Error("Invalid automation controls.");
         const previous={...CONTROL_DEFAULTS,...parse(await kv.get(CONTROLS_KEY),{})};
-        const next={...body.controls,updatedAt:new Date().toISOString()};
+        const next={...previous,...body.controls,updatedAt:new Date().toISOString()};
         if (next.womCreation && env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true") throw Error("Cloudflare WOM creation safety flag is disabled.");
         if (next.finalization && env.CYCLE_AUTO_FINALIZE_ENABLED !== "true") throw Error("Cloudflare finalization safety flag is disabled.");
         await kv.put(CONTROLS_KEY,JSON.stringify(next));
@@ -195,18 +199,22 @@ export async function onRequest({ request, env }) {
   }
   if (request.method !== "POST") return Response.json({error:"Method not allowed."},{status:405});
   try {
+    const origin=request.headers.get("Origin");
+    if (!origin || new URL(origin).origin!==new URL(request.url).origin) return Response.json({error:"Invalid origin."},{status:403});
     const config = validate(await request.json());
     const existing=parse(await kv.get(KEY),DEFAULT);
-    if (existing.startDate && (existing.startDate!==config.startDate || existing.startTime!==config.startTime || existing.firstEvent!==config.firstEvent)) {
+    if (existing.startDate && (existing.startDate!==config.startDate || existing.startTime!==config.startTime || existing.firstEvent!==config.firstEvent || (existing.durationDays||7)!==config.durationDays || (existing.rotationDays||14)!==config.rotationDays)) {
       const currentDay=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-      for(let i=0;i<208;i+=2){
-        const date=new Date(Date.parse(`${existing.startDate}T12:00:00Z`)+i*7*86400000).toISOString().slice(0,10);
-        if(date>currentDay)break;
-        const type=i%4===0?existing.firstEvent:existing.firstEvent==="botw"?"sotw":"botw";
+      for(let i=0;i<104;i++){
+        const date=new Date(Date.parse(`${existing.startDate}T12:00:00Z`)+i*(existing.rotationDays||14)*86400000).toISOString().slice(0,10);
+        if(date>new Date(Date.parse(`${currentDay}T12:00:00Z`)+4*(existing.rotationDays||14)*86400000).toISOString().slice(0,10))break;
+        const type=i%2===0?existing.firstEvent:existing.firstEvent==="botw"?"sotw":"botw";
         const record=parse(await kv.get(`events:sotw-botw-automation:v1:${type}:${date}`),{});
         if(record.messageId || record.pollReservedAt || record.closedAt || record.womStatus) return Response.json({error:"Schedule is locked by an existing official cycle. Do not change its dates without a migration."},{status:409});
       }
     }
+    // The schedule editor is not an activation switch. Preserve the deployed state.
+    config.enabled = existing.enabled === true;
     await kv.put(KEY, JSON.stringify({...config, updatedAt:new Date().toISOString()}));
     return Response.json({success:true,config,preview:preview(config)});
   } catch (error) { return Response.json({error:error.message || "Invalid configuration."},{status:400}); }

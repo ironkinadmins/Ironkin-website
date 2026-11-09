@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const date = document.getElementById("ikCycleDate");
   const time = document.getElementById("ikCycleTime");
   const first = document.getElementById("ikCycleFirst");
+  const duration = document.getElementById("ikCycleDuration");
+  const rotation = document.getElementById("ikCycleRotation");
   const preview = document.getElementById("ikCyclePreview");
   const status = document.getElementById("ikCycleStatus");
   const save = document.getElementById("ikCycleSave");
@@ -12,21 +14,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const start = new Date(date.value + "T12:00:00Z");
     if (Number.isNaN(start.getTime())) { preview.textContent = "Choose a valid calendar date."; return; }
     preview.textContent = Array.from({length: 4}, (_, i) => {
-      const d = new Date(start.getTime() + i * 7 * 86400000).toISOString().slice(0,10);
-      const type = i % 2 ? "Break" : i === 0 ? first.value.toUpperCase() : first.value === "botw" ? "SOTW" : "BOTW";
-      return `${d}: ${type}`;
+      const d = new Date(start.getTime() + i * Number(rotation.value) * 86400000).toISOString().slice(0,10);
+      const type = i % 2 === 0 ? first.value.toUpperCase() : first.value === "botw" ? "SOTW" : "BOTW";
+      return `${d}: ${type} (${duration.value} days)`;
     }).join("  ·  ");
   }
-  [date,time,first].forEach(el => el.addEventListener("change", showPreview));
+  [date,time,first,duration,rotation].forEach(el => el.addEventListener("change", showPreview));
   fetch("/api/admin/events/cycle", {credentials:"same-origin",cache:"no-store"}).then(r => {if (!r.ok) throw Error("Unable to load cycle settings.");return r.json();}).then(data => {
-    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; showPreview();
+    date.value = data.config.startDate || ""; time.value = data.config.startTime || "15:00"; first.value = data.config.firstEvent || "botw"; duration.value = data.config.durationDays || 7; rotation.value = data.config.rotationDays || 14; showPreview();
   }).catch(e => {status.textContent = e.message;});
   save.addEventListener("click", async () => {
     save.disabled = true; status.textContent = "Saving…";
     try {
-      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,enabled:false})});
+      const r = await fetch("/api/admin/events/cycle", {method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({startDate:date.value,startTime:time.value,firstEvent:first.value,durationDays:Number(duration.value),rotationDays:Number(rotation.value),enabled:false})});
       const data = await r.json(); if (!r.ok) throw Error(data.error || "Could not save cycle.");
-      status.textContent = "Schedule saved (inactive). No events or polls have been created.";showPreview();
+      status.textContent = "Schedule saved. Existing activation state preserved; active-cycle changes are locked.";showPreview();
     } catch(e) {status.textContent = e.message;} finally {save.disabled = false;}
   });
 });
@@ -192,7 +194,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 // Batch 4 staff controls: a runtime pause never bypasses Cloudflare's safety gates.
 document.addEventListener("DOMContentLoaded", () => {
-  const ids={polling:"ikControlPolling",womCreation:"ikControlWomCreation",finalization:"ikControlFinalization",nominationReminders:"ikControlNominationReminders"};
+  const ids={polling:"ikControlPolling",womCreation:"ikControlWomCreation",finalization:"ikControlFinalization",resultsAnnouncements:"ikControlResultsAnnouncements",nominationReminders:"ikControlNominationReminders"};
   const save=document.getElementById("ikControlsSave"), status=document.getElementById("ikControlsStatus"), gates=document.getElementById("ikControlGates");
   const health=document.getElementById("ikHealthSummary"), table=document.querySelector("#ikHealthTable tbody"), refresh=document.getElementById("ikHealthRefresh");
   if(!save || !table)return;
