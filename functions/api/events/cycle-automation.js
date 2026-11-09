@@ -74,14 +74,14 @@ async function createWom(env, kv, stateKey, event, state) {
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok||data.status!=="created"||!/^\d+$/.test(String(data.competitionId||""))) {
-        const flagged={...pending,womStatus:"needs_review",womCompetitionIds:created.map(c=>c.competitionId),
+        const flagged={...pending,womStatus:"needs_review",womCompetitionIds:[],womCompetitions:created,
           womError:`Metric ${metric} requires reconciliation: ${String(data.error||data.status||`HTTP ${response.status}`).slice(0,220)}`};
         await kv.put(stateKey,JSON.stringify(flagged));return flagged;
       }
-      created.push({competitionId:String(data.competitionId),metric,role:index===0?"primary":"paired"});
-      await kv.put(stateKey,JSON.stringify({...pending,womCompetitionIds:created.map(c=>c.competitionId),womCompetitions:created}));
+      created.push({competitionId:String(data.competitionId),metric,role:index===0?"primary":"paired",metricIndex:index});
+      await kv.put(stateKey,JSON.stringify({...pending,womCompetitionIds:[],womCompetitions:created}));
     }catch(error){
-      const flagged={...pending,womStatus:"needs_review",womCompetitionIds:created.map(c=>c.competitionId),womCompetitions:created,
+      const flagged={...pending,womStatus:"needs_review",womCompetitionIds:[],womCompetitions:created,
         womError:`Metric ${metric} outcome uncertain: ${String(error.message||error).slice(0,200)}`};
       await kv.put(stateKey,JSON.stringify(flagged));return flagged;
     }

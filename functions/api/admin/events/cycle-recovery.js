@@ -45,8 +45,8 @@ export async function onRequest({ request, env }) {
     }
     const metricIndex = Number(body.metricIndex ?? 0);
     if (metricIndex >= option.metrics.length) return Response.json({error:"Invalid metric index."},{status:400});
-    const expectedIds = option.metrics.map((_,index)=>String(state.womCompetitions?.[index]?.competitionId || state.womCompetitionIds?.[index] || ""));
-    if (state.womStatus === "created" && state.websiteStatus === "linked")
+    const expectedIds = option.metrics.map((_,index)=>String(state.womCompetitions?.find(c => c.metricIndex === index || (c.metricIndex == null && c.role === (index === 0 ? "primary" : "paired")))?.competitionId || state.womCompetitionIds?.[index] || ""));
+    if (state.websiteStatus === "linked")
       return Response.json({error:"This cycle is already linked. Reconciliation is blocked to protect the active event."},{status:409});
     if (expectedIds[metricIndex] && expectedIds[metricIndex] !== String(body.competitionId))
       return Response.json({error:"This metric already has a different WOM competition ID; staff review required."},{status:409});
@@ -64,22 +64,24 @@ export async function onRequest({ request, env }) {
         (state.womTitle && competition?.title !== expectedTitle)) {
       return Response.json({ error: "WOM group, metric, title or ID mismatch." }, { status: 409 });
     }
+    // Preserve metric positions: a missing primary must not shift the paired ID into slot zero.
     const allIds=[...expectedIds];
     allIds[metricIndex]=String(body.competitionId);
     if (new Set(allIds.filter(Boolean)).size !== allIds.filter(Boolean).length)
       return Response.json({error:"Two different metrics cannot use the same WOM competition ID."},{status:409});
     const allReconciled=allIds.every(id=>/^\d+$/.test(id));
-    const competitions=allIds.map((id,index)=>id ? {competitionId:id,metric:String(metricAliases[option.metrics[index]] || option.metrics[index]).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""),role:index===0?"primary":"paired"} : null).filter(Boolean);
+    const competitions=allIds.map((id,index)=>id ? {competitionId:id,metric:String(metricAliases[option.metrics[index]] || option.metrics[index]).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""),role:index===0?"primary":"paired",metricIndex:index} : null).filter(Boolean);
     const updated={...state,womStatus:allReconciled?"created":"needs_review",
       womCompetitionId:allReconciled?allIds[0]:state.womCompetitionId || null,
-      womCompetitionIds:allIds.filter(Boolean),womCompetitions:competitions,
+      womCompetitionIds:allReconciled?allIds:[],womCompetitions:competitions,
       womMetric:option.metrics.map(m=>String(metricAliases[m] || m).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")).join(" + "),
       womUrl:allReconciled?`https://wiseoldman.net/competitions/${allIds[0]}`:null,
       womReconciledAt:new Date().toISOString(),womError:allReconciled?null:"Paired metric still needs reconciliation."};
     await kv.put(stateKey, JSON.stringify(updated));
     const config = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
     const event = { id: body.id, type, date, start: `${date}T${config.startTime || "15:00"}` };
-    const linked = await linkOrFlag(kv, event, updated);
+    // Never link a partially reconciled pair to the public event.
+    const linked = allReconciled ? await linkOrFlag(kv, event, updated) : updated;
     return Response.json({ success: true, womCompetitionId: linked.womCompetitionId,
       websiteStatus: linked.websiteStatus, websiteError: linked.websiteError || null },
       { headers: { "Cache-Control": "no-store" } });
@@ -107,6 +109,8 @@ export async function onRequest({ request, env }) {
       finalizationStatus: state.finalizationStatus || null, finalizationError: state.finalizationError || null, archiveId: state.archiveId || null,
       awaitingWomActivation: state.womStatus === "awaiting_activation",
       womCompetitionIds: state.womCompetitionIds || (state.womCompetitionId ? [state.womCompetitionId] : []),
+      womCompetitions: state.womCompetitions || [],
+      metricCount: state.options?.[state.winningIndex]?.metrics?.length || 0,
       womUrl: state.womUrl || null,
       needsReview: !!issue,
       errors: [state.womError, state.websiteError, state.finalizationError].filter(Boolean)
