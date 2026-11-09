@@ -1,3 +1,4 @@
+import { processNominationReminder } from "../../_winnerNominationNotifications.js";
 import { archiveEventInternal } from "../admin/events/archive.js";
 import { buildEventResultsSnapshot, buildEventResultsContent, getResultsChannelId } from "../../_eventResultsAnnouncement.js";
 import { hybridKv } from "../../_hybridKv.js";
@@ -204,6 +205,8 @@ export async function onRequest({request,env}) {
   // A completed poll belongs to the prior cycle once the next cycle becomes current.
   // Reconcile it independently, without blocking the upcoming poll.
   if (request.method === "GET") {
+    // Best effort, nonblocking. Reminder errors never interrupt poll publication.
+    try { await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); } catch(error) { console.warn("Nomination reminder check failed",error); }
     const previousDate = shift(event.date, -14);
     const previousType = event.type === "sotw" ? "botw" : "sotw";
     const previousEvent = { ...event, date: previousDate, id: `${previousType}:${previousDate}`, start: `${previousDate}T${config.startTime || "15:00"}` };
