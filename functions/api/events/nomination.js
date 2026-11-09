@@ -1,6 +1,7 @@
 import { sendNominationDm } from "../../_winnerNominationNotifications.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession } from "../_auth.js";
+import { nominationNoticeStatus } from "../../_winnerNominationNotifications.js";
 
 const WINNERS_KEY = "events:sotw-botw-nomination-winners:v1";
 const NOMINATIONS_KEY = "events:sotw-botw-nominations:v1";
@@ -41,7 +42,10 @@ export async function onRequest({request,env}) {
   const [winnersRaw,nominationsRaw,poolsRaw,cycleRaw,draftsRaw]=await Promise.all([kv.get(WINNERS_KEY),kv.get(NOMINATIONS_KEY),kv.get(POOL_KEY),kv.get(CYCLE_KEY),kv.get(DRAFT_KEY)]);
   const winners=parse(winnersRaw,{}), nominations=parse(nominationsRaw,{}), pools=parse(poolsRaw,{botw:[],sotw:[]});
   const cycle=parse(cycleRaw,{}), drafts=parse(draftsRaw,{});
-  const eligible=["botw-standard","botw-elite","sotw"].filter(type=>winners[type]===String(session.id));
+  // Use the same category-specific verified-winner source as the admin page.
+  // The legacy winners map can be stale even when the admin verification succeeds.
+  const winnerStatuses=await Promise.all(["botw-standard","botw-elite","sotw"].map(type=>nominationNoticeStatus(env,type)));
+  const eligible=winnerStatuses.filter(x=>x.status?.state==="resolved" && String(x.status.discordId||"")===String(session.id)).map(x=>x.type);
   const windows=Object.fromEntries(eligible.map(type=>{
     const eventDate=nextEvent(cycle,type);
     if (!eventDate) return [type,{open:false,reason:"Cycle not configured"}];
