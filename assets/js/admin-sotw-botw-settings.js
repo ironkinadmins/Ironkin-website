@@ -189,3 +189,43 @@ document.addEventListener("DOMContentLoaded",()=>{
  del.onclick=async()=>{if(!confirm("Delete the TEST poll message from Discord? The bot must confirm deletion before the test can be repeated."))return;del.disabled=true;try{render(await api("delete"))}catch(e){out.textContent=e.message;await reload().catch(()=>{})}};
  reload().catch(e=>out.textContent=e.message);
 });
+
+// Batch 4 staff controls: a runtime pause never bypasses Cloudflare's safety gates.
+document.addEventListener("DOMContentLoaded", () => {
+  const ids={polling:"ikControlPolling",womCreation:"ikControlWomCreation",finalization:"ikControlFinalization",nominationReminders:"ikControlNominationReminders"};
+  const save=document.getElementById("ikControlsSave"), status=document.getElementById("ikControlsStatus"), gates=document.getElementById("ikControlGates");
+  const health=document.getElementById("ikHealthSummary"), table=document.querySelector("#ikHealthTable tbody"), refresh=document.getElementById("ikHealthRefresh");
+  if(!save || !table)return;
+  const req=async (url,method="GET",body)=>{
+    const r=await fetch(url,{method,credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json"},...(body?{body:JSON.stringify(body)}:{})});
+    const d=await r.json();if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d;
+  };
+  const loadControls=async()=>{
+    const d=await req("/api/admin/events/cycle");
+    Object.entries(ids).forEach(([key,id])=>{document.getElementById(id).checked=d.controls?.[key]!==false;});
+    gates.textContent=`Cloudflare safety gates: WOM creation ${d.gates?.womCreation?"enabled":"disabled"}; finalization ${d.gates?.finalization?"enabled":"disabled"}. Both a gate and the matching checkbox must be enabled for the action to run.`;
+  };
+  save.addEventListener("click",async()=>{
+    const controls=Object.fromEntries(Object.entries(ids).map(([key,id])=>[key,document.getElementById(id).checked]));
+    if((controls.womCreation||controls.finalization) && !confirm("Confirm these production automation controls. External actions may occur on the next bot check if Cloudflare safety flags are enabled."))return;
+    save.disabled=true;status.textContent="Saving controls…";
+    try{await req("/api/admin/events/cycle","PUT",{action:"save-controls",controls});status.textContent="Controls saved.";await loadControls();}
+    catch(e){status.textContent=e.message;}finally{save.disabled=false;}
+  });
+  const loadHealth=async()=>{
+    refresh.disabled=true;health.textContent="Loading current cycle records…";
+    try{
+      const d=await req("/api/admin/events/cycle-recovery");
+      const cycles=Array.isArray(d.cycles)?d.cycles:[];
+      table.replaceChildren();
+      for(const c of cycles){
+        const tr=document.createElement("tr");
+        const fields=[c.id||c.cycleId||"—",c.pollClosed?"Closed":c.pollPublished?"Published":"Not published",c.womStatus||"—",c.websiteStatus||"—",c.finalizationStatus||"—"];
+        for(const value of fields){const td=document.createElement("td");td.textContent=String(value);td.style.padding="8px";tr.append(td);}table.append(tr);
+      }
+      health.textContent=`${cycles.length} recent cycles loaded. Open Cycle Recovery below for details and staff reconciliation.`;
+    }catch(e){health.textContent=e.message;}finally{refresh.disabled=false;}
+  };
+  refresh.addEventListener("click",loadHealth);
+  loadControls().catch(e=>{status.textContent=e.message;});loadHealth();
+});

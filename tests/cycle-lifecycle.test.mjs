@@ -70,3 +70,24 @@ test('archive already exists with inactive event marks completed without repost'
  store.set('events:active',JSON.stringify(JSON.parse(store.get('events:active')).map(x=>({...x,active:false}))));
  await call();assert.equal(state().finalizationStatus,'completed');assert.equal(archiveCalls,0);
 });
+
+test('staff pause of WOM creation holds competition even with Cloudflare flag enabled',async()=>{
+ reset();store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:true,womCreation:false,finalization:true,nominationReminders:true}));
+ await close();assert.equal(state().womStatus,'awaiting_activation');assert.equal(coordinatorCalls,0);
+});
+test('re-enabling WOM creation resumes the held competition before its start',async()=>{
+ reset();store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:true,womCreation:false,finalization:true,nominationReminders:true}));
+ await close();store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:true,womCreation:true,finalization:true,nominationReminders:true}));
+ await call();assert.equal(state().womStatus,'created');assert.equal(coordinatorCalls,2);
+});
+test('finalization pause retains results without archiving and resumes once enabled',async()=>{
+ reset();await close();clock=RealDate.parse('2026-11-20T21:30:00Z');
+ store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:true,womCreation:true,finalization:false,nominationReminders:true}));
+ await call();assert.equal(archiveCalls,0);
+ store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:true,womCreation:true,finalization:true,nominationReminders:true}));
+ await call();assert.equal(archiveCalls,1);
+});
+test('polling pause does not strand an already published poll',async()=>{
+ reset();store.set('events:sotw-botw-controls:v1',JSON.stringify({polling:false,womCreation:true,finalization:true,nominationReminders:true}));
+ const r=await call();assert.equal(r.data.task?.action,'close');
+});

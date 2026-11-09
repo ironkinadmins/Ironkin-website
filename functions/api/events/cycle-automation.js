@@ -5,6 +5,7 @@ import { hybridKv } from "../../_hybridKv.js";
 import { womFetch } from "../../_wom.js";
 
 const PREFIX = "events:sotw-botw-automation:v1:";
+const CONTROL_DEFAULTS = {polling:true,womCreation:true,finalization:true,nominationReminders:true};
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
 const pairs = [["Artio","Callisto"],["Calvar'ion","Vet'ion"],["Spindel","Venenatis"],["The Nightmare","Phosani's Nightmare"],["Gauntlet","Corrupted Gauntlet"],["Chambers of Xeric","Chambers of Xeric Challenge Mode"],["Theatre of Blood","Theatre of Blood Hard Mode"],["Tombs of Amascut","Tombs of Amascut Expert Mode"]];
 const key = (value,type) => { const name=String(value||"").trim().toLowerCase(); const pair=type==="botw"?pairs.find(p=>p.some(x=>x.toLowerCase()===name)):null; return pair?pair[0].toLowerCase():name; };
@@ -28,9 +29,9 @@ function metricName(value) {
   const special = {"The Nightmare":"nightmare","Phosani's Nightmare":"phosanis_nightmare"};
   return special[value] || String(value).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
 }
-async function createWom(env, kv, stateKey, event, state) {
+async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAULTS) {
   if ((state.womStatus && state.womStatus !== "awaiting_activation") || state.outcome !== "winner") return state;
-  if (env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true") {
+  if (env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true" || !controls.womCreation) {
     const updated = {...state,womStatus:"awaiting_activation",womError:"Automatic WOM creation is disabled."};
     await kv.put(stateKey,JSON.stringify(updated));
     return updated;
@@ -216,14 +217,16 @@ async function finalizeCompetition(env, kv, event, state) {
 
 export async function onRequest({request,env}) {
   if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
-  const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});const now=new Date();const event=eventFor(config,now);
+  const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
+  const controls={...CONTROL_DEFAULTS,...parse(await kv.get("events:sotw-botw-controls:v1"),{})};
+  const now=new Date();const event=eventFor(config,now);
   if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
   const stateKey=PREFIX+event.id;const state=parse(await kv.get(stateKey),{});
   // Reconcile recent completed cycles independently of the current poll. A
   // competition can finish after the next poll has opened, and WOM can take
   // time to publish final standings. Never let maintenance block poll tasks.
   if (request.method === "GET") {
-    try { await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); }
+    try { if (controls.nominationReminders) await Promise.all(["botw","sotw"].map(type=>processNominationReminder(env,type))); }
     catch(error) { console.warn("Nomination reminder check failed",error); }
     for (const offset of [42,28,14,0]) {
       const date=shift(event.date,-offset);
@@ -237,11 +240,11 @@ export async function onRequest({request,env}) {
       try {
         // A poll may have closed while WOM auto-creation was deliberately
         // disabled. Enablement must safely resume that exact saved winner.
-        if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true")
-          pastState=await createWom(env,kv,pastKey,past,pastState);
+        if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
+          pastState=await createWom(env,kv,pastKey,past,pastState,controls);
         if (pastState.womStatus==="created" && pastState.websiteStatus!=="linked")
           pastState=await linkOrFlag(kv,past,pastState);
-        if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
+        if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && controls.finalization && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
           await finalizeCompetition(env,kv,past,pastState);
       } catch(error) {
         console.warn(`Cycle maintenance ${past.id} requires review:`,error);
@@ -250,7 +253,7 @@ export async function onRequest({request,env}) {
   }
   if(request.method==="GET") {
     const current=parse(await kv.get(stateKey),state);
-    if(!current.messageId && localTime(now)>=event.open && localTime(now)<event.close){
+    if(controls.polling && !current.messageId && localTime(now)>=event.open && localTime(now)<event.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
       const pool=(pools[event.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,event.type),x])).values()];
       // A staff-prepared draft is authoritative only for its explicitly bound cycle.
@@ -271,11 +274,12 @@ export async function onRequest({request,env}) {
       } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
     if(current.messageId&&!current.closedAt&&localTime(now)>=event.close)return Response.json({enabled:true,task:{action:"close",...event,messageId:current.messageId,channelId:current.channelId,options:current.options}},{headers:{"Cache-Control":"no-store"}});
-    return Response.json({enabled:true,task:null},{headers:{"Cache-Control":"no-store"}});
+    return Response.json({enabled:true,paused:!controls.polling,task:null},{headers:{"Cache-Control":"no-store"}});
   }
   if(request.method!=="POST")return Response.json({error:"Method not allowed"},{status:405});
   const body=await request.json();if(body.id!==event.id)return Response.json({error:"Unexpected event"},{status:409});
   if(body.action==="published"){
+    if(!controls.polling && !state.pollReservedAt)return Response.json({error:"Polling is paused and no poll was reserved."},{status:409});
     if(state.messageId)return Response.json({success:true,state});
     if(!/^\d{17,20}$/.test(String(body.messageId))||!/^\d{17,20}$/.test(String(body.channelId))||!Array.isArray(body.options)||body.options.length!==3)return Response.json({error:"Invalid poll receipt"},{status:400});
     if (!Array.isArray(state.pollOptions) || JSON.stringify(state.pollOptions) !== JSON.stringify(body.options))
@@ -288,7 +292,7 @@ export async function onRequest({request,env}) {
     if(!state.messageId||String(body.messageId)!==state.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...state,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(stateKey,JSON.stringify(record));
-    const updated = await createWom(env,kv,stateKey,event,record);
+    const updated = await createWom(env,kv,stateKey,event,record,controls);
     return Response.json({success:true,alreadyClosed:false,state:await linkOrFlag(kv,event,updated)});
   }
   return Response.json({error:"Unknown action"},{status:400});

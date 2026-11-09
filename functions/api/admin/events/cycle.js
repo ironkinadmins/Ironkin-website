@@ -2,6 +2,9 @@ import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 
 const KEY = "events:sotw-botw-cycle:v1";
+const CONTROLS_KEY = "events:sotw-botw-controls:v1";
+const CONTROL_DEFAULTS = {polling:true, womCreation:true, finalization:true, nominationReminders:true};
+const controlKeys = Object.keys(CONTROL_DEFAULTS);
 const DEFAULT = { enabled: false, startDate: "", startTime: "15:00", firstEvent: "botw" };
 const TZ = "America/Toronto";
 // Canonical poll identities. Both WOM metrics are retained for later event creation.
@@ -102,18 +105,30 @@ export async function onRequest({ request, env }) {
   if (!isStaffSession(await getSession(request, env))) return Response.json({error:"Staff only."},{status:403});
   const kv = hybridKv(env, "drops");
   if (request.method === "GET") {
-    const [poolRaw, draftRaw, historyRaw, winnersRaw, nominationsRaw, winnerStatusRaw] = await Promise.all([kv.get(POOL_KEY), kv.get(DRAFT_KEY), kv.get(HISTORY_KEY), kv.get(WINNERS_KEY), kv.get(NOMINATIONS_KEY), kv.get(WINNER_STATUS_KEY)]);
+    const [poolRaw, draftRaw, historyRaw, winnersRaw, nominationsRaw, winnerStatusRaw, controlsRaw] = await Promise.all([kv.get(POOL_KEY), kv.get(DRAFT_KEY), kv.get(HISTORY_KEY), kv.get(WINNERS_KEY), kv.get(NOMINATIONS_KEY), kv.get(WINNER_STATUS_KEY), kv.get(CONTROLS_KEY)]);
     const pools = parse(poolRaw, { botw: [], sotw: [] });
     const drafts = parse(draftRaw, {});
     const rotation = parse(historyRaw, { botw: [], sotw: [] });
     const raw = await kv.get(KEY);
     let config = DEFAULT;
     try { if (raw) config = {...DEFAULT, ...JSON.parse(raw)}; } catch { /* invalid old data */ }
-    return Response.json({config, preview: preview(config), pools, drafts, rotation, pairedBosses: BOSS_PAIRS, winners:parse(winnersRaw, {}), winnerStatus:parse(winnerStatusRaw, {}), nominations:parse(nominationsRaw, {})});
+    return Response.json({config, controls:{...CONTROL_DEFAULTS,...parse(controlsRaw,{})}, gates:{womCreation:env.CYCLE_AUTO_WOM_CREATE_ENABLED === "true",finalization:env.CYCLE_AUTO_FINALIZE_ENABLED === "true"}, preview: preview(config), pools, drafts, rotation, pairedBosses: BOSS_PAIRS, winners:parse(winnersRaw, {}), winnerStatus:parse(winnerStatusRaw, {}), nominations:parse(nominationsRaw, {})});
   }
   if (request.method === "PUT") {
     try {
       const body = await request.json();
+      if (body.action === "save-controls") {
+        const origin = request.headers.get("Origin");
+        if (!origin || new URL(origin).origin !== new URL(request.url).origin) return Response.json({error:"Invalid origin."},{status:403});
+        if (!body.controls || typeof body.controls !== "object" || Array.isArray(body.controls) || Object.keys(body.controls).some(k=>!controlKeys.includes(k)) || controlKeys.some(k=>typeof body.controls[k] !== "boolean")) throw Error("Invalid automation controls.");
+        const previous={...CONTROL_DEFAULTS,...parse(await kv.get(CONTROLS_KEY),{})};
+        const next={...body.controls,updatedAt:new Date().toISOString()};
+        if (next.womCreation && env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true") throw Error("Cloudflare WOM creation safety flag is disabled.");
+        if (next.finalization && env.CYCLE_AUTO_FINALIZE_ENABLED !== "true") throw Error("Cloudflare finalization safety flag is disabled.");
+        await kv.put(CONTROLS_KEY,JSON.stringify(next));
+        try { await kv.put(`events:sotw-botw-controls-audit:${Date.now()}`,JSON.stringify({before:previous,after:next,at:next.updatedAt}),{expirationTtl:90*86400}); } catch(error) { console.warn("Cycle controls audit write failed",error); }
+        return Response.json({success:true,controls:next});
+      }
       if (body.action === "save-pools") {
         const pools = {botw:cleanPool(body.botw, "botw"), sotw:cleanPool(body.sotw, "sotw")};
         await kv.put(POOL_KEY, JSON.stringify(pools));
@@ -181,6 +196,17 @@ export async function onRequest({ request, env }) {
   if (request.method !== "POST") return Response.json({error:"Method not allowed."},{status:405});
   try {
     const config = validate(await request.json());
+    const existing=parse(await kv.get(KEY),DEFAULT);
+    if (existing.startDate && (existing.startDate!==config.startDate || existing.startTime!==config.startTime || existing.firstEvent!==config.firstEvent)) {
+      const currentDay=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+      for(let i=0;i<208;i+=2){
+        const date=new Date(Date.parse(`${existing.startDate}T12:00:00Z`)+i*7*86400000).toISOString().slice(0,10);
+        if(date>currentDay)break;
+        const type=i%4===0?existing.firstEvent:existing.firstEvent==="botw"?"sotw":"botw";
+        const record=parse(await kv.get(`events:sotw-botw-automation:v1:${type}:${date}`),{});
+        if(record.messageId || record.pollReservedAt || record.closedAt || record.womStatus) return Response.json({error:"Schedule is locked by an existing official cycle. Do not change its dates without a migration."},{status:409});
+      }
+    }
     await kv.put(KEY, JSON.stringify({...config, updatedAt:new Date().toISOString()}));
     return Response.json({success:true,config,preview:preview(config)});
   } catch (error) { return Response.json({error:error.message || "Invalid configuration."},{status:400}); }
