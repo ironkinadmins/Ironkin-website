@@ -18,7 +18,7 @@ function nextNominationDeadline(cycle, type, now = new Date()) {
     const date = new Date(anchor+i*(cycle.rotationDays||14)*86400000).toISOString().slice(0,10);
     const kind = i%2===0 ? cycle.firstEvent : cycle.firstEvent==="botw" ? "sotw" : "botw";
     if (kind!==(type.startsWith("botw-")?"botw":type) || date<today) continue;
-    const lead = date==="2026-11-13" && type.startsWith("botw") ? 4 : 7;
+    const lead = date==="2026-11-13" && type.startsWith("botw") ? 2 : 7;
     const cutoff = new Date(Date.parse(`${date}T12:00:00Z`)-lead*86400000).toISOString().slice(0,10);
     return `${cutoff} ${cycle.startTime||"15:00"} Eastern`;
   }
@@ -75,7 +75,6 @@ async function syncNominationWinner(env, entry) {
   await kv.put(key, JSON.stringify(winners));
   await kv.put(nominationsKey, JSON.stringify(nominations));
   await kv.put(statusKey, JSON.stringify(statuses));
-  await kv.put(`${statusKey}:${category}`, JSON.stringify(status));
   // Best-effort private nomination invitation; a failed DM never blocks results.
   // A new winner receives a single invitation for this finalized event.
   if (status.state === "resolved" && status.discordId && env.DISCORD_BOT_TOKEN) {

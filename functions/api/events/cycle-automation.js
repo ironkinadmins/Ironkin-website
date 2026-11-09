@@ -23,7 +23,7 @@ function eventFor(config, now) {
     const type=i%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
     return {date,type,id:`${type}:${date}`,start:`${date}T${config.startTime||"15:00"}`,
       durationDays:duration,rotationDays:rotation,
-      open:`${shift(date,date==="2026-11-13"&&type==="botw"?-4:-7)}T${config.startTime||"15:00"}`,
+      open:`${shift(date,date==="2026-11-13"&&type==="botw"?-2:-7)}T${config.startTime||"15:00"}`,
       close:`${shift(date,-1)}T${config.startTime||"15:00"}`};
   }
   return null;

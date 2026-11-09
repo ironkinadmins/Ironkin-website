@@ -8,11 +8,13 @@ export async function onRequest({request,env}){
    return Response.json({statuses},{headers:{"Cache-Control":"no-store"}});
  }
  const origin=request.headers.get("Origin");if(!origin||new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:"Invalid origin"},{status:403});
- const body=await request.json().catch(()=>null);if(body?.action!=="retry_failed_invitation"||!["botw-standard","botw-elite","sotw"].includes(body?.type))return Response.json({error:"Invalid action"},{status:400});
+ const body=await request.json().catch(()=>null);if(!["retry_failed_invitation","send_initial_invitation"].includes(body?.action)||!["botw-standard","botw-elite","sotw"].includes(body?.type))return Response.json({error:"Invalid action"},{status:400});
  const x=await nominationNoticeStatus(env,body.type);
  if(x.status?.state!=="resolved"||!x.status.discordId||!x.noticeKey||!x.window?.open||x.complete)return Response.json({error:"No eligible pending winner invitation"},{status:409});
- if(x.notice?.state!=="failed")return Response.json({error:"Only confirmed failed invitations can be retried. Unknown delivery outcomes require manual review."},{status:409});
- const claimed={...x.notice,state:"sending",retryAt:new Date().toISOString()};await x.kv.put(x.noticeKey,JSON.stringify(claimed));
+ if(body.action==="send_initial_invitation"){
+   if(x.notice) return Response.json({error:"An invitation attempt already exists. Initial invitations cannot be resent automatically."},{status:409});
+ } else if(x.notice?.state!=="failed")return Response.json({error:"Only confirmed failed invitations can be retried. Unknown delivery outcomes require manual review."},{status:409});
+ const claimed={...(x.notice||{}),state:"sending",attemptedAt:new Date().toISOString()};await x.kv.put(x.noticeKey,JSON.stringify(claimed));
  try {const receipt=await sendNominationDm(env,x.status.discordId,body.type,x.window.deadline,"invitation");const done={...claimed,state:"sent",sentAt:new Date().toISOString(),discordId:x.status.discordId,deadline:x.window.deadline,...receipt};await x.kv.put(x.noticeKey,JSON.stringify(done));return Response.json({success:true,notice:done});}
  catch(error){const failed={...claimed,state:"needs_review",error:String(error.message||error).slice(0,200),failedAt:new Date().toISOString()};await x.kv.put(x.noticeKey,JSON.stringify(failed));return Response.json({error:"Delivery outcome requires review; no automatic retry will be attempted.",notice:failed},{status:502});}
 }

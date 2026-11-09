@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 const source=(await fs.readFile(new URL('../functions/api/events/cycle-automation.js',import.meta.url),'utf8')).replace(/^import .*?;\s*$/gm,'');
 const kv=new Map();
 const OriginalDate=globalThis.Date;
-let clock=OriginalDate.parse('2026-11-09T21:00:00Z');
+let clock=OriginalDate.parse('2026-11-11T21:00:00Z');
 class ClockDate extends OriginalDate {constructor(...args){super(...(args.length?args:[clock]));}static now(){return clock;}}
 globalThis.Date=ClockDate;
 globalThis.__dual={hybridKv:()=>({get:async k=>kv.get(k)??null,put:async(k,v)=>kv.set(k,v)}),processNominationReminder:async()=>{},archiveEventInternal:async()=>Response.json({success:true}),buildEventResultsSnapshot:async()=>({}),buildEventResultsContent:()=>'',getResultsChannelId:()=>null,womFetch:async()=>({ok:false})};
@@ -13,7 +13,7 @@ const {onRequest}=await import(`data:text/javascript;base64,${Buffer.from(inject
 const env={CYCLE_AUTOMATION_SECRET:'secret',CYCLE_AUTO_WOM_CREATE_ENABLED:'false'};
 const prefix='events:sotw-botw-automation:v1:';
 const base='2026-11-13';
-function setup(){kv.clear();clock=OriginalDate.parse('2026-11-09T21:00:00Z');kv.set('events:sotw-botw-cycle:v1',JSON.stringify({enabled:true,startDate:base,firstEvent:'botw',startTime:'15:00',durationDays:7,rotationDays:14}));kv.set('events:sotw-botw-pools:v1',JSON.stringify({'botw-standard':['Giant Mole','Barrows','Sarachnis'],'botw-elite':['Zulrah','Vorkath','Nex'],sotw:['Mining','Fishing','Woodcutting']}));kv.set('events:sotw-botw-nomination-winners:v1',JSON.stringify({'botw-standard':'111','botw-elite':'222'}));kv.set('events:sotw-botw-nominations:v1',JSON.stringify({'botw-standard':{discordId:'111',options:['Giant Mole','Barrows']},'botw-elite':{discordId:'222',options:['Zulrah','Vorkath']}}));}
+function setup(){kv.clear();clock=OriginalDate.parse('2026-11-11T21:00:00Z');kv.set('events:sotw-botw-cycle:v1',JSON.stringify({enabled:true,startDate:base,firstEvent:'botw',startTime:'15:00',durationDays:7,rotationDays:14}));kv.set('events:sotw-botw-pools:v1',JSON.stringify({'botw-standard':['Giant Mole','Barrows','Sarachnis'],'botw-elite':['Zulrah','Vorkath','Nex'],sotw:['Mining','Fishing','Woodcutting']}));kv.set('events:sotw-botw-nomination-winners:v1',JSON.stringify({'botw-standard':'111','botw-elite':'222'}));kv.set('events:sotw-botw-nominations:v1',JSON.stringify({'botw-standard':{discordId:'111',options:['Giant Mole','Barrows']},'botw-elite':{discordId:'222',options:['Zulrah','Vorkath']}}));}
 async function request(method='GET',body){const response=await onRequest({request:new Request('https://ironkinclan.com/api/events/cycle-automation',{method,headers:{Authorization:'Bearer secret'},...(body?{body:JSON.stringify(body)}:{})}),env});return {status:response.status,data:await response.json()};}
 test('standard and elite publish separate polls and retain their own winners and boss pools',async()=>{
  setup();let r=await request();assert.equal(r.data.task.id,`botw-standard:${base}`);assert.deepEqual(r.data.task.options.slice(0,2).map(x=>x.label),['Giant Mole','Barrows']);

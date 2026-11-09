@@ -8,7 +8,7 @@ export function nextNominationWindow(config,type,now=new Date()) {
   const today=localTime(now).slice(0,10);
   for(let i=0;i<208;i++){const date=shift(config.startDate,i*(config.rotationDays||14));const kind=i%2===0?config.firstEvent:config.firstEvent==="botw"?"sotw":"botw";
     if(kind!==(type.startsWith("botw-")?"botw":type)||date<today)continue;
-    const lead=date==="2026-11-13"&&type.startsWith("botw")?4:7;
+    const lead=date==="2026-11-13"&&type.startsWith("botw")?2:7;
     const deadline=`${shift(date,-lead)}T${config.startTime||"15:00"}`;
     return {date,deadline,open:localTime(now)<deadline,reminderDue:localTime(now)>=`${shift(date,-lead-2)}T${config.startTime||"15:00"}`&&localTime(now)<deadline};
   }return null;
@@ -28,13 +28,7 @@ export async function sendNominationDm(env,discordId,type,deadline,kind,options=
 }
 export async function nominationNoticeStatus(env,type){
   const kv=hybridKv(env,"drops");const statuses=parse(await kv.get("events:sotw-botw-winner-status:v1"),{});
-  const categoryRaw=await kv.get(`events:sotw-botw-winner-status:v1:${type}`);
-  const categoryStatus=parse(categoryRaw,null);
-  // Prefer the category record only when it is at least as recent as the shared record.
-  // Older deployments remain compatible with the shared-map format.
-  const sharedStatus=statuses[type]||null;
-  const status=categoryStatus && (!sharedStatus || String(categoryStatus.updatedAt||"")>=String(sharedStatus.updatedAt||"")) ? categoryStatus : sharedStatus;
-  const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
+  const status=statuses[type];const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
   const window=nextNominationWindow(config,type);
   const noticeKey=status?.eventId?`events:sotw-botw-winner-notice:${type}:${status.eventId}`:null;
   const notice=noticeKey?parse(await kv.get(noticeKey),null):null;

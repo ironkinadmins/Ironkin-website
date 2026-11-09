@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const raw=(await fs.readFile(new URL('../functions/api/admin/events/nomination-notifications.js',import.meta.url),'utf8')).replace(/^import .*?;\s*$/gm,'');
+const records=new Map();let sends=0;
+const info=()=>({status:{state:'resolved',discordId:'123456789012345678',rsn:'Winner'},window:{open:true,deadline:'2026-11-11T15:00'},notice:records.get('notice')||null,noticeKey:'notice',complete:false,kv:{put:async(k,v)=>records.set(k,JSON.parse(v))}});
+globalThis.__inviteTest={getSession:async()=>({id:'staff'}),isStaffSession:()=>true,nominationNoticeStatus:async()=>info(),sendNominationDm:async()=>{sends++;return {messageId:'987',channelId:'654'};}};
+const injected=`const {getSession,isStaffSession,nominationNoticeStatus,sendNominationDm}=globalThis.__inviteTest;\n${raw}`;
+const {onRequest}=await import(`data:text/javascript;base64,${Buffer.from(injected).toString('base64')}`);
+const request=async(action)=>onRequest({request:new Request('https://ironkinclan.com/api/admin/events/nomination-notifications',{method:'POST',headers:{Origin:'https://ironkinclan.com'},body:JSON.stringify({action,type:'botw-standard'})}),env:{}});
+test('first-time verified winner invitation sends once, and cannot be repeated',async()=>{records.clear();sends=0;let response=await request('send_initial_invitation');assert.equal(response.status,200);assert.equal(records.get('notice').state,'sent');response=await request('send_initial_invitation');assert.equal(response.status,409);assert.equal(sends,1);});
+test('an uncertain invitation cannot be retried as initial or failed',async()=>{records.clear();records.set('notice',{state:'needs_review'});assert.equal((await request('send_initial_invitation')).status,409);assert.equal((await request('retry_failed_invitation')).status,409);});

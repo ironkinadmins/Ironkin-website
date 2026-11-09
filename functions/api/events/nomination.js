@@ -46,7 +46,7 @@ export async function onRequest({request,env}) {
     const eventDate=nextEvent(cycle,type);
     if (!eventDate) return [type,{open:false,reason:"Cycle not configured"}];
     const anchor=new Date(`${eventDate}T12:00:00Z`);
-    const leadDays=eventDate === "2026-11-13" && type.startsWith("botw") ? 4 : 7;
+    const leadDays=eventDate === "2026-11-13" && type.startsWith("botw") ? 2 : 7;
     const deadline=new Date(anchor.getTime()-leadDays*86400000).toISOString().slice(0,10)+"T"+(cycle.startTime||"15:00");
     const cycleId=`${type}:${eventDate}`;
     return [type,{open:localParts()<deadline && !(drafts[type]?.cycleId===cycleId && drafts[type]?.status==="published"),deadline,cycleId}];
