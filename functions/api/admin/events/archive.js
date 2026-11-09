@@ -94,7 +94,7 @@ async function syncNominationWinner(env, entry) {
         const sent = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
           method: "POST", headers,
           body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${category.toUpperCase()} picks`,
-            description: `Congratulations! Choose **two** options for the next ${category.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/events.html#ikNominationPanel)`,
+            description: `Congratulations! Choose **two** options for the next ${category.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/winner-nominations.html?type=${encodeURIComponent(category)})`,
             color: 15891968 }], allowed_mentions: { parse: [] } })
         });
         if (!sent.ok) throw Error(`Discord DM message HTTP ${sent.status}`);

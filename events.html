@@ -78,6 +78,15 @@
     submit.addEventListener("click",async()=>{const options=[...choices.querySelectorAll("select")].map(x=>x.value);if(options.some(x=>!x)){status.textContent="Choose every option.";return;}submit.disabled=true;status.textContent="Saving…";try{const response=await fetch("/api/events/nomination",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,options})});const result=await response.json();if(!response.ok)throw Error(result.error||"Could not save nomination.");data.nominations[type.value]=result.options;status.textContent="Nomination saved.";}catch(error){status.textContent=error.message;}finally{submit.disabled=false;}});
   });
   </script>
+  <script>
+    // Preserve nomination links in previously delivered Discord DMs.
+    if (location.hash === '#ikNominationPanel') {
+      const type = new URLSearchParams(location.search).get('type');
+      const allowed = ['botw-standard', 'botw-elite', 'sotw'];
+      const target = '/winner-nominations.html' + (allowed.includes(type) ? '?type=' + encodeURIComponent(type) : '');
+      location.replace(target);
+    }
+  </script>
   <script src="/assets/js/script.js?v=20261017-p2"></script>
   <script src="/assets/js/premium-v5.js?v=20260825-v5-fix1" defer></script>
   <script>
