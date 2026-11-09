@@ -45,9 +45,11 @@ function topRows(entry, count = 3) {
 
 function placementLine(entry, row, index) {
   const medals = ["🥇", "🥈", "🥉"];
-  const reward = rewardForRank(entry, index);
+  const rows = topRows(entry, 5);
+  const tied = rows.some((other, i) => i !== index && number(other.gained) === number(row.gained));
+  const reward = tied ? "" : rewardForRank(entry, index);
   const metric = metricLabel(entry);
-  return `${medals[index] || "•"} **${text(row?.name) || "Clan member"}** — ${formatNumber(row?.gained)} ${metric}${reward ? `\n↳ ${reward}` : ""}`;
+  return `${tied ? "🏅" : medals[index] || "•"} **${text(row?.name) || "Clan member"}** — ${formatNumber(row?.gained)} ${metric}${tied ? " (tied; rewards pending review)" : reward ? `\n↳ ${reward}` : ""}`;
 }
 
 function reachedMilestones(entry) {

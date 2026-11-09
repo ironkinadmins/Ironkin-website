@@ -22,6 +22,12 @@ export async function onRequest({request,env}) {
   const key=`events:cycle-payout:${body.id}`;
   const draft=parse(await kv.get(key),null);
   if(!draft)return json({error:'Payout draft not found'},404);
+  // A draft must still belong to a real, immutable archived event.
+  const archive=parse(await kv.get('events:archive'),[]);
+  const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
+  if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||source.type!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
+  if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);
+  if(new Set((draft.payouts||[]).map(p=>String(p.discordId))).size!==(draft.payouts||[]).length)return json({error:'Duplicate payout recipient'},409);
   if(draft.status!=='pending_review')return json({error:'Payout has already been reviewed',status:draft.status},409);
   if(body.action==='approve'&&(draft.unresolved?.length||!draft.payouts?.length))return json({error:'Resolve unmatched members and reward thresholds before approving'},409);
   const next={...draft,status:body.action==='approve'?'approved':'rejected',reviewedAt:new Date().toISOString(),payouts:draft.payouts.map(p=>({...p,status:body.action==='approve'?'pending':'rejected'}))};

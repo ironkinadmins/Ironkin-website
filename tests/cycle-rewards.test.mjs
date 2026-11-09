@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildCyclePayoutDraft} from '../functions/_cyclePayouts.js';
+const id='123456789012345678';
+const kv={async get(key){if(key==='member-profiles:index')return JSON.stringify([{discordId:id}]);if(key===`member-profile:${id}`)return JSON.stringify({rsn:'Hero'});return null;}};
+const base={archiveRequestId:'cycle-sotw:2026-11-27-0',id:'sotw-archive',eventId:'sotw-current',type:'sotw',rewards:{placement:[{label:'1st place',reward:'100 Embers'}],participation:[{requirement:'100 XP',reward:'10 Embers'}]},leaderboard:[{name:'Hero',gained:200},{name:'Other',gained:150}]};
+test('draft calculates placement and keeps credits pending review',async()=>{const d=await buildCyclePayoutDraft(kv,base);assert.equal(d.status,'pending_review');assert.equal(d.payouts[0].embers,100);assert.equal(d.payouts[0].discordId,id);});
+test('first place ties are blocked',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,leaderboard:[{name:'Hero',gained:200},{name:'Other',gained:200}]});assert.ok(d.unresolved.some(x=>x.reason.includes('tie')));});
+test('duplicate RSNs are blocked',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,leaderboard:[{name:'Hero',gained:200},{name:'Hero',gained:150}]});assert.ok(d.unresolved.some(x=>x.reason.includes('Duplicate')));});
+test('invalid WOM gain is blocked',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,leaderboard:[{name:'Hero',gained:NaN}]});assert.ok(d.unresolved.some(x=>x.reason.includes('Invalid WOM')));});
+test('missing reward configuration is blocked',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,rewards:{}});assert.ok(d.unresolved.some(x=>x.reason.includes('No parseable')));});

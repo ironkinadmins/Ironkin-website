@@ -16,6 +16,10 @@ const placementRank = value => {
 export async function buildCyclePayoutDraft(kv, entry) {
   if (!['sotw','botw'].includes(entry?.type) || !entry?.archiveRequestId) return null;
   const rewards = entry.rewards || {};
+  // Never auto-award a tied first place or a non-finite/negative WOM gain.
+  const rawRows = Array.isArray(entry.leaderboard) ? entry.leaderboard : [];
+  const invalidRows = rawRows.filter(row => !Number.isFinite(Number(row.gained)) || Number(row.gained) < 0);
+  const duplicateNames = rawRows.map(row => normalize(row.name)).filter((name, i, all) => name && all.indexOf(name) !== i);
   const placement = (rewards.placement || []).map(item => ({rank:placementRank(item.label),embers:amount(item.reward),label:item.label})).filter(item => item.rank && item.embers > 0);
   const participation = (rewards.participation || []).map(item => ({minimum:threshold(item.requirement),embers:amount(item.reward),requirement:item.requirement})).filter(item => item.embers > 0);
   const index = parse(await kv.get('member-profiles:index'), []);
@@ -25,8 +29,11 @@ export async function buildCyclePayoutDraft(kv, entry) {
     const profile = parse(await kv.get(`member-profile:${candidate.discordId}`), {});
     profiles.push({discordId:String(candidate.discordId),names:[profile.rsn,...(Array.isArray(profile.previousRsns)?profile.previousRsns:[])].map(normalize).filter(Boolean)});
   }
-  const rows = (Array.isArray(entry.leaderboard) ? entry.leaderboard : []).filter(row => Number(row.gained) > 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
+  const rows = rawRows.filter(row => Number.isFinite(Number(row.gained)) && Number(row.gained) > 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
   const unresolved = [];
+  if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
+  if (duplicateNames.length) unresolved.push({reason:'Duplicate RSN in WOM standings',rsns:[...new Set(duplicateNames)]});
+  if (rows.length > 1 && Number(rows[0].gained) === Number(rows[1].gained)) unresolved.push({reason:'First-place tie requires manual resolution'});
   const payouts = [];
   let rank = 0;
   let lastGained = null;
@@ -45,5 +52,7 @@ export async function buildCyclePayoutDraft(kv, entry) {
   const duplicateIds = payouts.map(row=>row.discordId).filter((id,i,all)=>all.indexOf(id)!==i);
   if (duplicateIds.length) unresolved.push({reason:'Multiple WOM rows map to one Discord account',discordIds:[...new Set(duplicateIds)]});
   if (participation.some(item=>item.minimum===null)) unresolved.push({reason:'Participation thresholds are not numeric; manual review required',requirements:participation.filter(item=>item.minimum===null).map(item=>item.requirement)});
+  if (!placement.length && !participation.length) unresolved.push({reason:'No parseable Ember rewards configured'});
+  if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
   return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:'pending_review',payouts,unresolved,sourceRewards:rewards,approvedAt:null};
 }
