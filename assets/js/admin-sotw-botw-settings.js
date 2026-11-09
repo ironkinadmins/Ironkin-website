@@ -77,10 +77,55 @@ document.addEventListener("DOMContentLoaded", () => {
       result.textContent=`${which.toUpperCase()} options saved. The other list was not changed.`;
     }catch(e){result.textContent=e.message;}finally{button.disabled=false;}
   }
+  // Select verified-tier archived events by label instead of requiring an invisible internal ID.
+  const verifyType=document.getElementById("ikWinnerVerifyType");
+  const verifyArchive=document.getElementById("ikWinnerVerifyArchive");
+  const verifyHint=document.getElementById("ikWinnerArchiveHint");
+  const verifyRefresh=document.getElementById("ikWinnerVerifyRefresh");
+  let availableArchives=[];
+  function renderEligibleArchives(){
+    const category=verifyType.value;
+    const tier=category.slice(5);
+    const previous=verifyArchive.value;
+    const candidates=availableArchives.filter(entry=>{
+      if(entry?.type!=="botw" || entry.botwTier!==tier || !entry.id)return false;
+      const rows=(Array.isArray(entry.leaderboard)?entry.leaderboard:[])
+        .filter(row=>Number(row.gained)>0).sort((a,b)=>Number(b.gained)-Number(a.gained));
+      return rows.length>0 && (!rows[1] || Number(rows[0].gained)!==Number(rows[1].gained));
+    });
+    verifyArchive.replaceChildren(new Option(candidates.length?"Select an archived competition…":"No eligible archived competitions found", ""));
+    candidates.sort((a,b)=>new Date(b.endedAt||b.endDate||0)-new Date(a.endedAt||a.endDate||0));
+    for(const entry of candidates){
+      const leader=[...(entry.leaderboard||[])].sort((a,b)=>Number(b.gained)-Number(a.gained))[0];
+      const rawDate=entry.endedAt||entry.endDate||entry.startedAt||entry.startDate;
+      const date=rawDate&&!Number.isNaN(Date.parse(rawDate))?new Date(rawDate).toLocaleDateString("en-CA",{year:"numeric",month:"short",day:"numeric"}):"Date unknown";
+      const label=`${entry.title||entry.name||"BOTW"} · ${date} · Winner: ${leader.name||"Unknown"}`;
+      verifyArchive.add(new Option(label,String(entry.id)));
+    }
+    if(candidates.some(entry=>String(entry.id)===previous))verifyArchive.value=previous;
+    verifyHint.textContent=candidates.length
+      ?`${candidates.length} eligible ${category==="botw-standard"?"Standard":"Elite"} archive(s). Discord member linkage will be checked when verifying.`
+      :`No eligible ${category==="botw-standard"?"Standard":"Elite"} archives. Older shared BOTW archives cannot be assigned automatically.`;
+  }
+  async function loadEligibleArchives(){
+    verifyRefresh.disabled=true;
+    verifyHint.textContent="Loading archived competitions…";
+    try{
+      const response=await fetch("/api/admin/events/archive/list",{credentials:"same-origin",cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw Error(data.error||"Could not load archived competitions.");
+      availableArchives=Array.isArray(data.archive)?data.archive:[];
+      renderEligibleArchives();
+    }catch(error){availableArchives=[];renderEligibleArchives();verifyHint.textContent=error.message;}
+    finally{verifyRefresh.disabled=false;}
+  }
+  verifyType?.addEventListener("change",renderEligibleArchives);
+  verifyRefresh?.addEventListener("click",loadEligibleArchives);
+  if(verifyArchive)loadEligibleArchives();
   document.getElementById("ikVerifyBotwWinner")?.addEventListener("click",async()=>{
     const button=document.getElementById("ikVerifyBotwWinner"),status=document.getElementById("ikWinnerVerifyStatus");
     const category=document.getElementById("ikWinnerVerifyType").value,archiveId=document.getElementById("ikWinnerVerifyArchive").value.trim();
-    if(!archiveId){status.textContent="Enter an archived event ID.";return;}
+    if(!archiveId){status.textContent="Select an eligible archived competition.";return;}
     if(!confirm(`Verify the ${category} winner using archived event ${archiveId}?`))return;
     button.disabled=true;
     try{const data=await request("PUT",{action:"verify-category-winner",type:category,archiveId});states[category]=data.status;showWinner();status.textContent=`Verified ${data.status.rsn} for ${category}.`;}catch(e){status.textContent=e.message;}finally{button.disabled=false;}
