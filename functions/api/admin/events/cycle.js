@@ -161,8 +161,16 @@ export async function onRequest({ request, env }) {
         await kv.put(WINNERS_KEY,JSON.stringify(winners));
         await kv.put(NOMINATIONS_KEY,JSON.stringify(nominations));
         await kv.put(WINNER_STATUS_KEY,JSON.stringify(statuses));
+        // Hybrid storage may accept a legacy KV write while its preferred Supabase
+        // copy is stale. Never claim verification succeeded until the same read
+        // path used by the notification dashboard sees the exact winner.
+        const savedStatuses=parse(await kv.get(WINNER_STATUS_KEY),{});
+        const savedWinners=parse(await kv.get(WINNERS_KEY),{});
+        if(savedStatuses[type]?.state!=="resolved" || savedStatuses[type]?.discordId!==matches[0] || savedStatuses[type]?.archiveId!==archiveId || savedWinners[type]!==matches[0]) {
+          return Response.json({error:"Winner verification could not be confirmed in the shared storage. Please do not send invitations; check Supabase/Cloudflare KV synchronization.",code:"WINNER_STORAGE_MISMATCH"},{status:503,headers:{"Cache-Control":"no-store"}});
+        }
         await kv.put(`events:sotw-botw-winner-verification-audit:${type}:${Date.now()}`,JSON.stringify({type,archiveId,discordId:matches[0],at:statuses[type].updatedAt}),{expirationTtl:365*86400});
-        return Response.json({success:true,status:statuses[type]});
+        return Response.json({success:true,status:savedStatuses[type]},{headers:{"Cache-Control":"no-store"}});
       }
       if (body.action === "save-pools") {
         const pools = {"botw-standard":cleanPool(body["botw-standard"], "botw-standard"), "botw-elite":cleanPool(body["botw-elite"], "botw-elite"), sotw:cleanPool(body.sotw, "sotw")};
