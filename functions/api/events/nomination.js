@@ -7,6 +7,7 @@ const NOMINATIONS_KEY = "events:sotw-botw-nominations:v1";
 const POOL_KEY = "events:sotw-botw-pools:v1";
 const CYCLE_KEY = "events:sotw-botw-cycle:v1";
 const DRAFT_KEY = "events:sotw-botw-poll-drafts:v1";
+const AUTOMATION_PREFIX = "events:sotw-botw-automation:v1:";
 const TZ = "America/Toronto";
 function localParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).formatToParts(date);
@@ -47,7 +48,8 @@ export async function onRequest({request,env}) {
     const anchor=new Date(`${eventDate}T12:00:00Z`);
     const leadDays=eventDate === "2026-11-13" && type === "botw" ? 4 : 7;
     const deadline=new Date(anchor.getTime()-leadDays*86400000).toISOString().slice(0,10)+"T"+(cycle.startTime||"15:00");
-    return [type,{open:localParts()<deadline && drafts[type]?.status!=="published",deadline}];
+    const cycleId=`${type}:${eventDate}`;
+    return [type,{open:localParts()<deadline && !(drafts[type]?.cycleId===cycleId && drafts[type]?.status==="published"),deadline,cycleId}];
   }));
   if (request.method==="GET") return Response.json({eligible, pools:Object.fromEntries(eligible.map(type=>[type,pools[type]||[]])), nominations:Object.fromEntries(eligible.map(type=>[type,nominations[type]?.options||[]])),windows},{headers:{"Cache-Control":"no-store"}});
   let body;
@@ -55,6 +57,15 @@ export async function onRequest({request,env}) {
   const type=body?.type;
   if (!eligible.includes(type)) return Response.json({error:"You are not the authorized previous winner for this event type."},{status:403});
   if (!windows[type]?.open) return Response.json({error:"Nominations are closed or the cycle has not been configured."},{status:409});
+  // Never accept a change after this cycle has reserved or published poll choices.
+  // This also protects manually prepared early polls and closes the deadline race.
+  const reservedState=parse(await kv.get(AUTOMATION_PREFIX+windows[type].cycleId),{});
+  if (Array.isArray(reservedState.pollOptions) || reservedState.messageId || reservedState.publishedAt) {
+    return Response.json({error:"Poll choices have already been reserved for this event. Nominations can no longer be changed."},{status:409});
+  }
+  if (drafts[type]?.cycleId===windows[type].cycleId && drafts[type]?.status==="published") {
+    return Response.json({error:"The poll is already published. Nominations are closed."},{status:409});
+  }
   const options=body?.options;
   const max=2;
   if (!Array.isArray(options)||options.length!==max||options.some(x=>typeof x!=="string")) return Response.json({error:`Select exactly ${max} option(s).`},{status:400});
@@ -67,7 +78,7 @@ export async function onRequest({request,env}) {
   await kv.put(NOMINATIONS_KEY,JSON.stringify(nominations));
   // Poll drafts are regenerated from the authoritative saved nominations.
   // Live/published polls must never be mutated by a late submission.
-  if (drafts[type]?.status === "draft") {
+  if (drafts[type]?.cycleId===windows[type].cycleId && drafts[type]?.status === "draft") {
     delete drafts[type];
     await kv.put(DRAFT_KEY,JSON.stringify(drafts));
   }
