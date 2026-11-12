@@ -84,6 +84,30 @@ if (womButton) womButton.addEventListener("click", async () => {
   } catch (error) { output.textContent = `Unable to complete check: ${error.message}`; }
   finally { womButton.disabled = false; }
 });
+const expertButton = $("retryExpert");
+if (expertButton) expertButton.addEventListener("click", async () => {
+  const feedback = $("retryExpertFeedback");
+  if (!confirm("Retry the separate ToA Expert Mode WOM competition recovery? Existing ToA #165741 will be preserved.")) return;
+  expertButton.disabled = true;
+  feedback.textContent = "Requesting Expert Mode recovery…";
+  try {
+    const response = await fetch(api, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action: "retry_expert_invalid_cycle", id: "botw-elite:2026-11-13"})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || data.message || `HTTP ${response.status}`);
+    feedback.textContent = `Recovery response: ${JSON.stringify(data)}`;
+    await refresh();
+  } catch (error) {
+    feedback.textContent = `Recovery failed: ${error.message}`;
+  } finally {
+    expertButton.disabled = false;
+  }
+});
+
 $("refresh").addEventListener("click",refresh);
 $("attach").addEventListener("submit", async event => {
   event.preventDefault();
