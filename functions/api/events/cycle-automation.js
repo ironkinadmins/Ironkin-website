@@ -284,21 +284,21 @@ export async function onRequest({request,env}) {
     if(controls.polling && !current.messageId && localTime(now)>=candidate.open && localTime(now)<candidate.close){
       const pools=parse(await kv.get("events:sotw-botw-pools:v1"),{});const winners=parse(await kv.get("events:sotw-botw-nomination-winners:v1"),{});const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});const history=parse(await kv.get("events:sotw-botw-rotation:v1"),{});
       const pool=(pools[candidate.type]||[]).filter(x=>typeof x==="string");const unique=[...new Map(pool.map(x=>[key(x,candidate.type),x])).values()];
-      // A staff-prepared draft is authoritative only for its explicitly bound cycle.
-      // Legacy unbound drafts cannot silently alter a future competition.
-      const drafts=parse(await kv.get("events:sotw-botw-poll-drafts:v1"),{});
-      const prepared=drafts[candidate.type];
-      const draftOptions=prepared?.cycleId===candidate.id && Array.isArray(prepared.options) && prepared.options.length===3 ? prepared.options : null;
-      const picks=nominations[candidate.type]?.discordId===winners[candidate.type]?nominations[candidate.type].options||[]:[];
-      const selected=picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).slice(0,2);
-      const distinct=[...new Map(selected.map(x=>[key(x,candidate.type),x])).values()];
+      // Winner nominations are the sole authority for the first two slots.
+      // Legacy drafts and reservations must never replace them.
+      const nomination=nominations[candidate.type];
+      const picks=nomination?.discordId && String(nomination.discordId)===String(winners[candidate.type]) && (!nomination.cycleId || nomination.cycleId===candidate.id) ? nomination.options : null;
+      const distinct=Array.isArray(picks)?[...new Map(picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).map(x=>[key(x,candidate.type),x])).values()]:[];
       try {
-        const reserved = current.pollOptions;
-        const validDraft = draftOptions && new Set(draftOptions.map(x=>key(x.metrics?.[0]||x.label,candidate.type))).size===3 && draftOptions.every(x=>unique.some(v=>key(v,candidate.type)===key(x.metrics?.[0]||x.label,candidate.type)));
-        const random = reserved || validDraft ? null : choose(unique,new Set(distinct.map(x=>key(x,candidate.type))),history[candidate.type]||[],3-distinct.length,candidate.type);
-        const options = reserved || (validDraft ? draftOptions : [...distinct.map(x=>label(x,candidate.type)),...random.result]);
-        if (!reserved) await kv.put(candidateKey,JSON.stringify({...current,pollOptions:options,rotationReset:random?.reset ?? prepared?.rotationResetSuggested ?? false,pollReservedAt:now.toISOString()}));
-        return Response.json({enabled:true,task:{action:"publish",...candidate,options,rotationReset:current.rotationReset ?? random?.reset ?? false}},{headers:{"Cache-Control":"no-store"}});
+        if(distinct.length!==2)throw Error("Two valid previous-winner nominations are required before publishing; no random fallback.");
+        const nominated=distinct.map(x=>label(x,candidate.type));
+        const reserved=Array.isArray(current.pollOptions)&&current.pollOptions.length===3?current.pollOptions:null;
+        if(reserved && nominated.some((x,i)=>key(x.metrics[0],candidate.type)!==key(reserved[i]?.metrics?.[0]||reserved[i]?.label||reserved[i],candidate.type)))
+          throw Error("Reserved poll conflicts with winner nominations. Use staff poll recovery to reset it.");
+        const random=reserved?null:choose(unique,new Set(distinct.map(x=>key(x,candidate.type))),history[candidate.type]||[],1,candidate.type);
+        const options=reserved||[...nominated,...random.result];
+        if(!reserved)await kv.put(candidateKey,JSON.stringify({...current,pollOptions:options,rotationReset:random.reset,pollReservedAt:now.toISOString()}));
+        return Response.json({enabled:true,task:{action:"publish",...candidate,options,rotationReset:current.rotationReset??random?.reset??false}},{headers:{"Cache-Control":"no-store"}});
       } catch(e){return Response.json({enabled:true,error:String(e.message),task:null},{headers:{"Cache-Control":"no-store"}});}
     }
     if(current.messageId&&!current.closedAt&&localTime(now)>=candidate.close)return Response.json({enabled:true,task:{action:"close",...candidate,messageId:current.messageId,channelId:current.channelId,options:current.options}},{headers:{"Cache-Control":"no-store"}});
