@@ -1,3 +1,4 @@
+import { nominationNoticeStatus } from "../../_winnerNominationNotifications.js";
 import { processNominationReminder } from "../../_winnerNominationNotifications.js";
 import { archiveEventInternal } from "../admin/events/archive.js";
 import { buildEventResultsSnapshot, buildEventResultsContent, getResultsChannelId } from "../../_eventResultsAnnouncement.js";
@@ -287,7 +288,9 @@ export async function onRequest({request,env}) {
       // Winner nominations are the sole authority for the first two slots.
       // Legacy drafts and reservations must never replace them.
       const nomination=nominations[candidate.type];
-      const picks=nomination?.discordId && String(nomination.discordId)===String(winners[candidate.type]) && (!nomination.cycleId || nomination.cycleId===candidate.id) ? nomination.options : null;
+      const winnerInfo=await nominationNoticeStatus(env,candidate.type);
+      const resolvedId=winnerInfo.status?.state==="resolved"?String(winnerInfo.status.discordId||""):"";
+      const picks=resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id) ? nomination.options : null;
       const distinct=Array.isArray(picks)?[...new Map(picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).map(x=>[key(x,candidate.type),x])).values()]:[];
       try {
         if(distinct.length!==2)throw Error("Two valid previous-winner nominations are required before publishing; no random fallback.");
