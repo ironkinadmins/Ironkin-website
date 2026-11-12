@@ -98,9 +98,9 @@ export async function onRequest({ request, env }) {
     const raw = await response.json().catch(() => null);
     const competition = raw?.competition || raw;
     const groupId = competition?.groupId ?? competition?.group?.id;
-    const metricAliases={"The Nightmare":"nightmare","Phosani's Nightmare":"phosanis_nightmare"};
+    const metricAliases={"The Nightmare":"nightmare","Phosani's Nightmare":"phosanis_nightmare","Tombs of Amascut Expert Mode":"tombs_of_amascut_expert"};
     const expectedMetric=String(metricAliases[option.metrics[metricIndex]] || option.metrics[metricIndex]).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
-    const expectedTitle = option.metrics.length > 1 ? `${state.womTitle} (${option.metrics[metricIndex]})` : state.womTitle;
+    const expectedTitle = option.metrics.length > 1 ? `${state.womTitle} (${expectedMetric})`.slice(0,50) : String(state.womTitle).slice(0,50);
     if (String(competition?.id) !== String(body.competitionId) ||
         String(groupId) !== "12095" ||
         String(competition?.metric || "").toLowerCase() !== expectedMetric ||
