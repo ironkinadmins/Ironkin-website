@@ -313,6 +313,17 @@ export async function onRequest({request,env}) {
       let pastState=parse(await kv.get(pastKey),{});
       if (!pastState.closedAt || pastState.outcome!=="winner") continue;
       try {
+        // The old coordinator rejected botw-standard/botw-elite IDs before any
+        // Durable Object lookup or WOM POST. Only this exact pre-write rejection
+        // is safe to retry; every other needs_review remains staff-only.
+        if (pastState.womStatus === "needs_review" &&
+            /^Metric [a-z0-9_]+ requires reconciliation: Invalid cycle$/.test(String(pastState.womError || "")) &&
+            !pastState.womCompetitionId &&
+            (!Array.isArray(pastState.womCompetitionIds) || pastState.womCompetitionIds.length === 0) &&
+            (!Array.isArray(pastState.womCompetitions) || pastState.womCompetitions.length === 0)) {
+          pastState={...pastState,womStatus:"awaiting_activation",womError:null};
+          await kv.put(pastKey,JSON.stringify(pastState));
+        }
         if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
           pastState=await createWom(env,kv,pastKey,past,pastState,controls);
         if (pastState.womStatus==="created" && pastState.websiteStatus!=="linked")
