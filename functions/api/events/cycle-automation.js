@@ -160,6 +160,51 @@ export async function linkOrFlag(kv,event,state) {
   }
 }
 
+// Mirror confirmed automated WOM competitions into the existing Community Calendar.
+// Stable IDs make this safe on every bot poll and on a repeated close receipt.
+async function syncCycleCalendar(env, kv, event, state) {
+  if (state.womStatus !== "created" || state.websiteStatus !== "linked") return state;
+  const calendarKv = hybridKv(env, "calendar");
+  if (!calendarKv) return state;
+  const calendarKey = "calendar:custom-events";
+  try {
+    const raw = await calendarKv.get(calendarKey);
+    const events = parse(raw, []);
+    if (!Array.isArray(events)) throw new Error("Invalid Community Calendar event registry");
+    const option = state.options?.[state.winningIndex];
+    if (!option?.label) throw new Error("Winning poll option missing");
+    const id = `cycle-calendar:${event.id}`;
+    const now = new Date().toISOString();
+    const start = torontoInstant(event.date, event.start.slice(11));
+    const end = torontoInstant(shift(event.date, event.durationDays || 7), event.start.slice(11));
+    const tier = event.type.startsWith("botw-") ? event.type.slice(5) : "";
+    const title = `${tier ? `BOTW ${tier === "elite" ? "Elite" : "Standard"}` : "Skill of the Week"} - ${option.label}`;
+    const existing = events.find(item => item.id === id);
+    const record = {
+      ...(existing || {}), id, source:"ironkin-cycle-automation",
+      title, description:"Automatically selected by the Ironkin community vote.",
+      start, end, eventType:tier ? "botw" : "sotw", category:tier ? "botw" : "sotw",
+      ...(tier ? {botwTier:tier,botwRole:"primary"} : {}),
+      activeEventId:state.websiteEventId || (tier ? event.type : "sotw-current"),
+      womCompetitionId:String(state.womCompetitionId), womMetric:state.womMetric || "",
+      womUrl:state.womUrl || `https://wiseoldman.net/competitions/${state.womCompetitionId}`,
+      status:"scheduled", createdAt:existing?.createdAt || now, updatedAt:now
+    };
+    // Avoid unnecessary writes on every minute's reconciliation check.
+    if (!existing || ["title","start","end","womCompetitionId","activeEventId"].some(k => existing[k] !== record[k])) {
+      await calendarKv.put(calendarKey,JSON.stringify([...events.filter(item => item.id !== id),record]));
+    }
+    if (state.calendarStatus === "linked" && state.calendarEventId === id) return state;
+    const updated={...state,calendarStatus:"linked",calendarEventId:id,calendarLinkedAt:now,calendarError:null};
+    await kv.put(PREFIX + event.id,JSON.stringify(updated));
+    return updated;
+  } catch(error) {
+    const flagged={...state,calendarStatus:"needs_review",calendarError:String(error.message || error).slice(0,300)};
+    await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+    return flagged;
+  }
+}
+
 // Finalize only this automation's exact WOM competition, never a manually
 // configured event. The shared archive pipeline preserves results, winner
 // nomination mapping, record sync and Discord publishing behavior.
@@ -272,6 +317,8 @@ export async function onRequest({request,env}) {
           pastState=await createWom(env,kv,pastKey,past,pastState,controls);
         if (pastState.womStatus==="created" && pastState.websiteStatus!=="linked")
           pastState=await linkOrFlag(kv,past,pastState);
+        if (pastState.womStatus==="created" && pastState.websiteStatus==="linked")
+          pastState=await syncCycleCalendar(env,kv,past,pastState);
         if (env.CYCLE_AUTO_FINALIZE_ENABLED==="true" && controls.finalization && pastState.womStatus==="created" && pastState.websiteStatus==="linked")
           await finalizeCompetition(env,kv,past,pastState);
       } catch(error) { console.warn(`Cycle maintenance ${past.id} requires review:`,error); }
@@ -322,13 +369,17 @@ export async function onRequest({request,env}) {
     const record={...targetState,messageId:String(body.messageId),channelId:String(body.channelId),options:targetState.pollOptions,publishedAt:now.toISOString()};await kv.put(targetKey,JSON.stringify(record));return Response.json({success:true});
   }
   if(body.action==="closed"){
-    if(targetState.closedAt)return Response.json({success:true,alreadyClosed:true,state:await linkOrFlag(kv,target,targetState)});
+    if(targetState.closedAt){
+      const linked=await linkOrFlag(kv,target,targetState);
+      return Response.json({success:true,alreadyClosed:true,state:await syncCycleCalendar(env,kv,target,linked)});
+    }
     if (localTime(now) < target.close) return Response.json({error:"Voting is still open"},{status:409});
     if(!targetState.messageId||String(body.messageId)!==targetState.messageId||!Array.isArray(body.counts)||body.counts.length!==3||body.counts.some(n=>!Number.isInteger(n)||n<0))return Response.json({error:"Invalid poll result"},{status:400});
     const top=Math.max(...body.counts);const winning=body.counts.map((n,i)=>n===top?i:-1).filter(i=>i>=0);const outcome=top===0?"no_votes":winning.length>1?"tie":"winner";
     const record={...targetState,closedAt:now.toISOString(),counts:body.counts,outcome,winningIndex:outcome==="winner"?winning[0]:null};await kv.put(targetKey,JSON.stringify(record));
     const updated = await createWom(env,kv,targetKey,target,record,controls);
-    return Response.json({success:true,alreadyClosed:false,state:await linkOrFlag(kv,target,updated)});
+    const linked=await linkOrFlag(kv,target,updated);
+    return Response.json({success:true,alreadyClosed:false,state:await syncCycleCalendar(env,kv,target,linked)});
   }
   return Response.json({error:"Unknown action"},{status:400});
 }
