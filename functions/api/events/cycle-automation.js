@@ -78,13 +78,10 @@ async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAU
   const metrics=option.metrics.map(metricName);
   const startsAt=torontoInstant(event.date,event.start.slice(11));
   const endsAt=torontoInstant(shift(event.date,event.durationDays||7),event.start.slice(11));
-  const pending={...state,womStatus:"creating",womTitle:title,womMetric:metrics.join(" + "),womRequestedAt:new Date().toISOString(),womCompetitionIds:[],womCompetitions:state.womCompetitions || []};
+  const pending={...state,womStatus:"creating",womTitle:title,womMetric:metrics.join(" + "),womRequestedAt:new Date().toISOString(),womCompetitionIds:[]};
   await kv.put(stateKey,JSON.stringify(pending));
-  // Preserve verified primary WOM creation when retrying a rejected paired metric.
-  // The invalid enum response is a definitive WOM rejection, not an uncertain result.
-  const created=Array.isArray(state.womCompetitions) ? [...state.womCompetitions] : [];
+  const created=[];
   for(let index=0;index<metrics.length;index++) {
-    if (created.some(c => c.metricIndex === index && c.metric === metrics[index] && /^\d+$/.test(String(c.competitionId)))) continue;
     const metric=metrics[index];
     const payload={title:metrics.length>1?`${title} (${metric})`.slice(0,50):title.slice(0,50),
       metric,startsAt,endsAt,groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)};
@@ -335,20 +332,6 @@ export async function onRequest({request,env}) {
           pastState={...pastState,womStatus:"awaiting_activation",womError:null};
           await kv.put(pastKey,JSON.stringify(pastState));
         }
-        // The regular ToA metric may already exist. Preserve its verified ID and
-        // retry only the Expert Mode metric after correcting the WOM enum.
-        if (pastState.womStatus === "needs_review" &&
-            /^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) &&
-            !pastState.womCompetitionId &&
-            Array.isArray(pastState.womCompetitions) &&
-            pastState.womCompetitions.length === 1 &&
-            pastState.womCompetitions[0].metricIndex === 0 &&
-            pastState.womCompetitions[0].metric === "tombs_of_amascut" &&
-            /^\d+$/.test(String(pastState.womCompetitions[0].competitionId || "")) &&
-            !pastState.expertMetricRetryVersion) {
-          pastState={...pastState,womStatus:"awaiting_activation",womError:null,titleRetryVersion:Math.max(2,Number(pastState.titleRetryVersion||0)+1),expertMetricRetryVersion:1};
-          await kv.put(pastKey,JSON.stringify(pastState));
-        }
         // A confirmed WOM title validation rejection is safe to retry using a
         // fresh coordinator identity; no competition was created by WOM.
         // Never retry uncertain outcomes or a partially created paired event.
@@ -359,6 +342,56 @@ export async function onRequest({request,env}) {
             !pastState.titleRetryVersion) {
           pastState={...pastState,womStatus:"awaiting_activation",womError:null,titleRetryVersion:1};
           await kv.put(pastKey,JSON.stringify(pastState));
+        }
+        // Recover only the rejected ToA Expert metric, never the already-created normal ToA.
+        // The precise enum rejection means WOM rejected the second POST before creation.
+        if (past.type === "botw-elite" && pastState.womStatus === "needs_review" &&
+            /^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) &&
+            pastState.options?.[pastState.winningIndex]?.metrics?.join("|") === "Tombs of Amascut|Tombs of Amascut Expert Mode" &&
+            pastState.womCompetitions?.length === 1 &&
+            pastState.womCompetitions[0].metricIndex === 0 &&
+            pastState.womCompetitions[0].metric === "tombs_of_amascut" &&
+            /^\d+$/.test(String(pastState.womCompetitions[0].competitionId || "")) &&
+            !pastState.expertRecoveryAttempted &&
+            env.CYCLE_AUTO_WOM_CREATE_ENABLED === "true" && controls.womCreation) {
+          const primary = pastState.womCompetitions[0];
+          const primaryResponse = await womFetch(env, `/competitions/${primary.competitionId}`);
+          if (!primaryResponse.ok) throw Error("Cannot verify existing ToA WOM competition");
+          const primaryData = await primaryResponse.json();
+          const primaryWom = primaryData?.competition || primaryData;
+          if (String(primaryWom?.id) !== String(primary.competitionId) ||
+              String(primaryWom?.groupId ?? primaryWom?.group?.id) !== "12095" ||
+              primaryWom?.metric !== "tombs_of_amascut")
+            throw Error("Existing ToA competition identity mismatch; manual review required");
+          const startAt = torontoInstant(past.date, past.start.slice(11));
+          if (Date.now() >= Date.parse(startAt)) throw Error("Competition start passed; staff rescheduling required");
+          const title = `Ironkin BOTW Elite - ${past.date} (ToA Expert)`;
+          const payload = {title, metric:"tombs_of_amascut_expert",startsAt:startAt,
+            endsAt:torontoInstant(shift(past.date,past.durationDays||7),past.start.slice(11)),
+            groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)};
+          // Persist the intent before external POST. Do not retry an uncertain result.
+          pastState = {...pastState,expertRecoveryAttempted:true,expertRecoveryAt:new Date().toISOString()};
+          await kv.put(pastKey,JSON.stringify(pastState));
+          const response = await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create",{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({id:`${past.id}:r2-1`,payload})});
+          const result = await response.json().catch(()=>({}));
+          if (!response.ok || result.status !== "created" || !/^\d+$/.test(String(result.competitionId || ""))) {
+            pastState = {...pastState,womError:`Expert Mode recovery requires review: ${String(result.error||result.status||`HTTP ${response.status}`).slice(0,200)}`};
+            await kv.put(pastKey,JSON.stringify(pastState));
+          } else if (String(result.competitionId) === String(primary.competitionId)) {
+            pastState = {...pastState,womError:"Expert Mode returned the primary competition ID; manual review required"};
+            await kv.put(pastKey,JSON.stringify(pastState));
+          } else {
+            const competitions=[primary,{competitionId:String(result.competitionId),metric:"tombs_of_amascut_expert",role:"paired",metricIndex:1}];
+            pastState={...pastState,womStatus:"created",womError:null,
+              womCompetitionId:String(primary.competitionId),
+              womCompetitionIds:competitions.map(c=>c.competitionId),womCompetitions:competitions,
+              womMetric:"tombs_of_amascut + tombs_of_amascut_expert",
+              womUrl:`https://wiseoldman.net/competitions/${primary.competitionId}`,
+              womCreatedAt:new Date().toISOString()};
+            await kv.put(pastKey,JSON.stringify(pastState));
+          }
         }
         if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
           pastState=await createWom(env,kv,pastKey,past,pastState,controls);
