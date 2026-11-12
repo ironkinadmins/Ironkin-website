@@ -1,7 +1,7 @@
 import { hybridKv } from "../../../_hybridKv.js";
 import { getSession, isStaffSession } from "../../_auth.js";
 import { womFetch } from "../../../_wom.js";
-import { linkOrFlag } from "../../events/cycle-automation.js";
+import { linkOrFlag, retryExpertInvalidCycle } from "../../events/cycle-automation.js";
 
 const PREFIX = "events:sotw-botw-automation:v1:";
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
@@ -25,6 +25,16 @@ export async function onRequest({ request, env }) {
       return Response.json({ error: "Invalid origin." }, { status: 403 });
     }
     const body = await request.json().catch(() => null);
+    if (body?.action === "retry_expert_invalid_cycle") {
+      if (body.id !== "botw-elite:2026-11-13")
+        return Response.json({error:"Unsupported recovery cycle."},{status:400});
+      try {
+        const outcome = await retryExpertInvalidCycle(env,hybridKv(env,"drops"),body.id);
+        return Response.json(outcome,{headers:{"Cache-Control":"no-store"}});
+      } catch (error) {
+        return Response.json({error:String(error?.message||error).slice(0,300)},{status:409});
+      }
+    }
     if (body?.action === "reconcile_archive") {
       if (!/^(sotw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}$/.test(String(body.id || "")))
         return Response.json({error:"Invalid cycle."},{status:400});

@@ -166,7 +166,7 @@ export async function linkOrFlag(kv,event,state) {
 
 // Mirror confirmed automated WOM competitions into the existing Community Calendar.
 // Stable IDs make this safe on every bot poll and on a repeated close receipt.
-async function syncCycleCalendar(env, kv, event, state) {
+export async function syncCycleCalendar(env, kv, event, state) {
   if (state.womStatus !== "created" || state.websiteStatus !== "linked") return state;
   const calendarKv = hybridKv(env, "calendar");
   if (!calendarKv) return state;
@@ -284,6 +284,69 @@ async function finalizeCompetition(env, kv, event, state) {
   }
 }
 
+
+// Staff-triggered retry of a *confirmed pre-write* Invalid cycle rejection.
+// Reuses the exact same coordinator ID: never allocates a new identity.
+export async function retryExpertInvalidCycle(env, kv, cycleId) {
+  if (cycleId !== "botw-elite:2026-11-13") throw Error("Only the known November 13 Elite recovery is supported.");
+  const stateKey = PREFIX + cycleId;
+  let state = parse(await kv.get(stateKey), {});
+  if (state.womStatus === "created") return { status: "already_created", state };
+  if (state.womStatus !== "needs_review" ||
+      state.womError !== "Expert Mode recovery requires review: Invalid cycle" ||
+      state.expertRecoveryAttempted !== true)
+    throw Error("Recovery is not a confirmed pre-write Invalid cycle rejection. No WOM request sent.");
+  if (state.options?.[state.winningIndex]?.metrics?.join("|") !== "Tombs of Amascut|Tombs of Amascut Expert Mode")
+    throw Error("Unexpected winner metrics; no WOM request sent.");
+  const primary = state.womCompetitions?.find(c => c.metricIndex === 0 && c.metric === "tombs_of_amascut");
+  if (!primary || String(primary.competitionId) !== "165741" || state.womCompetitions.length !== 1)
+    throw Error("Existing normal ToA competition does not match #165741; no WOM request sent.");
+  if (!env.CYCLE_COORDINATOR || !env.WOM_GROUP_VERIFICATION_CODE || env.CYCLE_AUTO_WOM_CREATE_ENABLED !== "true")
+    throw Error("Coordinator or WOM creation prerequisites are not configured.");
+  const check = await womFetch(env, "/competitions/165741");
+  if (!check.ok) throw Error(`Normal ToA verification failed (HTTP ${check.status}).`);
+  const raw = await check.json();
+  const normal = raw?.competition || raw;
+  if (String(normal?.id) !== "165741" || String(normal?.groupId ?? normal?.group?.id) !== "12095" || normal?.metric !== "tombs_of_amascut")
+    throw Error("Normal ToA identity verification failed.");
+  const config = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
+  const date = "2026-11-13";
+  const time = config.startTime || "15:00";
+  const start = torontoInstant(date, time);
+  if (Date.now() >= Date.parse(start)) throw Error("Event has already started. Staff must reschedule; no new competition was created.");
+  const payload = {
+    title: `Ironkin BOTW Elite - ${date} (ToA Expert)`,
+    metric: "tombs_of_amascut_expert", startsAt: start,
+    endsAt: torontoInstant(shift(date, config.durationDays || 7), time),
+    groupId: 12095, groupVerificationCode: String(env.WOM_GROUP_VERIFICATION_CODE)
+  };
+  // The previously rejected request never reached a Durable Object or WOM.
+  // Reuse its coordinator ID to make repeated admin clicks idempotent.
+  const response = await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create", {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ id: `${cycleId}:r2-1`, payload })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.status !== "created" || !/^\d+$/.test(String(result.competitionId || ""))) {
+    const message = String(result.error || result.status || `HTTP ${response.status}`).slice(0,200);
+    await kv.put(stateKey, JSON.stringify({...state, womError: `Expert Mode recovery requires review: ${message}`}));
+    return { status: "needs_review", error: message, httpStatus: response.status };
+  }
+  if (String(result.competitionId) === "165741")
+    throw Error("Coordinator returned normal ToA competition ID; manual investigation required.");
+  const competitions = [primary, { competitionId: String(result.competitionId), metric: "tombs_of_amascut_expert", role: "paired", metricIndex: 1 }];
+  state = {...state, womStatus:"created", womError:null, womCompetitionId:"165741",
+    womCompetitionIds:competitions.map(c=>c.competitionId), womCompetitions:competitions,
+    womMetric:"tombs_of_amascut + tombs_of_amascut_expert",
+    womUrl:"https://wiseoldman.net/competitions/165741", womCreatedAt:new Date().toISOString()};
+  await kv.put(stateKey, JSON.stringify(state));
+  const event = {id:cycleId,type:"botw-elite",date,start:`${date}T${time}`,durationDays:config.durationDays||7};
+  state = await linkOrFlag(kv, event, state);
+  if (state.websiteStatus === "linked") state = await syncCycleCalendar(env,kv,event,state);
+  return {status:"created", expertCompetitionId:String(result.competitionId), websiteStatus:state.websiteStatus,
+    calendarStatus:state.calendarStatus || null};
+}
+
 export async function onRequest({request,env}) {
   if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
   const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
@@ -346,8 +409,7 @@ export async function onRequest({request,env}) {
         // Recover only the rejected ToA Expert metric, never the already-created normal ToA.
         // The precise enum rejection means WOM rejected the second POST before creation.
         if (past.type === "botw-elite" && pastState.womStatus === "needs_review" &&
-            (/^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) ||
-             /^Metric tombs_of_amascut_expert requires reconciliation: Invalid cycle$/.test(String(pastState.womError || ""))) &&
+            /^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) &&
             pastState.options?.[pastState.winningIndex]?.metrics?.join("|") === "Tombs of Amascut|Tombs of Amascut Expert Mode" &&
             pastState.womCompetitions?.length === 1 &&
             pastState.womCompetitions[0].metricIndex === 0 &&

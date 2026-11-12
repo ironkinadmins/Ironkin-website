@@ -39,6 +39,10 @@ small,.muted{color:#c1ae9b}.check{padding:11px 0;border-bottom:1px solid #4b4239
 <section class="panel"><h2>Recent cycles</h2><div class="scroll"><table><thead><tr>
 <th>Cycle</th><th>Vote</th><th>WOM</th><th>Website</th><th>Finalization</th><th>Review</th></tr></thead>
 <tbody id="cycles"></tbody></table></div></section>
+<section class="panel"><h2>Retry ToA Expert Mode recovery</h2>
+<p class="muted">For the November 13 BOTW Elite cycle only. Reuses the original Expert Mode recovery ID after a confirmed Invalid cycle rejection. Preserves normal ToA #165741 and Zalcano #165740. The server verifies the existing competition and blocks retries after the scheduled start.</p>
+<button type="button" id="retryExpert">Retry Expert Mode recovery</button>
+<p id="retryExpertFeedback" role="status"></p></section>
 <section class="panel"><h2>Attach an existing WOM competition</h2>
 <p class="muted">Use only when WOM already created the competition but the website lost its ID. The server checks the WOM group, metric, and title before attaching.</p>
 <form id="attach"><label>Cycle <select id="cycle" required></select></label>
