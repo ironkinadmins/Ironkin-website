@@ -346,7 +346,8 @@ export async function onRequest({request,env}) {
         // Recover only the rejected ToA Expert metric, never the already-created normal ToA.
         // The precise enum rejection means WOM rejected the second POST before creation.
         if (past.type === "botw-elite" && pastState.womStatus === "needs_review" &&
-            /^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) &&
+            (/^Metric tombs_of_amascut_expert_mode requires reconciliation: Invalid enum value for ['"]metric['"]\.?$/.test(String(pastState.womError || "")) ||
+             /^Metric tombs_of_amascut_expert requires reconciliation: Invalid cycle$/.test(String(pastState.womError || ""))) &&
             pastState.options?.[pastState.winningIndex]?.metrics?.join("|") === "Tombs of Amascut|Tombs of Amascut Expert Mode" &&
             pastState.womCompetitions?.length === 1 &&
             pastState.womCompetitions[0].metricIndex === 0 &&
