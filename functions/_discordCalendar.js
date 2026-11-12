@@ -380,3 +380,28 @@ export async function mirrorCalendarEventDelete(env, event) {
     console.warn("Discord calendar delete mirror failed", error?.message || error);
   }
 }
+
+// Called by the automated SOTW/BOTW cycle after calendar registration.
+// Reuses the same Discord scheduled-event payload and current-events board.
+export async function syncAutomatedDiscordCalendarEvent(env, event) {
+  if (!env?.DISCORD_BOT_TOKEN || !env?.DISCORD_GUILD_ID) {
+    return {synced:false,reason:"Discord bot token or guild ID missing"};
+  }
+  const kv=hybridKv(env,"calendar");
+  if (!kv) return {synced:false,reason:"Calendar storage missing"};
+  const events=await getJson(kv,CUSTOM_CALENDAR_EVENTS_KEY,[]);
+  const saved=events.find(item=>item.id===event.id);
+  if (!saved) return {synced:false,reason:"Calendar event not found"};
+  let result;
+  try {
+    result=saved.discordScheduledEventId
+      ? await updateDiscordScheduledEvent(env,saved)
+      : await createDiscordScheduledEvent(env,saved);
+    if (!result?.id) return {synced:false,reason:"Discord scheduled event API request failed"};
+    await saveDiscordScheduledEventId(env,saved.id,result.id);
+    await syncDiscordCalendarBoard(env);
+    return {synced:true,discordScheduledEventId:String(result.id)};
+  } catch(error) {
+    return {synced:false,reason:String(error?.message||error).slice(0,200)};
+  }
+}

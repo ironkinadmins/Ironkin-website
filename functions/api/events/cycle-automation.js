@@ -4,6 +4,7 @@ import { archiveEventInternal } from "../admin/events/archive.js";
 import { buildEventResultsSnapshot, buildEventResultsContent, getResultsChannelId } from "../../_eventResultsAnnouncement.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { womFetch } from "../../_wom.js";
+import { syncAutomatedDiscordCalendarEvent } from "../../_discordCalendar.js";
 
 const PREFIX = "events:sotw-botw-automation:v1:";
 const CONTROL_DEFAULTS = {polling:true,womCreation:true,finalization:true,nominationReminders:true,resultsAnnouncements:true};
@@ -70,7 +71,10 @@ async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAU
     await kv.put(stateKey, JSON.stringify(updated));
     return updated;
   }
-  const title = `Ironkin ${event.type.replace("-", " ").toUpperCase()} - ${option.label} - ${event.date}`;
+  // WOM limits titles to 50 characters. Use metric-specific short titles;
+  // the public calendar retains the full winning option label.
+  const tier = event.type === "botw-standard" ? "BOTW Standard" : event.type === "botw-elite" ? "BOTW Elite" : "SOTW";
+  const title = `Ironkin ${tier} - ${event.date}`;
   const metrics=option.metrics.map(metricName);
   const startsAt=torontoInstant(event.date,event.start.slice(11));
   const endsAt=torontoInstant(shift(event.date,event.durationDays||7),event.start.slice(11));
@@ -79,14 +83,14 @@ async function createWom(env, kv, stateKey, event, state, controls=CONTROL_DEFAU
   const created=[];
   for(let index=0;index<metrics.length;index++) {
     const metric=metrics[index];
-    const payload={title:metrics.length>1?`${title} (${option.metrics[index]})`:title,
+    const payload={title:metrics.length>1?`${title} (${metric})`.slice(0,50):title.slice(0,50),
       metric,startsAt,endsAt,groupId:12095,groupVerificationCode:String(env.WOM_GROUP_VERIFICATION_CODE)};
     // Each metric has a distinct Durable Object identity. An uncertain result
     // blocks automatic retry of the whole pair; staff must reconcile it.
     try {
       const response=await env.CYCLE_COORDINATOR.fetch("https://cycle-coordinator.internal/create",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({id:metrics.length>1?`${event.id}:${index}`:event.id,payload})
+        body:JSON.stringify({id:state.titleRetryVersion ? `${event.id}:r${state.titleRetryVersion}${metrics.length>1?`-${index}`:""}` : (metrics.length>1?`${event.id}:${index}`:event.id),payload})
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok||data.status!=="created"||!/^\d+$/.test(String(data.competitionId||""))) {
@@ -194,8 +198,12 @@ async function syncCycleCalendar(env, kv, event, state) {
     if (!existing || ["title","start","end","womCompetitionId","activeEventId"].some(k => existing[k] !== record[k])) {
       await calendarKv.put(calendarKey,JSON.stringify([...events.filter(item => item.id !== id),record]));
     }
-    if (state.calendarStatus === "linked" && state.calendarEventId === id) return state;
-    const updated={...state,calendarStatus:"linked",calendarEventId:id,calendarLinkedAt:now,calendarError:null};
+    // Mirror automated calendar events through the same Discord scheduled-event
+    // integration used by manually created calendar entries.
+    const discordResult = await syncAutomatedDiscordCalendarEvent(env, record);
+    const updated={...state,calendarStatus:"linked",calendarEventId:id,calendarLinkedAt:now,calendarError:null,
+      discordCalendarStatus:discordResult.synced ? "linked" : "needs_review",
+      discordCalendarError:discordResult.synced ? null : discordResult.reason};
     await kv.put(PREFIX + event.id,JSON.stringify(updated));
     return updated;
   } catch(error) {
@@ -322,6 +330,17 @@ export async function onRequest({request,env}) {
             (!Array.isArray(pastState.womCompetitionIds) || pastState.womCompetitionIds.length === 0) &&
             (!Array.isArray(pastState.womCompetitions) || pastState.womCompetitions.length === 0)) {
           pastState={...pastState,womStatus:"awaiting_activation",womError:null};
+          await kv.put(pastKey,JSON.stringify(pastState));
+        }
+        // A confirmed WOM title validation rejection is safe to retry using a
+        // fresh coordinator identity; no competition was created by WOM.
+        // Never retry uncertain outcomes or a partially created paired event.
+        if (pastState.womStatus === "needs_review" &&
+            /^Metric [a-z0-9_]+ requires reconciliation: Parameter ['\"]title['\"] must have a maximum of 50 character\(s\)\.$/.test(String(pastState.womError || "")) &&
+            !pastState.womCompetitionId &&
+            (!pastState.womCompetitions || pastState.womCompetitions.length === 0) &&
+            !pastState.titleRetryVersion) {
+          pastState={...pastState,womStatus:"awaiting_activation",womError:null,titleRetryVersion:1};
           await kv.put(pastKey,JSON.stringify(pastState));
         }
         if (pastState.womStatus==="awaiting_activation" && env.CYCLE_AUTO_WOM_CREATE_ENABLED==="true" && controls.womCreation)
