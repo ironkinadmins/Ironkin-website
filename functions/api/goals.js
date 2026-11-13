@@ -3,15 +3,40 @@ import { supabaseRest } from './_supabase.js';
 const fields='id,discord_id,display_name,title,category,target,progress,unit,status,is_public,created_at,updated_at';
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const validId=x=>typeof x==='string'&&/^\d{15,22}$/.test(x);
+const memberName=session=>String(session?.nick||session?.global_name||session?.username||session?.name||'Ironkin').trim().slice(0,80);
 async function fetchRows(env,query){const r=await supabaseRest(env,`ironkin_member_goals?select=${fields}&${query}`);return r.json();}
 export async function onRequestGet({request,env}){
  try{
   const session=await getSession(request,env);const url=new URL(request.url);
   if(url.searchParams.get('scope')==='mine'){
    if(!validId(session?.id))return reply({error:'Sign in with Discord to view your goals.'},401);
-   return reply({goals:await fetchRows(env,`discord_id=eq.${session.id}&order=created_at.desc&limit=100`)});
+   const goals=await fetchRows(env,`discord_id=eq.${session.id}&order=created_at.desc&limit=100`);
+   // The signed-in member's server nickname is stored by Discord OAuth. Refresh
+   // previously saved goals so public cards use the server nickname, not global profile.
+   const name=memberName(session);
+   if(goals.some(goal=>goal.display_name!==name)){
+    await supabaseRest(env,`ironkin_member_goals?discord_id=eq.${session.id}`,{method:'PATCH',body:JSON.stringify({display_name:name})});
+    goals.forEach(goal=>{goal.display_name=name;});
+   }
+   return reply({goals});
   }
-  return reply({goals:await fetchRows(env,'is_public=eq.true&order=updated_at.desc&limit=500')});
+  const page=Math.max(1,Math.min(100000,parseInt(url.searchParams.get('page')||'1',10)||1));
+  const pageSize=10;
+  const filters=['is_public=eq.true'];
+  const category=url.searchParams.get('category')||'';
+  const status=url.searchParams.get('status')||'';
+  const member=url.searchParams.get('member')||'';
+  const search=(url.searchParams.get('search')||'').trim().slice(0,80);
+  if(category && !['PvM','Skilling','Quests','Collection Log','Other'].includes(category))return reply({error:'Invalid category.'},400);
+  if(status && !['completed','in_progress'].includes(status))return reply({error:'Invalid status.'},400);
+  if(member && !validId(member))return reply({error:'Invalid member.'},400);
+  if(category)filters.push('category=eq.'+encodeURIComponent(category));
+  if(status)filters.push('status=eq.'+status);
+  if(member)filters.push('discord_id=eq.'+member);
+  if(search){const escaped=search.replace(/[(),.*%\\]/g,' ').trim();if(escaped)filters.push('or='+encodeURIComponent(`(title.ilike.*${escaped}*,display_name.ilike.*${escaped}*)`));}
+  const offset=(page-1)*pageSize;
+  const rows=await fetchRows(env,filters.join('&')+`&order=updated_at.desc&limit=${pageSize+1}&offset=${offset}`);
+  return reply({goals:rows.slice(0,pageSize),page,hasMore:rows.length>pageSize,pageSize});
  }catch(e){console.error('Goals GET',e);return reply({error:'Unable to load goals.'},500);}
 }
 export async function onRequestPost({request,env}){
@@ -24,7 +49,7 @@ export async function onRequestPost({request,env}){
   const normalizedStatus=target!==null&&(data.status==='completed'||progress>=target)?'completed':data.status==='completed'?'completed':'in_progress';
   const normalizedProgress=target!==null&&normalizedStatus==='completed'?target:progress;
   const count=await fetchRows(env,`discord_id=eq.${session.id}&limit=51`);if(count.length>=50)return reply({error:'Maximum 50 goals.'},400);
-  const r=await supabaseRest(env,'ironkin_member_goals',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({discord_id:session.id,display_name:String(session.global_name||session.username||session.name||'Ironkin').slice(0,80),title,category,unit,progress:normalizedProgress,target,status:normalizedStatus,is_public:data.is_public===true})});
+  const r=await supabaseRest(env,'ironkin_member_goals',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({discord_id:session.id,display_name:memberName(session),title,category,unit,progress:normalizedProgress,target,status:normalizedStatus,is_public:data.is_public===true})});
   return reply({goal:(await r.json())[0]},201);
  }catch(e){console.error('Goals POST',e);return reply({error:'Unable to create goal.'},500);}
 }
