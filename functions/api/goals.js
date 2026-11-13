@@ -21,8 +21,10 @@ export async function onRequestPost({request,env}){
   const unit=String(data.unit||'').trim().slice(0,24);const progress=Number(data.progress??0);
   const target=data.target==null||data.target===''?null:Number(data.target);
   if(!title||title.length>120||!Number.isFinite(progress)||progress<0||(target!==null&&(!Number.isFinite(target)||target<=0)))return reply({error:'Invalid goal values.'},400);
+  const normalizedStatus=target!==null&&(data.status==='completed'||progress>=target)?'completed':data.status==='completed'?'completed':'in_progress';
+  const normalizedProgress=target!==null&&normalizedStatus==='completed'?target:progress;
   const count=await fetchRows(env,`discord_id=eq.${session.id}&limit=51`);if(count.length>=50)return reply({error:'Maximum 50 goals.'},400);
-  const r=await supabaseRest(env,'ironkin_member_goals',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({discord_id:session.id,display_name:String(session.global_name||session.username||session.name||'Ironkin').slice(0,80),title,category,unit,progress,target,status:data.status==='completed'?'completed':'in_progress',is_public:data.is_public===true})});
+  const r=await supabaseRest(env,'ironkin_member_goals',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({discord_id:session.id,display_name:String(session.global_name||session.username||session.name||'Ironkin').slice(0,80),title,category,unit,progress:normalizedProgress,target,status:normalizedStatus,is_public:data.is_public===true})});
   return reply({goal:(await r.json())[0]},201);
  }catch(e){console.error('Goals POST',e);return reply({error:'Unable to create goal.'},500);}
 }
@@ -38,6 +40,10 @@ export async function onRequestPatch({request,env}){
   if('target'in data){update.target=data.target==null||data.target===''?null:Number(data.target);if(update.target!==null&&(!Number.isFinite(update.target)||update.target<=0))return reply({error:'Invalid target.'},400);}
   if('status'in data){if(!['in_progress','completed'].includes(data.status))return reply({error:'Invalid status.'},400);update.status=data.status;}
   if('is_public'in data)update.is_public=data.is_public===true;
+  const existing=await fetchRows(env,`id=eq.${encodeURIComponent(data.id)}&discord_id=eq.${session.id}&limit=1`);
+  if(!existing.length)return reply({error:'Goal not found.'},404);
+  const old=existing[0];const finalTarget='target'in update?update.target:old.target;const finalProgress='progress'in update?update.progress:Number(old.progress);const finalStatus='status'in update?update.status:old.status;
+  if(finalTarget!==null&&Number(finalTarget)>0){if(finalStatus==='completed')update.progress=Number(finalTarget);else if(finalProgress>=Number(finalTarget))update.status='completed';}
   const r=await supabaseRest(env,`ironkin_member_goals?id=eq.${encodeURIComponent(data.id)}&discord_id=eq.${session.id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(update)});
   const rows=await r.json();return rows.length?reply({goal:rows[0]}):reply({error:'Goal not found.'},404);
  }catch(e){console.error('Goals PATCH',e);return reply({error:'Unable to update goal.'},500);}
