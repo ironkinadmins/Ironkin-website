@@ -5,7 +5,7 @@ export async function onRequestGet({request,env}){
  if(secret.length<24||!equal(supplied,`Bearer ${secret}`))return Response.json({error:'Unauthorized'},{status:401});
  const id=new URL(request.url).searchParams.get('discord_id')||'';
  if(!/^\d{15,22}$/.test(id))return Response.json({error:'Invalid Discord ID'},{status:400});
- try{const r=await supabaseRest(env,`ironkin_member_goals?select=title,category,target,progress,unit,status&discord_id=eq.${id}&order=created_at.desc&limit=50`);
+ try{const r=await supabaseRest(env,`ironkin_member_goals?select=title,category,target,progress,unit,status,is_public&discord_id=eq.${id}&order=created_at.desc&limit=50`);
  return Response.json({goals:await r.json()},{headers:{'Cache-Control':'no-store'}});}
  catch(e){console.error('Bot goals lookup',e);return Response.json({error:'Unable to retrieve goals'},{status:500});}
 }
