@@ -1,5 +1,5 @@
 import { hybridKv } from "../../../_hybridKv.js";
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, canManageCalendarSession } from "../../_auth.js";
 const EVENT_TEMPLATES_KEY = "calendar:event-templates";
 
 const DEFAULT_TEMPLATES = {
@@ -76,7 +76,7 @@ async function getTemplates(env) {
 }
 
 export async function onRequestGet({ request, env }) {
-  if (!isStaffSession(await getSession(request, env))) {
+  if (!canManageCalendarSession(await getSession(request, env))) {
     return Response.json({ error: "Staff access required." }, { status: 403 });
   }
 
@@ -85,7 +85,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!isStaffSession(await getSession(request, env))) {
+  if (!canManageCalendarSession(await getSession(request, env))) {
     return Response.json({ error: "Staff access required." }, { status: 403 });
   }
 

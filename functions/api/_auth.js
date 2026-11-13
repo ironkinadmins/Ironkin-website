@@ -108,3 +108,9 @@ export function isGamesAdminSession(session) {
 export function isStaffSession(session) {
   return Boolean(session?.roles?.some(roleId => STAFF_ROLE_IDS.includes(roleId)));
 }
+
+// Calendar-only permission for Event Moderators; does not grant staff access.
+export const CALENDAR_EVENT_ROLE_IDS = ["1570504555928485919"];
+export function canManageCalendarSession(session) {
+  return isStaffSession(session) || Boolean(session?.roles?.some(id => CALENDAR_EVENT_ROLE_IDS.includes(String(id))));
+}

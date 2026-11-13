@@ -17,6 +17,11 @@ function isStaffUser(user) {
   );
 }
 
+const CALENDAR_EVENT_ROLE_IDS = ["1570504555928485919"];
+function canManageCalendarUser(user) {
+  return isStaffUser(user) || Boolean(user?.roles?.some(id => CALENDAR_EVENT_ROLE_IDS.includes(String(id))));
+}
+
 async function getCurrentAuthUser() {
   try {
     const response = await fetch("/api/auth/me");
@@ -5601,7 +5606,7 @@ async function setupCalendarAdminTools() {
   if (!panel) return;
 
   const user = await getCurrentAuthUser();
-  calendarCurrentUserIsStaff = isStaffUser(user);
+  calendarCurrentUserIsStaff = canManageCalendarUser(user);
   panel.hidden = !calendarCurrentUserIsStaff;
   document.getElementById("calendarQuickCreateBtn")?.toggleAttribute("hidden", !calendarCurrentUserIsStaff);
   document.getElementById("calendarManageTemplatesBtn")?.toggleAttribute("hidden", !calendarCurrentUserIsStaff);

@@ -1,6 +1,6 @@
 import { womFetch } from "../../../_wom.js";
 import { hybridKv } from "../../../_hybridKv.js";
-import { getSession, isStaffSession } from "../../_auth.js";
+import { getSession, canManageCalendarSession } from "../../_auth.js";
 import { mirrorCalendarEventCreate, mirrorCalendarEventDelete, mirrorCalendarEventCancel } from "../../../_discordCalendar.js";
 
 const CUSTOM_CALENDAR_EVENTS_KEY = "calendar:custom-events";
@@ -771,7 +771,7 @@ async function createWomCompetition(env, event) {
 }
 
 export async function onRequestDelete({ request, env, waitUntil }) {
-  if (!isStaffSession(await getSession(request, env))) {
+  if (!canManageCalendarSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
@@ -811,7 +811,7 @@ export async function onRequestDelete({ request, env, waitUntil }) {
 }
 
 export async function onRequestPost({ request, env, waitUntil }) {
-  if (!isStaffSession(await getSession(request, env))) {
+  if (!canManageCalendarSession(await getSession(request, env))) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
