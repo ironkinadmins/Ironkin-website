@@ -160,7 +160,7 @@ function buildScheduledEventPayload(env, event) {
 
   return {
     name: truncate(event.title || "Ironkin Event", 100),
-    description: truncate(event.description || `${getEventKind(event)} from Ironkin.`, 1000),
+    description: truncate([event.description || `${getEventKind(event)} from Ironkin.`, event.creatorDiscordId ? `Created by: <@${event.creatorDiscordId}>` : "", event.hostDiscordId ? `Hosted by: <@${event.hostDiscordId}>` : ""].filter(Boolean).join("\n"), 1000),
     privacy_level: 2,
     scheduled_start_time: start.toISOString(),
     scheduled_end_time: end.toISOString(),

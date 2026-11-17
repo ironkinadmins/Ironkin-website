@@ -314,7 +314,7 @@ function getDiscordScheduledEventLocation(env, event) {
 function getDiscordScheduledEventPayload(env, event) {
   return {
     name: truncateDiscordText(event.title || "Ironkin Event", 100),
-    description: truncateDiscordText(event.description || `${getLabelForType(event.eventType, event.botwTier)} on the Ironkin calendar.`, 1000),
+    description: truncateDiscordText([event.description || `${getLabelForType(event.eventType, event.botwTier)} on the Ironkin calendar.`, event.creatorDiscordId ? `Created by: <@${event.creatorDiscordId}>` : "", event.hostDiscordId ? `Hosted by: <@${event.hostDiscordId}>` : ""].filter(Boolean).join("\n"), 1000),
     privacy_level: 2,
     entity_type: 3,
     scheduled_start_time: event.start,
@@ -448,6 +448,10 @@ function buildEventAnnouncementPayload(env, event, mode = "created") {
     { name: "Time", value: formatDiscordTimeRange(event.start, event.end), inline: false },
     { name: "Calendar", value: `${siteUrl}/calendar`, inline: false }
   ];
+  if (event.creatorDiscordId) fields.splice(4, 0, {name:"Created by",value:`<@${event.creatorDiscordId}>`,inline:true});
+  else if (event.creatorDisplayName) fields.splice(4,0,{name:"Created by",value:event.creatorDisplayName,inline:true});
+  if (event.hostDiscordId) fields.splice(5, 0, {name:"Hosted by",value:`<@${event.hostDiscordId}>`,inline:true});
+  else if (event.hostDisplayName) fields.splice(5,0,{name:"Hosted by",value:event.hostDisplayName,inline:true});
 
   if (scheduledLink) {
     fields.splice(4, 0, { name: "Discord Event", value: scheduledLink, inline: false });
@@ -771,7 +775,8 @@ async function createWomCompetition(env, event) {
 }
 
 export async function onRequestDelete({ request, env, waitUntil }) {
-  if (!canManageCalendarSession(await getSession(request, env))) {
+  const session = await getSession(request, env);
+  if (!canManageCalendarSession(session)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
@@ -811,7 +816,8 @@ export async function onRequestDelete({ request, env, waitUntil }) {
 }
 
 export async function onRequestPost({ request, env, waitUntil }) {
-  if (!canManageCalendarSession(await getSession(request, env))) {
+  const session = await getSession(request, env);
+  if (!canManageCalendarSession(session)) {
     return Response.json({ error: "Staff only." }, { status: 403 });
   }
 
@@ -829,11 +835,37 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const existing = cleanText(body.id) ? events.find(item => item.id === cleanText(body.id)) : null;
 
     const normalizedType = normalizeCalendarEventType(body.eventType, body.botwTier || existing?.botwTier);
+    const creatorId = cleanText(existing?.creatorDiscordId) || cleanText(session.id);
+    const creatorName = cleanText(existing?.creatorDisplayName) || cleanText(session.nick || session.global_name || session.username, "Staff");
+    const selection = cleanText(body.hostSelection);
+    const hostIdMatch = selection.match(/\((\d{15,22})\)$/);
+    let hostId = existing?.hostDiscordId || creatorId;
+    let hostName = existing?.hostDisplayName || creatorName;
+    if (!existing || Object.prototype.hasOwnProperty.call(body, "hostSelection")) {
+      if (!selection) { hostId = creatorId; hostName = creatorName; }
+      else if (hostIdMatch) {
+        hostId = hostIdMatch[1];
+        hostName = selection.slice(0, hostIdMatch.index).trim() || creatorName;
+        if (env.DISCORD_BOT_TOKEN && env.DISCORD_GUILD_ID) {
+          const lookup = await fetch(`https://discord.com/api/v10/guilds/${env.DISCORD_GUILD_ID}/members/${hostId}`, {headers:{Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`}});
+          if (!lookup.ok) return Response.json({error:"Selected host is not a Discord server member."},{status:400});
+          const member = await lookup.json();
+          hostName = member.nick || member.user?.global_name || member.user?.username || hostName;
+        }
+      } else if (selection === existing?.hostDisplayName) { hostId = existing.hostDiscordId || creatorId; hostName = selection; }
+      else if (selection === creatorName) { hostId = creatorId; hostName = creatorName; }
+      else return Response.json({error:"Choose a host from the Discord member suggestions."},{status:400});
+    }
+
 
     const event = {
       ...(existing || {}),
       id: cleanText(body.id) || makeId("calendar"),
       source: "ironkin-admin",
+      creatorDiscordId: creatorId,
+      creatorDisplayName: creatorName,
+      hostDiscordId: hostId,
+      hostDisplayName: hostName,
       title: cleanText(body.title, "Untitled Event"),
       description: cleanText(body.description),
       location: cleanText(body.location),

@@ -5229,6 +5229,8 @@ function setCalendarEventFormFromEvent(event, { duplicate = false } = {}) {
   if (titleInput) titleInput.value = duplicate ? `${event.title || "Untitled Event"} Copy` : (event.title || "");
   if (typeInput) typeInput.value = getCalendarEventTypeInputValue(event);
   if (descInput) descInput.value = event.description || "";
+  const hostInput = document.getElementById("calendarEventHostInput");
+  if (hostInput) hostInput.value = duplicate ? "" : (event.hostDisplayName || event.creatorDisplayName || "");
   if (featuredInput) featuredInput.checked = event.featured === true;
   if (targetInput) targetInput.value = event.target || "";
   if (createWomInput) createWomInput.checked = duplicate ? false : Boolean(event.womCompetitionId);
@@ -5280,6 +5282,7 @@ async function saveCalendarEventForm(event) {
     title: document.getElementById("calendarEventTitleInput")?.value.trim(),
     description: document.getElementById("calendarEventDescriptionInput")?.value.trim(),
     location: "",
+    hostSelection: document.getElementById("calendarEventHostInput")?.value.trim() || "",
     start: getCalendarDateTimeValue("calendarEventStartDateInput", "calendarEventStartTimeInput", "calendarEventStartMeridiemInput"),
     end: getCalendarDateTimeValue("calendarEventEndDateInput", "calendarEventEndTimeInput", "calendarEventEndMeridiemInput"),
     eventType,
@@ -6291,3 +6294,28 @@ if (!window.__ironkinEventLeaderboardToggleReady) {
     showModal(href);
   });
 })();
+
+// Staff-only member suggestions: the server resolves selected names to immutable Discord IDs.
+let calendarHostSearchTimer;
+document.getElementById("calendarEventHostInput")?.addEventListener("input", (event) => {
+  clearTimeout(calendarHostSearchTimer);
+  const query = event.target.value.trim();
+  const suggestions = document.getElementById("calendarHostSuggestions");
+  if (!suggestions) return;
+  suggestions.replaceChildren();
+  if (query.length < 2) return;
+  calendarHostSearchTimer = setTimeout(async () => {
+    try {
+      const response = await fetch(`/api/admin/calendar/members?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (event.target.value.trim() !== query) return;
+      suggestions.replaceChildren();
+      for (const member of data.members || []) {
+        const option = document.createElement("option");
+        option.value = `${member.name} (${member.id})`;
+        suggestions.append(option);
+      }
+    } catch (_) { /* Member search is optional; creator fallback remains available. */ }
+  }, 250);
+});

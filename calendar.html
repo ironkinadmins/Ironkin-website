@@ -211,6 +211,13 @@
           </label>
 
           <label class="calendar-field-wide">
+            <span>Hosted by</span>
+            <input id="calendarEventHostInput" type="text" list="calendarHostSuggestions" autocomplete="off" placeholder="Search Discord members (defaults to creator)" />
+            <datalist id="calendarHostSuggestions"></datalist>
+            <small>Creator is recorded automatically from your Discord login. Choose a host or leave blank to host yourself.</small>
+          </label>
+
+          <label class="calendar-field-wide">
             <span>Description</span>
             <textarea id="calendarEventDescriptionInput" rows="3" placeholder="Optional event details"></textarea>
           </label>
