@@ -3231,9 +3231,20 @@ document.addEventListener("click",async event=>{
         // handling remains server-side and follows Discord's retry_after value.
         if(i<bosses.length-1) await new Promise(resolve=>setTimeout(resolve,450));
       }
+      // The boss boards are synced in separate requests to stay within Worker limits.
+      // Reorder the historical boards once, AFTER the final boss has finished.
+      let historicalStatus="";
+      try {
+        target.textContent="Positioning BOTW/SOTW records…";
+        const ordered=await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reorder-historical"})});
+        historicalStatus=ordered.historicalRecords?.moved?"BOTW/SOTW records moved to bottom.":"BOTW/SOTW records already at bottom.";
+      } catch(error) {
+        historicalStatus=`BOTW/SOTW ordering FAILED: ${error.message||"Unknown error"}`;
+        failures.push({name:"Historical record ordering",error:error.message||"Unknown error"});
+      }
       target.textContent=originalText;
       const details=failures.slice(0,6).map(x=>`\n• ${x.name}: ${x.error}`).join("");
-      alert(`Discord sync complete: ${synced} synced${skipped?`, ${skipped} skipped`:""}${failures.length?`, ${failures.length} failed`:""}.${details}${failures.length>6?`\n• +${failures.length-6} more`:""}`);
+      alert(`Discord sync complete: ${synced} synced${skipped?`, ${skipped} skipped`:""}${failures.length?`, ${failures.length} failed`:""}.${details}${failures.length>6?`\n• +${failures.length-6} more`:""}\n${historicalStatus}`);
     }else{const b=(window.__hofAdminBosses||[]).find(x=>x.slug===target.dataset.slug);if(!b)throw new Error("Boss not found.");if(action==="sync")await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"sync",slug:b.slug})});if(action==="archive")await hofFetchJson(`/api/hall-of-flame/bosses?slug=${encodeURIComponent(b.slug)}`,{method:"DELETE"});if(action==="restore")await hofFetchJson("/api/hall-of-flame/bosses",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:b.slug,active:true,visible:true,accept_submissions:true})});}await hofOpenManage();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}return;}
   if(target.dataset.hofHistory){hofOpenHistory(target.dataset.hofHistory);return;}
   if(target.dataset.hofReview){target.disabled=true;try{await hofFetchJson("/api/hall-of-flame/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:target.dataset.id,action:target.dataset.hofReview})});await hofOpenReview();await loadHallOfFlamePage();}catch(e){alert(e.message);target.disabled=false;}}

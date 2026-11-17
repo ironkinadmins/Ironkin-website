@@ -64,6 +64,15 @@ export async function onRequestPost({request,env}){
     }
     return json({ok:failed===0,updated,failed,results});
   }
+  if (body.action === "reorder-historical") {
+    try {
+      const historicalRecords = await ensureHistoricalRecordsLast(env);
+      if (historicalRecords.skipped) return json({ok:false,error:historicalRecords.reason||"Historical records not found",historicalRecords},409);
+      return json({ok:true,historicalRecords});
+    } catch (error) {
+      return json({ok:false,error:`Historical record ordering failed: ${error.message||error}`},502);
+    }
+  }
   if(body.action==="sync" || body.action==="sync-all"){
     const all=await listBosses(env,{all:true});
     const targets=body.action==="sync-all"?all.filter(b=>b.active!==false&&b.discord_sync!==false):all.filter(b=>b.slug===slugify(body.slug)&&b.discord_sync!==false);
