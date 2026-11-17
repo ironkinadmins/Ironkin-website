@@ -128,72 +128,82 @@ function buildReminderPayload(env, event, reminder) {
 }
 
 async function sendDiscordMessage(env, payload) {
-  if (!env.DISCORD_BOT_TOKEN) return false;
+  if (!env.DISCORD_BOT_TOKEN) return null;
   const response = await fetch(`https://discord.com/api/v10/channels/${EVENT_ANNOUNCEMENT_CHANNEL_ID}/messages`, {
     method: "POST",
-    headers: {
-      "Authorization": `Bot ${env.DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json"
-    },
+    headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    console.warn("Discord reminder failed", response.status, data);
-    return false;
+    console.warn("Discord reminder failed", response.status, await response.text().catch(() => ""));
+    return null;
   }
-  return true;
+  const message = await response.json().catch(() => null);
+  // Without an ID we cannot safely guarantee cleanup; do not mark this reminder complete.
+  return message?.id ? { id: String(message.id), channelId: String(message.channel_id || EVENT_ANNOUNCEMENT_CHANNEL_ID) } : null;
+}
+
+async function deleteDiscordReminder(env, message) {
+  if (!message?.id || !env.DISCORD_BOT_TOKEN) return false;
+  const channelId = cleanText(message.channelId, EVENT_ANNOUNCEMENT_CHANNEL_ID);
+  const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages/${encodeURIComponent(message.id)}`, {
+    method: "DELETE", headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` }
+  });
+  // A deleted or missing reminder is already clean.
+  if (response.ok || response.status === 404) return true;
+  console.warn("Could not remove previous calendar reminder", response.status, await response.text().catch(() => ""));
+  return false;
 }
 
 export async function processCalendarReminders(env) {
-  if (!hybridKv(env, "calendar")) return { checked: 0, sent: 0, error: "Missing CALENDAR_KV binding." };
-  const events = await getJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, []);
+  const kv = hybridKv(env, "calendar");
+  if (!kv) return { checked: 0, sent: 0, error: "Missing CALENDAR_KV binding." };
+  const events = await getJson(kv, CUSTOM_CALENDAR_EVENTS_KEY, []);
   const now = Date.now();
   let changed = false;
   let sent = 0;
+  let removed = 0;
 
- for (const event of events) {
-  if (!event || String(event.status || "scheduled").toLowerCase() === "cancelled") continue;
-
-  const flags = event.reminderFlags && typeof event.reminderFlags === "object"
-    ? event.reminderFlags
-    : {};
-
-  for (const reminder of getReminderPlan(event)) {
-    if (flags[reminder.key]) continue;
-
-    console.log({
-      title: event.title,
-      reminder: reminder.key,
-      triggerMs: reminder.triggerMs,
-      trigger: reminder.triggerMs ? new Date(reminder.triggerMs).toISOString() : null,
-      nowMs: now,
-      now: new Date(now).toISOString(),
-      differenceMinutes: reminder.triggerMs
-        ? Math.round((now - reminder.triggerMs) / 60000)
-        : null,
-      due: reminder.triggerMs ? isDue(reminder.triggerMs, now) : false,
-    });
-
-    if (!isDue(reminder.triggerMs, now)) continue;
-
-    const ok = await sendDiscordMessage(env, buildReminderPayload(env, event, reminder));
-
-    if (ok) {
-      flags[reminder.key] = new Date().toISOString();
-      event.reminderFlags = flags;
-      changed = true;
-      sent += 1;
+  for (const event of events) {
+    if (!event) continue;
+    const status = String(event.status || "scheduled").toLowerCase();
+    const endMs = new Date(event.end).getTime();
+    const shouldClean = status === "cancelled" || (Number.isFinite(endMs) && now >= endMs);
+    if (shouldClean) {
+      if (event.activeReminderMessage?.id && await deleteDiscordReminder(env, event.activeReminderMessage)) {
+        delete event.activeReminderMessage;
+        changed = true;
+        removed++;
+      }
+      continue;
     }
+
+    const flags = event.reminderFlags && typeof event.reminderFlags === "object" ? event.reminderFlags : {};
+    // Process only the latest due reminder, preventing multiple active posts in a single run.
+    const due = getReminderPlan(event)
+      .filter(reminder => !flags[reminder.key] && isDue(reminder.triggerMs, now))
+      .sort((a, b) => b.triggerMs - a.triggerMs);
+    if (!due.length) continue;
+    const reminder = due[0];
+    const posted = await sendDiscordMessage(env, buildReminderPayload(env, event, reminder));
+    if (!posted) continue;
+
+    const previous = event.activeReminderMessage;
+    flags[reminder.key] = new Date().toISOString();
+    // Earlier due triggers are superseded by the latest reminder.
+    for (const other of due.slice(1)) flags[other.key] = flags[reminder.key];
+    event.reminderFlags = flags;
+    event.activeReminderMessage = posted;
+    changed = true;
+    sent++;
+    if (previous?.id && previous.id !== posted.id && await deleteDiscordReminder(env, previous)) removed++;
   }
-}
 
   if (changed) {
     events.sort((a, b) => new Date(a.start || 0) - new Date(b.start || 0));
-    await putJson(hybridKv(env, "calendar"), CUSTOM_CALENDAR_EVENTS_KEY, events);
+    await putJson(kv, CUSTOM_CALENDAR_EVENTS_KEY, events);
   }
-
-  return { checked: events.length, sent };
+  return { checked: events.length, sent, removed };
 }
 
 function isAuthorized(request, env) {
