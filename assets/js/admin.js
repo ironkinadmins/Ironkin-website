@@ -2712,7 +2712,7 @@ async function loadAdminDrops() {
           </label>
           ${bountyItem ? `<label><span>Starts (Eastern Time)</span><input type="datetime-local" data-bounty-start value="${dateValue(drop.bountyStartsAt)}"></label>
           <label><span>Ends (Eastern Time)</span><input type="datetime-local" data-bounty-end value="${dateValue(drop.bountyEndsAt)}"></label>
-          <label><span>Tracking enabled</span><input type="checkbox" data-bounty-enabled ${drop.bountyEnabled !== false ? "checked" : ""}></label>` : ""}
+          <label><span>Allow tracking (uncheck to stop this bounty early)</span><input type="checkbox" data-bounty-enabled ${drop.bountyEnabled !== false ? "checked" : ""}></label>` : ""}
           ${pvmEntry ? `<label>
             <span>Boss / category</span>
             <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name">
@@ -3036,6 +3036,27 @@ async function searchBountyWiki(query) {
     }));
   } catch { resultsEl.innerHTML = `<div class="wiki-loading">Could not search the OSRS Wiki.</div>`; }
 }
+// Remember the last successfully saved schedule on this browser, not an unsaved draft.
+const BOUNTY_LAST_SCHEDULE_KEY = "ironkin:bounties:last-successful-schedule:v1";
+function restoreLastBountySchedule() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(BOUNTY_LAST_SCHEDULE_KEY) || "null");
+    if (!saved || typeof saved.starts !== "string" || typeof saved.ends !== "string") return;
+    const start = bountyDateToIso(saved.starts);
+    const end = bountyDateToIso(saved.ends);
+    if (!start || !end || Date.parse(start) >= Date.parse(end)) return;
+    const startInput = document.getElementById("bountyStartInput");
+    const endInput = document.getElementById("bountyEndInput");
+    if (startInput) startInput.value = saved.starts;
+    if (endInput) endInput.value = saved.ends;
+  } catch { /* Storage may be blocked; bounty creation must still work. */ }
+}
+function rememberLastBountySchedule(starts, ends) {
+  try { localStorage.setItem(BOUNTY_LAST_SCHEDULE_KEY, JSON.stringify({ starts, ends })); }
+  catch { /* Private browsing or storage quota must not block saving. */ }
+}
+restoreLastBountySchedule();
+
 async function addBountyItem() {
   const name = document.getElementById("bountySelectedItemInput")?.value.trim();
   const imageInput = document.getElementById("bountySelectedImageInput");
@@ -3051,16 +3072,15 @@ async function addBountyItem() {
   if (!name || !selectedEventId) { alert("Select an OSRS item first."); return; }
   const itemId = Number(document.getElementById("bountySelectedItemInput")?.dataset.itemId || 0);
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
-  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule, bountyStartsAt, bountyEndsAt, bountyEnabled:document.getElementById("bountyEnabledInput")?.checked !== false }) });
+  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule, bountyStartsAt, bountyEndsAt, bountyEnabled:true }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add bounty."); return; }
+  rememberLastBountySchedule(starts, ends);
   document.getElementById("bountySelectedItemInput").value = "";
   document.getElementById("bountySelectedItemInput").dataset.itemId = "";
   imageInput.value = "";
   document.getElementById("bountyRewardInput").value = "";
-  document.getElementById("bountyStartInput").value = "";
-  document.getElementById("bountyEndInput").value = "";
-  document.getElementById("bountyEnabledInput").checked = true;
+  // Keep the last successful schedule populated for the next bounty.
   const bountyIdLookup = document.getElementById("bountyItemIdLookupInput");
   if (bountyIdLookup) bountyIdLookup.value = "";
   const bountyIdStatus = document.getElementById("bountyItemIdLookupStatus");
