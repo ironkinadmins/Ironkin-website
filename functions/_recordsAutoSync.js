@@ -32,7 +32,6 @@ const canonicalEventName = (type, value) => {
   return name;
 };
 const numericScore = row => Number(String(row.score || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/)?.[0] || 0);
-const competitionId = row => String(row.url || '').match(/wiseoldman\.net\/competitions\/(\d+)/)?.[1] || '';
 const preferRecord = (candidate, current) => {
   const a = numericScore(candidate), b = numericScore(current);
   if (a !== b) return a > b;
@@ -54,9 +53,9 @@ export function reconcileHistoricalRecords(archive) {
     const normalized = { ...row, eventName: canonicalEventName(type, row.eventName) };
     const key = metric(normalized.eventName);
     // A category has one record: the verified highest historical result.
-    // The WOM ID is retained on the winning record for traceability.
-    const existingIndex = sets[type].findIndex(item => metric(item.eventName) === key ||
-      (competitionId(item) && competitionId(item) === competitionId(normalized)));
+    // Only merge equivalent event categories. Different bosses may share a
+    // legacy WOM URL, so competition IDs alone must never trigger a merge.
+    const existingIndex = sets[type].findIndex(item => metric(item.eventName) === key);
     if (existingIndex < 0) sets[type].push(normalized);
     else if (preferRecord(normalized, sets[type][existingIndex])) sets[type][existingIndex] = normalized;
   };
