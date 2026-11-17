@@ -1,4 +1,6 @@
 import { ensureHistoricalRecordsLast } from "../../_hofRecordOrder.js";
+import { syncRecordEmbeds } from "../../_recordsAutoSync.js";
+import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
 import { approvedForBoss, bossMessage, discordMessages, mergeBoard, normalizeBoss, parseDiscordBoard, syncDiscordBoard } from "./_records.js";
@@ -66,7 +68,15 @@ export async function onRequestPost({request,env}){
   }
   if (body.action === "reorder-historical") {
     try {
+      // Rebuild historical boards from archived competition results, not stale
+      // Discord embeds. Reordering alone cannot add newly archived winners.
+      const rawArchive = await hybridKv(env, "drops").get("events:archive");
+      const archive = rawArchive ? JSON.parse(rawArchive) : [];
+      if (!Array.isArray(archive)) throw new Error("Competition archive data is invalid.");
+      const published = await syncRecordEmbeds(env, archive, ["botw", "sotw"]);
       const historicalRecords = await ensureHistoricalRecordsLast(env);
+      historicalRecords.published = published.results;
+      historicalRecords.archiveIssues = published.reconciliation.issues;
       if (historicalRecords.skipped) return json({ok:false,error:historicalRecords.reason||"Historical records not found",historicalRecords},409);
       return json({ok:true,historicalRecords});
     } catch (error) {

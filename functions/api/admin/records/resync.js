@@ -2,6 +2,7 @@ import { hybridKv } from '../../../_hybridKv.js';
 import { getSession, isStaffSession } from '../../_auth.js';
 import { reconcileHistoricalRecords, syncRecordEmbeds } from '../../../_recordsAutoSync.js';
 import { getHallOfFlameDiscordSettings } from '../../hall-of-flame/_records.js';
+import { ensureHistoricalRecordsLast } from '../../../_hofRecordOrder.js';
 
 // Preview archive coverage without modifying Discord or archived results.
 export async function onRequestGet({ request, env }) {
@@ -49,8 +50,10 @@ export async function onRequestPost({ request, env }) {
     const raw = await hybridKv(env, 'drops').get('events:archive');
     const archive = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(archive)) throw new Error('Archive is invalid.');
-    const results = await syncRecordEmbeds(env, archive);
-    return Response.json({ success: true, results }, { headers: { 'Cache-Control': 'no-store' } });
+    const results = await syncRecordEmbeds(env, archive, ['botw', 'sotw']);
+    const ordering = await ensureHistoricalRecordsLast(env);
+    if (ordering.skipped) throw new Error(ordering.reason || 'Historical record ordering skipped.');
+    return Response.json({ success: true, results, ordering }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return Response.json({ success: false, error: String(error?.message || error) }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }

@@ -85,7 +85,7 @@ async function discord(url,token,method='GET',payload) {
   if(!res.ok) throw new Error(`Discord ${res.status}: ${tidy(body.message).slice(0,140)}`);
   return body;
 }
-export async function syncRecordEmbeds(env,archive,types=['sotw','botw']) {
+export async function syncRecordEmbeds(env,archive,types=['botw','sotw']) {
   const {channelId}=await getHallOfFlameDiscordSettings(env);
   const token=env.DISCORD_BOT_TOKEN;
   if(!channelId||!token) throw new Error('Hall of Flame Discord bot/channel not configured.');
@@ -97,7 +97,9 @@ export async function syncRecordEmbeds(env,archive,types=['sotw','botw']) {
     const previous=messages.find(m=>m.author?.id===bot.id&&m.embeds?.some(e=>e.title===title));
     const payload={embeds:embedChunks(type,records[type]),allowed_mentions:{parse:[]}};
     const message=await discord(previous?`${base}/${previous.id}`:base,token,previous?'PATCH':'POST',payload);
-    results.push({type,action:previous?'updated':'created',messageId:message.id,count:records[type].length});
+    const published = (message.embeds || []).flatMap(embed => String(embed.description || '').split('\n')).filter(line => /^\d+\.\s+\*\*/.test(line)).length;
+    if (published !== records[type].length) throw new Error(`Discord ${type.toUpperCase()} verification failed: expected ${records[type].length}, published ${published}`);
+    results.push({type,action:previous?'updated':'created',messageId:message.id,count:published});
   }
   return { results, reconciliation: { counts: reconciliation.counts, issues: reconciliation.issues } };
 }
