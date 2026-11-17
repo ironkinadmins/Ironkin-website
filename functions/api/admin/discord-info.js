@@ -53,6 +53,7 @@ export async function onRequest({request,env}) {
    if(!old && body.expected_revision!=null) return err("Section was removed. Reload.",409);
    const record={...v,revision:(old?.revision||0)+1,updated_at:new Date().toISOString(),updated_by:who(session)};
    const r=await supabaseRest(env,"ironkin_discord_info_sections?on_conflict=id",{method:"POST",headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify([record])});
+   if(!r.ok) return err(`Database save failed (HTTP ${r.status})`,502);
    return json({section:(await r.json())[0]});
   }
   if(body.action==="publish") {
@@ -62,24 +63,18 @@ export async function onRequest({request,env}) {
    if(!item) return err("Section not found",404);
    if(Number(body.expected_revision)!==Number(item.revision)) return err("Reload: this section has changed",409);
    if(!item.enabled) return err("Section disabled. Enable it before publishing.");
-   const url=String(env[CHANNELS[item.channel_key]]||"").trim();
-   if(!/^https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\//.test(url)) return err(`Webhook secret not configured for ${item.channel_key}`,503);
-   const embed={title:item.title,description:item.description,color:0xd4a44e,footer:{text:"Ironkin • Official Information"}};
-   const imageList=Array.isArray(item.images)?item.images.filter(Boolean):[];
-   if(!imageList.length && item.image_url) imageList.push(item.image_url);
-   if(imageList.length) embed.image={url:imageList[0]};
-   const embeds=[embed,...imageList.slice(1,8).map(url=>({color:0xd4a44e,image:{url}}))];
-   const payload={embeds,allowed_mentions:{parse:[]}};
-   let messageId=item.discord_message_id;
-   if(messageId) {
-    await discord(url,`/messages/${encodeURIComponent(messageId)}`,"PATCH",payload);
-   } else {
-    const result=await discord(url,"?wait=true","POST",payload);
-    messageId=String(result.id||"");
-    if(!/^\d+$/.test(messageId)) throw Error("Discord did not return a message ID");
-   }
-   const r=await supabaseRest(env,`ironkin_discord_info_sections?id=eq.${encodeURIComponent(id)}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({discord_message_id:messageId,published_at:new Date().toISOString()})});
-   return json({section:(await r.json())[0],message_id:messageId});
+   const images=Array.isArray(item.images) && item.images.length ? item.images : (item.image_url ? [item.image_url] : []);
+   // Publish an immutable snapshot. The bot will reconcile the permanent hub;
+   // never create a standalone webhook message here.
+   const published={published_title:item.title,published_description:item.description,
+     published_images:images,published_sort_order:item.sort_order,
+     published_enabled:true,published_at:new Date().toISOString()};
+   const r=await supabaseRest(env,`ironkin_discord_info_sections?id=eq.${encodeURIComponent(id)}&revision=eq.${Number(item.revision)}`,
+     {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(published)});
+   if(!r.ok) return err(`Database publish failed (HTTP ${r.status})`,502);
+   const updated=await r.json();
+   if(!updated.length) return err("Section changed during publishing. Reload and retry.",409);
+   return json({section:updated[0],hub_sync:"pending",message:"Published. Forgewarden will refresh the hub automatically."});
   }
   return err("Unknown action");
  } catch(e) {return err(e.message||"Unexpected error",500);}
