@@ -1,3 +1,4 @@
+import { validateBountySchedule } from "../_bountySchedule.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { resolveOsrsItemIdByName } from "../_osrsItems.js";
@@ -50,9 +51,16 @@ export async function onRequestPost({ request, env }) {
   const existingValue = await hybridKv(env, "drops").get(key);
   const drops = existingValue ? JSON.parse(existingValue) : [];
 
+  const isBounty = eventId === "bounties";
+  const start = String(body.bountyStartsAt || "");
+  const end = String(body.bountyEndsAt || "");
+  if (isBounty && !validateBountySchedule(start, end)) return Response.json({ error: "Invalid bounty schedule." }, { status: 400 });
   const existing = drops.find(drop => drop.name.toLowerCase() === name.toLowerCase());
 
   if (existing) {
+    if (isBounty && body.bountyStartsAt !== undefined) existing.bountyStartsAt = start;
+    if (isBounty && body.bountyEndsAt !== undefined) existing.bountyEndsAt = end;
+    if (isBounty && typeof body.bountyEnabled === "boolean") existing.bountyEnabled = body.bountyEnabled;
     if (image) existing.image = image;
     if (wikiUrl) existing.wikiUrl = wikiUrl;
     if (body.rewardEmbers !== undefined) existing.rewardEmbers = rewardEmbers;
@@ -60,7 +68,7 @@ export async function onRequestPost({ request, env }) {
     existing.trackingRule = trackingRule;
     if (body.boss !== undefined) existing.boss = boss;
   } else {
-    drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, boss, itemId: itemId || null, count: 0 });
+    drops.push({ name, image, wikiUrl, rewardEmbers, trackingRule, boss, itemId: itemId || null, count: 0, ...(isBounty ? { bountyStartsAt: start, bountyEndsAt: end, bountyEnabled: body.bountyEnabled !== false } : {}) });
   }
 
   await hybridKv(env, "drops").put(key, JSON.stringify(drops));

@@ -1,3 +1,5 @@
+import { isBountyItemActive } from "../../api/_bountySchedule.js";
+import { readDropsWithClanGoalFallback } from "../../api/drops/_dropKeys.js";
 import { isEventAcceptingSubmissions } from "../../api/_eventEligibility.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { requirePluginUser } from "../../api/_pluginAuth.js";
@@ -184,6 +186,15 @@ async function handlePluginSubmission(context) {
   if (!tracked || (shopping && tracked.status !== "missing")) {
     if (shopping && tracked) return Response.json({ success:true, duplicate:true, duplicateReason:"team_already_submitted", eventId:effectiveEventId, itemid:itemId, shoppingObjectiveId:tracked.id, status:tracked.status }, { status:200 });
     return Response.json({ error: "That item is not tracked for this event." }, { status: 404 });
+  }
+
+  // The client may have cached the item list. Enforce per-item expiry at intake.
+  if (websiteEventId === "bounties") {
+    const bountyDrops = (await readDropsWithClanGoalFallback(env, "bounties")).drops || [];
+    const bountyDrop = bountyDrops.find(drop => Number(drop.itemId) === Number(itemId));
+    if (!bountyDrop || !isBountyItemActive(bountyDrop)) {
+      return Response.json({ error: "This bounty is not currently active." }, { status: 409 });
+    }
   }
 
   const trackingRule = shopping ? "once_per_event" : (["repeatable", "once_per_player", "once_per_event"].includes(String(tracked.tracking_rule || "")) ? String(tracked.tracking_rule) : "repeatable");

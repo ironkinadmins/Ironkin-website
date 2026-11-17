@@ -2640,6 +2640,19 @@ async function loadAdminDrops() {
   catalog.className = `tracked-items-catalog${pvmEntry ? " tracked-items-catalog--grouped" : ""}`;
   list.appendChild(catalog);
 
+  const bountyLocalToIso = value => {
+    if (!value) return "";
+    const naive = Date.parse(value + ":00Z");
+    if (!Number.isFinite(naive)) return "";
+    let utc = naive;
+    for (let i = 0; i < 3; i++) {
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date(utc));
+      const obj = Object.fromEntries(parts.map(part => [part.type, part.value]));
+      const easternAsUtc = Date.UTC(+obj.year, +obj.month-1, +obj.day, +obj.hour, +obj.minute);
+      utc += naive - easternAsUtc;
+    }
+    return new Date(utc).toISOString();
+  };
   const createItemRow = (drop, index, currentBoss) => {
     const item = document.createElement("details");
     item.className = "tracked-item-record";
@@ -2650,12 +2663,15 @@ async function loadAdminDrops() {
     const canMoveUp = pvmEntry && index > 0 && previousBoss === currentBoss;
     const canMoveDown = pvmEntry && index < drops.length - 1 && nextBoss === currentBoss;
 
+    const bountyItem = selectedEventId === "bounties";
+    const bountyStatus = !bountyItem ? "" : drop.bountyEnabled === false ? "Disabled" : drop.bountyStartsAt && Date.now() < Date.parse(drop.bountyStartsAt) ? "Scheduled" : drop.bountyEndsAt && Date.now() >= Date.parse(drop.bountyEndsAt) ? "Expired" : "Active";
+    const dateValue = value => value ? new Date(value).toLocaleString("sv-SE", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).replace(" ", "T") : "";
     item.innerHTML = `
       <summary class="tracked-item-record-summary">
         <span class="tracked-item-record-main">
           <span class="tracked-item-thumb">${drop.image ? `<img src="${escapeHtml(drop.image)}" alt="">` : `<span class="tracked-item-thumb-placeholder">?</span>`}</span>
           <span class="tracked-item-identity">
-            <strong>${escapeHtml(drop.name)}</strong>
+            <strong>${escapeHtml(drop.name)}</strong>${bountyItem ? `<small>Bounty: ${bountyStatus}</small>` : ""}
             <small>${drop.itemId ? `ID ${Number(drop.itemId)}` : "Legacy item"}${pvmEntry ? ` · ${escapeHtml(drop.boss || "Unassigned")}` : ""}</small>
           </span>
         </span>
@@ -2691,6 +2707,9 @@ async function loadAdminDrops() {
               <option value="once_per_event" ${drop.trackingRule === "once_per_event" ? "selected" : ""}>Once per event</option>
             </select>
           </label>
+          ${bountyItem ? `<label><span>Starts (Eastern Time)</span><input type="datetime-local" data-bounty-start value="${dateValue(drop.bountyStartsAt)}"></label>
+          <label><span>Ends (Eastern Time)</span><input type="datetime-local" data-bounty-end value="${dateValue(drop.bountyEndsAt)}"></label>
+          <label><span>Tracking enabled</span><input type="checkbox" data-bounty-enabled ${drop.bountyEnabled !== false ? "checked" : ""}></label>` : ""}
           ${pvmEntry ? `<label>
             <span>Boss / category</span>
             <input type="text" data-drop-boss value="${escapeHtml(drop.boss || "")}" placeholder="Boss name">
@@ -2715,6 +2734,11 @@ async function loadAdminDrops() {
       itemId: item.querySelector('[data-drop-item-id]')?.value || "",
       rewardEmbers: item.querySelector('[data-drop-reward]')?.value || 0,
       trackingRule: item.querySelector('[data-drop-tracking-rule]')?.value || "repeatable",
+      ...(bountyItem ? {
+        bountyStartsAt: bountyLocalToIso(item.querySelector('[data-bounty-start]')?.value),
+        bountyEndsAt: bountyLocalToIso(item.querySelector('[data-bounty-end]')?.value),
+        bountyEnabled: item.querySelector('[data-bounty-enabled]')?.checked === true
+      } : {}),
       ...(pvmEntry ? { boss: item.querySelector('[data-drop-boss]')?.value || "" } : {})
     }));
     item.querySelector('[data-drop-action="up"]')?.addEventListener("click", () => updatePvmDropOrder(drop.name, { move: "up" }));

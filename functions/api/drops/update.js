@@ -1,3 +1,4 @@
+import { validateBountySchedule } from "../_bountySchedule.js";
 import { hybridKv } from "../../_hybridKv.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { getDropListKey, readDropsWithClanGoalFallback } from "./_dropKeys.js";
@@ -82,6 +83,17 @@ export async function onRequestPost({ request, env }) {
       const trackingRule = String(body.trackingRule || "");
       if (!allowedTrackingRules.has(trackingRule)) return Response.json({ error: "Invalid duplicate rule." }, { status: 400 });
       drops[index] = { ...drops[index], trackingRule };
+    }
+
+    if (eventId === "bounties" && (body.bountyStartsAt !== undefined || body.bountyEndsAt !== undefined || body.bountyEnabled !== undefined)) {
+      const start = body.bountyStartsAt === undefined ? (drops[index].bountyStartsAt || "") : String(body.bountyStartsAt || "");
+      const end = body.bountyEndsAt === undefined ? (drops[index].bountyEndsAt || "") : String(body.bountyEndsAt || "");
+      if (!validateBountySchedule(start, end)) return Response.json({ error: "Invalid bounty schedule or end is not after start." }, { status: 400 });
+      drops[index] = { ...drops[index], bountyStartsAt: start, bountyEndsAt: end };
+      if (body.bountyEnabled !== undefined) {
+        if (typeof body.bountyEnabled !== "boolean") return Response.json({ error: "Invalid enabled value." }, { status: 400 });
+        drops[index].bountyEnabled = body.bountyEnabled;
+      }
     }
 
     if (body.boss !== undefined) {

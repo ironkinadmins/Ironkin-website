@@ -1,3 +1,4 @@
+import { isBountyItemActive } from "../api/_bountySchedule.js";
 import { isEventAcceptingSubmissions, isPermanentSubmissionEvent } from "../api/_eventEligibility.js";
 import { hybridKv } from "../_hybridKv.js";
 import { requirePluginUser } from "../api/_pluginAuth.js";
@@ -134,7 +135,7 @@ export async function onRequestGet({ request, env }) {
       for (const { drop, originalItemId, itemId } of updatedDrops) {
         normalizedDrops.push(itemId ? { ...drop, itemId } : drop);
         if (itemId && itemId !== originalItemId) dropsChanged = true;
-        if (itemId) itemIds.push(itemId);
+        if (itemId && (websiteEventId !== "bounties" || isBountyItemActive(drop))) itemIds.push(itemId);
       }
 
       // Do not rewrite the canonical drop list on every GET. Only persist when
