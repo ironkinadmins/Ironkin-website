@@ -3682,16 +3682,17 @@ function getCalendarEventEnd(event) {
 
 function getDateOnlyKey(value) {
   if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) {
-    return String(value).slice(0, 10);
-  }
-
+  const raw = String(value).trim();
+  // Calendar date-only values are wall dates, not UTC instants.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  // Calendar events are scheduled in Eastern Time. UTC date slicing can
+  // incorrectly move evening events to the following calendar day.
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date).filter(part => ["year", "month", "day"].includes(part.type)).map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function isCalendarEventOnDate(event, dateKey) {
