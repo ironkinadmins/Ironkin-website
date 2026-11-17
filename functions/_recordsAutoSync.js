@@ -22,7 +22,23 @@ const titleFor = entry => {
   const raw = tidy(entry.metric || entry.title || entry.label);
   return displayEventName(raw.replace(/^skill of the week\s*[-–:]\s*/i, '').replace(/^boss of the week\s*[-–:]\s*/i, '') || 'Event');
 };
-const recordKey = row => `${metric(row.eventName)}|${metric(row.winner)}`;
+// Only verified equivalent BOTW categories are merged. Preserve source archives.
+const canonicalEventName = (type, value) => {
+  const name = displayEventName(value);
+  if (type !== 'botw') return name;
+  const key = metric(name);
+  if (key === 'barrows' || key === 'barrowschests') return 'Barrows';
+  if (key === 'phosanisnightmare' || key === 'phosanisnightmarenightmare') return "Phosani's Nightmare";
+  return name;
+};
+const numericScore = row => Number(String(row.score || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/)?.[0] || 0);
+const competitionId = row => String(row.url || '').match(/wiseoldman\.net\/competitions\/(\d+)/)?.[1] || '';
+const preferRecord = (candidate, current) => {
+  const a = numericScore(candidate), b = numericScore(current);
+  if (a !== b) return a > b;
+  if ((candidate.source === 'archive') !== (current.source === 'archive')) return candidate.source === 'archive';
+  return false;
+};
 const archiveType = entry => {
   const type = tidy(entry?.type).toLowerCase();
   return type === 'sotw' ? 'sotw' : (type === 'botw' || type.startsWith('botw-') ? 'botw' : null);
@@ -34,13 +50,15 @@ const compareRecords = (a,b) => a.eventName.localeCompare(b.eventName, 'en', {se
 export function reconcileHistoricalRecords(archive) {
   const sets = { sotw: [], botw: [] };
   const issues = [];
-  const seen = { sotw: new Set(), botw: new Set() };
-  const add = (type,row) => {
-    const normalized = { ...row, eventName: displayEventName(row.eventName) };
-    const key = recordKey(normalized);
-    if (seen[type].has(key)) return;
-    seen[type].add(key);
-    sets[type].push(normalized);
+  const add = (type, row) => {
+    const normalized = { ...row, eventName: canonicalEventName(type, row.eventName) };
+    const key = metric(normalized.eventName);
+    // A category has one record: the verified highest historical result.
+    // The WOM ID is retained on the winning record for traceability.
+    const existingIndex = sets[type].findIndex(item => metric(item.eventName) === key ||
+      (competitionId(item) && competitionId(item) === competitionId(normalized)));
+    if (existingIndex < 0) sets[type].push(normalized);
+    else if (preferRecord(normalized, sets[type][existingIndex])) sets[type][existingIndex] = normalized;
   };
   for (const entry of archive || []) {
     const type = archiveType(entry);
