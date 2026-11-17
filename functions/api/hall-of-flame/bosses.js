@@ -1,3 +1,4 @@
+import { ensureHistoricalRecordsLast } from "../../_hofRecordOrder.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
 import { approvedForBoss, bossMessage, discordMessages, mergeBoard, normalizeBoss, parseDiscordBoard, syncDiscordBoard } from "./_records.js";
@@ -81,7 +82,12 @@ export async function onRequestPost({request,env}){
       // using Discord's retry_after; this small gap avoids needless bucket bursts.
       if(body.action==="sync-all") await new Promise(resolve=>setTimeout(resolve,350));
     }
-    return json({ok:failed===0,synced,failed,results});
+    let historicalRecords = null;
+    if (body.action === "sync-all") {
+      try { historicalRecords = await ensureHistoricalRecordsLast(env); }
+      catch (error) { historicalRecords = { error: String(error.message || error) }; }
+    }
+    return json({ok:failed===0 && !historicalRecords?.error,synced,failed,results,historicalRecords});
   }
   if(body.action==="import-discord"){
     const messages=await discordMessages(env);
