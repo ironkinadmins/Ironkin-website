@@ -5,31 +5,66 @@ const tidy = value => String(value ?? '').trim();
 const metric = value => tidy(value).toLowerCase().replace(/[^a-z0-9]/g, '');
 export const displayEventName = value => {
   const raw = tidy(value).replace(/_/g, ' ').replace(/\s+/g, ' ');
-  const known = { 'phosanis nightmare': "Phosani's Nightmare", 'phosani s nightmare': "Phosani's Nightmare", 'barrows chests': 'Barrows Chests', 'chambers of xeric': 'Chambers of Xeric', 'theatre of blood': 'Theatre of Blood', 'tombs of amascut': 'Tombs of Amascut', 'royal titans': 'Royal Titans' };
-  return known[raw.toLowerCase().replace(/[’']/g, '')] || raw.replace(/\b[a-z]/g, letter => letter.toUpperCase());
+  const key = raw.toLowerCase().replace(/[’']/g, '');
+  const known = {
+    'phosanis nightmare': "Phosani's Nightmare",
+    'phosani s nightmare': "Phosani's Nightmare",
+    'barrows chests': 'Barrows Chests',
+    'chambers of xeric': 'Chambers of Xeric',
+    'theatre of blood': 'Theatre of Blood',
+    'tombs of amascut': 'Tombs of Amascut',
+    'royal titans': 'Royal Titans',
+    'artio/callisto': 'Artio/Callisto'
+  };
+  return known[key] || raw.replace(/\b[a-z]/g, letter => letter.toUpperCase());
 };
 const titleFor = entry => {
-  const text = tidy(entry.metric || entry.title || entry.label);
-  return displayEventName(text.replace(/^skill of the week\s*[-–:]\s*/i, '').replace(/^boss of the week\s*[-–:]\s*/i, '') || 'Event');
+  const raw = tidy(entry.metric || entry.title || entry.label);
+  return displayEventName(raw.replace(/^skill of the week\s*[-–:]\s*/i, '').replace(/^boss of the week\s*[-–:]\s*/i, '') || 'Event');
 };
-export function buildSyncedRecords(archive) {
+const recordKey = row => `${metric(row.eventName)}|${metric(row.winner)}`;
+const archiveType = entry => {
+  const type = tidy(entry?.type).toLowerCase();
+  return type === 'sotw' ? 'sotw' : (type === 'botw' || type.startsWith('botw-') ? 'botw' : null);
+};
+const compareRecords = (a,b) => a.eventName.localeCompare(b.eventName, 'en', {sensitivity:'base'}) || a.winner.localeCompare(b.winner,'en',{sensitivity:'base'});
+
+// Reconciliation is read-only. Invalid or incomplete archived results are
+// reported instead of silently fabricating a winner or changing history.
+export function reconcileHistoricalRecords(archive) {
   const sets = { sotw: [], botw: [] };
-  for (const type of ['sotw','botw']) {
-    const seen = new Set();
-    const add = row => {
-      const id = `${metric(row.eventName)}|${metric(row.winner)}`;
-      if (!row.eventName || !row.winner || !row.score || seen.has(id)) return;
-      seen.add(id); sets[type].push({...row,eventName:displayEventName(row.eventName)});
-    };
-    for (const entry of archive || []) {
-      if (entry?.type !== type || !entry?.winner?.name) continue;
-      const id = String(entry.womCompetitionId || entry.womCompetitionIds?.[0] || '').trim();
-      add({ eventName: titleFor(entry), winner: tidy(entry.winner.name), score: `${Number(entry.winner.gained || 0).toLocaleString('en-US')} ${type === 'sotw' ? 'XP' : 'KC'}`, url: /^\d+$/.test(id) ? `https://wiseoldman.net/competitions/${id}` : '' });
+  const issues = [];
+  const seen = { sotw: new Set(), botw: new Set() };
+  const add = (type,row) => {
+    const normalized = { ...row, eventName: displayEventName(row.eventName) };
+    const key = recordKey(normalized);
+    if (seen[type].has(key)) return;
+    seen[type].add(key);
+    sets[type].push(normalized);
+  };
+  for (const entry of archive || []) {
+    const type = archiveType(entry);
+    if (!type) continue;
+    const eventName = titleFor(entry);
+    const winner = tidy(entry?.winner?.name || entry?.winner?.rsn);
+    const gained = Number(entry?.winner?.gained);
+    const id = String(entry.womCompetitionId || entry.womCompetitionIds?.[0] || '').trim();
+    if (!winner || !Number.isFinite(gained) || gained <= 0) {
+      issues.push({ type, archiveId: String(entry.id || ''), eventName, reason: 'Missing winner or positive score', womCompetitionId: id });
+      continue;
     }
-    for (const row of curatedChampions[type] || []) add(row);
+    add(type, { eventName, winner, score: `${gained.toLocaleString('en-US')} ${type === 'sotw' ? 'XP' : 'KC'}`, url: /^\d+$/.test(id) ? `https://wiseoldman.net/competitions/${id}` : '', source: 'archive', archiveId: String(entry.id || '') });
   }
-  return sets;
+  for (const type of ['sotw','botw']) {
+    for (const row of curatedChampions[type] || []) {
+      if (!row.eventName || !row.winner || !row.score) continue;
+      add(type, { ...row, source: 'legacy-curated' });
+    }
+    sets[type].sort(compareRecords);
+  }
+  return { records: sets, issues, counts: {sotw:sets.sotw.length,botw:sets.botw.length,archiveIssues:issues.length} };
 }
+export const buildSyncedRecords = archive => reconcileHistoricalRecords(archive).records;
 const safe = value => tidy(value).replace(/([\\*_`~|>])/g, '\\$1').replace(/@/g, '＠');
 const embedChunks = (type, rows) => {
   const title = type === 'sotw' ? 'Ironkin SOTW Records' : 'Ironkin BOTW Records';
@@ -56,7 +91,7 @@ export async function syncRecordEmbeds(env,archive,types=['sotw','botw']) {
   if(!channelId||!token) throw new Error('Hall of Flame Discord bot/channel not configured.');
   const base=`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`;
   const [messages,bot]=await Promise.all([discord(`${base}?limit=100`,token),discord('https://discord.com/api/v10/users/@me',token)]);
-  const records=buildSyncedRecords(archive), results=[];
+  const reconciliation=reconcileHistoricalRecords(archive), records=reconciliation.records, results=[];
   for (const type of types) {
     const title=type==='sotw'?'Ironkin SOTW Records':'Ironkin BOTW Records';
     const previous=messages.find(m=>m.author?.id===bot.id&&m.embeds?.some(e=>e.title===title));
@@ -64,5 +99,5 @@ export async function syncRecordEmbeds(env,archive,types=['sotw','botw']) {
     const message=await discord(previous?`${base}/${previous.id}`:base,token,previous?'PATCH':'POST',payload);
     results.push({type,action:previous?'updated':'created',messageId:message.id,count:records[type].length});
   }
-  return results;
+  return { results, reconciliation: { counts: reconciliation.counts, issues: reconciliation.issues } };
 }
