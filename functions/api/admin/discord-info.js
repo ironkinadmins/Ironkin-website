@@ -17,7 +17,10 @@ function normalize(v) {
   if(description.length>4000) throw Error("Description exceeds 4000 characters");
   const image_url=String(v.image_url||"").trim();
   if(image_url && (!/^https:\/\//.test(image_url)||image_url.length>1500)) throw Error("Image must use an HTTPS URL");
-  return {id,channel_key,title,description,image_url,sort_order:Math.max(0,Math.min(9999,Number(v.sort_order)||0)),enabled:v.enabled!==false};
+  const images=Array.isArray(v.images)?v.images:[];
+  if(images.length>8) throw Error("Maximum 8 screenshots per topic");
+  for(const url of images) if(typeof url!=="string" || !/^https:\/\/[^\s]+$/i.test(url) || url.length>1500) throw Error("Screenshots must use valid HTTPS URLs");
+  return {id,channel_key,title,description,image_url,images,sort_order:Math.max(0,Math.min(9999,Number(v.sort_order)||0)),enabled:v.enabled!==false};
 }
 async function read(env,id) {
  const response=await supabaseRest(env,`ironkin_discord_info_sections?id=eq.${encodeURIComponent(id)}&select=*&limit=1`);
@@ -62,8 +65,11 @@ export async function onRequest({request,env}) {
    const url=String(env[CHANNELS[item.channel_key]]||"").trim();
    if(!/^https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\//.test(url)) return err(`Webhook secret not configured for ${item.channel_key}`,503);
    const embed={title:item.title,description:item.description,color:0xd4a44e,footer:{text:"Ironkin • Official Information"}};
-   if(item.image_url) embed.image={url:item.image_url};
-   const payload={embeds:[embed],allowed_mentions:{parse:[]}};
+   const imageList=Array.isArray(item.images)?item.images.filter(Boolean):[];
+   if(!imageList.length && item.image_url) imageList.push(item.image_url);
+   if(imageList.length) embed.image={url:imageList[0]};
+   const embeds=[embed,...imageList.slice(1,8).map(url=>({color:0xd4a44e,image:{url}}))];
+   const payload={embeds,allowed_mentions:{parse:[]}};
    let messageId=item.discord_message_id;
    if(messageId) {
     await discord(url,`/messages/${encodeURIComponent(messageId)}`,"PATCH",payload);
