@@ -534,7 +534,7 @@
 </section><section class="admin-card" id="bountiesEditor" style="display:none">
 <div class="admin-section-header">
 <h2>Bounty Items</h2>
-<p>Select OSRS items from the Wiki, assign an Ember reward, and track how many the clan receives.</p>
+<p>Choose an item, set its reward and active dates, then add it. Each bounty runs independently; the calendar shows one Bounties entry. No Discord notifications are sent.</p>
 </div>
 <div class="admin-form-grid">
 <div class="admin-field admin-field-wide">
@@ -567,6 +567,9 @@
 <option value="once_per_event">Once per event (clan-wide)</option>
 </select>
 </div>
+<div class="admin-field"><label for="bountyStartInput">Starts (Eastern Time)</label><input id="bountyStartInput" type="datetime-local" required></div>
+<div class="admin-field"><label for="bountyEndInput">Ends (Eastern Time)</label><input id="bountyEndInput" type="datetime-local" required></div>
+<div class="admin-field admin-field-wide"><label class="bounty-enabled-control"><input id="bountyEnabledInput" type="checkbox" checked> Enable this bounty for its scheduled dates</label><small>Each bounty activates and expires independently. Disabled bounties are never tracked.</small></div>
 </div>
 <div class="admin-action-row"><button class="btn primary" id="addBountyItemBtn" type="button">Add Bounty</button></div>
 <div class="admin-divider"></div>

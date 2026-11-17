@@ -1,3 +1,17 @@
+function bountyDateToIso(value) {
+    if (!value) return "";
+    const naive = Date.parse(value + ":00Z");
+    if (!Number.isFinite(naive)) return "";
+    let utc = naive;
+    for (let i = 0; i < 3; i++) {
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date(utc));
+      const obj = Object.fromEntries(parts.map(part => [part.type, part.value]));
+      const easternAsUtc = Date.UTC(+obj.year, +obj.month-1, +obj.day, +obj.hour, +obj.minute);
+      utc += naive - easternAsUtc;
+    }
+    return new Date(utc).toISOString();
+}
+
 
 // Guard against losing unsaved event details when switching events or leaving the page.
 // This only tracks user edits in the Details form; item edits have their own save actions.
@@ -90,7 +104,7 @@ function getAdminEventOptionText(event) {
   const title = event.title || getResetEventTitle(event);
   const tier = event?.type === "botw" ? getBotwTierLabel(event) : "";
   const label = tier ? `BOTW ${tier}` : (event.label || event.type);
-  return `${label} - ${title}${event.active ? " (Active)" : ""}`;
+  return isBountiesEvent(event) ? "Bounties" : `${label} - ${title}${event.active ? " (Active)" : ""}`;
 }
 
 function getPluginTrackingLabel(event) {
@@ -2640,19 +2654,8 @@ async function loadAdminDrops() {
   catalog.className = `tracked-items-catalog${pvmEntry ? " tracked-items-catalog--grouped" : ""}`;
   list.appendChild(catalog);
 
-  const bountyLocalToIso = value => {
-    if (!value) return "";
-    const naive = Date.parse(value + ":00Z");
-    if (!Number.isFinite(naive)) return "";
-    let utc = naive;
-    for (let i = 0; i < 3; i++) {
-      const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date(utc));
-      const obj = Object.fromEntries(parts.map(part => [part.type, part.value]));
-      const easternAsUtc = Date.UTC(+obj.year, +obj.month-1, +obj.day, +obj.hour, +obj.minute);
-      utc += naive - easternAsUtc;
-    }
-    return new Date(utc).toISOString();
-  };
+  const bountyLocalToIso = bountyDateToIso;
+  /* Shared conversion is also used by the create form. */
   const createItemRow = (drop, index, currentBoss) => {
     const item = document.createElement("details");
     item.className = "tracked-item-record";
@@ -3038,16 +3041,26 @@ async function addBountyItem() {
   const imageInput = document.getElementById("bountySelectedImageInput");
   const rewardEmbers = Number(document.getElementById("bountyRewardInput")?.value || 0);
   const trackingRule = String(document.getElementById("bountyTrackingRuleInput")?.value || "repeatable");
+  const starts = document.getElementById("bountyStartInput")?.value || "";
+  const ends = document.getElementById("bountyEndInput")?.value || "";
+  const bountyStartsAt = bountyDateToIso(starts);
+  const bountyEndsAt = bountyDateToIso(ends);
+  if (!starts || !ends || !bountyStartsAt || !bountyEndsAt || Date.parse(bountyStartsAt) >= Date.parse(bountyEndsAt)) {
+    alert("Choose valid start and end times (Eastern Time). The end must be after the start."); return;
+  }
   if (!name || !selectedEventId) { alert("Select an OSRS item first."); return; }
   const itemId = Number(document.getElementById("bountySelectedItemInput")?.dataset.itemId || 0);
   if (!Number.isInteger(itemId) || itemId <= 0) { alert("Select an OSRS item from the search results first."); return; }
-  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule }) });
+  const response = await fetch("/api/drops/add", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ eventId:selectedEventId, itemId, name, image:imageInput?.value || "", wikiUrl:imageInput?.dataset.wikiUrl || "", rewardEmbers, trackingRule, bountyStartsAt, bountyEndsAt, bountyEnabled:document.getElementById("bountyEnabledInput")?.checked !== false }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { alert(data.error || "Could not add bounty."); return; }
   document.getElementById("bountySelectedItemInput").value = "";
   document.getElementById("bountySelectedItemInput").dataset.itemId = "";
   imageInput.value = "";
   document.getElementById("bountyRewardInput").value = "";
+  document.getElementById("bountyStartInput").value = "";
+  document.getElementById("bountyEndInput").value = "";
+  document.getElementById("bountyEnabledInput").checked = true;
   const bountyIdLookup = document.getElementById("bountyItemIdLookupInput");
   if (bountyIdLookup) bountyIdLookup.value = "";
   const bountyIdStatus = document.getElementById("bountyItemIdLookupStatus");

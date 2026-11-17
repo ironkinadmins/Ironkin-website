@@ -69,6 +69,7 @@ function isDue(triggerMs, nowMs) {
 }
 
 function getReminderPlan(event) {
+  if (getEventType(event) === "bounties" || event?.discordNotificationsEnabled === false || event?.remindersEnabled === false) return [];
   const start = new Date(event.start).getTime();
   const end = new Date(event.end).getTime();
   if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
