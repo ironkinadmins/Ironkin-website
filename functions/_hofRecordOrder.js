@@ -1,3 +1,4 @@
+import { displayEventName } from './_recordsAutoSync.js';
 import { getHallOfFlameDiscordSettings } from './api/hall-of-flame/_records.js';
 
 // Keep the two historical boards after all individual PB boards. Only move
@@ -17,15 +18,29 @@ export async function ensureHistoricalRecordsLast(env) {
   const titles = ['Ironkin BOTW Records', 'Ironkin SOTW Records'];
   const matches = titles.map(title => messages.find(m => m.author?.id === bot.id && m.embeds?.some(e => e.title === title)));
   if (matches.some(m => !m)) return { skipped: true, reason: 'Both historical boards must be published first' };
+  // Normalize legacy record names without touching winners, scores, or links.
+  // Discord embeds use **event name** at the start of each numbered row.
+  const normalizedEmbeds = message => (message.embeds || []).map(embed => ({
+    ...embed,
+    description: String(embed.description || '').replace(/(^|\n)(\d+\.\s+\*\*)([^*\n]+)(\*\*)/g,
+      (_whole, prefix, number, eventName, closing) => `${prefix}${number}${displayEventName(eventName.trim())}${closing}`)
+  }));
+  const changed = matches.map(message => normalizedEmbeds(message).some((embed, i) => embed.description !== (message.embeds[i]?.description || '')));
   // Discord returns newest first; desired final ordering is BOTW then SOTW.
-  if (messages[0]?.id === matches[1].id && messages[1]?.id === matches[0].id) return { moved: false };
+  // If already in position, edit in place instead of unnecessarily reposting.
+  if (messages[0]?.id === matches[1].id && messages[1]?.id === matches[0].id) {
+    for (let i = 0; i < matches.length; i++) {
+      if (changed[i]) await request(`${base}/${matches[i].id}`, 'PATCH', { embeds: normalizedEmbeds(matches[i]), allowed_mentions: { parse: [] } });
+    }
+    return { moved: false, normalized: changed.filter(Boolean).length };
+  }
   const created = [];
   for (const old of matches) {
-    const payload = { content: old.content || '', embeds: old.embeds, allowed_mentions: { parse: [] } };
+    const payload = { content: old.content || '', embeds: normalizedEmbeds(old), allowed_mentions: { parse: [] } };
     const next = await request(base, 'POST', payload);
     created.push({ old: old.id, next: next.id });
   }
   // Remove originals only after both replacements exist.
   for (const entry of created) await request(`${base}/${entry.old}`, 'DELETE');
-  return { moved: true, messageIds: created.map(x => x.next) };
+  return { moved: true, normalized: changed.filter(Boolean).length, messageIds: created.map(x => x.next) };
 }
