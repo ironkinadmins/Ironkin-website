@@ -3,9 +3,14 @@ import { getHallOfFlameDiscordSettings } from './api/hall-of-flame/_records.js';
 
 const tidy = value => String(value ?? '').trim();
 const metric = value => tidy(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+export const displayEventName = value => {
+  const raw = tidy(value).replace(/_/g, ' ').replace(/\s+/g, ' ');
+  const known = { 'phosanis nightmare': "Phosani's Nightmare", 'phosani s nightmare': "Phosani's Nightmare", 'barrows chests': 'Barrows Chests', 'chambers of xeric': 'Chambers of Xeric', 'theatre of blood': 'Theatre of Blood', 'tombs of amascut': 'Tombs of Amascut', 'royal titans': 'Royal Titans' };
+  return known[raw.toLowerCase().replace(/[’']/g, '')] || raw.replace(/\b[a-z]/g, letter => letter.toUpperCase());
+};
 const titleFor = entry => {
   const text = tidy(entry.metric || entry.title || entry.label);
-  return text.replace(/^skill of the week\s*[-–:]\s*/i, '').replace(/^boss of the week\s*[-–:]\s*/i, '') || 'Event';
+  return displayEventName(text.replace(/^skill of the week\s*[-–:]\s*/i, '').replace(/^boss of the week\s*[-–:]\s*/i, '') || 'Event');
 };
 export function buildSyncedRecords(archive) {
   const sets = { sotw: [], botw: [] };
@@ -14,7 +19,7 @@ export function buildSyncedRecords(archive) {
     const add = row => {
       const id = `${metric(row.eventName)}|${metric(row.winner)}`;
       if (!row.eventName || !row.winner || !row.score || seen.has(id)) return;
-      seen.add(id); sets[type].push(row);
+      seen.add(id); sets[type].push({...row,eventName:displayEventName(row.eventName)});
     };
     for (const entry of archive || []) {
       if (entry?.type !== type || !entry?.winner?.name) continue;

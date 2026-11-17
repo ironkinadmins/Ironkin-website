@@ -207,6 +207,45 @@ export function mergeBoard(legacy, approved) {
   return rankBoard([...best.values()], 3);
 }
 
+
+// The Hall of Flame channel is bot-managed. Keep the two historical record
+// messages as the final messages after a newly created boss PB board.
+// Preserve their embeds verbatim, including links, winners and scores.
+async function keepHistoricalRecordsLast(env, channelId) {
+  const token = env.DISCORD_BOT_TOKEN;
+  const base = `https://discord.com/api/v10/channels/${channelId}/messages`;
+  const headers = { Authorization: `Bot ${token}` };
+  const [listResponse, selfResponse] = await Promise.all([
+    discordFetch(`${base}?limit=100`, { headers }),
+    discordFetch('https://discord.com/api/v10/users/@me', { headers })
+  ]);
+  if (!listResponse.ok || !selfResponse.ok) return;
+  const messages = await listResponse.json();
+  const self = await selfResponse.json();
+  const recordType = message => {
+    const title = String(message.embeds?.[0]?.title || '');
+    return /^Ironkin (BOTW|SOTW) Records(?: · Part \d+)?$/.test(title) ? title.match(/BOTW|SOTW/)[0] : null;
+  };
+  const historical = messages.filter(m => m.author?.id === self.id && recordType(m));
+  if (!historical.length) return;
+  // Discord returns newest first. If the records already form the newest block,
+  // do nothing. Never delete a record we cannot replace.
+  if (messages.slice(0, historical.length).every(m => historical.some(r => r.id === m.id))) return;
+  // Oldest first; BOTW then SOTW is the desired visible order.
+  const ordered = historical.sort((a,b) => {
+    const type = recordType(a) === 'BOTW' ? 0 : 1;
+    const other = recordType(b) === 'BOTW' ? 0 : 1;
+    return type-other || (BigInt(a.id) < BigInt(b.id) ? -1 : 1);
+  });
+  for (const old of ordered) {
+    const payload = { content: old.content || '', embeds: old.embeds, allowed_mentions: {parse:[]} };
+    const posted = await discordFetch(base, { method:'POST', headers:{...headers,'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    if (!posted.ok) throw new Error(`Could not reposition historical record: Discord ${posted.status}`);
+    const removed = await discordFetch(`${base}/${old.id}`, { method:'DELETE', headers });
+    if (!removed.ok && removed.status !== 404) throw new Error(`Historical record reposted but old copy could not be removed: Discord ${removed.status}`);
+  }
+}
+
 export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl = "") {
   const { channelId } = await getHallOfFlameDiscordSettings(env);
   if (!env.DISCORD_BOT_TOKEN || !channelId) throw new Error("Discord Hall of Flame integration is not configured.");
@@ -231,6 +270,7 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
     const createdResponse = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (!createdResponse.ok) throw new Error(`Discord Hall of Flame create failed: ${await createdResponse.text()}`);
     const created = await createdResponse.json();
+    try { await keepHistoricalRecordsLast(env, channelId); } catch(error) { console.warn("Hall of Flame record positioning:", error); }
     return { synced:true, messageId:created.id, mode:"created" };
   }
   let response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });
@@ -241,7 +281,7 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
   // newest matching boss title and edit that managed message instead.
   if (response.status === 403 || response.status === 404) {
     response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
-    if (response.ok) { const created=await response.json(); return { synced:true, messageId:created.id, mode:"created" }; }
+    if (response.ok) { const created=await response.json(); try { await keepHistoricalRecordsLast(env, channelId); } catch(error) { console.warn("Hall of Flame record positioning:", error); } return { synced:true, messageId:created.id, mode:"created" }; }
   }
   throw new Error(`Discord Hall of Flame update failed: ${await response.text()}`);
 }

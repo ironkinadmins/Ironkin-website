@@ -1,3 +1,4 @@
+import { displayEventName } from '../../../_recordsAutoSync.js';
 import { getSession, isStaffSession } from "../../_auth.js";
 import { getHallOfFlameDiscordSettings } from "../../hall-of-flame/_records.js";
 
@@ -18,7 +19,7 @@ function validate(rows, type) {
     const identity = `${event.toLowerCase()}|${winner.toLowerCase()}`;
     if (seen.has(identity)) return null;
     seen.add(identity);
-    return { event, winner, score, url };
+    return { event: displayEventName(event), winner, score, url };
   }).filter(Boolean);
 }
 const escapeDiscord = text => text.replace(/([\\*_`~|>])/g, "\\$1").replace(/@/g, "＠");
