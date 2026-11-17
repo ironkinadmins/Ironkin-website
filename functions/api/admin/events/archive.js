@@ -361,6 +361,12 @@ export async function archiveEventInternal({env, body}) {
     });
 
     await hybridKv(env, "drops").put("events:active", JSON.stringify(sanitizedEvents));
+    // The archive above retains configuredDrops/template.configuredDrops for reuse.
+    // Clear the live drop catalog only after the archived event is saved and
+    // removed from active tracking, so the next BOTW/SOTW starts empty.
+    if (event.type === "botw" || event.type === "sotw") {
+      await hybridKv(env, "drops").put(`drops:${event.id}`, JSON.stringify([]));
+    }
   }
 
   try {
