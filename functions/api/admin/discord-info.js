@@ -20,7 +20,22 @@ function normalize(v) {
   const images=Array.isArray(v.images)?v.images:[];
   if(images.length>8) throw Error("Maximum 8 screenshots per topic");
   for(const url of images) if(typeof url!=="string" || !/^https:\/\/[^\s]+$/i.test(url) || url.length>1500) throw Error("Screenshots must use valid HTTPS URLs");
-  return {id,channel_key,title,description,image_url,images,sort_order:Math.max(0,Math.min(9999,Number(v.sort_order)||0)),enabled:v.enabled!==false};
+  const blocks=Array.isArray(v.blocks)?v.blocks:[];
+  function checkBlocks(value, depth=0) {
+    if(depth>1 || value.length>50) throw Error("Too many content blocks or nested categories");
+    for(const b of value) {
+      if(!b || !["text","image","category"].includes(b.type)) throw Error("Invalid content block");
+      if(b.type==="text" && (typeof b.text!=="string" || b.text.length>4000)) throw Error("Text block exceeds 4000 characters");
+      if(b.type==="image" && (typeof b.url!=="string" || !/^https:\/\/[^\s]+$/i.test(b.url) || b.url.length>1500)) throw Error("Image blocks require an HTTPS URL");
+      if(b.type==="category") {
+        if(depth!==0 || typeof b.title!=="string" || !b.title.trim() || b.title.length>80 || !/^[a-z0-9_-]{1,60}$/.test(b.id||"")) throw Error("Invalid category");
+        if(!Array.isArray(b.blocks)) throw Error("Invalid category content");
+        checkBlocks(b.blocks,depth+1);
+      }
+    }
+  }
+  checkBlocks(blocks);
+  return {id,channel_key,title,description,image_url,images,blocks,sort_order:Math.max(0,Math.min(9999,Number(v.sort_order)||0)),enabled:v.enabled!==false};
 }
 async function read(env,id) {
  const response=await supabaseRest(env,`ironkin_discord_info_sections?id=eq.${encodeURIComponent(id)}&select=*&limit=1`);
@@ -67,7 +82,7 @@ export async function onRequest({request,env}) {
    // Publish an immutable snapshot. The bot will reconcile the permanent hub;
    // never create a standalone webhook message here.
    const published={published_title:item.title,published_description:item.description,
-     published_images:images,published_sort_order:item.sort_order,
+     published_images:images,published_blocks:Array.isArray(item.blocks)?item.blocks:[],published_sort_order:item.sort_order,
      published_enabled:true,published_at:new Date().toISOString()};
    const r=await supabaseRest(env,`ironkin_discord_info_sections?id=eq.${encodeURIComponent(id)}&revision=eq.${Number(item.revision)}`,
      {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(published)});
