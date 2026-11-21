@@ -18,6 +18,26 @@ export async function onRequest({request,env}){
  if(request.method==='GET')return Response.json({statuses},{headers:{'Cache-Control':'no-store'}});
  const origin=request.headers.get('Origin');if(!origin||new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const body=await request.json().catch(()=>null);const type=body?.type;const info=statuses.find(s=>s.type===type);
+ if(body.action==='bootstrap-sotw'){
+  if(type!=='sotw'||!info?.cycleId)return Response.json({error:'No upcoming SOTW cycle.'},{status:409});
+  if(info.winner?.discordId)return Response.json({error:'A verified SOTW winner exists; use the regular nomination process.'},{status:409});
+  if(info.locked)return Response.json({error:'SOTW poll is already reserved or published.'},{status:409});
+  if(!info.window?.open)return Response.json({error:'SOTW nomination window is closed.'},{status:409});
+  const previous=nominations.sotw;
+  if(previous && previous.source!=='initial-staff-bootstrap')return Response.json({error:'Existing SOTW nominations require manual reconciliation.'},{status:409});
+  if(previous?.cycleId && previous.cycleId!==info.cycleId)return Response.json({error:'Existing bootstrap belongs to another cycle.'},{status:409});
+  const options=body.options;
+  if(!Array.isArray(options)||options.length!==2||options.some(x=>typeof x!=='string'))return Response.json({error:'Choose exactly two skills.'},{status:400});
+  const lookup=new Map(info.pool.map(x=>[key(x,'sotw'),x]));const ids=options.map(x=>key(x,'sotw'));
+  if(new Set(ids).size!==2||ids.some(x=>!lookup.has(x))||lookup.size<3)return Response.json({error:'Choose two different eligible skills from a pool of at least three.'},{status:400});
+  const fresh=parse(await kv.get(PREFIX+info.cycleId),{});
+  if(fresh.messageId||fresh.publishedAt||fresh.pollReservedAt||Array.isArray(fresh.pollOptions))return Response.json({error:'Poll already reserved; nominations locked.'},{status:409});
+  const latest=parse(await kv.get(K.nominations),{});
+  if(latest.sotw && latest.sotw.source!=='initial-staff-bootstrap')return Response.json({error:'Existing winner nominations cannot be overwritten.'},{status:409});
+  latest.sotw={source:'initial-staff-bootstrap',cycleId:info.cycleId,options:ids.map(x=>lookup.get(x)),updatedAt:new Date().toISOString(),updatedBy:'staff',adminDiscordId:String((await getSession(request,env)).id)};
+  await kv.put(K.nominations,JSON.stringify(latest));
+  return Response.json({success:true,cycleId:info.cycleId,options:latest.sotw.options},{headers:{'Cache-Control':'no-store'}});
+ }
  if(!info||body.action!=='save-picks')return Response.json({error:'Invalid action or competition'},{status:400});
  if(!info.winner?.discordId)return Response.json({error:'Verify the previous winner before editing picks.'},{status:409});
  if(!info.cycleId||info.locked)return Response.json({error:'No upcoming cycle or poll choices already reserved. Changes are locked.'},{status:409});

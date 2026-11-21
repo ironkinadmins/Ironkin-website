@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {buildCyclePayoutDraft} from '../functions/_cyclePayouts.js';
+const discordId='123456789012345678';
+const kv={async get(k){if(k==='member-profiles:index')return JSON.stringify([{discordId}]);if(k===`member-profile:${discordId}`)return JSON.stringify({rsn:'Hero'});return null;}};
+const base={archiveRequestId:'cycle-botw-standard:2026-11-13-165740',id:'archive1',eventId:'event1',type:'botw',rewards:{placement:[{label:'1st place',reward:'75 Embers'}]},leaderboard:[{name:'Hero',gained:100}]};
+test('verified competition is approved with pending recipient receipt',async()=>{const d=await buildCyclePayoutDraft(kv,base);assert.equal(d.status,'approved');assert.equal(d.payouts[0].status,'pending');assert.equal(d.approvalSource,'verified-automatic');});
+test('unmatched member blocks automated approval',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,leaderboard:[...base.leaderboard,{name:'Unknown',gained:10}]});assert.equal(d.status,'pending_review');assert.ok(d.unresolved.some(e=>e.reason==='No linked Discord account'));});
+test('ambiguous participation threshold blocks approval',async()=>{const d=await buildCyclePayoutDraft(kv,{...base,rewards:{...base.rewards,participation:[{requirement:'Participate',reward:'10 Embers'}]}});assert.equal(d.status,'pending_review');});
+test('payout APIs accept tier-specific cycle receipt IDs',async()=>{for(const f of ['../functions/api/events/cycle-payouts.js','../functions/api/admin/events/cycle-payouts.js']){const source=await readFile(new URL(f,import.meta.url),'utf8');assert.match(source,/cycle-\(sotw\|botw\|botw-standard\|botw-elite\)/);}});
+test('uncertain processing finalization is reconciled only with an existing archive',async()=>{const source=await readFile(new URL('../functions/api/events/cycle-automation.js',import.meta.url),'utf8');assert.match(source,/matches\.length !== 1\) return state/);assert.match(source,/archiveReconciledAt/);});

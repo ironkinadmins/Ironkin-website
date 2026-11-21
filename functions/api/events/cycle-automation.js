@@ -218,7 +218,36 @@ export async function syncCycleCalendar(env, kv, event, state) {
 // nomination mapping, record sync and Discord publishing behavior.
 async function finalizeCompetition(env, kv, event, state) {
   if (state.websiteStatus !== "linked" || state.womStatus !== "created") return state;
-  if (state.finalizationStatus === "completed" || state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") return state;
+  if (state.finalizationStatus === "completed") return state;
+  // Reconcile an interrupted archive write before considering any external action.
+  // Never blindly retry a processing/uncertain archive: its Discord post may have succeeded.
+  if (state.finalizationStatus === "processing" || state.finalizationStatus === "needs_review") {
+    const archived = parse(await kv.get("events:archive"), []);
+    const requestId = `cycle-${event.id}-${state.womCompetitionId}`;
+    const matches = Array.isArray(archived) ? archived.filter(item =>
+      item.archiveRequestId === requestId ||
+      (String(item.womCompetitionId) === String(state.womCompetitionId) && item.eventId === state.websiteEventId)) : [];
+    if (matches.length !== 1) return state; // no archive or ambiguous: staff intervention required
+    const active = parse(await kv.get("events:active"), []);
+    const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
+    if (record?.active) {
+      // The immutable archive is present. Complete only the archived slot's
+      // local reset; never touch a newer event occupying that slot.
+      if (String(record.womCompetitionId) !== String(state.womCompetitionId)) return state;
+      const updated = active.map(item => item.id === record.id ? {...item,
+        title:item.type === "botw" ? "Boss of the Week" : "Skill of the Week",
+        description:"",womCompetitionId:null,womCompetitionIds:[],womCompetitions:[],
+        combinedMetric:null,eventPassword:null,target:null,startDate:null,endDate:null,
+        active:false,featured:false,dropsEnabled:false} : item);
+      await kv.put("events:active",JSON.stringify(updated));
+    }
+    const existing = matches[0];
+    const done = {...state,finalizationStatus:"completed",archiveId:existing.id,
+      finalizedAt:new Date().toISOString(),finalizationError:null,
+      announcementStatus:existing.resultsAnnouncement?.status || "unknown",archiveReconciledAt:new Date().toISOString()};
+    await kv.put(PREFIX + event.id,JSON.stringify(done));
+    return done;
+  }
   const now = new Date();
   const end = torontoInstant(shift(event.date,event.durationDays||7), event.start.slice(11));
   if (now.getTime() < Date.parse(end) + 15 * 60 * 1000) return state;
@@ -480,7 +509,8 @@ export async function onRequest({request,env}) {
       const nomination=nominations[candidate.type];
       const winnerInfo=await nominationNoticeStatus(env,candidate.type);
       const resolvedId=winnerInfo.status?.state==="resolved"?String(winnerInfo.status.discordId||""):"";
-      const picks=resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id) ? nomination.options : null;
+      const bootstrapValid=candidate.type==="sotw" && nomination?.source==="initial-staff-bootstrap" && nomination?.cycleId===candidate.id && !resolvedId;
+      const picks=(bootstrapValid || (resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id))) ? nomination.options : null;
       const distinct=Array.isArray(picks)?[...new Map(picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).map(x=>[key(x,candidate.type),x])).values()]:[];
       try {
         if(distinct.length!==2)throw Error("Two valid previous-winner nominations are required before publishing; no random fallback.");

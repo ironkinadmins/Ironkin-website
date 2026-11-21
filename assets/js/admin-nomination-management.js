@@ -6,6 +6,14 @@ document.addEventListener('DOMContentLoaded',()=>{
  async function load(){refresh.disabled=true;panel.textContent='Loading nominations…';try{const r=await fetch('/api/admin/events/nomination-management',{credentials:'same-origin',cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Could not load nominations');records=j.statuses||[];render();}catch(e){panel.textContent=e.message;}finally{refresh.disabled=false;}}
  function render(){panel.replaceChildren();const x=records.find(v=>v.type===type.value);if(!x)return;
  panel.append(el('p',`Previous winner: ${x.winner?.rsn||'Not verified'} | Deadline: ${x.window?.deadline?.replace('T',' ')||'Not scheduled'} Eastern | ${x.locked?'Poll locked':x.window?.open?'Nominations open':'Nominations closed'}`));
+ if(!x.winner && x.type==='sotw' && x.cycleId && !x.locked && x.window?.open){
+  panel.append(el('p','First SOTW only: enter two nominations from the previous winner. The third poll option is selected automatically.'));
+  const selections=[];
+  for(let i=0;i<2;i++){const label=el('label',`Initial nomination ${i+1} `),select=el('select');const blank=el('option','Choose a skill');blank.value='';select.append(blank);for(const name of x.pool){const opt=el('option',name);opt.value=name;select.append(opt);}select.value=x.picks[i]||'';label.append(select);panel.append(label,el('div'));selections.push(select);}
+  const save=el('button','Save initial SOTW nominations');save.type='button';save.disabled=x.pool.length<3;const status=el('p','');status.setAttribute('role','status');panel.append(save,status);
+  save.onclick=async()=>{const options=selections.map(s=>s.value);if(!options[0]||!options[1]||options[0]===options[1]){status.textContent='Choose two different skills.';return;}if(!confirm(`Save two initial SOTW nominations for ${x.cycleId}? The poll will publish automatically when eligible.`))return;save.disabled=true;try{const r=await fetch('/api/admin/events/nomination-management',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'bootstrap-sotw',type:'sotw',options})});const j=await r.json();if(!r.ok)throw Error(j.error||'Could not save');await load();}catch(e){status.textContent=e.message;save.disabled=false;}};
+  return;
+ }
  if(!x.winner){panel.append(el('p','Verify the previous winner before editing nominations.'));return;}
  const selections=[];
  for(let i=0;i<2;i++){const label=el('label',`Choice ${i+1} `),select=el('select');select.style.maxWidth='100%';const blank=el('option','Choose an eligible option');blank.value='';select.append(blank);for(const name of x.pool){const opt=el('option',name);opt.value=name;select.append(opt);}select.value=x.picks[i]||'';select.disabled=x.locked||!x.window?.open;label.append(select);panel.append(label,el('div'));selections.push(select);}

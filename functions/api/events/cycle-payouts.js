@@ -15,7 +15,7 @@ export async function onRequest({request,env}) {
   }
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
   const body=await request.json().catch(()=>null);
-  if(!body||body.action!=='credited'||typeof body.id!=='string'||!/^cycle-(sotw|botw):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id)||!/^\d{17,20}$/.test(String(body.discordId||'')))return json({error:'Invalid receipt'},400);
+  if(!body||body.action!=='credited'||typeof body.id!=='string'||!/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id)||!/^\d{17,20}$/.test(String(body.discordId||'')))return json({error:'Invalid receipt'},400);
   const key=`events:cycle-payout:${body.id}`;
   const draft=parse(await kv.get(key),null);
   if(draft?.status!=='approved')return json({error:'Payout not approved'},409);

@@ -54,5 +54,5 @@ export async function buildCyclePayoutDraft(kv, entry) {
   if (participation.some(item=>item.minimum===null)) unresolved.push({reason:'Participation thresholds are not numeric; manual review required',requirements:participation.filter(item=>item.minimum===null).map(item=>item.requirement)});
   if (!placement.length && !participation.length) unresolved.push({reason:'No parseable Ember rewards configured'});
   if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
-  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:'pending_review',payouts,unresolved,sourceRewards:rewards,approvedAt:null};
+  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,sourceRewards:rewards,approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
 }

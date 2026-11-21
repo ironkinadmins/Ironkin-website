@@ -18,7 +18,7 @@ export async function onRequest({request,env}) {
   const origin=request.headers.get('Origin');
   if(!origin||new URL(origin).origin!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
   const body=await request.json().catch(()=>null);
-  if(!body||!['approve','reject'].includes(body.action)||typeof body.id!=='string'||!/^cycle-(sotw|botw):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id))return json({error:'Invalid request'},400);
+  if(!body||!['approve','reject'].includes(body.action)||typeof body.id!=='string'||!/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id))return json({error:'Invalid request'},400);
   const key=`events:cycle-payout:${body.id}`;
   const draft=parse(await kv.get(key),null);
   if(!draft)return json({error:'Payout draft not found'},404);
