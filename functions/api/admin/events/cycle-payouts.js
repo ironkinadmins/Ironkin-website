@@ -83,7 +83,7 @@ export async function onRequest({request,env}) {
       try{recovered=await recoverFullWomLeaderboard(env,isNov13Elite(entry)?correctedEliteSource(entry):entry);}
       catch(error){results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
       if(isNov13Elite(entry) && !recovered.leaderboard.some(row=>Number(row.gained)>0)){results.push({id:entry.archiveRequestId,status:'blocked',reason:'Correct Elite WOM competitions returned no positive gains'});continue;}
-      const draft=await buildCyclePayoutDraft(kv,{...(isNov13Elite(entry)?correctedEliteSource(entry):entry),type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards);
+      const draft=await buildCyclePayoutDraft(kv,{...(isNov13Elite(entry)?correctedEliteSource(entry):entry),type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards,env);
       if(!draft){results.push({id:entry.archiveRequestId,status:'skipped'});continue;}
       draft.status='pending_review';draft.approvedAt=null;draft.approvalSource=null;
       draft.payouts=(draft.payouts||[]).map(p=>({...p,status:'pending_review'}));
@@ -140,7 +140,7 @@ export async function onRequest({request,env}) {
     try { recovered=await recoverFullWomLeaderboard(env,isNov13Elite(source)?correctedEliteSource(source):source); }
     catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
     if(isNov13Elite(source) && !recovered.leaderboard.some(row=>Number(row.gained)>0))return json({error:'Correct Elite WOM competitions returned no positive gains'},409);
-    const fresh=await buildCyclePayoutDraft(kv,{...(isNov13Elite(source)?correctedEliteSource(source):source),type,leaderboard:recovered.leaderboard},matches[0].rewards);
+    const fresh=await buildCyclePayoutDraft(kv,{...(isNov13Elite(source)?correctedEliteSource(source):source),type,leaderboard:recovered.leaderboard},matches[0].rewards,env);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
