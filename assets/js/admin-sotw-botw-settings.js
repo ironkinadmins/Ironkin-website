@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   panel.className='admin-card';
   panel.style.marginTop='1.5rem';
   const heading=document.createElement('h3');heading.textContent='SOTW/BOTW Ember payout approval';
-  const explanation=document.createElement('p');explanation.textContent='Payouts use archived WOM results; recalculation uses the CURRENT Event Rewards (02) settings. No Embers are credited until you approve a fully matched draft.';
+  const explanation=document.createElement('p');explanation.textContent='Recalculation fetches the FULL historical WOM standings and uses CURRENT Event Rewards (02) settings. No Embers are credited until you approve a fully matched draft.';
   const refresh=document.createElement('button');refresh.type='button';refresh.className='btn';refresh.textContent='Refresh payout drafts';
   const prepare=document.createElement('button');prepare.type='button';prepare.className='btn';prepare.textContent='Find missing November 13 payouts';prepare.style.marginLeft='.5rem';
   const content=document.createElement('div');content.style.whiteSpace='pre-wrap';
@@ -222,33 +222,34 @@ document.addEventListener('DOMContentLoaded',()=>{
       lines.textContent=(draft.payouts||[]).map(p=>`${p.rsn} — ${p.embers} Embers (${p.source}, rank ${p.rank}) · ${p.status||'pending'}`).join('\n')||'No payable linked members.';
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
       box.append(label,lines);
-      const report=document.createElement('button');report.type='button';report.className='btn';report.textContent='Export payout report (CSV)';report.style.marginRight='.5rem';
-      report.addEventListener('click',()=>{
-        const columns=['Event','Player','Discord ID','Rank','KC or XP gained','Reward type','Embers','Status','Reason'];
-        const payoutByName=new Map((draft.payouts||[]).map(p=>[String(p.rsn||'').toLowerCase(),p]));
-        const rows=(draft.reportRows||draft.payouts||[]).map(row=>{
-          const paid=payoutByName.get(String(row.rsn||'').toLowerCase());
-          const status=paid?.status||row.status||'unknown';
-          return [draft.id,row.rsn,row.discordId||paid?.discordId||'',row.rank,row.gained,row.source,row.embers,status,row.reason||''];
-        });
-        const csv=[columns,...rows].map(r=>r.map(v=>'"'+String(v??'').replace(/^[=+@\-]/,'\'') .replace(/"/g,'""')+'"').join(',')).join('\r\n');
-        const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-        const a=document.createElement('a');a.href=url;a.download='ironkin-payout-'+String(draft.id).replace(/[^a-z0-9_-]/gi,'_')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      });box.append(report);
-      const summary=document.createElement('p');summary.textContent=`Report: ${(draft.reportRows||draft.payouts||[]).length} players; ${(draft.payouts||[]).length} payable; ${(draft.unresolved||[]).length} issues. Reward source: ${draft.rewardSource||'legacy / archived (recalculate to update)'}. Payment statuses are based on the payout draft, not an independently verified bank/transaction ledger.`;box.append(summary);
-      
+      const provenance=document.createElement('div');provenance.textContent=draft.womVerified?`Verified WOM participants: ${draft.womParticipantCount} · Competition IDs: ${(draft.womCompetitionIds||[]).join(', ')} · Components: ${(draft.womComponentCounts||[]).join(' + ')}`:'WARNING: Full WOM participant list not verified. Do not approve or trust this draft as complete.';provenance.style.margin='.4rem 0';box.append(provenance);
+      const report=document.createElement('button');report.type='button';report.className='btn';report.textContent='Verify payments + export CSV';report.style.marginRight='.5rem';
+      const reportStatus=document.createElement('div');reportStatus.style.margin='.5rem 0';
+      report.addEventListener('click',async()=>{
+        report.disabled=true;reportStatus.textContent='Checking Supabase payout ledger and Ember transactions…';
+        try{
+          const response=await fetch('/api/admin/events/cycle-payout-report?id='+encodeURIComponent(draft.id),{credentials:'same-origin',cache:'no-store'});
+          const data=await response.json();if(!response.ok)throw Error(data.error||'Verification failed');
+          const columns=['Event','Player','Discord ID','Rank','KC or XP gained','Reward type','Expected Embers','Paid Embers','Verified status','Paid at','Transaction ID','Reason'];
+          const rows=data.rows.map(r=>[draft.id,r.rsn,r.discordId,r.rank,r.gained,r.source,r.expectedEmbers,r.paidEmbers,r.status,r.paidAt,r.transactionId,r.reason]);
+          const csv=[columns,...rows].map(row=>row.map(v=>{let value=String(v??'');if(/^[=+@\-]/.test(value))value="'"+value;return '"'+value.replace(/"/g,'""')+'"'}).join(',')).join('\r\n');
+          const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+          const a=document.createElement('a');a.href=url;a.download='ironkin-verified-payments-'+String(draft.id).replace(/[^a-z0-9_-]/gi,'_')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+          reportStatus.textContent=`Verified: ${data.summary.paid} paid (${data.summary.embersPaid} Embers), ${data.summary.unpaid} unpaid, ${data.summary.requiresReconciliation} requiring reconciliation. Checked ${data.verifiedAt}.`;
+        }catch(error){reportStatus.textContent=error.message;}finally{report.disabled=false;}
+      });box.append(report,reportStatus);
       if(draft.status==='pending_review'||draft.status==='rejected'){
         const recalc=document.createElement('button');recalc.type='button';recalc.className='btn';recalc.textContent='Recalculate unpaid rewards';recalc.style.marginRight='.5rem';
         recalc.addEventListener('click',async()=>{
-          if(!confirm(`Recalculate ${draft.id} using CURRENT Rewards (02) settings and archived leaderboard? No Embers will be credited.`))return;
+          if(!confirm(`Recalculate ${draft.id} using CURRENT Rewards (02) settings and the COMPLETE live WOM competition standings? No Embers will be credited.`))return;
           recalc.disabled=true;
-          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');alert(`Recalculated using ${d.sourceEventId}: ${d.recipients} payable members, ${d.unresolved} unresolved issues.`);await load();}catch(e){alert(e.message);recalc.disabled=false;}
+          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');alert(`Recovered ${d.participants} WOM participants (${(d.componentCounts||[]).join(' + ')} per competition). Using current rewards ${d.sourceEventId}: ${d.recipients} payable linked members; ${d.unresolved} unresolved issues.`);await load();}catch(e){alert(e.message);recalc.disabled=false;}
         });box.append(recalc);
       }
       if(draft.status==='pending_review'){
         for(const action of ['approve','reject']){
           const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=action==='approve'?'Approve Ember payouts':'Reject payouts';button.style.marginRight='.5rem';
-          button.disabled=action==='approve'&&(!draft.payouts?.length||!!draft.unresolved?.length);
+          button.disabled=action==='approve'&&(!draft.womVerified||draft.womParticipantCount<2||draft.reportRows?.length!==draft.womParticipantCount||!draft.payouts?.length||!!draft.unresolved?.length);
           button.addEventListener('click',async()=>{
             if(!confirm(`${action.toUpperCase()} payouts for ${draft.id}? Approval authorizes the bot to credit Embers.`))return;
             button.disabled=true;

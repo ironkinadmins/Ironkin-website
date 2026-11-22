@@ -32,7 +32,7 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null) {
     const profile = parse(await kv.get(`member-profile:${candidate.discordId}`), {});
     profiles.push({discordId:String(candidate.discordId),names:[profile.rsn,...(Array.isArray(profile.previousRsns)?profile.previousRsns:[])].map(normalize).filter(Boolean)});
   }
-  const rows = rawRows.filter(row => Number.isFinite(Number(row.gained)) && Number(row.gained) > 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
+  const rows = rawRows.filter(row => Number.isFinite(Number(row.gained)) && Number(row.gained) >= 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
   const unresolved = [];
   if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
   if (duplicateNames.length) unresolved.push({reason:'Duplicate RSN in WOM standings',rsns:[...new Set(duplicateNames)]});
@@ -41,11 +41,11 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null) {
   if(!rankRewards.has(1))unresolved.push({reason:'First-place reward is missing'});
   const payouts = [];
   const reportRows = [];
-  if (!rows.length) unresolved.push({reason:'No positive WOM gain in final standings'});
+  if (!rows.some(row=>Number(row.gained)>0)) unresolved.push({reason:'No positive WOM gain in final standings'});
   for (let i=0;i<rows.length;i++) {
     const row=rows[i],rank=i+1;
     // Placement overrides participation; do not stack.
-    const placed=rankRewards.get(rank);
+    const placed=Number(row.gained)>0?rankRewards.get(rank):null;
     const tier=placed?null:eligibleParticipation.find(t=>Number(row.gained)>=t.minimum);
     const embers=placed?.embers??tier?.embers??0;
     if(!embers){reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers:0,source:"ineligible",status:"not_eligible"});continue;}

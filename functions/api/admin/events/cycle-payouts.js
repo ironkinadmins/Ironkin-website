@@ -1,3 +1,4 @@
+import { recoverFullWomLeaderboard } from '../../../_fullWomPayout.js';
 import { hybridKv } from '../../../_hybridKv.js';
 import { buildCyclePayoutDraft } from '../../../_cyclePayouts.js';
 import { getSession, isStaffSession } from '../../_auth.js';
@@ -68,15 +69,20 @@ export async function onRequest({request,env}) {
     if(matches.length!==1)return json({error:`Cannot identify exactly one current Rewards (02) configuration for ${type}. Found ${matches.length}. No changes made.`},409);
     if(draft.status!=='pending_review' && draft.status!=='rejected')return json({error:'Only unpaid, unapproved drafts can be recalculated'},409);
     if((draft.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status))||draft.approvedAt)return json({error:'Draft may already have been dispatched; no changes made'},409);
-    const fresh=await buildCyclePayoutDraft(kv,source,matches[0].rewards);
+    let recovered;
+    try { recovered=await recoverFullWomLeaderboard(env,source); }
+    catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
+    const fresh=await buildCyclePayoutDraft(kv,{...source,leaderboard:recovered.leaderboard},matches[0].rewards);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
     fresh.recalculatedAt=new Date().toISOString();fresh.currentRewardsEventId=matches[0].id;
-    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,unresolved:fresh.unresolved.length});
+    fresh.womVerified=true;fresh.womCompetitionIds=recovered.competitionIds;fresh.womComponentCounts=recovered.componentCounts;fresh.womParticipantCount=recovered.leaderboard.length;
+    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,participants:fresh.womParticipantCount,componentCounts:fresh.womComponentCounts,unresolved:fresh.unresolved.length});
   }
   if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);
   if(new Set((draft.payouts||[]).map(p=>String(p.discordId))).size!==(draft.payouts||[]).length)return json({error:'Duplicate payout recipient'},409);
+  if(body.action==='approve' && (!draft.womVerified || !Number.isInteger(draft.womParticipantCount) || draft.womParticipantCount<2 || draft.reportRows?.length!==draft.womParticipantCount))return json({error:'Full WOM standings have not been verified for this draft. Recalculate first.'},409);
   if(body.action==='approve' && !draft.payouts?.some(p=>p.rank===1&&p.source==='placement'))return json({error:'First-place placement payout is missing'},409);
   if(draft.status!=='pending_review')return json({error:'Payout has already been reviewed',status:draft.status},409);
   if(body.action==='approve'&&(draft.unresolved?.length||!draft.payouts?.length))return json({error:'Resolve unmatched members and reward thresholds before approving'},409);
