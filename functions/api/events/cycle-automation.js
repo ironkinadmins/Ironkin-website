@@ -3,6 +3,7 @@ import { processNominationReminder } from "../../_winnerNominationNotifications.
 import { archiveEventInternal } from "../admin/events/archive.js";
 import { buildEventResultsSnapshot, buildEventResultsContent, getResultsChannelId } from "../../_eventResultsAnnouncement.js";
 import { hybridKv } from "../../_hybridKv.js";
+import { retryFailedHistoricalRecordSync } from "../../_historicalRecordRetry.js";
 import { womFetch } from "../../_wom.js";
 import { syncAutomatedDiscordCalendarEvent } from "../../_discordCalendar.js";
 
@@ -522,6 +523,10 @@ export async function onRequest({request,env,context}) {
   if (request.method === "GET" && now.getUTCMinutes() % 15 === 0 && typeof context?.waitUntil === "function") {
     context.waitUntil(runCycleMaintenance(env, kv, config, controls, now, variants)
       .catch(error => console.error("cycle_maintenance_background_failed", String(error))));
+    // Retry previously failed Hall of Fame publication independently from
+    // event finalization and payouts. Never block the poll fast path.
+    context.waitUntil(retryFailedHistoricalRecordSync(env, now)
+      .catch(error => console.error("historical_record_retry_failed", String(error))));
   }
   if(request.method==="GET") {
     for (const candidate of currentEvents) {

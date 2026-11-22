@@ -321,7 +321,7 @@ export async function archiveEventInternal({env, body}) {
       const synced = await syncRecordEmbeds(env, archive, [event.type]);
       archiveEntry.recordsSync = { status: "synced", at: new Date().toISOString(), results: synced };
     } catch (error) {
-      archiveEntry.recordsSync = { status: "failed", error: String(error?.message || error).slice(0, 250) };
+      archiveEntry.recordsSync = { status: "failed", at: new Date().toISOString(), attempts: 1, nextRetryAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), error: String(error?.message || error).slice(0, 250) };
     }
     const index = archive.findIndex(item => item.archiveRequestId === archiveRequestId);
     if (index !== -1) archive[index] = archiveEntry;
