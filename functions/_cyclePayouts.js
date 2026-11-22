@@ -21,8 +21,10 @@ export async function buildCyclePayoutDraft(kv, entry) {
   const invalidRows = rawRows.filter(row => !Number.isFinite(Number(row.gained)) || Number(row.gained) < 0);
   const duplicateNames = rawRows.map(row => normalize(row.name)).filter((name, i, all) => name && all.indexOf(name) !== i);
   const placement = (rewards.placement || []).map(item => ({rank:placementRank(item.label),embers:amount(item.reward),label:item.label})).filter(item => item.rank && item.embers > 0);
-  // Only the configured first-place placement is payable. No participation awards.
-  const first = placement.filter(item => item.rank === 1);
+  const participation = (rewards.participation || []).map(item => ({minimum:threshold(item.requirement),embers:amount(item.reward),requirement:item.requirement}));
+  const invalidParticipation = participation.filter(item=>item.minimum===null || !Number.isFinite(item.minimum) || item.minimum<0 || !Number.isSafeInteger(item.embers) || item.embers<=0);
+  const eligibleParticipation = participation.filter(item=>!invalidParticipation.includes(item)).sort((a,b)=>b.minimum-a.minimum);
+  const rankRewards = new Map(placement.map(item=>[item.rank,item]));
   const index = parse(await kv.get('member-profiles:index'), []);
   const profiles = [];
   for (const candidate of Array.isArray(index) ? index : []) {
@@ -34,17 +36,24 @@ export async function buildCyclePayoutDraft(kv, entry) {
   const unresolved = [];
   if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
   if (duplicateNames.length) unresolved.push({reason:'Duplicate RSN in WOM standings',rsns:[...new Set(duplicateNames)]});
-  if (rows.length > 1 && Number(rows[0].gained) === Number(rows[1].gained)) unresolved.push({reason:'First-place tie requires manual resolution'});
+  for(let i=1;i<Math.min(rows.length,4);i++)if(Number(rows[i].gained)===Number(rows[i-1].gained))unresolved.push({reason:'Tie affects placement ranking; manual resolution required'});
+  if(invalidParticipation.length)unresolved.push({reason:'Participation requirements or Ember amounts are invalid',requirements:invalidParticipation.map(x=>x.requirement)});
+  if(!rankRewards.has(1))unresolved.push({reason:'First-place reward is missing'});
   const payouts = [];
-  if (first.length !== 1) unresolved.push({reason:'Exactly one first-place Ember reward must be configured in BOTW/SOTW Rewards (2)'});
   if (!rows.length) unresolved.push({reason:'No positive WOM gain in final standings'});
-  if (rows.length && first.length === 1) {
-    const winner = rows[0];
-    const matching = profiles.filter(profile => profile.names.includes(normalize(winner.name)));
-    if (matching.length !== 1) unresolved.push({rsn:winner.name,reason:matching.length?'Ambiguous linked Discord accounts':'No linked Discord account'});
-    else payouts.push({discordId:matching[0].discordId,rsn:String(winner.name),rank:1,gained:Number(winner.gained),embers:first[0].embers,source:'placement'});
+  for (let i=0;i<rows.length;i++) {
+    const row=rows[i],rank=i+1;
+    // Placement overrides participation; do not stack.
+    const placed=rankRewards.get(rank);
+    const tier=placed?null:eligibleParticipation.find(t=>Number(row.gained)>=t.minimum);
+    const embers=placed?.embers??tier?.embers??0;
+    if(!embers)continue;
+    const matching=profiles.filter(profile=>profile.names.includes(normalize(row.name)));
+    if(matching.length!==1){unresolved.push({rsn:row.name,reason:matching.length?'Ambiguous linked Discord accounts':'No linked Discord account'});continue;}
+    payouts.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation'});
   }
   if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
+  if(new Set(payouts.map(p=>p.discordId)).size!==payouts.length)unresolved.push({reason:'Multiple payouts resolve to the same Discord account'});
   // Fail closed: never publish an automatically approved draft for ambiguous results.
   return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,sourceRewards:rewards,approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
 }

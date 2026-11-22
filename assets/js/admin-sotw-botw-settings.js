@@ -222,6 +222,14 @@ document.addEventListener('DOMContentLoaded',()=>{
       lines.textContent=(draft.payouts||[]).map(p=>`${p.rsn} — ${p.embers} Embers (${p.source}, rank ${p.rank}) · ${p.status||'pending'}`).join('\n')||'No payable linked members.';
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
       box.append(label,lines);
+      if(draft.status==='pending_review'||draft.status==='rejected'){
+        const recalc=document.createElement('button');recalc.type='button';recalc.className='btn';recalc.textContent='Recalculate unpaid rewards';recalc.style.marginRight='.5rem';
+        recalc.addEventListener('click',async()=>{
+          if(!confirm(`Recalculate ${draft.id} from its archived rewards and leaderboard? No Embers will be credited.`))return;
+          recalc.disabled=true;
+          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');await load();}catch(e){alert(e.message);recalc.disabled=false;}
+        });box.append(recalc);
+      }
       if(draft.status==='pending_review'){
         for(const action of ['approve','reject']){
           const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=action==='approve'?'Approve Ember payouts':'Reject payouts';button.style.marginRight='.5rem';

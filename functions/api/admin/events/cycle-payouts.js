@@ -46,7 +46,7 @@ export async function onRequest({request,env}) {
     }
     return json({results});
   }
-  if(!body||!['approve','reject'].includes(body.action)||typeof body.id!=='string'||!/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id))return json({error:'Invalid request'},400);
+  if(!body||!['approve','reject','recalculate'].includes(body.action)||typeof body.id!=='string'||!/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id))return json({error:'Invalid request'},400);
   const key=`events:cycle-payout:${body.id}`;
   const draft=parse(await kv.get(key),null);
   if(!draft)return json({error:'Payout draft not found'},404);
@@ -54,9 +54,18 @@ export async function onRequest({request,env}) {
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
   if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||source.type!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
+  if(body.action==='recalculate'){
+    if(draft.status!=='pending_review' && draft.status!=='rejected')return json({error:'Only unpaid, unapproved drafts can be recalculated'},409);
+    if((draft.payouts||[]).some(p=>p.status==='credited') || draft.approvedAt)return json({error:'Draft contains potentially dispatched or credited payouts; cannot safely recalculate'},409);
+    const fresh=await buildCyclePayoutDraft(kv,source);
+    if(!fresh)return json({error:'Unable to calculate from archive'},409);
+    fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
+    fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
+    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh});
+  }
   if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);
   if(new Set((draft.payouts||[]).map(p=>String(p.discordId))).size!==(draft.payouts||[]).length)return json({error:'Duplicate payout recipient'},409);
-  if(body.action==='approve' && (draft.payouts?.length!==1 || draft.payouts[0]?.rank!==1 || draft.payouts[0]?.source!=='placement'))return json({error:'Only one first-place placement payout may be approved'},409);
+  if(body.action==='approve' && !draft.payouts?.some(p=>p.rank===1&&p.source==='placement'))return json({error:'First-place placement payout is missing'},409);
   if(draft.status!=='pending_review')return json({error:'Payout has already been reviewed',status:draft.status},409);
   if(body.action==='approve'&&(draft.unresolved?.length||!draft.payouts?.length))return json({error:'Resolve unmatched members and reward thresholds before approving'},409);
   const next={...draft,status:body.action==='approve'?'approved':'rejected',reviewedAt:new Date().toISOString(),payouts:draft.payouts.map(p=>({...p,status:body.action==='approve'?'pending':'rejected'}))};
