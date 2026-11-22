@@ -133,6 +133,64 @@ export async function onRequest({ request, env }) {
         try { await kv.put(`events:sotw-botw-controls-audit:${Date.now()}`,JSON.stringify({before:previous,after:next,at:next.updatedAt}),{expirationTtl:90*86400}); } catch(error) { console.warn("Cycle controls audit write failed",error); }
         return Response.json({success:true,controls:next});
       }
+      if (body.action === "set-historical-sotw-winner") {
+        const origin=request.headers.get("Origin");
+        if(!origin || new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:"Invalid origin."},{status:403});
+        // The Nov 27 catch-up nomination deadline has passed. Permit staff recovery
+        // only for this cycle, before the official poll has been reserved.
+        const config=parse(await kv.get(KEY),DEFAULT);
+        const windowDate="2026-11-27";
+        const nowDate=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+        if(nowDate>windowDate)return Response.json({error:"November 27 recovery window has ended."},{status:409});
+        let scheduled=false;
+        for(let i=0;i<208;i++){
+          const d=new Date(Date.parse(`${config.startDate}T12:00:00Z`)+i*(config.rotationDays||14)*86400000).toISOString().slice(0,10);
+          const kind=i%2===0?config.firstEvent:(config.firstEvent==="botw"?"sotw":"botw");
+          if(d===windowDate&&kind==="sotw")scheduled=true;
+          if(d>=windowDate)break;
+        }
+        if(!scheduled)return Response.json({error:"Saved schedule does not place SOTW on November 27. Correct the schedule before assigning nominations."},{status:409});
+        const cycleId=`sotw:${windowDate}`;
+        const state=parse(await kv.get(`events:sotw-botw-automation:v1:${cycleId}`),{});
+        const drafts=parse(await kv.get(DRAFT_KEY),{});
+        if(state.messageId||state.publishedAt||state.pollReservedAt||Array.isArray(state.pollOptions)||
+          (drafts.sotw?.cycleId===cycleId&&drafts.sotw.status==="published"))
+          return Response.json({error:"SOTW poll already reserved or published; manual changes blocked."},{status:409});
+        const discordId=String(body.discordId||"").trim();
+        if(!/^\d{17,20}$/.test(discordId))throw Error("Enter the winner's exact Discord user ID (17–20 digits).");
+        const index=parse(await kv.get("member-profiles:index"),[]);
+        if(!Array.isArray(index)||!index.some(x=>String(x.discordId)===discordId))throw Error("Discord ID is not in the indexed clan member directory.");
+        const profile=parse(await kv.get(`member-profile:${discordId}`),{});
+        const rsn=String(profile.rsn||"").trim();
+        if(!rsn)throw Error("Selected Discord account has no linked RuneScape name.");
+        const pool=cleanPool(parse(await kv.get(POOL_KEY),{}).sotw||[],"sotw");
+        const options=body.options;
+        if(!Array.isArray(options)||options.length!==2||options.some(x=>typeof x!=="string"))throw Error("Choose exactly two skills.");
+        const byKey=new Map(pool.map(x=>[identity(x,"sotw"),x]));
+        const keys=options.map(x=>identity(x,"sotw"));
+        if(byKey.size<3||new Set(keys).size!==2||keys.some(x=>!byKey.has(x)))throw Error("Choose two different enabled skills; at least three must be enabled.");
+        const existing=parse(await kv.get(NOMINATIONS_KEY),{});
+        if(existing.sotw?.cycleId && existing.sotw.cycleId!==cycleId)
+          throw Error("Existing SOTW nominations belong to another cycle; manual reconciliation required.");
+        const winners=parse(await kv.get(WINNERS_KEY),{});
+        const statuses=parse(await kv.get(WINNER_STATUS_KEY),{});
+        const at=new Date().toISOString(),adminId=String((await getSession(request,env)).id);
+        const previous={winner:winners.sotw||null,status:statuses.sotw||null,nominations:existing.sotw||null};
+        const status={state:"resolved",discordId,rsn,eventId:`historical-sotw-recovery:${cycleId}`,verifiedBy:"staff-manual-historical-selection",updatedAt:at};
+        winners.sotw=discordId;statuses.sotw=status;
+        existing.sotw={discordId,options:keys.map(x=>byKey.get(x)),cycleId,source:"staff-historical-sotw",updatedAt:at,updatedBy:"staff",adminDiscordId:adminId};
+        // Clear only an unpublished draft, so it cannot retain old nominations.
+        if(drafts.sotw?.cycleId===cycleId){delete drafts.sotw;await kv.put(DRAFT_KEY,JSON.stringify(drafts));}
+        await kv.put(WINNERS_KEY,JSON.stringify(winners));
+        await kv.put(WINNER_STATUS_KEY,JSON.stringify(statuses));
+        await kv.put(`${WINNER_STATUS_KEY}:sotw`,JSON.stringify(status));
+        await kv.put(NOMINATIONS_KEY,JSON.stringify(existing));
+        const [checkWinners,checkNominations]=await Promise.all([kv.get(WINNERS_KEY),kv.get(NOMINATIONS_KEY)]);
+        if(parse(checkWinners,{}).sotw!==discordId||parse(checkNominations,{}).sotw?.options?.join("|")!==existing.sotw.options.join("|"))
+          return Response.json({error:"Storage verification failed. Do not publish the poll; investigate shared storage."},{status:503});
+        await kv.put(`events:sotw-botw-manual-winner-audit:${Date.now()}`,JSON.stringify({cycleId,discordId,rsn,options:existing.sotw.options,adminId,at,previous}),{expirationTtl:365*86400});
+        return Response.json({success:true,status,cycleId,options:existing.sotw.options},{headers:{"Cache-Control":"no-store"}});
+      }
       if (body.action === "verify-category-winner") {
         const origin = request.headers.get("Origin");
         if (!origin || new URL(origin).origin !== new URL(request.url).origin) return Response.json({error:"Invalid origin."},{status:403});

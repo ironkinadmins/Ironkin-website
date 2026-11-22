@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pools=saved.pools;
       if(which==="botw-standard")bosses.value=pools["botw-standard"].join("\n");
       else if(which==="botw-elite")elite.value=pools["botw-elite"].join("\n");
-      else skills.value=pools.sotw.join("\n");
+      else {skills.value=pools.sotw.join("\n");populateManualSkills();}
       result.textContent=`${which.toUpperCase()} options saved. The other list was not changed.`;
     }catch(e){result.textContent=e.message;}finally{button.disabled=false;}
   }
@@ -129,6 +129,38 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!confirm(`Verify the ${category} winner using archived event ${archiveId}?`))return;
     button.disabled=true;
     try{const data=await request("PUT",{action:"verify-category-winner",type:category,archiveId});states[category]=data.status;showWinner();status.textContent=`Verified ${data.status.rsn} for ${category}.`;}catch(e){status.textContent=e.message;}finally{button.disabled=false;}
+  });
+  const manualDiscord=document.getElementById("ikManualSotwDiscord");
+  const manualSkill1=document.getElementById("ikManualSotwSkill1");
+  const manualSkill2=document.getElementById("ikManualSotwSkill2");
+  const manualSave=document.getElementById("ikManualSotwSave");
+  const manualStatus=document.getElementById("ikManualSotwStatus");
+  function populateManualSkills(){
+    for(const select of [manualSkill1,manualSkill2]){
+      const old=select.value;
+      select.replaceChildren(new Option("Choose a skill…",""));
+      for(const skill of pools.sotw||[])select.add(new Option(skill,skill));
+      if((pools.sotw||[]).includes(old))select.value=old;
+    }
+  }
+  request("GET").then(data=>{pools.sotw=data.pools?.sotw||[];populateManualSkills();
+    const saved=data.nominations?.sotw;
+    if(saved?.cycleId==="sotw:2026-11-27"){
+      manualDiscord.value=String(saved.discordId||data.winners?.sotw||"");
+      manualSkill1.value=saved.options?.[0]||"";manualSkill2.value=saved.options?.[1]||"";
+    }else if(data.winners?.sotw)manualDiscord.value=String(data.winners.sotw);
+  }).catch(e=>{manualStatus.textContent=e.message;});
+  manualSave?.addEventListener("click",async()=>{
+    const discordId=manualDiscord.value.trim(),options=[manualSkill1.value,manualSkill2.value];
+    if(!/^\d{17,20}$/.test(discordId)||options.some(x=>!x)||options[0]===options[1]){
+      manualStatus.textContent="Enter a valid Discord ID and choose two different skills.";return;
+    }
+    if(!confirm(`Set previous SOTW winner to Discord ID ${discordId} and nominate ${options.join(" + ")} for November 27? This will replace unpublished SOTW nominations.`))return;
+    manualSave.disabled=true;manualStatus.textContent="Saving and verifying…";
+    try{const data=await request("PUT",{action:"set-historical-sotw-winner",discordId,options});
+      states.sotw=data.status;showWinner();
+      manualStatus.textContent=`Saved for ${data.cycleId}: ${data.status.rsn} (${data.status.discordId}) nominated ${data.options.join(" and ")}. Third option remains random. Refresh Nomination Management to confirm.`;
+    }catch(e){manualStatus.textContent=e.message;}finally{manualSave.disabled=false;}
   });
   saveBosses.addEventListener("click",()=>save("botw-standard",saveBosses));
   saveElite.addEventListener("click",()=>save("botw-elite",saveElite));
@@ -311,7 +343,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(draft.status==='pending_review'){
         for(const action of ['approve','reject']){
           const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=action==='approve'?'Approve Ember payouts':'Reject payouts';button.style.marginRight='.5rem';
-          button.disabled=action==='approve'&&(!draft.womVerified||draft.womParticipantCount<2||draft.reportRows?.length!==draft.womParticipantCount||!draft.payouts?.length||(draft.unresolved||[]).some(u=>!String(u.reason||'').startsWith('Indexed Discord profiles are missing from the Supabase directory')));
+          button.disabled=action==='approve'&&(draft.id==='3db76115-9da3-417d-9fc5-ccc98498095e'||!draft.womVerified||draft.womParticipantCount<2||draft.reportRows?.length!==draft.womParticipantCount||!draft.payouts?.length||!!draft.unresolved?.length);
           button.addEventListener('click',async()=>{
             if(!confirm(`${action.toUpperCase()} payouts for ${draft.id}? Approval authorizes the bot to credit Embers.`))return;
             button.disabled=true;
