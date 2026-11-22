@@ -61,13 +61,19 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
         .map(normalize).filter(Boolean)});
     }
   }
-  // A missing profile is NOT proof that a player has no linked account.
-  // Stop rather than silently omitting payouts while profiles are unmigrated.
-  if (found.size !== ids.length)
-    throw Error(`Profile directory incomplete in Supabase: ${found.size}/${ids.length} indexed profiles. ` +
-      'Cannot safely match payout recipients; migrate the missing profiles first.');
+  // An indexed profile missing from the bulk directory is not proof that
+  // its owner is unlinked. Build a reviewable draft, but fail closed on approval.
+  const missingProfileIds = ids.filter(id => !found.has(id));
+  const profileDirectoryDiagnostic = {
+    indexed: ids.length, retrieved: found.size, missing: missingProfileIds.length,
+    missingDiscordIds: missingProfileIds
+  };
   const rows = rawRows.filter(row => Number.isFinite(Number(row.gained)) && Number(row.gained) >= 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
   const unresolved = [];
+  if (missingProfileIds.length) unresolved.push({
+    reason: 'Indexed Discord profiles are missing from the Supabase directory; recipient matching may be incomplete. Review missing IDs before approval.',
+    count: missingProfileIds.length, discordIds: missingProfileIds
+  });
   if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
   if (duplicateNames.length) unresolved.push({reason:'Duplicate RSN in WOM standings',rsns:[...new Set(duplicateNames)]});
   for(let i=1;i<Math.min(rows.length,4);i++)if(Number(rows[i].gained)===Number(rows[i-1].gained))unresolved.push({reason:'Tie affects placement ranking; manual resolution required'});
@@ -75,6 +81,11 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
   if(!rankRewards.has(1))unresolved.push({reason:'First-place reward is missing'});
   const payouts = [];
   const reportRows = [];
+  const nameToProfiles = new Map();
+  for (const profile of profiles) for (const name of profile.names) {
+    if (!nameToProfiles.has(name)) nameToProfiles.set(name, []);
+    nameToProfiles.get(name).push(profile);
+  }
   if (!rows.some(row=>Number(row.gained)>0)) unresolved.push({reason:'No positive WOM gain in final standings'});
   for (let i=0;i<rows.length;i++) {
     const row=rows[i],rank=i+1;
@@ -83,7 +94,7 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
     const tier=placed?null:eligibleParticipation.find(t=>Number(row.gained)>=t.minimum);
     const embers=placed?.embers??tier?.embers??0;
     if(!embers){reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers:0,source:"ineligible",status:"not_eligible"});continue;}
-    const matching=profiles.filter(profile=>profile.names.includes(normalize(row.name)));
+    const matching=nameToProfiles.get(normalize(row.name)) || [];
     if(matching.length!==1){const reason=matching.length?'Ambiguous linked Discord accounts':'No linked Discord account';unresolved.push({rsn:row.name,reason});reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'unmatched',reason});continue;}
     payouts.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation'});
     reportRows.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'pending_review'});
@@ -91,5 +102,5 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
   if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
   if(new Set(payouts.map(p=>p.discordId)).size!==payouts.length)unresolved.push({reason:'Multiple payouts resolve to the same Discord account'});
   // Fail closed: never publish an automatically approved draft for ambiguous results.
-  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,reportRows,sourceRewards:rewards,rewardSource:rewardOverride?"current_event_settings":"archived_snapshot",approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
+  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,reportRows,profileDirectoryDiagnostic,sourceRewards:rewards,rewardSource:rewardOverride?"current_event_settings":"archived_snapshot",approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
 }
