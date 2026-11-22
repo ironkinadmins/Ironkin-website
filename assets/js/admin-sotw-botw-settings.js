@@ -270,7 +270,15 @@ document.addEventListener('DOMContentLoaded',()=>{
               if(!/^\d{17,20}$/.test(input.value.trim())){alert('Enter a valid Discord user ID');return;}
               if(!confirm('Confirm that '+player.rsn+' is the same person as Discord user '+input.value.trim()+'? This is an audit-sensitive mapping, not an automatic guess.'))return;
               save.disabled=true;
-              try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_historical_alias',id:draft.id,rsn:player.rsn,discordId:input.value.trim()})});const d=await r.json();if(!r.ok)throw Error(d.error||'Mapping failed');alert(d.notice);}
+              try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_historical_alias',id:draft.id,rsn:player.rsn,discordId:input.value.trim()})});const d=await r.json();if(!r.ok)throw Error(d.error||'Mapping failed');
+                const recalcResponse=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});
+                const recalcData=await recalcResponse.json().catch(()=>({}));
+                if(!recalcResponse.ok)throw Error('Alias saved, but recalculation failed: '+(recalcData.error||'Unknown error')+'. The draft has not been updated.');
+                const updated=recalcData.draft;
+                const mappedRow=updated?.reportRows?.find(row=>String(row.rsn||'').trim().toLowerCase().replace(/[ _-]+/g,' ')===String(player.rsn).trim().toLowerCase().replace(/[ _-]+/g,' '));
+                if(!mappedRow||mappedRow.status==='unmatched'||String(mappedRow.discordId)!==input.value.trim())throw Error('Alias saved, but the recalculated draft did not match this Discord ID. Do not approve.');
+                await load();
+                alert('Historical name matched and payout draft recalculated. '+player.rsn+' is now linked for this event. Review the updated rewards before approval.');}
               catch(e){alert(e.message);}finally{save.disabled=false;}
             });line.append(name,input,save);box.append(line);
           }

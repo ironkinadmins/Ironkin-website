@@ -95,7 +95,10 @@ export async function onRequest({request,env}) {
         NOV13_ELITE_WOM.every(id=>existing.womCompetitionIds.map(String).includes(id));
       const storedAliases=isNov13Elite(entry)?parse(await kv.get(aliasKey(entry.archiveRequestId)),{}):{};
       if(existing && isComplete && (!isNov13Elite(entry) ||
-        (existing.sharedSecondPlace===true && JSON.stringify(existing.historicalAliasOverrides||{})===JSON.stringify(storedAliases)))){
+        (existing.sharedSecondPlace===true &&
+         (existing.reportRows||[]).filter(r=>['vibingiron','ittommy'].includes(normalizeRsn(r.rsn))).length===2 &&
+         (existing.reportRows||[]).filter(r=>['vibingiron','ittommy'].includes(normalizeRsn(r.rsn))).every(r=>Number(r.embers)===60) &&
+         JSON.stringify(existing.historicalAliasOverrides||{})===JSON.stringify(storedAliases)))){
         results.push({id:entry.archiveRequestId,status:'already_complete',participants:existing.womParticipantCount,recipients:existing.payouts?.length||0});continue;
       }
       if(existing && (existing.approvedAt || !['pending_review','rejected'].includes(existing.status) ||
