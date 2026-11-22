@@ -60,7 +60,21 @@ export async function onRequest({request,env}) {
     for(const entry of selected){
       const key=`events:cycle-payout:${entry.archiveRequestId}`;
       const existing=parse(await kv.get(key),null);
-      if(existing){results.push({id:entry.archiveRequestId,status:'existing',draftStatus:existing.status});continue;}
+      // An archive/draft existing is not proof that the complete historical Elite
+      // leaderboard was recovered. Repair only unpaid, unapproved drafts.
+      const isComplete=existing?.womVerified===true &&
+        Number.isInteger(existing.womParticipantCount) &&
+        existing.womParticipantCount>0 &&
+        Array.isArray(existing.reportRows) &&
+        existing.reportRows.length===existing.womParticipantCount &&
+        Array.isArray(existing.womCompetitionIds) &&
+        NOV13_ELITE_WOM.every(id=>existing.womCompetitionIds.map(String).includes(id));
+      if(existing && isComplete){results.push({id:entry.archiveRequestId,status:'already_complete',participants:existing.womParticipantCount,recipients:existing.payouts?.length||0});continue;}
+      if(existing && (existing.approvedAt || !['pending_review','rejected'].includes(existing.status) ||
+        (existing.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status)))){
+        results.push({id:entry.archiveRequestId,status:'blocked',reason:'Existing draft may have been approved or dispatched; cannot overwrite'});
+        continue;
+      }
       const active=parse(await kv.get('events:active'),[]);
       const matches=rewardSlot(entry,active);
       if(matches.length!==1){results.push({id:entry.archiveRequestId,status:'blocked',reason:`Current reward settings ambiguous (${matches.length})`});continue;}
@@ -80,7 +94,7 @@ export async function onRequest({request,env}) {
         const saved=parse(await kv.get(key),null);
         if(saved?.reportRows?.length!==draft.womParticipantCount || saved?.recalculatedAt!==draft.recalculatedAt)
           throw Error('Saved participant report does not match recovered leaderboard');
-        results.push({id:entry.archiveRequestId,status:'prepared',participants:draft.womParticipantCount,recipients:draft.payouts.length,unresolved:draft.unresolved?.length||0});
+        results.push({id:entry.archiveRequestId,status:existing?'repaired':'prepared',participants:draft.womParticipantCount,recipients:draft.payouts.length,unresolved:draft.unresolved?.length||0});
       } catch(error) {results.push({id:entry.archiveRequestId,status:'blocked',reason:'Persistence failed: '+String(error.message||error)});}
     }
     return json({results});
