@@ -15,8 +15,14 @@ export async function retryFailedHistoricalRecordSync(env, now = new Date()) {
   const raw = await kv.get(KEY);
   const archive = parse(raw);
   if (!Array.isArray(archive)) return { skipped: "invalid_archive" };
-  const pending = archive.filter(entry => eligibleType(entry) && entry?.recordsSync?.status === "failed" &&
-    (!entry.recordsSync.nextRetryAt || Date.parse(entry.recordsSync.nextRetryAt) <= now.getTime()));
+  // Legacy Standard/Elite archives were committed before their archive hook
+  // recognized the split types. They have no recordsSync metadata at all.
+  // Reconcile those once, using the existing archive snapshot; never rearchive.
+  const pending = archive.filter(entry => eligibleType(entry) && (
+    entry?.recordsSync?.status === "failed" &&
+      (!entry.recordsSync.nextRetryAt || Date.parse(entry.recordsSync.nextRetryAt) <= now.getTime()) ||
+    (entry?.recordsSync == null && ["botw-standard", "botw-elite"].includes(entry.type))
+  ));
   if (!pending.length) return { skipped: "no_due_failures" };
   // At most one Discord sync per category per invocation, even if many archives failed.
   const dueTypes = [...new Set(pending.map(eligibleType))];
@@ -32,10 +38,10 @@ export async function retryFailedHistoricalRecordSync(env, now = new Date()) {
   const ids = new Set(pending.map(entry => String(entry.archiveRequestId || entry.id)));
   let updated = 0;
   for (const entry of latest) {
-    if (!ids.has(String(entry.archiveRequestId || entry.id)) || entry?.recordsSync?.status !== "failed") continue;
+    if (!ids.has(String(entry.archiveRequestId || entry.id)) || !(entry?.recordsSync?.status === "failed" || (entry?.recordsSync == null && ["botw-standard", "botw-elite"].includes(entry.type)))) continue;
     const outcome = results[eligibleType(entry)];
     if (!outcome) continue;
-    const attempts = Number(entry.recordsSync.attempts || 1) + 1;
+    const attempts = Number(entry.recordsSync?.attempts || 0) + 1;
     entry.recordsSync = outcome.status === "synced"
       ? { status: "synced", at: now.toISOString(), attempts, results: outcome.result }
       : { status: "failed", at: now.toISOString(), attempts, nextRetryAt: new Date(now.getTime() + retryDelay(attempts)).toISOString(), error: outcome.error };

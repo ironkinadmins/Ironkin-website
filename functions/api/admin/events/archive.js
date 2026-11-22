@@ -316,9 +316,10 @@ export async function archiveEventInternal({env, body}) {
 
   // Archive is already committed: Discord failures must never roll back the event.
   // Only the affected competition category is republished.
-  if (event.type === "sotw" || event.type === "botw") {
+  if (["sotw", "botw", "botw-standard", "botw-elite"].includes(event.type)) {
     try {
-      const synced = await syncRecordEmbeds(env, archive, [event.type]);
+      const recordType = event.type === "sotw" ? "sotw" : "botw";
+      const synced = await syncRecordEmbeds(env, archive, [recordType]);
       archiveEntry.recordsSync = { status: "synced", at: new Date().toISOString(), results: synced };
     } catch (error) {
       archiveEntry.recordsSync = { status: "failed", at: new Date().toISOString(), attempts: 1, nextRetryAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), error: String(error?.message || error).slice(0, 250) };
