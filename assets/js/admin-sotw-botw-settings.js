@@ -197,8 +197,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   const heading=document.createElement('h3');heading.textContent='SOTW/BOTW Ember payout approval';
   const explanation=document.createElement('p');explanation.textContent='Payouts are calculated from archived WOM results and saved Event Rewards (02). No Embers are credited until you approve a fully matched draft.';
   const refresh=document.createElement('button');refresh.type='button';refresh.className='btn';refresh.textContent='Refresh payout drafts';
+  const prepare=document.createElement('button');prepare.type='button';prepare.className='btn';prepare.textContent='Find missing November 13 payouts';prepare.style.marginLeft='.5rem';
   const content=document.createElement('div');content.style.whiteSpace='pre-wrap';
-  panel.append(heading,explanation,refresh,content);anchor.parentElement.append(panel);
+  panel.append(heading,explanation,refresh,prepare,content);anchor.parentElement.append(panel);
+  prepare.addEventListener('click',async()=>{
+    if(!confirm('Find archived November 13 BOTW events and prepare missing payout drafts? This will NOT credit Embers or replace existing drafts.'))return;
+    prepare.disabled=true;
+    try{
+      const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'prepare',date:'2026-11-13'})});
+      const d=await r.json();if(!r.ok)throw Error(d.error||'Could not prepare payouts');
+      alert(d.results.map(x=>`${x.id}: ${x.status}${x.unresolved?' (requires review)':''}`).join('\n'));
+      await load();
+    }catch(e){alert(e.message)}finally{prepare.disabled=false}
+  });
   const load=async()=>{
     content.replaceChildren();
     const response=await fetch('/api/admin/events/cycle-payouts',{credentials:'same-origin',cache:'no-store'});

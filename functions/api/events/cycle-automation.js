@@ -227,7 +227,15 @@ async function finalizeCompetition(env, kv, event, state) {
     const matches = Array.isArray(archived) ? archived.filter(item =>
       item.archiveRequestId === requestId ||
       (String(item.womCompetitionId) === String(state.womCompetitionId) && item.eventId === state.websiteEventId)) : [];
-    if (matches.length !== 1) return state; // no archive or ambiguous: staff intervention required
+    if (matches.length !== 1) {
+      const reason = matches.length > 1
+        ? "Multiple matching archives; manual identity verification required."
+        : "No matching archive for the interrupted finalization. Verify WOM results and the archive before retrying.";
+      const flagged = {...state,finalizationStatus:"needs_review",finalizationError:reason,
+        lastReconciliationAt:new Date().toISOString()};
+      await kv.put(PREFIX + event.id,JSON.stringify(flagged));
+      return flagged;
+    }
     const active = parse(await kv.get("events:active"), []);
     const record = Array.isArray(active) ? active.find(item => item.id === state.websiteEventId) : null;
     if (record?.active) {

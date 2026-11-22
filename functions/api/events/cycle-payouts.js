@@ -7,9 +7,9 @@ export async function onRequest({request,env}) {
   if(request.method==='GET') {
     const archive=parse(await kv.get('events:archive'),[]);
     const jobs=[];
-    for(const entry of (Array.isArray(archive)?archive:[]).filter(e=>['sotw','botw'].includes(e.type)).slice(0,30)) {
+    for(const entry of (Array.isArray(archive)?archive:[]).filter(e=>['sotw','botw','botw-standard','botw-elite'].includes(e.type))) {
       const draft=parse(await kv.get(`events:cycle-payout:${entry.archiveRequestId}`),null);
-      if(draft?.status==='approved' && draft.archiveId===entry.id && draft.eventId===entry.eventId && draft.type===entry.type)for(const p of draft.payouts||[])if(p.status==='pending' && /^\d{17,20}$/.test(String(p.discordId||'')) && Number.isSafeInteger(p.embers) && p.embers>0 && p.embers<=100000)jobs.push({id:draft.id,discordId:p.discordId,embers:p.embers,rsn:p.rsn});
+      if(draft?.status==='approved' && Array.isArray(draft.payouts) && draft.payouts.length===1 && draft.payouts[0].rank===1 && draft.payouts[0].source==='placement' && draft.archiveId===entry.id && draft.eventId===entry.eventId && draft.type===entry.type)for(const p of draft.payouts||[])if(p.status==='pending' && /^\d{17,20}$/.test(String(p.discordId||'')) && Number.isSafeInteger(p.embers) && p.embers>0 && p.embers<=100000)jobs.push({id:draft.id,discordId:p.discordId,embers:p.embers,rsn:p.rsn});
     }
     return json({jobs:jobs.slice(0,50)});
   }
@@ -21,6 +21,7 @@ export async function onRequest({request,env}) {
   if(draft?.status!=='approved')return json({error:'Payout not approved'},409);
   const archive=parse(await kv.get('events:archive'),[]);
   if(!Array.isArray(archive)||!archive.some(e=>e.archiveRequestId===body.id&&e.id===draft.archiveId&&e.eventId===draft.eventId&&e.type===draft.type))return json({error:'Archived source mismatch'},409);
+  if(!Array.isArray(draft.payouts)||draft.payouts.length!==1||draft.payouts[0].rank!==1||draft.payouts[0].source!=='placement')return json({error:'Invalid approved payout shape'},409);
   const target=draft.payouts.find(p=>p.discordId===String(body.discordId));
   if(!target)return json({error:'Unknown recipient'},404);
   if(target.status==='credited')return json({success:true,alreadyCredited:true});

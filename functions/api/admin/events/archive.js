@@ -265,7 +265,7 @@ export async function archiveEventInternal({env, body}) {
   archive.unshift(archiveEntry);
   await hybridKv(env, "drops").put("events:archive", JSON.stringify(archive));
   // Generate a staff-review payout draft. This never changes balances.
-  if (["sotw", "botw"].includes(archiveEntry.type)) {
+  if (["sotw", "botw", "botw-standard", "botw-elite"].includes(archiveEntry.type)) {
     try {
       const kv = hybridKv(env, "drops");
       const draftKey = `events:cycle-payout:${archiveRequestId}`;
