@@ -29,16 +29,15 @@ export async function onRequestGet({request,env}){
     // Check BOTH the durable payout ledger and the actual Ember transaction.
     const ledger=await fetchRows(verifyEnv,`cycle_payouts?archive_request_id=eq.${encodeURIComponent(id)}&select=id,user_id,amount,created_at&limit=1000`);
     if(ledger.length===1000)throw Error('Ledger result limit reached; report incomplete');
-    const users=[...new Set(ledger.map(x=>String(x.user_id)).filter(x=>/^\d{1,20}$/.test(x)))];
-    const transactions=users.length?await fetchRows(verifyEnv,`transactions?kind=eq.cycle_reward&user_id=in.(${users.join(',')})&select=id,user_id,delta,created_at,metadata&limit=1000`):[];
+    const transactions=await fetchRows(verifyEnv,`transactions?kind=eq.cycle_reward&reason=eq.${encodeURIComponent(`SOTW/BOTW ${id}`)}&select=id,user_id,delta,created_at,kind,reason&limit=1000`);
     if(transactions.length===1000)throw Error('Transaction result limit reached; report incomplete');
     const payoutMap=new Map((draft.payouts||[]).map(x=>[String(x.discordId),x]));
     const rows=(draft.reportRows||draft.payouts||[]).map(x=>{
       const userId=String(x.discordId||'');const payout=payoutMap.get(userId);
       const expected=Number(payout?.embers||x.embers||0);
       const credits=ledger.filter(l=>String(l.user_id)===userId);
-      const matches=transactions.filter(t=>String(t.user_id)===userId && String(t.metadata?.archiveRequestId||'')===id);
-      const confirmed=credits.length===1 && matches.length===1 && Number(credits[0].amount)===expected && Number(matches[0].delta)===expected;
+      const matches=transactions.filter(t=>String(t.user_id)===userId && String(t.kind)==='cycle_reward' && String(t.reason||'')===`SOTW/BOTW ${id}`);
+      const confirmed=credits.length===1 && matches.length===1 && Number(credits[0].amount)===expected && Number(matches[0].delta)===expected && Number(matches[0].delta)>0;
       let status='not_eligible';
       if(expected>0 && !userId)status='unmatched';
       else if(expected>0 && confirmed)status='paid';
@@ -47,6 +46,12 @@ export async function onRequestGet({request,env}){
       else if(expected>0)status='unpaid';
       return {rsn:x.rsn||'',discordId:userId,rank:x.rank,gained:x.gained,source:x.source,expectedEmbers:expected,status,paidEmbers:confirmed?expected:0,paidAt:confirmed?matches[0].created_at:null,transactionId:confirmed?matches[0].id:null,reason:x.reason||''};
     });
+    // An event transaction without a matching ledger entry is an accounting anomaly.
+    for(const t of transactions){
+      if(String(t.reason||'')!==`SOTW/BOTW ${id}`)continue;
+      if(rows.some(r=>r.discordId===String(t.user_id)))continue;
+      rows.push({rsn:'Unknown / no longer in draft',discordId:String(t.user_id),expectedEmbers:null,paidEmbers:0,status:'requires_reconciliation',reason:'Event transaction is absent from the current payout draft',transactionId:t.id,paidAt:t.created_at});
+    }
     // Include orphan ledger entries rather than silently omit them.
     for(const l of ledger){if(rows.some(r=>r.discordId===String(l.user_id)))continue;
       rows.push({rsn:'Unknown / no longer in draft',discordId:String(l.user_id),expectedEmbers:null,paidEmbers:0,status:'requires_reconciliation',reason:'Ledger entry is absent from the current payout draft',transactionId:null,paidAt:null});
