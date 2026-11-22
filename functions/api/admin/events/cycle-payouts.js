@@ -16,7 +16,9 @@ const rewardSlot=(source,active)=>{
  }).filter(e=>e.rewards&&Array.isArray(e.rewards.placement)&&Array.isArray(e.rewards.participation));
 };
 const NOV13_ELITE_ARCHIVE='3db76115-9da3-417d-9fc5-ccc98498095e';
-const NOV13_ELITE_WOM=['155412','155411'];
+const NOV13_ELITE_WOM=['165741','165765'];
+const correctedEliteSource=entry=>({...entry,womCompetitionId:null,womCompetitions:[],womCompetitionIds:[...NOV13_ELITE_WOM]});
+const isNov13Elite=entry=>isElite(entry)&&entry?.archiveRequestId===NOV13_ELITE_ARCHIVE;
 const validCycleId=id=>/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(String(id||''));
 
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -50,8 +52,7 @@ export async function onRequest({request,env}) {
       if(!isCycle(e)||typeof e.archiveRequestId!=='string')return false;
       const cycle=validCycleId(e.archiveRequestId)&&(!body.date||e.archiveRequestId.includes(':'+body.date+'-'));
       const eliteHistorical=body.date==='2026-11-13' && isElite(e) && e.archiveRequestId===NOV13_ELITE_ARCHIVE &&
-        NOV13_ELITE_WOM.every(id=>getEventWomCompetitionIds(e).map(String).includes(id)) &&
-        getEventWomCompetitionIds(e).length===2;
+        true;
       if(body.only==='botw-elite')return eliteHistorical;
       return cycle||eliteHistorical;
     });
@@ -79,9 +80,10 @@ export async function onRequest({request,env}) {
       const matches=rewardSlot(entry,active);
       if(matches.length!==1){results.push({id:entry.archiveRequestId,status:'blocked',reason:`Current reward settings ambiguous (${matches.length})`});continue;}
       let recovered;
-      try{recovered=await recoverFullWomLeaderboard(env,entry);}
+      try{recovered=await recoverFullWomLeaderboard(env,isNov13Elite(entry)?correctedEliteSource(entry):entry);}
       catch(error){results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
-      const draft=await buildCyclePayoutDraft(kv,{...entry,type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards);
+      if(isNov13Elite(entry) && !recovered.leaderboard.some(row=>Number(row.gained)>0)){results.push({id:entry.archiveRequestId,status:'blocked',reason:'Correct Elite WOM competitions returned no positive gains'});continue;}
+      const draft=await buildCyclePayoutDraft(kv,{...(isNov13Elite(entry)?correctedEliteSource(entry):entry),type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards);
       if(!draft){results.push({id:entry.archiveRequestId,status:'skipped'});continue;}
       draft.status='pending_review';draft.approvedAt=null;draft.approvalSource=null;
       draft.payouts=(draft.payouts||[]).map(p=>({...p,status:'pending_review'}));
@@ -107,9 +109,7 @@ export async function onRequest({request,env}) {
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
   if(!source)return json({error:'Original archive record missing. No changes made.'},409);
-  if(body.id===NOV13_ELITE_ARCHIVE && (!isElite(source) ||
-      getEventWomCompetitionIds(source).length!==2 ||
-      !NOV13_ELITE_WOM.every(id=>getEventWomCompetitionIds(source).map(String).includes(id))))
+  if(body.id===NOV13_ELITE_ARCHIVE && !isElite(source))
     return json({error:'Historical Elite archive WOM components do not match verified November 13 references'},409);
   if(body.id===NOV13_ELITE_ARCHIVE && body.action==='approve')
     return json({error:'Historical Elite draft is review-only: bot payout ingestion for UUID-based archive IDs must be verified before approval.'},409);
@@ -137,9 +137,10 @@ export async function onRequest({request,env}) {
     if(draft.status!=='pending_review' && draft.status!=='rejected')return json({error:'Only unpaid, unapproved drafts can be recalculated'},409);
     if((draft.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status))||draft.approvedAt)return json({error:'Draft may already have been dispatched; no changes made'},409);
     let recovered;
-    try { recovered=await recoverFullWomLeaderboard(env,source); }
+    try { recovered=await recoverFullWomLeaderboard(env,isNov13Elite(source)?correctedEliteSource(source):source); }
     catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
-    const fresh=await buildCyclePayoutDraft(kv,{...source,type,leaderboard:recovered.leaderboard},matches[0].rewards);
+    if(isNov13Elite(source) && !recovered.leaderboard.some(row=>Number(row.gained)>0))return json({error:'Correct Elite WOM competitions returned no positive gains'},409);
+    const fresh=await buildCyclePayoutDraft(kv,{...(isNov13Elite(source)?correctedEliteSource(source):source),type,leaderboard:recovered.leaderboard},matches[0].rewards);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
