@@ -3,32 +3,28 @@ import { getEventWomCompetitionIds, normalizeWomStandingsRows } from './_womComp
 
 const normalize = value => String(value || '').trim().toLowerCase().replace(/[ _-]+/g, ' ');
 
-// Read all pages directly from WOM; never accept a truncated archive or cached top-five.
+// WOM v2 exposes competition participations on the competition details resource.
+// /competitions/:id/standings returns 404 for historical competitions.
 async function fullStandings(env, id) {
-  const pageSize = 50;
-  const players = new Map();
-  let expected = null;
-  for (let offset=0; offset<5000; offset+=pageSize) {
-    const url=`https://api.wiseoldman.net/v2/competitions/${encodeURIComponent(id)}/standings?limit=${pageSize}&offset=${offset}`;
-    const response=await womFetch(env,url,{},'Ironkin-Payout-Recovery');
-    if(!response.ok)throw Error(`WOM ${id} standings request failed (${response.status})`);
-    const body=await response.json();
-    const raw=Array.isArray(body)?body:(body?.standings||body?.results||body?.participations);
-    if(!Array.isArray(raw))throw Error(`WOM ${id} returned an unrecognized standings format`);
-    const count=Number(body?.pagination?.total ?? body?.total ?? body?.participantCount);
-    if(Number.isInteger(count)&&count>=0)expected=count;
-    for(const row of normalizeWomStandingsRows(raw)){
-      const key=normalize(row.name);
-      if(!key)continue;
-      if(players.has(key))throw Error(`WOM ${id} returned duplicate player ${row.name}; review required`);
-      players.set(key,row);
-    }
-    if(raw.length<pageSize){
-      if(expected!==null&&players.size<expected)throw Error(`WOM ${id} incomplete: ${players.size}/${expected} participants`);
-      return [...players.values()];
-    }
+  const url=`https://api.wiseoldman.net/v2/competitions/${encodeURIComponent(id)}`;
+  const response=await womFetch(env,url,{},'Ironkin-Payout-Recovery');
+  if(!response.ok)throw Error(`WOM ${id} competition details request failed (${response.status})`);
+  const body=await response.json();
+  const raw=body?.participations;
+  if(!Array.isArray(raw))throw Error(`WOM ${id} details did not include a participations array; no changes made`);
+  const count=Number(body?.participantCount ?? body?._count?.participations);
+  if(Number.isInteger(count)&&count>=0&&raw.length!==count)
+    throw Error(`WOM ${id} incomplete: ${raw.length}/${count} participants`);
+  const rows=normalizeWomStandingsRows(raw);
+  if(rows.length!==raw.length)throw Error(`WOM ${id} contains ${raw.length-rows.length} unrecognized participants`);
+  const players=new Map();
+  for(const row of rows){
+    const key=normalize(row.name);
+    if(players.has(key))throw Error(`WOM ${id} returned duplicate player ${row.name}; review required`);
+    players.set(key,row);
   }
-  throw Error(`WOM ${id} standings exceeded 5000 rows; refusing partial results`);
+  if(!players.size)throw Error(`WOM ${id} returned no participants`);
+  return [...players.values()];
 }
 
 export async function recoverFullWomLeaderboard(env, archive) {
