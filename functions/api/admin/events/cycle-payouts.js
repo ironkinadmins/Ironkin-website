@@ -1,4 +1,5 @@
 import { recoverFullWomLeaderboard } from '../../../_fullWomPayout.js';
+import { getEventWomCompetitionIds } from '../../../_womCompetition.js';
 import { hybridKv } from '../../../_hybridKv.js';
 import { buildCyclePayoutDraft } from '../../../_cyclePayouts.js';
 import { getSession, isStaffSession } from '../../_auth.js';
@@ -80,7 +81,21 @@ export async function onRequest({request,env}) {
   // A draft must still belong to a real, immutable archived event.
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
-  if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||(isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type)!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
+  if(!source)return json({error:'Original archive record missing. No changes made.'},409);
+  const canonicalType=isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type;
+  const draftType=draft.type;
+  const sameType=canonicalType===draftType || (draftType==='botw' && ['botw-standard','botw-elite'].includes(canonicalType));
+  const sameSource=source.id===draft.archiveId && source.eventId===draft.eventId && sameType;
+  // Legacy cycle drafts can contain old archive IDs and a generic `botw` type.
+  // Permit reconciliation ONLY on recalculation, never approval or rejection.
+  // The immutable cycle request ID must still reference the archived WOM competition.
+  if(!sameSource){
+    if(body.action!=='recalculate')return json({error:'Archived source no longer matches payout draft; recalculate and review first.'},409);
+    const cycleMatch=String(body.id).match(/^cycle-(sotw|botw|botw-standard|botw-elite):(\d{4}-\d{2}-\d{2})-(\d+)$/);
+    const sourceIds=getEventWomCompetitionIds(source).map(String);
+    if(!cycleMatch || !sameType || !sourceIds.includes(cycleMatch[3]) || !source.archiveRequestId || source.archiveRequestId!==body.id)
+      return json({error:'Cannot safely reconcile legacy draft with original WOM competition. No changes made.',sourceType:canonicalType,draftType,sourceIds},409);
+  }
   // Explicitly select the CURRENT Rewards (02) settings; never fall back to an archived snapshot.
   if(body.action==='recalculate'){
     const active=parse(await kv.get('events:active'),[]);
