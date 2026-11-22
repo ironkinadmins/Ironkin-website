@@ -384,26 +384,11 @@ export async function retryExpertInvalidCycle(env, kv, cycleId) {
     calendarStatus:state.calendarStatus || null};
 }
 
-export async function onRequest({request,env}) {
-  if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
-  const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
-  const controls={...CONTROL_DEFAULTS,...parse(await kv.get("events:sotw-botw-controls:v1"),{})};
-  const now=new Date();const event=eventFor(config,now);
-  if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
-  const variants = base => base.type === "botw" ? ["botw-standard","botw-elite"].map(type=>({...base,type,id:`${type}:${base.date}`})) : [base];
-  const currentEvents=variants(event);
-  // Never publish two replacement BOTW polls while a legacy shared poll is active.
-  if (event.type === "botw") {
-    const legacy=parse(await kv.get(PREFIX+event.id),{});
-    if (legacy.messageId || legacy.pollReservedAt || legacy.closedAt || legacy.womStatus) {
-      return Response.json({enabled:true,task:null,error:"Legacy shared BOTW cycle exists. Staff must reconcile it before activating Standard/Elite polls."},{headers:{"Cache-Control":"no-store"},status:409});
-    }
-  }
-  
+async function runCycleMaintenance(env, kv, config, controls, now, variants) {
   // Reconcile recent completed cycles independently of the current poll. A
   // competition can finish after the next poll has opened, and WOM can take
   // time to publish final standings. Never let maintenance block poll tasks.
-  if (request.method === "GET") {
+  {
     try { if (controls.nominationReminders) await Promise.all(["botw-standard","botw-elite","sotw"].map(type=>processNominationReminder(env,type))); }
     catch(error) { console.warn("Nomination reminder check failed",error); }
     // Examine recent scheduled cycles, not fixed 14-day offsets. This remains
@@ -504,6 +489,32 @@ export async function onRequest({request,env}) {
       } catch(error) { console.warn(`Cycle maintenance ${past.id} requires review:`,error); }
       }
     }
+  }
+}
+
+export async function onRequest({request,env,context}) {
+  if(!env.CYCLE_AUTOMATION_SECRET || request.headers.get("Authorization")!==`Bearer ${env.CYCLE_AUTOMATION_SECRET}`)return Response.json({error:"Unauthorized"},{status:401});
+  const kv=hybridKv(env,"drops");const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
+  const controls={...CONTROL_DEFAULTS,...parse(await kv.get("events:sotw-botw-controls:v1"),{})};
+  const now=new Date();const event=eventFor(config,now);
+  if(!event)return Response.json({enabled:false,task:null},{headers:{"Cache-Control":"no-store"}});
+  const variants = base => base.type === "botw" ? ["botw-standard","botw-elite"].map(type=>({...base,type,id:`${type}:${base.date}`})) : [base];
+  const currentEvents=variants(event);
+  // Never publish two replacement BOTW polls while a legacy shared poll is active.
+  if (event.type === "botw") {
+    const legacy=parse(await kv.get(PREFIX+event.id),{});
+    if (legacy.messageId || legacy.pollReservedAt || legacy.closedAt || legacy.womStatus) {
+      return Response.json({enabled:true,task:null,error:"Legacy shared BOTW cycle exists. Staff must reconcile it before activating Standard/Elite polls."},{headers:{"Cache-Control":"no-store"},status:409});
+    }
+  }
+  
+  // Keep the bot's poll/close response on the fast path. Historical WOM,
+  // calendar and result reconciliation can be expensive and must not block
+  // publication of the next poll. Run it at most once per 15-minute slot.
+  // A separate request will retry if an invocation is interrupted.
+  if (request.method === "GET" && now.getUTCMinutes() % 15 === 0 && typeof context?.waitUntil === "function") {
+    context.waitUntil(runCycleMaintenance(env, kv, config, controls, now, variants)
+      .catch(error => console.error("cycle_maintenance_background_failed", String(error))));
   }
   if(request.method==="GET") {
     for (const candidate of currentEvents) {
