@@ -210,6 +210,18 @@ document.addEventListener('DOMContentLoaded',()=>{
       await load();
     }catch(e){alert(e.message)}finally{prepare.disabled=false}
   });
+  const recoverElite=document.createElement('button');recoverElite.type='button';recoverElite.className='btn';recoverElite.textContent='Recover November 13 Elite BOTW';recoverElite.style.marginLeft='.5rem';
+  prepare.after(recoverElite);
+  recoverElite.addEventListener('click',async()=>{
+    if(!confirm('Recover the November 13 Elite BOTW draft from both archived WOM competitions? No Embers will be credited.'))return;
+    recoverElite.disabled=true;
+    try{
+      const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'prepare',date:'2026-11-13',only:'botw-elite'})});
+      const d=await r.json();if(!r.ok)throw Error(d.error||'Elite recovery failed');
+      alert((d.results||[]).map(x=>`${x.id}: ${x.status}${x.reason?' — '+x.reason:''}${x.participants!==undefined?' · '+x.participants+' participants':''}`).join('\n')||'No Elite archive matched; no draft created.');
+      await load();
+    }catch(e){alert('Elite recovery: '+e.message);}finally{recoverElite.disabled=false;}
+  });
   const load=async()=>{
     content.replaceChildren();
     const response=await fetch('/api/admin/events/cycle-payouts',{credentials:'same-origin',cache:'no-store'});
@@ -220,9 +232,14 @@ document.addEventListener('DOMContentLoaded',()=>{
       const box=document.createElement('div');box.style.margin='1rem 0';
       const label=document.createElement('strong');label.textContent=`${draft.type.toUpperCase()} · ${draft.id} · ${draft.status}`;
       const lines=document.createElement('pre');lines.style.whiteSpace='pre-wrap';
-      lines.textContent=(draft.reportRows?.length?draft.reportRows:draft.payouts||[]).map(p=>`${p.rank||'?'} · ${p.rsn} · ${p.gained??'?'} gained · ${p.embers||0} Embers (${p.source||'unknown'}) · ${p.status||'pending'}${p.reason?' · '+p.reason:''}`).join('\n')||'No participant data stored in this draft. Recalculate unpaid rewards.';
+      // Keep the complete reportRows in storage for verification, but only display
+      // players eligible for an Ember reward (including unmatched eligible players).
+      const fullRows=Array.isArray(draft.reportRows)&&draft.reportRows.length?draft.reportRows:(draft.payouts||[]);
+      const eligibleRows=fullRows.filter(p=>Number(p.embers)>0);
+      lines.textContent=eligibleRows.map(p=>`${p.rank||'?'} · ${p.rsn} · ${p.gained??'?'} gained · ${p.embers} Embers (${p.source||'unknown'}) · ${p.status||'pending'}${p.reason?' · '+p.reason:''}`).join('\n')||'No eligible recipients recorded. Recalculate unpaid rewards.';
+      if(draft.reportRows?.length){const summary=document.createElement('div');summary.textContent=`Eligible for Embers: ${eligibleRows.length} · Full WOM participants verified: ${draft.womParticipantCount||draft.reportRows.length} (ineligible players hidden)`;box.append(label,summary);} 
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
-      box.append(label,lines);
+      if(!label.isConnected)box.append(label);box.append(lines);
       const provenance=document.createElement('div');provenance.textContent=draft.womVerified?`Verified WOM participants: ${draft.womParticipantCount} · Competition IDs: ${(draft.womCompetitionIds||[]).join(', ')} · Components: ${(draft.womComponentCounts||[]).join(' + ')}`:'WARNING: Full WOM participant list not verified. Do not approve or trust this draft as complete.';provenance.style.margin='.4rem 0';box.append(provenance);
       const report=document.createElement('button');report.type='button';report.className='btn';report.textContent='Verify payments + export CSV';report.style.marginRight='.5rem';
       const reportStatus=document.createElement('div');reportStatus.style.margin='.5rem 0';

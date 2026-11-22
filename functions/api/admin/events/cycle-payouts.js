@@ -44,6 +44,7 @@ export async function onRequest({request,env}) {
   const body=await request.json().catch(()=>null);
   if(body?.action==='prepare') {
     if(body.date!==undefined && !/^\d{4}-\d{2}-\d{2}$/.test(body.date))return json({error:'Invalid date'},400);
+    if(body.only!==undefined && body.only!=='botw-elite')return json({error:'Unsupported recovery filter'},400);
     const archive=parse(await kv.get('events:archive'),[]);
     const selected=(Array.isArray(archive)?archive:[]).filter(e=>{
       if(!isCycle(e)||typeof e.archiveRequestId!=='string')return false;
@@ -51,10 +52,10 @@ export async function onRequest({request,env}) {
       const eliteHistorical=body.date==='2026-11-13' && isElite(e) && e.archiveRequestId===NOV13_ELITE_ARCHIVE &&
         NOV13_ELITE_WOM.every(id=>getEventWomCompetitionIds(e).map(String).includes(id)) &&
         getEventWomCompetitionIds(e).length===2;
+      if(body.only==='botw-elite')return eliteHistorical;
       return cycle||eliteHistorical;
     });
     if(!selected.length)return json({error:'No matching archived cycle competitions. Check the archive first; this action will not invent results.'},404);
-    if(selected.length>5)return json({error:'Too many historical cycles in one recovery request; use a specific date.'},409);
     const results=[];
     for(const entry of selected){
       const key=`events:cycle-payout:${entry.archiveRequestId}`;
@@ -66,8 +67,7 @@ export async function onRequest({request,env}) {
       let recovered;
       try{recovered=await recoverFullWomLeaderboard(env,entry);}
       catch(error){results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
-      let draft;
-      try { draft=await buildCyclePayoutDraft(kv,{...entry,type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards,env); } catch(error) {results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
+      const draft=await buildCyclePayoutDraft(kv,{...entry,type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards);
       if(!draft){results.push({id:entry.archiveRequestId,status:'skipped'});continue;}
       draft.status='pending_review';draft.approvedAt=null;draft.approvalSource=null;
       draft.payouts=(draft.payouts||[]).map(p=>({...p,status:'pending_review'}));
@@ -125,8 +125,7 @@ export async function onRequest({request,env}) {
     let recovered;
     try { recovered=await recoverFullWomLeaderboard(env,source); }
     catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
-    let fresh;
-    try { fresh=await buildCyclePayoutDraft(kv,{...source,type,leaderboard:recovered.leaderboard},matches[0].rewards,env); } catch(error) {return json({error:'Cannot safely match members: '+String(error.message||error)+'. No draft was changed.'},409);}
+    const fresh=await buildCyclePayoutDraft(kv,{...source,type,leaderboard:recovered.leaderboard},matches[0].rewards);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
