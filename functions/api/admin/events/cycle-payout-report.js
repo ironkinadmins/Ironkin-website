@@ -20,12 +20,17 @@ export async function onRequestGet({request,env}){
   const draft=parse(await kv.get(`events:cycle-payout:${id}`));
   if(!draft)return json({error:'Draft not found'},404);
   if(!hasSupabase(env))return json({error:'Cannot verify payment: Supabase unavailable'},503);
+  // This privileged, staff-only verification must use the service-role key.
+  // Other site features retain their existing credential selection.
+  const serviceRoleKey=String(env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
+  if(!serviceRoleKey)return json({error:'Payment verification requires a server-side SUPABASE_SERVICE_ROLE_KEY secret.'},503);
+  const verifyEnv={...env,SUPABASE_SECRET_KEY:serviceRoleKey};
   try{
     // Check BOTH the durable payout ledger and the actual Ember transaction.
-    const ledger=await fetchRows(env,`cycle_payouts?archive_request_id=eq.${encodeURIComponent(id)}&select=id,user_id,amount,created_at&limit=1000`);
+    const ledger=await fetchRows(verifyEnv,`cycle_payouts?archive_request_id=eq.${encodeURIComponent(id)}&select=id,user_id,amount,created_at&limit=1000`);
     if(ledger.length===1000)throw Error('Ledger result limit reached; report incomplete');
     const users=[...new Set(ledger.map(x=>String(x.user_id)).filter(x=>/^\d{1,20}$/.test(x)))];
-    const transactions=users.length?await fetchRows(env,`transactions?kind=eq.cycle_reward&user_id=in.(${users.join(',')})&select=id,user_id,delta,created_at,metadata&limit=1000`):[];
+    const transactions=users.length?await fetchRows(verifyEnv,`transactions?kind=eq.cycle_reward&user_id=in.(${users.join(',')})&select=id,user_id,delta,created_at,metadata&limit=1000`):[];
     if(transactions.length===1000)throw Error('Transaction result limit reached; report incomplete');
     const payoutMap=new Map((draft.payouts||[]).map(x=>[String(x.discordId),x]));
     const rows=(draft.reportRows||draft.payouts||[]).map(x=>{
