@@ -1,3 +1,4 @@
+import { supabaseRest, hasSupabase } from './api/_supabase.js';
 // Build a review-only payout draft from the exact archived WOM snapshot.
 // No Embers are credited by this module.
 const parse = (raw, fallback) => { try { return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } };
@@ -13,7 +14,7 @@ const placementRank = value => {
   const m = String(value || '').match(/\b([1-9]\d*)(?:st|nd|rd|th)?\s*(?:place)?\b/i);
   return m ? Number(m[1]) : null;
 };
-export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null) {
+export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, env = null) {
   if (!['sotw','botw','botw-standard','botw-elite'].includes(entry?.type) || !entry?.archiveRequestId) return null;
   const rewards = rewardOverride || entry.rewards || {};
   // Never auto-award a tied first place or a non-finite/negative WOM gain.
@@ -25,13 +26,46 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null) {
   const invalidParticipation = participation.filter(item=>item.minimum===null || !Number.isFinite(item.minimum) || item.minimum<0 || !Number.isSafeInteger(item.embers) || item.embers<=0);
   const eligibleParticipation = participation.filter(item=>!invalidParticipation.includes(item)).sort((a,b)=>b.minimum-a.minimum);
   const rankRewards = new Map(placement.map(item=>[item.rank,item]));
+  // Bulk-read indexed member profiles through PostgREST instead of one
+  // Supabase+KV round trip per Discord member (which exceeds Workers limits).
   const index = parse(await kv.get('member-profiles:index'), []);
+  const ids = [...new Set((Array.isArray(index) ? index : [])
+    .map(candidate => String(candidate.discordId || ''))
+    .filter(id => /^\d{17,20}$/.test(id)))];
+  if (env && !hasSupabase(env)) throw Error('Bulk profile matching requires server-side Supabase access');
   const profiles = [];
-  for (const candidate of Array.isArray(index) ? index : []) {
-    if (!/^\d{17,20}$/.test(String(candidate.discordId || ''))) continue;
-    const profile = parse(await kv.get(`member-profile:${candidate.discordId}`), {});
-    profiles.push({discordId:String(candidate.discordId),names:[profile.rsn,...(Array.isArray(profile.previousRsns)?profile.previousRsns:[])].map(normalize).filter(Boolean)});
+  const found = new Set();
+  if (!env) {
+    for (const discordId of ids) {
+      const profile = parse(await kv.get(`member-profile:${discordId}`), {});
+      found.add(discordId);
+      profiles.push({discordId,names:[profile.rsn,...(Array.isArray(profile.previousRsns)?profile.previousRsns:[])]
+        .map(normalize).filter(Boolean)});
+    }
   }
+  for (let offset = 0; env && offset < ids.length; offset += 80) {
+    const batch = ids.slice(offset, offset + 80);
+    const keys = batch.map(id => `member-profile:${id}`);
+    const filter = `(${keys.map(key => `"${key}"`).join(',')})`;
+    const response = await supabaseRest(env,
+      `website_store?namespace=eq.drops&key=in.${encodeURIComponent(filter)}&select=key,value&limit=100`);
+    const records = await response.json();
+    if (!Array.isArray(records) || records.length > batch.length)
+      throw Error('Bulk profile query returned unexpected results');
+    for (const record of records) {
+      const discordId = String(record.key || '').replace(/^member-profile:/, '');
+      if (!batch.includes(discordId) || found.has(discordId)) continue;
+      found.add(discordId);
+      const profile = parse(record.value, {});
+      profiles.push({discordId,names:[profile.rsn,...(Array.isArray(profile.previousRsns)?profile.previousRsns:[])]
+        .map(normalize).filter(Boolean)});
+    }
+  }
+  // A missing profile is NOT proof that a player has no linked account.
+  // Stop rather than silently omitting payouts while profiles are unmigrated.
+  if (found.size !== ids.length)
+    throw Error(`Profile directory incomplete in Supabase: ${found.size}/${ids.length} indexed profiles. ` +
+      'Cannot safely match payout recipients; migrate the missing profiles first.');
   const rows = rawRows.filter(row => Number.isFinite(Number(row.gained)) && Number(row.gained) >= 0).sort((a,b)=>Number(b.gained)-Number(a.gained));
   const unresolved = [];
   if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
