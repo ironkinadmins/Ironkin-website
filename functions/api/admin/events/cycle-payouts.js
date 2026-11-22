@@ -189,7 +189,26 @@ export async function onRequest({request,env}) {
   if(body.action==='approve' && (!draft.womVerified || !Number.isInteger(draft.womParticipantCount) || draft.womParticipantCount<2 || draft.reportRows?.length!==draft.womParticipantCount))return json({error:'Full WOM standings have not been verified for this draft. Recalculate first.'},409);
   if(body.action==='approve' && !draft.payouts?.some(p=>p.rank===1&&p.source==='placement'))return json({error:'First-place placement payout is missing'},409);
   if(draft.status!=='pending_review')return json({error:'Payout has already been reviewed',status:draft.status},409);
-  if(body.action==='approve'&&(draft.unresolved?.length||!draft.payouts?.length))return json({error:'Resolve unmatched members and reward thresholds before approving'},409);
+  if(body.action==='approve'){
+    const eligible=(draft.reportRows||[]).filter(r=>Number(r.embers)>0);
+    const payoutIds=new Set((draft.payouts||[]).map(p=>String(p.discordId)));
+    const eligibleIds=eligible.map(r=>String(r.discordId||''));
+    if(!eligible.length || eligible.some(r=>!/^[0-9]{17,20}$/.test(String(r.discordId||''))) ||
+       new Set(eligibleIds).size!==eligible.length ||
+       eligible.some(r=>!payoutIds.has(String(r.discordId))) ||
+       draft.payouts.length!==eligible.length)
+      return json({error:'Not every eligible WOM player has one uniquely matched payout recipient. Approval blocked.'},409);
+    const issues=(draft.unresolved||[]).filter(u=>!String(u.reason||'').startsWith('Indexed Discord profiles are missing from the Supabase directory'));
+    if(issues.length)return json({error:'Unresolved payout or ranking issues remain',issues},409);
+    // A missing directory entry is a warning, not a payout blocker when every
+    // eligible player has a unique, verified recipient.
+    if(draft.id===NOV13_ELITE_ARCHIVE){
+      const top=eligible.filter(r=>['jockey 818','vibingiron','ittommy'].includes(normalizeRsn(r.rsn)));
+      const amounts=new Map(top.map(r=>[normalizeRsn(r.rsn),Number(r.embers)]));
+      if(amounts.get('jockey 818')!==75||amounts.get('vibingiron')!==60||amounts.get('ittommy')!==60)
+        return json({error:'Elite shared-second-place rewards do not match approved policy'},409);
+    }
+  }
   const next={...draft,status:body.action==='approve'?'approved':'rejected',reviewedAt:new Date().toISOString(),payouts:draft.payouts.map(p=>({...p,status:body.action==='approve'?'pending':'rejected'}))};
   await kv.put(key,JSON.stringify(next));
   return json({draft:next});
