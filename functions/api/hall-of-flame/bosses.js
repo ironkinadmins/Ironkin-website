@@ -66,6 +66,31 @@ export async function onRequestPost({request,env}){
     }
     return json({ok:failed===0,updated,failed,results});
   }
+  // Each historical board is published in its own Worker invocation. This
+  // prevents the two archive reconciliations and Discord ordering from
+  // sharing one request's CPU/subrequest budget.
+  if (body.action === "sync-historical") {
+    const type = body.type;
+    if (type !== "botw" && type !== "sotw") return json({error:"Invalid historical record type."},400);
+    try {
+      const raw = await hybridKv(env, "drops").get("events:archive");
+      const archive = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(archive)) throw new Error("Competition archive data is invalid.");
+      const published = await syncRecordEmbeds(env, archive, [type]);
+      return json({ok:true,type,results:published.results,archiveIssues:published.reconciliation.issues});
+    } catch(error) {
+      return json({ok:false,type,error:`${type.toUpperCase()} records sync failed: ${error.message||error}`},502);
+    }
+  }
+  if (body.action === "order-historical-only") {
+    try {
+      const historicalRecords = await ensureHistoricalRecordsLast(env);
+      if (historicalRecords.skipped) return json({ok:false,error:historicalRecords.reason||"Historical boards not found",historicalRecords},409);
+      return json({ok:true,historicalRecords});
+    } catch(error) {
+      return json({ok:false,error:`Historical record ordering failed: ${error.message||error}`},502);
+    }
+  }
   if (body.action === "reorder-historical") {
     try {
       // Rebuild historical boards from archived competition results, not stale

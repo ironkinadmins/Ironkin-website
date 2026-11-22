@@ -3231,17 +3231,30 @@ document.addEventListener("click",async event=>{
         // handling remains server-side and follows Discord's retry_after value.
         if(i<bosses.length-1) await new Promise(resolve=>setTimeout(resolve,450));
       }
-      // The boss boards are synced in separate requests to stay within Worker limits.
-      // Reorder the historical boards once, AFTER the final boss has finished.
+      // Independently publish BOTW and SOTW archive records before ordering.
+      // Ordering is optional; a failure cannot undo successful record updates.
       let historicalStatus="";
-      try {
-        target.textContent="Positioning BOTW/SOTW records…";
-        const ordered=await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reorder-historical"})});
-        historicalStatus=ordered.historicalRecords?.moved?"BOTW/SOTW records moved to bottom.":"BOTW/SOTW records already at bottom.";
-      } catch(error) {
-        historicalStatus=`BOTW/SOTW ordering FAILED: ${error.message||"Unknown error"}`;
-        failures.push({name:"Historical record ordering",error:error.message||"Unknown error"});
+      let publishedCount=0;
+      let publishFailed=false;
+      for(const type of ["botw","sotw"]){
+        target.textContent=`Updating ${type.toUpperCase()} historical records…`;
+        try {
+          const result=await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"sync-historical",type})});
+          publishedCount+=(result.results||[]).length;
+          if(result.archiveIssues?.length) failures.push({name:`${type.toUpperCase()} archive validation`,error:`${result.archiveIssues.length} archived result(s) need review`});
+        }catch(error){publishFailed=true;failures.push({name:`${type.toUpperCase()} historical sync`,error:error.message||"Unknown error"});}
       }
+      if(!publishFailed){
+        try {
+          target.textContent="Positioning BOTW/SOTW records…";
+          const ordered=await hofFetchJson("/api/hall-of-flame/bosses",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"order-historical-only"})});
+          historicalStatus=ordered.historicalRecords?.moved?"Historical boards moved to bottom.":"Historical boards already at bottom.";
+        }catch(error){
+          historicalStatus=`Ordering unavailable: ${error.message||"Unknown error"}. Historical records were still updated.`;
+          failures.push({name:"Historical record ordering",error:error.message||"Unknown error"});
+        }
+      }else historicalStatus="Historical record update incomplete; ordering skipped until both boards sync.";
+      historicalStatus=`${publishedCount} historical board(s) synced. ${historicalStatus}`;
       target.textContent=originalText;
       const details=failures.slice(0,6).map(x=>`\n• ${x.name}: ${x.error}`).join("");
       alert(`Discord sync complete: ${synced} synced${skipped?`, ${skipped} skipped`:""}${failures.length?`, ${failures.length} failed`:""}.${details}${failures.length>6?`\n• +${failures.length-6} more`:""}\n${historicalStatus}`);
