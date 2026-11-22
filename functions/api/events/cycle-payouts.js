@@ -14,7 +14,7 @@ export async function onRequest({request,env}) {
     for(const entry of archive){
       const id=String(entry?.archiveRequestId||'');if(!validId.test(id))continue;
       const draft=parse(await kv.get(`events:cycle-payout:${id}`));
-      if(!draft||draft.status!=='approved'||!draft.approvedAt||draft.id!==id||!draft.womVerified||draft.reportRows?.length!==draft.womParticipantCount||draft.unresolved?.length)continue;
+      if(!draft||draft.status!=='approved'||!draft.approvedAt||draft.id!==id||!draft.womVerified||draft.reportRows?.length!==draft.womParticipantCount||(draft.unresolved||[]).some(u=>!String(u.reason||'').startsWith('Indexed Discord profiles are missing from the Supabase directory')))continue;
       const payouts=Array.isArray(draft.payouts)?draft.payouts:[];
       if(!payouts.length||payouts.some(x=>!/^[0-9]{17,20}$/.test(String(x.discordId||''))||!Number.isSafeInteger(x.embers)||x.embers<=0))continue;
       const eligible=(draft.reportRows||[]).filter(x=>Number(x.embers)>0);

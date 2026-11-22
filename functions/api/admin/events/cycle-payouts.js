@@ -142,8 +142,6 @@ export async function onRequest({request,env}) {
   if(!source)return json({error:'Original archive record missing. No changes made.'},409);
   if(body.id===NOV13_ELITE_ARCHIVE && !isElite(source))
     return json({error:'Historical Elite archive WOM components do not match verified November 13 references'},409);
-  if(body.id===NOV13_ELITE_ARCHIVE && body.action==='approve')
-    return json({error:'Historical Elite draft is review-only: bot payout ingestion for UUID-based archive IDs must be verified before approval.'},409);
   const canonicalType=isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type;
   const draftType=draft.type;
   const sameType=canonicalType===draftType || (draftType==='botw' && ['botw-standard','botw-elite'].includes(canonicalType));
@@ -209,7 +207,8 @@ export async function onRequest({request,env}) {
         return json({error:'Elite shared-second-place rewards do not match approved policy'},409);
     }
   }
-  const next={...draft,status:body.action==='approve'?'approved':'rejected',reviewedAt:new Date().toISOString(),payouts:draft.payouts.map(p=>({...p,status:body.action==='approve'?'pending':'rejected'}))};
+  const reviewedAt=new Date().toISOString();
+  const next={...draft,status:body.action==='approve'?'approved':'rejected',reviewedAt,approvedAt:body.action==='approve'?reviewedAt:null,payouts:draft.payouts.map(p=>({...p,status:body.action==='approve'?'pending':'rejected'}))};
   await kv.put(key,JSON.stringify(next));
   return json({draft:next});
 }
