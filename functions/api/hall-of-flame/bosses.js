@@ -72,14 +72,19 @@ export async function onRequestPost({request,env}){
   if (body.action === "sync-historical") {
     const type = body.type;
     if (type !== "botw" && type !== "sotw") return json({error:"Invalid historical record type."},400);
+    let phase = "load-archive";
     try {
       const raw = await hybridKv(env, "drops").get("events:archive");
+      phase = "parse-archive";
       const archive = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(archive)) throw new Error("Competition archive data is invalid.");
+      phase = "publish-discord";
       const published = await syncRecordEmbeds(env, archive, [type]);
       return json({ok:true,type,results:published.results,archiveIssues:published.reconciliation.issues});
     } catch(error) {
-      return json({ok:false,type,error:`${type.toUpperCase()} records sync failed: ${error.message||error}`},502);
+      const message = String(error?.message || error).slice(0,400);
+      console.error("hof_historical_sync_failed", JSON.stringify({type,phase,error:message}));
+      return json({ok:false,type,phase,error:`${type.toUpperCase()} historical sync failed during ${phase}: ${message}`},502);
     }
   }
   if (body.action === "order-historical-only") {

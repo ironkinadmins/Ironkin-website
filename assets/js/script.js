@@ -3008,7 +3008,9 @@ async function hofFetchJson(url, options = {}) {
   const response = await fetch(url, options);
   const type = response.headers.get("content-type") || "";
   if (!type.includes("application/json")) {
-    throw new Error(response.ok ? "This Hall of Flame service returned an invalid response." : `Hall of Flame service unavailable (${response.status}).`);
+    const body = await response.text().catch(() => "");
+    const ray = response.headers.get("cf-ray") || "unknown";
+    throw new Error(response.ok ? "This Hall of Flame service returned an invalid response." : `Hall of Flame HTTP ${response.status}; Cloudflare ray ${ray}; ${body.slice(0,160).replace(/\s+/g," ") || "non-JSON response"}`);
   }
   const data = await response.json();
   if (!response.ok) {
