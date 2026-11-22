@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(draft.status==='pending_review'){
         for(const action of ['approve','reject']){
           const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=action==='approve'?'Approve Ember payouts':'Reject payouts';button.style.marginRight='.5rem';
-          button.disabled=action==='approve'&&(draft.id==='3db76115-9da3-417d-9fc5-ccc98498095e'||!draft.womVerified||draft.womParticipantCount<2||draft.reportRows?.length!==draft.womParticipantCount||!draft.payouts?.length||!!draft.unresolved?.length);
+          button.disabled=action==='approve'&&(!draft.womVerified||draft.womParticipantCount<2||draft.reportRows?.length!==draft.womParticipantCount||!draft.payouts?.length||(draft.unresolved||[]).some(u=>!String(u.reason||'').startsWith('Indexed Discord profiles are missing from the Supabase directory')));
           button.addEventListener('click',async()=>{
             if(!confirm(`${action.toUpperCase()} payouts for ${draft.id}? Approval authorizes the bot to credit Embers.`))return;
             button.disabled=true;
