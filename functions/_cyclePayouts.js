@@ -10,11 +10,12 @@ const threshold = value => {
   const multiplier = {k:1e3,m:1e6,b:1e9}[String(match[2] || '').toLowerCase()] || 1;
   return Number(match[1].replaceAll(',', '')) * multiplier;
 };
+const HISTORICAL_ELITE_ID='3db76115-9da3-417d-9fc5-ccc98498095e';
 const placementRank = value => {
   const m = String(value || '').match(/\b([1-9]\d*)(?:st|nd|rd|th)?\s*(?:place)?\b/i);
   return m ? Number(m[1]) : null;
 };
-export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, env = null) {
+export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, env = null, manualAliases = {}) {
   if (!['sotw','botw','botw-standard','botw-elite'].includes(entry?.type) || !entry?.archiveRequestId) return null;
   const rewards = rewardOverride || entry.rewards || {};
   // Never auto-award a tied first place or a non-finite/negative WOM gain.
@@ -76,7 +77,19 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
   });
   if (invalidRows.length) unresolved.push({reason:'Invalid WOM gains require manual review',count:invalidRows.length});
   if (duplicateNames.length) unresolved.push({reason:'Duplicate RSN in WOM standings',rsns:[...new Set(duplicateNames)]});
-  for(let i=1;i<Math.min(rows.length,4);i++)if(Number(rows[i].gained)===Number(rows[i-1].gained))unresolved.push({reason:'Tie affects placement ranking; manual resolution required'});
+  const sharedSecond=entry.archiveRequestId===HISTORICAL_ELITE_ID && (entry.type==='botw-elite'||entry.botwTier==='elite');
+  const firstScore=Number(rows[0]?.gained);
+  const secondScore=Number(rows[1]?.gained);
+  if (rows.length>1 && firstScore===secondScore && firstScore>0)
+    unresolved.push({reason:'First-place tie requires Council review; no automatic winner assigned'});
+  if (!sharedSecond && rows.length>2 && rows.slice(1,4).some((row,i)=>i>0 && Number(row.gained)===Number(rows[i].gained)))
+    unresolved.push({reason:'Tie affects placement ranking; manual resolution required'});
+  // Nov 13 Elite policy: tied second-place scores share the second-place reward;
+  // the third-place award is skipped. Never award placement based on row order.
+  const secondPlaceTie=sharedSecond && firstScore>secondScore && secondScore>0 &&
+    rows.filter(row=>Number(row.gained)===secondScore).length===2;
+  if(sharedSecond && secondScore>0 && rows.filter(row=>Number(row.gained)===secondScore).length>2)
+    unresolved.push({reason:'More than two players tied for second; Council review required'});
   if(invalidParticipation.length)unresolved.push({reason:'Participation requirements or Ember amounts are invalid',requirements:invalidParticipation.map(x=>x.requirement)});
   if(!rankRewards.has(1))unresolved.push({reason:'First-place reward is missing'});
   const payouts = [];
@@ -90,11 +103,16 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
   for (let i=0;i<rows.length;i++) {
     const row=rows[i],rank=i+1;
     // Placement overrides participation; do not stack.
-    const placed=Number(row.gained)>0?rankRewards.get(rank):null;
+    const effectiveRank=secondPlaceTie && Number(row.gained)===secondScore ? 2 :
+      secondPlaceTie && Number(row.gained)<secondScore ? rank : rank;
+    const placed=Number(row.gained)>0 && !(sharedSecond && rank===3 && secondPlaceTie && Number(row.gained)<secondScore)
+      ?rankRewards.get(effectiveRank):null;
     const tier=placed?null:eligibleParticipation.find(t=>Number(row.gained)>=t.minimum);
     const embers=placed?.embers??tier?.embers??0;
     if(!embers){reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers:0,source:"ineligible",status:"not_eligible"});continue;}
-    const matching=nameToProfiles.get(normalize(row.name)) || [];
+    const aliasId=manualAliases[normalize(row.name)];
+    const matching=aliasId ? profiles.filter(profile=>profile.discordId===String(aliasId)) : (nameToProfiles.get(normalize(row.name)) || []);
+    if(aliasId && matching.length!==1) unresolved.push({rsn:row.name,reason:'Staff-confirmed historical alias points to a profile not available in the directory'});
     if(matching.length!==1){const reason=matching.length?'Ambiguous linked Discord accounts':'No linked Discord account';unresolved.push({rsn:row.name,reason});reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'unmatched',reason});continue;}
     payouts.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation'});
     reportRows.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'pending_review'});
@@ -102,5 +120,5 @@ export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null, en
   if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
   if(new Set(payouts.map(p=>p.discordId)).size!==payouts.length)unresolved.push({reason:'Multiple payouts resolve to the same Discord account'});
   // Fail closed: never publish an automatically approved draft for ambiguous results.
-  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,reportRows,profileDirectoryDiagnostic,sourceRewards:rewards,rewardSource:rewardOverride?"current_event_settings":"archived_snapshot",approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
+  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,reportRows,profileDirectoryDiagnostic,historicalAliasOverrides:manualAliases,sharedSecondPlace:secondPlaceTie,sourceRewards:rewards,rewardSource:rewardOverride?"current_event_settings":"archived_snapshot",approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
 }

@@ -254,6 +254,28 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(draft.reportRows?.length){const summary=document.createElement('div');summary.textContent=`Eligible for Embers: ${eligibleRows.length} · Full WOM participants verified: ${draft.womParticipantCount||draft.reportRows.length} (ineligible players hidden)`;box.append(label,summary);} 
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
       if(!label.isConnected)box.append(label);box.append(lines);
+      if(draft.id===eliteNov13Id && draft.status==='pending_review') {
+        const unmatched=eligibleRows.filter(row=>row.status==='unmatched');
+        if(unmatched.length){
+          const aliasTitle=document.createElement('p');
+          aliasTitle.textContent='Historical RSN matching: confirm the member’s Discord ID (17–20 digits), save the mapping, then recalculate. Do not guess identities.';
+          box.append(aliasTitle);
+          for(const player of unmatched){
+            const line=document.createElement('div');line.style.margin='.35rem 0';
+            const name=document.createElement('span');name.textContent=player.rsn+' → ';
+            const input=document.createElement('input');input.placeholder='Confirmed Discord user ID';input.setAttribute('aria-label','Discord ID for '+player.rsn);
+            input.style.maxWidth='210px';
+            const save=document.createElement('button');save.type='button';save.className='btn';save.textContent='Save historical name';
+            save.addEventListener('click',async()=>{
+              if(!/^\d{17,20}$/.test(input.value.trim())){alert('Enter a valid Discord user ID');return;}
+              if(!confirm('Confirm that '+player.rsn+' is the same person as Discord user '+input.value.trim()+'? This is an audit-sensitive mapping, not an automatic guess.'))return;
+              save.disabled=true;
+              try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set_historical_alias',id:draft.id,rsn:player.rsn,discordId:input.value.trim()})});const d=await r.json();if(!r.ok)throw Error(d.error||'Mapping failed');alert(d.notice);}
+              catch(e){alert(e.message);}finally{save.disabled=false;}
+            });line.append(name,input,save);box.append(line);
+          }
+        }
+      }
       const provenance=document.createElement('div');provenance.textContent=draft.womVerified?`Verified WOM participants: ${draft.womParticipantCount} · Competition IDs: ${(draft.womCompetitionIds||[]).join(', ')} · Components: ${(draft.womComponentCounts||[]).join(' + ')}`:'WARNING: Full WOM participant list not verified. Do not approve or trust this draft as complete.';provenance.style.margin='.4rem 0';box.append(provenance);
       const report=document.createElement('button');report.type='button';report.className='btn';report.textContent='Verify payments + export CSV';report.style.marginRight='.5rem';
       const reportStatus=document.createElement('div');reportStatus.style.margin='.5rem 0';

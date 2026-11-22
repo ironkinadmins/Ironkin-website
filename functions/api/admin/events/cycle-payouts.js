@@ -17,6 +17,8 @@ const rewardSlot=(source,active)=>{
 };
 const NOV13_ELITE_ARCHIVE='3db76115-9da3-417d-9fc5-ccc98498095e';
 const NOV13_ELITE_WOM=['165741','165765'];
+const normalizeRsn=value=>String(value||'').trim().toLowerCase().replace(/[ _-]+/g,' ');
+const aliasKey=id=>`events:cycle-payout-aliases:${id}`;
 const correctedEliteSource=entry=>({...entry,womCompetitionId:null,womCompetitions:[],womCompetitionIds:[...NOV13_ELITE_WOM]});
 const isNov13Elite=entry=>isElite(entry)&&entry?.archiveRequestId===NOV13_ELITE_ARCHIVE;
 const validCycleId=id=>/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(String(id||''));
@@ -44,6 +46,27 @@ export async function onRequest({request,env}) {
   const origin=request.headers.get('Origin');
   if(!origin||new URL(origin).origin!==new URL(request.url).origin)return json({error:'Invalid origin'},403);
   const body=await request.json().catch(()=>null);
+  if(body?.action==='set_historical_alias') {
+    if(body.id!==NOV13_ELITE_ARCHIVE || typeof body.rsn!=='string' ||
+      !/^\d{17,20}$/.test(String(body.discordId||'')))return json({error:'Invalid Elite alias mapping'},400);
+    const draft=parse(await kv.get(`events:cycle-payout:${body.id}`),null);
+    if(!draft || draft.status!=='pending_review' || draft.approvedAt ||
+      draft.payouts?.some(p=>['credited','paid','processing'].includes(p.status)))return json({error:'Draft is not safe for alias changes'},409);
+    const rsn=normalizeRsn(body.rsn);
+    if(!draft.reportRows?.some(row=>normalizeRsn(row.rsn)===rsn && Number(row.embers)>0 && row.status==='unmatched'))
+      return json({error:'RSN is not an unmatched eligible recipient in this draft'},409);
+    const index=parse(await kv.get('member-profiles:index'),[]);
+    if(!Array.isArray(index)||!index.some(item=>String(item.discordId)===String(body.discordId)))
+      return json({error:'Discord ID is not in the indexed clan member directory'},409);
+    if(draft.payouts?.some(p=>String(p.discordId)===String(body.discordId)))
+      return json({error:'Discord account already receives a payout in this draft'},409);
+    const aliases=parse(await kv.get(aliasKey(body.id)),{});
+    if(Object.entries(aliases).some(([name,id])=>name!==rsn&&String(id)===String(body.discordId)))
+      return json({error:'Discord account is already mapped to another historical RSN'},409);
+    aliases[rsn]=String(body.discordId);
+    await kv.put(aliasKey(body.id),JSON.stringify(aliases));
+    return json({saved:true,rsn,discordId:String(body.discordId),notice:'Alias saved for this historical event only. Recalculate to review. No Embers credited.'});
+  }
   if(body?.action==='prepare') {
     if(body.date!==undefined && !/^\d{4}-\d{2}-\d{2}$/.test(body.date))return json({error:'Invalid date'},400);
     if(body.only!==undefined && body.only!=='botw-elite')return json({error:'Unsupported recovery filter'},400);
@@ -70,7 +93,11 @@ export async function onRequest({request,env}) {
         existing.reportRows.length===existing.womParticipantCount &&
         Array.isArray(existing.womCompetitionIds) &&
         NOV13_ELITE_WOM.every(id=>existing.womCompetitionIds.map(String).includes(id));
-      if(existing && isComplete){results.push({id:entry.archiveRequestId,status:'already_complete',participants:existing.womParticipantCount,recipients:existing.payouts?.length||0});continue;}
+      const storedAliases=isNov13Elite(entry)?parse(await kv.get(aliasKey(entry.archiveRequestId)),{}):{};
+      if(existing && isComplete && (!isNov13Elite(entry) ||
+        (existing.sharedSecondPlace===true && JSON.stringify(existing.historicalAliasOverrides||{})===JSON.stringify(storedAliases)))){
+        results.push({id:entry.archiveRequestId,status:'already_complete',participants:existing.womParticipantCount,recipients:existing.payouts?.length||0});continue;
+      }
       if(existing && (existing.approvedAt || !['pending_review','rejected'].includes(existing.status) ||
         (existing.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status)))){
         results.push({id:entry.archiveRequestId,status:'blocked',reason:'Existing draft may have been approved or dispatched; cannot overwrite'});
@@ -83,7 +110,8 @@ export async function onRequest({request,env}) {
       try{recovered=await recoverFullWomLeaderboard(env,isNov13Elite(entry)?correctedEliteSource(entry):entry);}
       catch(error){results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
       if(isNov13Elite(entry) && !recovered.leaderboard.some(row=>Number(row.gained)>0)){results.push({id:entry.archiveRequestId,status:'blocked',reason:'Correct Elite WOM competitions returned no positive gains'});continue;}
-      const draft=await buildCyclePayoutDraft(kv,{...(isNov13Elite(entry)?correctedEliteSource(entry):entry),type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards,env);
+      const aliases=isNov13Elite(entry)?parse(await kv.get(aliasKey(entry.archiveRequestId)),{}):{};
+      const draft=await buildCyclePayoutDraft(kv,{...(isNov13Elite(entry)?correctedEliteSource(entry):entry),type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards,env,aliases);
       if(!draft){results.push({id:entry.archiveRequestId,status:'skipped'});continue;}
       draft.status='pending_review';draft.approvedAt=null;draft.approvalSource=null;
       draft.payouts=(draft.payouts||[]).map(p=>({...p,status:'pending_review'}));
@@ -140,7 +168,8 @@ export async function onRequest({request,env}) {
     try { recovered=await recoverFullWomLeaderboard(env,isNov13Elite(source)?correctedEliteSource(source):source); }
     catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
     if(isNov13Elite(source) && !recovered.leaderboard.some(row=>Number(row.gained)>0))return json({error:'Correct Elite WOM competitions returned no positive gains'},409);
-    const fresh=await buildCyclePayoutDraft(kv,{...(isNov13Elite(source)?correctedEliteSource(source):source),type,leaderboard:recovered.leaderboard},matches[0].rewards,env);
+    const aliases=isNov13Elite(source)?parse(await kv.get(aliasKey(source.archiveRequestId)),{}):{};
+    const fresh=await buildCyclePayoutDraft(kv,{...(isNov13Elite(source)?correctedEliteSource(source):source),type,leaderboard:recovered.leaderboard},matches[0].rewards,env,aliases);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
