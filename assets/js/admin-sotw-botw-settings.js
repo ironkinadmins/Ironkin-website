@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     try{
       const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'prepare',date:'2026-11-13'})});
       const d=await r.json();if(!r.ok)throw Error(d.error||'Could not prepare payouts');
-      alert(d.results.map(x=>`${x.id}: ${x.status}${x.unresolved?' (requires review)':''}`).join('\n'));
+      alert(d.results.map(x=>`${x.id}: ${x.status}${x.reason?' — '+x.reason:''}${x.unresolved?' (requires review)':''}`).join('\n'));
       await load();
     }catch(e){alert(e.message)}finally{prepare.disabled=false}
   });
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         recalc.addEventListener('click',async()=>{
           if(!confirm(`Recalculate ${draft.id} using CURRENT Rewards (02) settings and the COMPLETE live WOM competition standings? No Embers will be credited.`))return;
           recalc.disabled=true;
-          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');alert(`Recovered ${d.participants} WOM participants (${(d.componentCounts||[]).join(' + ')} per competition). Using current rewards ${d.sourceEventId}: ${d.recipients} payable linked members; ${d.unresolved} unresolved issues.`);await load();}catch(e){alert(e.message);recalc.disabled=false;}
+          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');alert(`Recovered ${d.participants} WOM participants (${(d.componentCounts||[]).join(' + ')} per competition). Using current rewards ${d.sourceEventId}: ${d.recipients} payable linked members; ${d.unresolved} unresolved issues. Saved report: ${d.draft?.reportRows?.length||0} rows.`);await load();}catch(e){alert(e.message);recalc.disabled=false;}
         });box.append(recalc);
       }
       if(draft.status==='pending_review'){

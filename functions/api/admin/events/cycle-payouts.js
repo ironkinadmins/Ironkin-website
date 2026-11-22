@@ -3,6 +3,19 @@ import { hybridKv } from '../../../_hybridKv.js';
 import { buildCyclePayoutDraft } from '../../../_cyclePayouts.js';
 import { getSession, isStaffSession } from '../../_auth.js';
 const parse=(raw,fallback)=>{try{return raw?JSON.parse(raw):fallback;}catch{return fallback;}};
+const isElite=e=>e?.type==='botw-elite'||(e?.type==='botw'&&String(e.botwTier||'').toLowerCase()==='elite');
+const isStandard=e=>e?.type==='botw-standard'||(e?.type==='botw'&&String(e.botwTier||'').toLowerCase()==='standard');
+const isCycle=e=>e?.type==='sotw'||isElite(e)||isStandard(e)||e?.type==='botw';
+const rewardSlot=(source,active)=>{
+ const type=isElite(source)?'elite':isStandard(source)?'standard':source.type==='sotw'?'sotw':null;
+ if(!type)return [];
+ return (Array.isArray(active)?active:[]).filter(e=>{
+  if(type==='sotw')return e.id==='sotw-current'||e.type==='sotw';
+  return e.id===`botw-${type}`||e.botwTier===type;
+ }).filter(e=>e.rewards&&Array.isArray(e.rewards.placement)&&Array.isArray(e.rewards.participation));
+};
+const validCycleId=id=>/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(String(id||''));
+
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 export async function onRequest({request,env}) {
   if(!isStaffSession(await getSession(request,env)))return json({error:'Staff only'},403);
@@ -11,13 +24,13 @@ export async function onRequest({request,env}) {
     const archive=parse(await kv.get('events:archive'),[]);
     const drafts=[];
     const diagnostics=[];
-    for(const entry of (Array.isArray(archive)?archive:[]).filter(e=>['sotw','botw','botw-standard','botw-elite'].includes(e.type))) {
+    for(const entry of (Array.isArray(archive)?archive:[]).filter(isCycle)) {
       const draft=parse(await kv.get(`events:cycle-payout:${entry.archiveRequestId}`),null);
       if(draft)drafts.push(draft);
     }
     // Include missing Elite cycle diagnostics without fabricating an archive or paying anyone.
     const eliteState=parse(await kv.get('events:sotw-botw-automation:v1:botw-elite:2026-11-13'),{});
-    const eliteArchives=(Array.isArray(archive)?archive:[]).filter(e=>e.type==='botw-elite'||(e.type==='botw'&&e.botwTier==='elite'));
+    const eliteArchives=(Array.isArray(archive)?archive:[]).filter(isElite);
     if(!eliteArchives.length)diagnostics.push({type:'botw-elite',cycle:'2026-11-13',reason:'No archived Elite BOTW event. Cannot create a payable draft until the original two WOM components and archive are reconciled.',womCompetitionIds:eliteState.womCompetitionIds||[],womStatus:eliteState.womStatus||null,finalizationStatus:eliteState.finalizationStatus||null,websiteStatus:eliteState.websiteStatus||null});
     else for(const entry of eliteArchives)if(!drafts.some(d=>d.id===entry.archiveRequestId))diagnostics.push({type:'botw-elite',cycle:'2026-11-13',reason:'Elite archive exists but no payout draft was found',archiveRequestId:entry.archiveRequestId,womCompetitionIds:entry.womCompetitionIds||[]});
     return json({drafts,diagnostics});
@@ -30,7 +43,7 @@ export async function onRequest({request,env}) {
     if(body.date!==undefined && !/^\d{4}-\d{2}-\d{2}$/.test(body.date))return json({error:'Invalid date'},400);
     const archive=parse(await kv.get('events:archive'),[]);
     const selected=(Array.isArray(archive)?archive:[]).filter(e=>
-      ['sotw','botw','botw-standard','botw-elite'].includes(e.type) &&
+      isCycle(e) &&
       typeof e.archiveRequestId==='string' &&
       /^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(e.archiveRequestId) &&
       (!body.date || String(e.archiveRequestId).includes(':'+body.date+'-'))
@@ -41,13 +54,20 @@ export async function onRequest({request,env}) {
       const key=`events:cycle-payout:${entry.archiveRequestId}`;
       const existing=parse(await kv.get(key),null);
       if(existing){results.push({id:entry.archiveRequestId,status:'existing',draftStatus:existing.status});continue;}
-      const draft=await buildCyclePayoutDraft(kv,entry);
+      const active=parse(await kv.get('events:active'),[]);
+      const matches=rewardSlot(entry,active);
+      if(matches.length!==1){results.push({id:entry.archiveRequestId,status:'blocked',reason:`Current reward settings ambiguous (${matches.length})`});continue;}
+      let recovered;
+      try{recovered=await recoverFullWomLeaderboard(env,entry);}
+      catch(error){results.push({id:entry.archiveRequestId,status:'blocked',reason:String(error.message||error)});continue;}
+      const draft=await buildCyclePayoutDraft(kv,{...entry,type:isElite(entry)?'botw-elite':isStandard(entry)?'botw-standard':entry.type,leaderboard:recovered.leaderboard},matches[0].rewards);
       if(!draft){results.push({id:entry.archiveRequestId,status:'skipped'});continue;}
-      // Backfilled drafts require explicit staff review, even when fully matched.
-      draft.status='pending_review';
-      draft.approvedAt=null;
-      draft.approvalSource=null;
+      draft.status='pending_review';draft.approvedAt=null;draft.approvalSource=null;
       draft.payouts=(draft.payouts||[]).map(p=>({...p,status:'pending_review'}));
+      draft.womVerified=true;draft.womCompetitionIds=recovered.competitionIds;draft.womComponentCounts=recovered.componentCounts;
+      draft.womParticipantCount=recovered.leaderboard.length;draft.currentRewardsEventId=matches[0].id;
+      draft.recalculatedAt=new Date().toISOString();
+      if(draft.reportRows?.length!==draft.womParticipantCount){results.push({id:entry.archiveRequestId,status:'blocked',reason:'Full report row count mismatch'});continue;}
       await kv.put(key,JSON.stringify(draft));
       results.push({id:entry.archiveRequestId,status:'prepared',unresolved:draft.unresolved?.length||0});
     }
@@ -60,31 +80,30 @@ export async function onRequest({request,env}) {
   // A draft must still belong to a real, immutable archived event.
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
-  if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||source.type!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
+  if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||(isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type)!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
   // Explicitly select the CURRENT Rewards (02) settings; never fall back to an archived snapshot.
   if(body.action==='recalculate'){
     const active=parse(await kv.get('events:active'),[]);
-    const type=source.type;
+    const type=isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type;
     const tier=type==='botw-elite'?'elite':type==='botw-standard'?'standard':String(source.botwTier||'').toLowerCase();
-    const matches=(Array.isArray(active)?active:[]).filter(e=>{
-      if(type==='sotw')return e.id==='sotw-current'||e.type==='sotw';
-      if(tier==='elite')return e.id==='botw-elite'||e.botwTier==='elite';
-      if(tier==='standard')return e.id==='botw-standard'||e.botwTier==='standard';
-      return false;
-    }).filter(e=>e.rewards && Array.isArray(e.rewards.placement) && Array.isArray(e.rewards.participation));
+    const matches=rewardSlot(source,active);
     if(matches.length!==1)return json({error:`Cannot identify exactly one current Rewards (02) configuration for ${type}. Found ${matches.length}. No changes made.`},409);
     if(draft.status!=='pending_review' && draft.status!=='rejected')return json({error:'Only unpaid, unapproved drafts can be recalculated'},409);
     if((draft.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status))||draft.approvedAt)return json({error:'Draft may already have been dispatched; no changes made'},409);
     let recovered;
     try { recovered=await recoverFullWomLeaderboard(env,source); }
     catch(error){return json({error:'Full WOM standings could not be verified: '+String(error.message||error)+'. No draft was changed.'},409);}
-    const fresh=await buildCyclePayoutDraft(kv,{...source,leaderboard:recovered.leaderboard},matches[0].rewards);
+    const fresh=await buildCyclePayoutDraft(kv,{...source,type,leaderboard:recovered.leaderboard},matches[0].rewards);
     if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
     fresh.recalculatedAt=new Date().toISOString();fresh.currentRewardsEventId=matches[0].id;
     fresh.womVerified=true;fresh.womCompetitionIds=recovered.competitionIds;fresh.womComponentCounts=recovered.componentCounts;fresh.womParticipantCount=recovered.leaderboard.length;
-    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,participants:fresh.womParticipantCount,componentCounts:fresh.womComponentCounts,unresolved:fresh.unresolved.length});
+    if(fresh.reportRows?.length!==fresh.womParticipantCount)return json({error:'Recovered leaderboard/report mismatch. No changes made.'},409);
+    await kv.put(key,JSON.stringify(fresh));
+    const persisted=parse(await kv.get(key),null);
+    if(persisted?.reportRows?.length!==fresh.womParticipantCount)return json({error:'Payout draft could not be verified after saving. Do not approve.'},503);
+    return json({draft:persisted,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,participants:fresh.womParticipantCount,componentCounts:fresh.womComponentCounts,unresolved:fresh.unresolved.length});
   }
   if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);
   if(new Set((draft.payouts||[]).map(p=>String(p.discordId))).size!==(draft.payouts||[]).length)return json({error:'Duplicate payout recipient'},409);

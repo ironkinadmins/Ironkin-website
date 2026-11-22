@@ -48,7 +48,7 @@ export async function onRequestGet({request,env}){
     }
     return json({id,verifiedAt:new Date().toISOString(),rows,summary:{paid:rows.filter(r=>r.status==='paid').length,unpaid:rows.filter(r=>r.status==='unpaid').length,requiresReconciliation:rows.filter(r=>r.status==='requires_reconciliation').length,embersPaid:rows.reduce((s,r)=>s+r.paidEmbers,0)}});
   }catch(e){
-    const denied=Number(e.status)===403;
-    return json({error:denied?'Payment verification blocked: Supabase denied access to the bot payout ledger. No payment statuses can be confirmed. Check that the website and Forgewarden reference the SAME Supabase project and that the server-side credential has SELECT access; do not change RLS or expose credentials.':('Payment verification unavailable: '+String(e.message||e)),verification:'unavailable',diagnostic:{status:Number(e.status)||null,code:String(e.code||''),table:denied?'cycle_payouts':null}},503);
+    const denied=Number(e.status)===403||/permission denied/i.test(String(e.message||''));
+    return json({error:denied?'Payment verification blocked: Supabase denied SELECT access to the payout ledger (403 / permission denied). This is a database privilege or key-role issue, not missing Cloudflare variables. No payment statuses can be confirmed. Check that the website and Forgewarden reference the SAME Supabase project and that the server-side credential has SELECT access; do not change RLS or expose credentials.':('Payment verification unavailable: '+String(e.message||e)),verification:'unavailable',diagnostic:{status:Number(e.status)||null,code:String(e.code||''),table:denied?'cycle_payouts':null}},503);
   }
 }
