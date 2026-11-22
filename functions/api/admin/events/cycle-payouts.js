@@ -15,6 +15,8 @@ const rewardSlot=(source,active)=>{
   return e.id===`botw-${type}`||e.botwTier===type;
  }).filter(e=>e.rewards&&Array.isArray(e.rewards.placement)&&Array.isArray(e.rewards.participation));
 };
+const NOV13_ELITE_ARCHIVE='3db76115-9da3-417d-9fc5-ccc98498095e';
+const NOV13_ELITE_WOM=['155412','155411'];
 const validCycleId=id=>/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(String(id||''));
 
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -43,12 +45,14 @@ export async function onRequest({request,env}) {
   if(body?.action==='prepare') {
     if(body.date!==undefined && !/^\d{4}-\d{2}-\d{2}$/.test(body.date))return json({error:'Invalid date'},400);
     const archive=parse(await kv.get('events:archive'),[]);
-    const selected=(Array.isArray(archive)?archive:[]).filter(e=>
-      isCycle(e) &&
-      typeof e.archiveRequestId==='string' &&
-      /^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(e.archiveRequestId) &&
-      (!body.date || String(e.archiveRequestId).includes(':'+body.date+'-'))
-    );
+    const selected=(Array.isArray(archive)?archive:[]).filter(e=>{
+      if(!isCycle(e)||typeof e.archiveRequestId!=='string')return false;
+      const cycle=validCycleId(e.archiveRequestId)&&(!body.date||e.archiveRequestId.includes(':'+body.date+'-'));
+      const eliteHistorical=body.date==='2026-11-13' && isElite(e) && e.archiveRequestId===NOV13_ELITE_ARCHIVE &&
+        NOV13_ELITE_WOM.every(id=>getEventWomCompetitionIds(e).map(String).includes(id)) &&
+        getEventWomCompetitionIds(e).length===2;
+      return cycle||eliteHistorical;
+    });
     if(!selected.length)return json({error:'No matching archived cycle competitions. Check the archive first; this action will not invent results.'},404);
     const results=[];
     for(const entry of selected){
@@ -69,12 +73,17 @@ export async function onRequest({request,env}) {
       draft.womParticipantCount=recovered.leaderboard.length;draft.currentRewardsEventId=matches[0].id;
       draft.recalculatedAt=new Date().toISOString();
       if(draft.reportRows?.length!==draft.womParticipantCount){results.push({id:entry.archiveRequestId,status:'blocked',reason:'Full report row count mismatch'});continue;}
-      await kv.put(key,JSON.stringify(draft));
-      results.push({id:entry.archiveRequestId,status:'prepared',unresolved:draft.unresolved?.length||0});
+      try {
+        await kv.put(key,JSON.stringify(draft));
+        const saved=parse(await kv.get(key),null);
+        if(saved?.reportRows?.length!==draft.womParticipantCount || saved?.recalculatedAt!==draft.recalculatedAt)
+          throw Error('Saved participant report does not match recovered leaderboard');
+        results.push({id:entry.archiveRequestId,status:'prepared',participants:draft.womParticipantCount,recipients:draft.payouts.length,unresolved:draft.unresolved?.length||0});
+      } catch(error) {results.push({id:entry.archiveRequestId,status:'blocked',reason:'Persistence failed: '+String(error.message||error)});}
     }
     return json({results});
   }
-  if(!body||!['approve','reject','recalculate'].includes(body.action)||typeof body.id!=='string'||!/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/.test(body.id))return json({error:'Invalid request'},400);
+  if(!body||!['approve','reject','recalculate'].includes(body.action)||typeof body.id!=='string'||!(validCycleId(body.id)||body.id===NOV13_ELITE_ARCHIVE))return json({error:'Invalid request'},400);
   const key=`events:cycle-payout:${body.id}`;
   const draft=parse(await kv.get(key),null);
   if(!draft)return json({error:'Payout draft not found'},404);
@@ -82,6 +91,12 @@ export async function onRequest({request,env}) {
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
   if(!source)return json({error:'Original archive record missing. No changes made.'},409);
+  if(body.id===NOV13_ELITE_ARCHIVE && (!isElite(source) ||
+      getEventWomCompetitionIds(source).length!==2 ||
+      !NOV13_ELITE_WOM.every(id=>getEventWomCompetitionIds(source).map(String).includes(id))))
+    return json({error:'Historical Elite archive WOM components do not match verified November 13 references'},409);
+  if(body.id===NOV13_ELITE_ARCHIVE && body.action==='approve')
+    return json({error:'Historical Elite draft is review-only: bot payout ingestion for UUID-based archive IDs must be verified before approval.'},409);
   const canonicalType=isElite(source)?'botw-elite':isStandard(source)?'botw-standard':source.type;
   const draftType=draft.type;
   const sameType=canonicalType===draftType || (draftType==='botw' && ['botw-standard','botw-elite'].includes(canonicalType));
@@ -117,7 +132,7 @@ export async function onRequest({request,env}) {
     if(fresh.reportRows?.length!==fresh.womParticipantCount)return json({error:'Recovered leaderboard/report mismatch. No changes made.'},409);
     await kv.put(key,JSON.stringify(fresh));
     const persisted=parse(await kv.get(key),null);
-    if(persisted?.reportRows?.length!==fresh.womParticipantCount)return json({error:'Payout draft could not be verified after saving. Do not approve.'},503);
+    if(!persisted || persisted.recalculatedAt!==fresh.recalculatedAt || persisted.womVerified!==true || persisted.reportRows?.length!==fresh.womParticipantCount || JSON.stringify(persisted.payouts)!==JSON.stringify(fresh.payouts) || JSON.stringify(persisted.sourceRewards)!==JSON.stringify(fresh.sourceRewards))return json({error:'Payout draft did not match the recalculated result after saving. No approval is permitted.'},503);
     return json({draft:persisted,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,participants:fresh.womParticipantCount,componentCounts:fresh.womComponentCounts,unresolved:fresh.unresolved.length});
   }
   if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);

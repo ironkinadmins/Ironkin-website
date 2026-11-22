@@ -18,6 +18,11 @@ const cache = new WeakMap();
 // and lazy migration would write a deleted image straight back.
 const EPHEMERAL_PREFIXES = ["event-submission-image:"];
 
+// Payout drafts require strong read-after-write consistency for financial approvals.
+function isPayoutDraft(key) {
+  return String(key).startsWith("events:cycle-payout:");
+}
+
 function isEphemeral(key) {
   return EPHEMERAL_PREFIXES.some(prefix => key.startsWith(prefix));
 }
@@ -123,6 +128,18 @@ function makeHybridKv(env, namespace) {
     async get(key) {
       key = String(key);
 
+      if (isPayoutDraft(key)) {
+        // A payout draft must never silently switch between Supabase and eventually
+        // consistent Cloudflare KV after an update. Supabase is authoritative.
+        if (!supabaseEnabled) throw new Error("Payout storage requires configured Supabase");
+        const result = await readSupabase(env, namespace, key);
+        if (result.found) return result.value;
+        // Historical drafts may exist only in legacy KV. They remain readable,
+        // but are not migrated on GET; the next explicit write creates the
+        // authoritative Supabase record.
+        return legacy ? legacy.get(key) : null;
+      }
+
       if (supabaseEnabled) {
         try {
           const result = await readSupabase(env, namespace, key);
@@ -152,6 +169,23 @@ function makeHybridKv(env, namespace) {
 
     async put(key, value, options = {}) {
       key = String(key);
+      if (isPayoutDraft(key)) {
+        if (!supabaseEnabled) throw new Error("Cannot save payout draft: Supabase is not configured");
+        // Never accept a KV-only payout write as successful: a subsequent GET
+        // would prefer stale Supabase data and hide the newly calculated draft.
+        await writeSupabase(env, namespace, key, value, options);
+        const check = await readSupabase(env, namespace, key);
+        if (!check.found || check.value !== encodeText(value)) {
+          throw new Error("Payout draft persistence mismatch in Supabase; approval blocked");
+        }
+        // KV is best-effort backup only. Do not let an eventual KV write
+        // overwrite the authoritative Supabase record via lazy migration.
+        if (legacy) {
+          try { await legacy.put(key, value, options); }
+          catch (error) { console.warn("Payout KV backup failed", key, error); }
+        }
+        return;
+      }
       let supabaseOk = false;
       let legacyOk = false;
       let firstError = null;
@@ -181,6 +215,10 @@ function makeHybridKv(env, namespace) {
 
     async delete(key) {
       key = String(key);
+      if (isPayoutDraft(key)) {
+        // Financial records must not be deleted through this generic adapter.
+        throw new Error("Payout draft deletion is disabled; retain financial audit history");
+      }
       let supabaseOk = false;
       let legacyOk = false;
       let firstError = null;
