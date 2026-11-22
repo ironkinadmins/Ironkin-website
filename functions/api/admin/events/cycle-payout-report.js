@@ -3,7 +3,7 @@ import { getSession, isStaffSession } from '../../_auth.js';
 import { hasSupabase, supabaseRest } from '../../_supabase.js';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const parse=(s)=>{try{return JSON.parse(s)}catch{return null}};
-const validId=/^cycle-(sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+$/;
+const validId=/^(?:cycle-(?:sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2}-\d+|[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/i;
 async function fetchRows(env,path){
   const response=await supabaseRest(env,path);
   if(!response.ok)throw Error(`Supabase query failed (${response.status})`);
@@ -14,6 +14,9 @@ export async function onRequestGet({request,env}){
   const id=new URL(request.url).searchParams.get('id');
   if(!id||!validId.test(id))return json({error:'Invalid event ID'},400);
   const kv=hybridKv(env,'drops');
+  const archive=parse(await kv.get('events:archive'));
+  const source=(Array.isArray(archive)?archive:[]).find(e=>e.archiveRequestId===id);
+  if(!source)return json({error:'No matching archived event. Cannot verify an unknown payout ID.'},404);
   const draft=parse(await kv.get(`events:cycle-payout:${id}`));
   if(!draft)return json({error:'Draft not found'},404);
   if(!hasSupabase(env))return json({error:'Cannot verify payment: Supabase unavailable'},503);
@@ -44,5 +47,8 @@ export async function onRequestGet({request,env}){
       rows.push({rsn:'Unknown / no longer in draft',discordId:String(l.user_id),expectedEmbers:null,paidEmbers:0,status:'requires_reconciliation',reason:'Ledger entry is absent from the current payout draft',transactionId:null,paidAt:null});
     }
     return json({id,verifiedAt:new Date().toISOString(),rows,summary:{paid:rows.filter(r=>r.status==='paid').length,unpaid:rows.filter(r=>r.status==='unpaid').length,requiresReconciliation:rows.filter(r=>r.status==='requires_reconciliation').length,embersPaid:rows.reduce((s,r)=>s+r.paidEmbers,0)}});
-  }catch(e){return json({error:'Payment verification unavailable: '+String(e.message||e)},503)}
+  }catch(e){
+    const denied=Number(e.status)===403;
+    return json({error:denied?'Payment verification blocked: Supabase denied access to the bot payout ledger. No payment statuses can be confirmed. Check that the website and Forgewarden reference the SAME Supabase project and that the server-side credential has SELECT access; do not change RLS or expose credentials.':('Payment verification unavailable: '+String(e.message||e)),verification:'unavailable',diagnostic:{status:Number(e.status)||null,code:String(e.code||''),table:denied?'cycle_payouts':null}},503);
+  }
 }

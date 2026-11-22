@@ -10,11 +10,17 @@ export async function onRequest({request,env}) {
   if(request.method==='GET') {
     const archive=parse(await kv.get('events:archive'),[]);
     const drafts=[];
+    const diagnostics=[];
     for(const entry of (Array.isArray(archive)?archive:[]).filter(e=>['sotw','botw','botw-standard','botw-elite'].includes(e.type))) {
       const draft=parse(await kv.get(`events:cycle-payout:${entry.archiveRequestId}`),null);
       if(draft)drafts.push(draft);
     }
-    return json({drafts});
+    // Include missing Elite cycle diagnostics without fabricating an archive or paying anyone.
+    const eliteState=parse(await kv.get('events:sotw-botw-automation:v1:botw-elite:2026-11-13'),{});
+    const eliteArchives=(Array.isArray(archive)?archive:[]).filter(e=>e.type==='botw-elite'||(e.type==='botw'&&e.botwTier==='elite'));
+    if(!eliteArchives.length)diagnostics.push({type:'botw-elite',cycle:'2026-11-13',reason:'No archived Elite BOTW event. Cannot create a payable draft until the original two WOM components and archive are reconciled.',womCompetitionIds:eliteState.womCompetitionIds||[],womStatus:eliteState.womStatus||null,finalizationStatus:eliteState.finalizationStatus||null,websiteStatus:eliteState.websiteStatus||null});
+    else for(const entry of eliteArchives)if(!drafts.some(d=>d.id===entry.archiveRequestId))diagnostics.push({type:'botw-elite',cycle:'2026-11-13',reason:'Elite archive exists but no payout draft was found',archiveRequestId:entry.archiveRequestId,womCompetitionIds:entry.womCompetitionIds||[]});
+    return json({drafts,diagnostics});
   }
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
   const origin=request.headers.get('Origin');

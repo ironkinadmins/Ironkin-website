@@ -214,12 +214,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     content.replaceChildren();
     const response=await fetch('/api/admin/events/cycle-payouts',{credentials:'same-origin',cache:'no-store'});
     const data=await response.json();if(!response.ok)throw Error(data.error||'Unable to load payouts');
-    if(!data.drafts.length){content.textContent='No archived cycle payout drafts yet.';return;}
+    if(data.diagnostics?.length){const note=document.createElement('div');note.style.margin='1rem 0';note.style.whiteSpace='pre-wrap';note.textContent=data.diagnostics.map(x=>`MISSING ${x.type.toUpperCase()} (${x.cycle}): ${x.reason}\nWOM IDs: ${(x.womCompetitionIds||[]).join(', ')||'not recorded'}; WOM: ${x.womStatus||'unknown'}; finalization: ${x.finalizationStatus||'unknown'}; website: ${x.websiteStatus||'unknown'}`).join('\n\n');content.append(note);}
+    if(!data.drafts.length){const note=document.createElement('p');note.textContent='No archived cycle payout drafts yet.';content.append(note);return;}
     for(const draft of data.drafts){
       const box=document.createElement('div');box.style.margin='1rem 0';
       const label=document.createElement('strong');label.textContent=`${draft.type.toUpperCase()} · ${draft.id} · ${draft.status}`;
       const lines=document.createElement('pre');lines.style.whiteSpace='pre-wrap';
-      lines.textContent=(draft.payouts||[]).map(p=>`${p.rsn} — ${p.embers} Embers (${p.source}, rank ${p.rank}) · ${p.status||'pending'}`).join('\n')||'No payable linked members.';
+      lines.textContent=(draft.reportRows?.length?draft.reportRows:draft.payouts||[]).map(p=>`${p.rank||'?'} · ${p.rsn} · ${p.gained??'?'} gained · ${p.embers||0} Embers (${p.source||'unknown'}) · ${p.status||'pending'}${p.reason?' · '+p.reason:''}`).join('\n')||'No participant data stored in this draft. Recalculate unpaid rewards.';
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
       box.append(label,lines);
       const provenance=document.createElement('div');provenance.textContent=draft.womVerified?`Verified WOM participants: ${draft.womParticipantCount} · Competition IDs: ${(draft.womCompetitionIds||[]).join(', ')} · Components: ${(draft.womComponentCounts||[]).join(' + ')}`:'WARNING: Full WOM participant list not verified. Do not approve or trust this draft as complete.';provenance.style.margin='.4rem 0';box.append(provenance);
