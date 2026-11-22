@@ -102,6 +102,16 @@ async function discord(url,token,method='GET',payload) {
   if(!res.ok) throw new Error(`Discord ${res.status}: ${tidy(body.message).slice(0,140)}`);
   return body;
 }
+// Discord limits edits to messages older than an hour. Historical boards are
+// immutable snapshots: skip identical snapshots, otherwise publish a replacement
+// and only then remove the obsolete bot-owned board(s).
+const historicalBoard = (message, title, botId) => message.author?.id === botId && message.embeds?.some(e => e.title === title);
+const sameEmbeds = (a, b) => JSON.stringify((a || []).map(e => ({title:e.title,description:e.description,color:e.color,footer:e.footer?.text}))) === JSON.stringify((b || []).map(e => ({title:e.title,description:e.description,color:e.color,footer:e.footer?.text})));
+const verifyBoard = (message, expected, type) => {
+  const published = (message.embeds || []).flatMap(embed => String(embed.description || '').split('\n')).filter(line => /^\d+\.\s+\*\*/.test(line)).length;
+  if (published !== expected) throw new Error(`Discord ${type.toUpperCase()} verification failed: expected ${expected}, published ${published}`);
+  return published;
+};
 export async function syncRecordEmbeds(env,archive,types=['botw','sotw']) {
   const {channelId}=await getHallOfFlameDiscordSettings(env);
   const token=env.DISCORD_BOT_TOKEN;
@@ -111,12 +121,25 @@ export async function syncRecordEmbeds(env,archive,types=['botw','sotw']) {
   const reconciliation=reconcileHistoricalRecords(archive), records=reconciliation.records, results=[];
   for (const type of types) {
     const title=type==='sotw'?'Ironkin SOTW Records':'Ironkin BOTW Records';
-    const previous=messages.find(m=>m.author?.id===bot.id&&m.embeds?.some(e=>e.title===title));
+    const matching=messages.filter(m=>historicalBoard(m,title,bot.id));
     const payload={embeds:embedChunks(type,records[type]),allowed_mentions:{parse:[]}};
-    const message=await discord(previous?`${base}/${previous.id}`:base,token,previous?'PATCH':'POST',payload);
-    const published = (message.embeds || []).flatMap(embed => String(embed.description || '').split('\n')).filter(line => /^\d+\.\s+\*\*/.test(line)).length;
-    if (published !== records[type].length) throw new Error(`Discord ${type.toUpperCase()} verification failed: expected ${records[type].length}, published ${published}`);
-    results.push({type,action:previous?'updated':'created',messageId:message.id,count:published});
+    const identical=matching.find(m=>sameEmbeds(m.embeds,payload.embeds));
+    if (identical) {
+      const count=verifyBoard(identical,records[type].length,type);
+      // Reconcile abandoned older copies from a previous partial attempt.
+      for(const old of matching.filter(m=>m.id!==identical.id)) await discord(`${base}/${old.id}`,token,'DELETE');
+      results.push({type,action:'unchanged',messageId:identical.id,count});
+      continue;
+    }
+    // Never PATCH historical boards: Discord may reject edits to old messages
+    // with a non-retryable 429. POST creates a fresh managed snapshot.
+    const created=await discord(base,token,'POST',payload);
+    const count=verifyBoard(created,records[type].length,type);
+    // The new board is published and verified before old ones are removed.
+    // If deletion fails, a subsequent run finds the identical new board and
+    // finishes cleanup rather than creating another copy.
+    for(const old of matching) await discord(`${base}/${old.id}`,token,'DELETE');
+    results.push({type,action:matching.length?'replaced':'created',messageId:created.id,count});
   }
   return { results, reconciliation: { counts: reconciliation.counts, issues: reconciliation.issues } };
 }

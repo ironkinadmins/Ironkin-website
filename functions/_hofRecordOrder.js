@@ -30,7 +30,11 @@ export async function ensureHistoricalRecordsLast(env) {
   // If already in position, edit in place instead of unnecessarily reposting.
   if (messages[0]?.id === matches[1].id && messages[1]?.id === matches[0].id) {
     for (let i = 0; i < matches.length; i++) {
-      if (changed[i]) await request(`${base}/${matches[i].id}`, 'PATCH', { embeds: normalizedEmbeds(matches[i]), allowed_mentions: { parse: [] } });
+      if (changed[i]) {
+        const replacement = await request(base, 'POST', { content: matches[i].content || '', embeds: normalizedEmbeds(matches[i]), allowed_mentions: { parse: [] } });
+        await request(`${base}/${matches[i].id}`, 'DELETE');
+        return { moved: true, normalized: 1, messageIds: [replacement.id] };
+      }
     }
     return { moved: false, normalized: changed.filter(Boolean).length };
   }
