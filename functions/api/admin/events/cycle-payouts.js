@@ -54,14 +54,26 @@ export async function onRequest({request,env}) {
   const archive=parse(await kv.get('events:archive'),[]);
   const source=Array.isArray(archive)?archive.find(entry=>entry.archiveRequestId===body.id):null;
   if(!source||source.id!==draft.archiveId||source.eventId!==draft.eventId||source.type!==draft.type)return json({error:'Archived source no longer matches payout draft'},409);
+  // Explicitly select the CURRENT Rewards (02) settings; never fall back to an archived snapshot.
   if(body.action==='recalculate'){
+    const active=parse(await kv.get('events:active'),[]);
+    const type=source.type;
+    const tier=type==='botw-elite'?'elite':type==='botw-standard'?'standard':String(source.botwTier||'').toLowerCase();
+    const matches=(Array.isArray(active)?active:[]).filter(e=>{
+      if(type==='sotw')return e.id==='sotw-current'||e.type==='sotw';
+      if(tier==='elite')return e.id==='botw-elite'||e.botwTier==='elite';
+      if(tier==='standard')return e.id==='botw-standard'||e.botwTier==='standard';
+      return false;
+    }).filter(e=>e.rewards && Array.isArray(e.rewards.placement) && Array.isArray(e.rewards.participation));
+    if(matches.length!==1)return json({error:`Cannot identify exactly one current Rewards (02) configuration for ${type}. Found ${matches.length}. No changes made.`},409);
     if(draft.status!=='pending_review' && draft.status!=='rejected')return json({error:'Only unpaid, unapproved drafts can be recalculated'},409);
-    if((draft.payouts||[]).some(p=>p.status==='credited') || draft.approvedAt)return json({error:'Draft contains potentially dispatched or credited payouts; cannot safely recalculate'},409);
-    const fresh=await buildCyclePayoutDraft(kv,source);
-    if(!fresh)return json({error:'Unable to calculate from archive'},409);
+    if((draft.payouts||[]).some(p=>['credited','paid','processing'].includes(p.status))||draft.approvedAt)return json({error:'Draft may already have been dispatched; no changes made'},409);
+    const fresh=await buildCyclePayoutDraft(kv,source,matches[0].rewards);
+    if(!fresh)return json({error:'Unable to calculate from archived standings'},409);
     fresh.status='pending_review';fresh.approvedAt=null;fresh.approvalSource=null;
     fresh.payouts=fresh.payouts.map(p=>({...p,status:'pending_review'}));
-    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh});
+    fresh.recalculatedAt=new Date().toISOString();fresh.currentRewardsEventId=matches[0].id;
+    await kv.put(key,JSON.stringify(fresh));return json({draft:fresh,updated:true,rewardSource:'current_event_settings',sourceEventId:matches[0].id,recipients:fresh.payouts.length,unresolved:fresh.unresolved.length});
   }
   if(draft.payouts?.some(p=>!/^\d{17,20}$/.test(String(p.discordId||''))||!Number.isSafeInteger(p.embers)||p.embers<=0||p.embers>100000))return json({error:'Invalid payout recipient or amount'},409);
   if(new Set((draft.payouts||[]).map(p=>String(p.discordId))).size!==(draft.payouts||[]).length)return json({error:'Duplicate payout recipient'},409);

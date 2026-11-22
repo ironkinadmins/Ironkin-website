@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   panel.className='admin-card';
   panel.style.marginTop='1.5rem';
   const heading=document.createElement('h3');heading.textContent='SOTW/BOTW Ember payout approval';
-  const explanation=document.createElement('p');explanation.textContent='Payouts are calculated from archived WOM results and saved Event Rewards (02). No Embers are credited until you approve a fully matched draft.';
+  const explanation=document.createElement('p');explanation.textContent='Payouts use archived WOM results; recalculation uses the CURRENT Event Rewards (02) settings. No Embers are credited until you approve a fully matched draft.';
   const refresh=document.createElement('button');refresh.type='button';refresh.className='btn';refresh.textContent='Refresh payout drafts';
   const prepare=document.createElement('button');prepare.type='button';prepare.className='btn';prepare.textContent='Find missing November 13 payouts';prepare.style.marginLeft='.5rem';
   const content=document.createElement('div');content.style.whiteSpace='pre-wrap';
@@ -222,12 +222,27 @@ document.addEventListener('DOMContentLoaded',()=>{
       lines.textContent=(draft.payouts||[]).map(p=>`${p.rsn} — ${p.embers} Embers (${p.source}, rank ${p.rank}) · ${p.status||'pending'}`).join('\n')||'No payable linked members.';
       if(draft.unresolved?.length)lines.textContent+='\nREQUIRES REVIEW:\n'+draft.unresolved.map(u=>`${u.rsn||''}: ${u.reason}`).join('\n');
       box.append(label,lines);
+      const report=document.createElement('button');report.type='button';report.className='btn';report.textContent='Export payout report (CSV)';report.style.marginRight='.5rem';
+      report.addEventListener('click',()=>{
+        const columns=['Event','Player','Discord ID','Rank','KC or XP gained','Reward type','Embers','Status','Reason'];
+        const payoutByName=new Map((draft.payouts||[]).map(p=>[String(p.rsn||'').toLowerCase(),p]));
+        const rows=(draft.reportRows||draft.payouts||[]).map(row=>{
+          const paid=payoutByName.get(String(row.rsn||'').toLowerCase());
+          const status=paid?.status||row.status||'unknown';
+          return [draft.id,row.rsn,row.discordId||paid?.discordId||'',row.rank,row.gained,row.source,row.embers,status,row.reason||''];
+        });
+        const csv=[columns,...rows].map(r=>r.map(v=>'"'+String(v??'').replace(/^[=+@\-]/,'\'') .replace(/"/g,'""')+'"').join(',')).join('\r\n');
+        const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+        const a=document.createElement('a');a.href=url;a.download='ironkin-payout-'+String(draft.id).replace(/[^a-z0-9_-]/gi,'_')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      });box.append(report);
+      const summary=document.createElement('p');summary.textContent=`Report: ${(draft.reportRows||draft.payouts||[]).length} players; ${(draft.payouts||[]).length} payable; ${(draft.unresolved||[]).length} issues. Reward source: ${draft.rewardSource||'legacy / archived (recalculate to update)'}. Payment statuses are based on the payout draft, not an independently verified bank/transaction ledger.`;box.append(summary);
+      
       if(draft.status==='pending_review'||draft.status==='rejected'){
         const recalc=document.createElement('button');recalc.type='button';recalc.className='btn';recalc.textContent='Recalculate unpaid rewards';recalc.style.marginRight='.5rem';
         recalc.addEventListener('click',async()=>{
-          if(!confirm(`Recalculate ${draft.id} from its archived rewards and leaderboard? No Embers will be credited.`))return;
+          if(!confirm(`Recalculate ${draft.id} using CURRENT Rewards (02) settings and archived leaderboard? No Embers will be credited.`))return;
           recalc.disabled=true;
-          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');await load();}catch(e){alert(e.message);recalc.disabled=false;}
+          try{const r=await fetch('/api/admin/events/cycle-payouts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',id:draft.id})});const d=await r.json();if(!r.ok)throw Error(d.error||'Recalculation failed');alert(`Recalculated using ${d.sourceEventId}: ${d.recipients} payable members, ${d.unresolved} unresolved issues.`);await load();}catch(e){alert(e.message);recalc.disabled=false;}
         });box.append(recalc);
       }
       if(draft.status==='pending_review'){

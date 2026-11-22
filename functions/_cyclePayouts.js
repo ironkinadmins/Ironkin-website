@@ -13,9 +13,9 @@ const placementRank = value => {
   const m = String(value || '').match(/\b([1-9]\d*)(?:st|nd|rd|th)?\s*(?:place)?\b/i);
   return m ? Number(m[1]) : null;
 };
-export async function buildCyclePayoutDraft(kv, entry) {
+export async function buildCyclePayoutDraft(kv, entry, rewardOverride = null) {
   if (!['sotw','botw','botw-standard','botw-elite'].includes(entry?.type) || !entry?.archiveRequestId) return null;
-  const rewards = entry.rewards || {};
+  const rewards = rewardOverride || entry.rewards || {};
   // Never auto-award a tied first place or a non-finite/negative WOM gain.
   const rawRows = Array.isArray(entry.leaderboard) ? entry.leaderboard : [];
   const invalidRows = rawRows.filter(row => !Number.isFinite(Number(row.gained)) || Number(row.gained) < 0);
@@ -40,6 +40,7 @@ export async function buildCyclePayoutDraft(kv, entry) {
   if(invalidParticipation.length)unresolved.push({reason:'Participation requirements or Ember amounts are invalid',requirements:invalidParticipation.map(x=>x.requirement)});
   if(!rankRewards.has(1))unresolved.push({reason:'First-place reward is missing'});
   const payouts = [];
+  const reportRows = [];
   if (!rows.length) unresolved.push({reason:'No positive WOM gain in final standings'});
   for (let i=0;i<rows.length;i++) {
     const row=rows[i],rank=i+1;
@@ -47,13 +48,14 @@ export async function buildCyclePayoutDraft(kv, entry) {
     const placed=rankRewards.get(rank);
     const tier=placed?null:eligibleParticipation.find(t=>Number(row.gained)>=t.minimum);
     const embers=placed?.embers??tier?.embers??0;
-    if(!embers)continue;
+    if(!embers){reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers:0,source:"ineligible",status:"not_eligible"});continue;}
     const matching=profiles.filter(profile=>profile.names.includes(normalize(row.name)));
-    if(matching.length!==1){unresolved.push({rsn:row.name,reason:matching.length?'Ambiguous linked Discord accounts':'No linked Discord account'});continue;}
+    if(matching.length!==1){const reason=matching.length?'Ambiguous linked Discord accounts':'No linked Discord account';unresolved.push({rsn:row.name,reason});reportRows.push({rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'unmatched',reason});continue;}
     payouts.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation'});
+    reportRows.push({discordId:matching[0].discordId,rsn:String(row.name),rank,gained:Number(row.gained),embers,source:placed?'placement':'participation',status:'pending_review'});
   }
   if (payouts.some(row => !Number.isSafeInteger(row.embers) || row.embers <= 0 || row.embers > 100000)) unresolved.push({reason:'Invalid or excessive Ember amount'});
   if(new Set(payouts.map(p=>p.discordId)).size!==payouts.length)unresolved.push({reason:'Multiple payouts resolve to the same Discord account'});
   // Fail closed: never publish an automatically approved draft for ambiguous results.
-  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,sourceRewards:rewards,approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
+  return {id:entry.archiveRequestId,archiveId:entry.id,eventId:entry.eventId,type:entry.type,createdAt:new Date().toISOString(),status:unresolved.length || !payouts.length ? 'pending_review' : 'approved',payouts:payouts.map(p=>({...p,status:unresolved.length || !payouts.length ? 'pending_review' : 'pending'})),unresolved,reportRows,sourceRewards:rewards,rewardSource:rewardOverride?"current_event_settings":"archived_snapshot",approvedAt:unresolved.length || !payouts.length ? null : new Date().toISOString(),approvalSource:unresolved.length || !payouts.length ? null : 'verified-automatic'};
 }
