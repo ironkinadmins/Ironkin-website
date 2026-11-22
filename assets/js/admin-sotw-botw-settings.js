@@ -228,9 +228,23 @@ document.addEventListener('DOMContentLoaded',()=>{
     const data=await response.json();if(!response.ok)throw Error(data.error||'Unable to load payouts');
     if(data.diagnostics?.length){const note=document.createElement('div');note.style.margin='1rem 0';note.style.whiteSpace='pre-wrap';note.textContent=data.diagnostics.map(x=>`MISSING ${x.type.toUpperCase()} (${x.cycle}): ${x.reason}\nWOM IDs: ${(x.womCompetitionIds||[]).join(', ')||'not recorded'}; WOM: ${x.womStatus||'unknown'}; finalization: ${x.finalizationStatus||'unknown'}; website: ${x.websiteStatus||'unknown'}`).join('\n\n');content.append(note);}
     if(!data.drafts.length){const note=document.createElement('p');note.textContent='No archived cycle payout drafts yet.';content.append(note);return;}
-    for(const draft of data.drafts){
+    // Put the recovered November 13 Elite review above unrelated historical payouts.
+    // This changes presentation only; no draft or payment record is modified.
+    const eliteNov13Id='3db76115-9da3-417d-9fc5-ccc98498095e';
+    const standardNov13Id='cycle-botw-standard:2026-11-13-165740';
+    const priority=d=>d.id===eliteNov13Id?0:d.id===standardNov13Id?1:2;
+    const sortedDrafts=[...data.drafts].sort((a,b)=>priority(a)-priority(b));
+    if(!sortedDrafts.some(d=>d.id===eliteNov13Id)){
+      const missing=document.createElement('p');
+      missing.textContent='November 13 Elite BOTW recovery draft is NOT present in the payout API response. The older jockey 818 draft below is not the recovered Elite event.';
+      missing.style.fontWeight='bold';
+      content.append(missing);
+    }
+    for(const draft of sortedDrafts){
       const box=document.createElement('div');box.style.margin='1rem 0';
-      const label=document.createElement('strong');label.textContent=`${draft.type.toUpperCase()} · ${draft.id} · ${draft.status}`;
+      const label=document.createElement('strong');
+      const title=draft.id===eliteNov13Id?'NOVEMBER 13 ELITE BOTW — RECOVERY REVIEW':draft.id===standardNov13Id?'NOVEMBER 13 STANDARD BOTW — RECOVERY REVIEW':'HISTORICAL EVENT — '+String(draft.type||'event').toUpperCase();
+      label.textContent=`${title} · ${draft.id} · ${draft.status}`;
       const lines=document.createElement('pre');lines.style.whiteSpace='pre-wrap';
       // Keep the complete reportRows in storage for verification, but only display
       // players eligible for an Ember reward (including unmatched eligible players).
