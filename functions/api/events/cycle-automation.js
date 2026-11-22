@@ -526,10 +526,23 @@ export async function onRequest({request,env,context}) {
       // Winner nominations are the sole authority for the first two slots.
       // Legacy drafts and reservations must never replace them.
       const nomination=nominations[candidate.type];
-      const winnerInfo=await nominationNoticeStatus(env,candidate.type);
-      const resolvedId=winnerInfo.status?.state==="resolved"?String(winnerInfo.status.discordId||""):"";
+      // The staff historical SOTW recovery action verifies the linked member,
+      // writes the winner status and nominations together, and scopes them to
+      // the exact upcoming cycle. Trust that verified, cycle-scoped record;
+      // don't require the expensive general nomination-notice lookup on every
+      // poll tick (which also depends on unrelated reminder state).
+      const staffSotw = candidate.type === "sotw" &&
+        nomination?.source === "staff-historical-sotw" &&
+        nomination?.cycleId === candidate.id &&
+        /^\d{17,20}$/.test(String(nomination?.discordId || "")) &&
+        String(winners.sotw || "") === String(nomination.discordId);
+      let resolvedId = "";
+      if (!staffSotw) {
+        const winnerInfo = await nominationNoticeStatus(env,candidate.type);
+        resolvedId = winnerInfo.status?.state === "resolved" ? String(winnerInfo.status.discordId || "") : "";
+      }
       const bootstrapValid=candidate.type==="sotw" && nomination?.source==="initial-staff-bootstrap" && nomination?.cycleId===candidate.id && !resolvedId;
-      const picks=(bootstrapValid || (resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id))) ? nomination.options : null;
+      const picks=(staffSotw || bootstrapValid || (resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id))) ? nomination.options : null;
       const distinct=Array.isArray(picks)?[...new Map(picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).map(x=>[key(x,candidate.type),x])).values()]:[];
       try {
         if(distinct.length!==2)throw Error("Two valid previous-winner nominations are required before publishing; no random fallback.");
