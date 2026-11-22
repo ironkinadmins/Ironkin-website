@@ -7,7 +7,13 @@ const validId=/^(?:cycle-(?:sotw|botw|botw-standard|botw-elite):\d{4}-\d{2}-\d{2
 async function fetchRows(env,path){
   const response=await supabaseRest(env,path);
   if(!response.ok)throw Error(`Supabase query failed (${response.status})`);
-  const rows=await response.json();if(!Array.isArray(rows))throw Error('Invalid Supabase response');return rows;
+  // Supabase bigint Discord snowflakes must be decoded as strings BEFORE JSON.parse.
+  // JSON.parse would round 18-19 digit numeric IDs and silently break matching.
+  const raw=await response.text();
+  const safe=raw.replace(/("user_id"\s*:\s*)(-?\d+)(?=\s*[,}])/g, '$1"$2"');
+  const rows=JSON.parse(safe);
+  if(!Array.isArray(rows))throw Error('Invalid Supabase response');
+  return rows;
 }
 export async function onRequestGet({request,env}){
   if(!isStaffSession(await getSession(request,env)))return json({error:'Staff only'},403);
