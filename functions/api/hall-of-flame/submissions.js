@@ -1,3 +1,4 @@
+import { activeGuildMember } from "../_activeGuildMember.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
 import { bossMessage, displayName, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
@@ -20,7 +21,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const session = await getSession(request, env);
   if (!session) return Response.json({ error:"Sign in with Discord before submitting a PB." }, { status:401, headers:noStore });
-  if (session.inGuild === false) return Response.json({ error:"Only Ironkin Discord members can submit records." }, { status:403, headers:noStore });
+  if (!await activeGuildMember(env, session.id)) return Response.json({ error:"Active Discord clan membership could not be verified." }, { status:403, headers:noStore });
   const form = await request.formData();
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();

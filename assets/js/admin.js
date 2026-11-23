@@ -1808,6 +1808,38 @@ async function searchMemberProfiles() {
   renderProfileSearchResults(data.results || []);
 }
 
+async function refreshProfilePluginAccess() {
+  const discordId = document.getElementById("profileEditorDiscordId")?.value.trim();
+  const status = document.getElementById("profilePluginAccessStatus");
+  const revoke = document.getElementById("profilePluginAccessRevokeBtn");
+  if (revoke) revoke.disabled = true;
+  if (!discordId) { if (status) status.textContent = "Select a member first."; return; }
+  if (status) status.textContent = "Checking plugin access…";
+  try {
+    const response = await fetch(`/api/admin/plugin-keys?discordId=${encodeURIComponent(discordId)}`, { credentials: "same-origin", cache: "no-store" });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    if (document.getElementById("profileEditorDiscordId")?.value.trim() !== discordId) return;
+    if (status) status.textContent = `RSN: ${data.rsn || "Unknown"} • API key: ${data.hasKey ? "Present" : "None"} • Access: ${data.revoked ? "Revoked" : data.hasKey ? "Active" : "No key"}${data.revokedAt ? ` • Revoked ${data.revokedAt}` : ""}`;
+    if (revoke) revoke.disabled = Boolean(data.revoked || !data.hasKey);
+  } catch (error) { if (status) status.textContent = `Could not check access: ${error.message}`; }
+}
+async function revokeProfilePluginAccess() {
+  const discordId = document.getElementById("profileEditorDiscordId")?.value.trim();
+  const displayName = document.getElementById("profileEditorDisplayName")?.value.trim() || discordId;
+  if (!discordId || !window.confirm(`Revoke all RuneLite plugin access for ${displayName}? This cannot be undone here.`)) return;
+  const revoke = document.getElementById("profilePluginAccessRevokeBtn");
+  const status = document.getElementById("profilePluginAccessStatus");
+  if (revoke) revoke.disabled = true;
+  if (status) status.textContent = "Revoking plugin access…";
+  try {
+    const response = await fetch("/api/admin/plugin-keys", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discordId, action: "revoke" }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    await refreshProfilePluginAccess();
+  } catch (error) { if (status) status.textContent = `Revocation failed: ${error.message}`; await refreshProfilePluginAccess(); }
+}
+
 function openProfileEditor(member) {
   const editor = document.getElementById("profileAdminEditor");
   const title = document.getElementById("profileEditorTitle");
@@ -1830,6 +1862,7 @@ function openProfileEditor(member) {
   if (blurbInput) blurbInput.value = member.adminBlurbOverride || "";
   if (rankInput) rankInput.value = member.rankOverride || "";
   if (status) status.textContent = "";
+  void refreshProfilePluginAccess();
 }
 
 async function saveProfileOverrides(clear = false) {
@@ -3969,3 +4002,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("ikActivityRefresh")?.addEventListener("click",refreshActivity);
 });
 
+
+// Member Management: plugin access controls live inside the existing profile editor.
+document.getElementById("profilePluginAccessRefreshBtn")?.addEventListener("click", refreshProfilePluginAccess);
+document.getElementById("profilePluginAccessRevokeBtn")?.addEventListener("click", revokeProfilePluginAccess);

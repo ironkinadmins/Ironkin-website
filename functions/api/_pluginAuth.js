@@ -34,6 +34,10 @@ export async function requirePluginUser(request, env) {
     return { ok: false, response: jsonError("Invalid API key.", 401) };
   }
 
+  // Revocation is authoritative even if an old KV mapping remains cached.
+  const revoked = await hybridKv(env, "drops").get(`plugin-key-revoked:${keyRecord.discordId}`);
+  if (revoked) return { ok:false, response:jsonError("Plugin access revoked by staff.", 403) };
+
   // The API key authenticates the Discord member, not an RSN snapshot.
   // Always hydrate current profile data so RuneLite integrations keep working
   // after an OSRS name change without requiring the member to rotate their key.

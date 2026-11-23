@@ -84,6 +84,8 @@ function randomApiKey() {
 }
 
 async function upsertPluginApiKey(env, record) {
+  // A staff revocation must never be undone by viewing or saving a profile.
+  if (await hybridKv(env, "drops").get(`plugin-key-revoked:${record.discordId}`)) return "";
   if (record.pluginApiKey) {
     await hybridKv(env, "drops").put(`plugin-api-key:${record.pluginApiKey}`, JSON.stringify({
       discordId: record.discordId,
@@ -109,6 +111,7 @@ async function upsertPluginApiKey(env, record) {
 }
 
 async function rotatePluginApiKey(env, record) {
+  if (await hybridKv(env, "drops").get(`plugin-key-revoked:${record.discordId}`)) throw Error("Plugin access revoked by staff.");
   if (record.pluginApiKey) {
     await hybridKv(env, "drops").delete(`plugin-api-key:${record.pluginApiKey}`);
   }
@@ -460,7 +463,7 @@ const displayRank =
     placements,
     isOwnProfile,
     plugin: isOwnProfile ? {
-      apiKey: record.pluginApiKey || "",
+      apiKey: record.pluginKeyRevoked ? "" : (record.pluginApiKey || ""),
       serverUrl: "https://ironkinclan.com",
       bingoId: "battleship-bingo"
     } : null
@@ -513,6 +516,7 @@ export async function onRequestGet({ request, env }) {
       memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
       lastSeenAt: new Date().toISOString()
     };
+    record.pluginKeyRevoked = Boolean(await hybridKv(env, "drops").get(`plugin-key-revoked:${session.id}`));
     await upsertPluginApiKey(env, record);
     await saveProfileRecord(env, session.id, record);
 
@@ -626,6 +630,8 @@ export async function onRequestPost({ request, env }) {
     updatedAt: new Date().toISOString()
   };
 
+  next.pluginKeyRevoked = Boolean(await hybridKv(env, "drops").get(`plugin-key-revoked:${session.id}`));
+  if (regeneratePluginApiKey && next.pluginKeyRevoked) return Response.json({ error:"Plugin access revoked by staff." }, { status:403 });
   if (regeneratePluginApiKey) {
     await rotatePluginApiKey(env, next);
   } else {

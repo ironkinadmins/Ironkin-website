@@ -1,3 +1,4 @@
+import { activeGuildMember } from "../_activeGuildMember.js";
 import { getSession, isStaffSession } from "../_auth.js";
 import { supabaseRest } from "../_supabase.js";
 import { approvedForBoss, bossMessage, getSubmission, mergeBoard, parseDiscordBoard, projectedPlacement, syncDiscordBoard, updateHallOfFlameReviewNotification } from "./_records.js";
@@ -24,6 +25,7 @@ export async function onRequestPost({ request, env }) {
     return Response.json({ok:Boolean(reviewMessage.updated),status:submission.status,reviewMessage},{status:reviewMessage.updated?200:207,headers:noStore});
   }
 
+  if (action === "approve" && !await activeGuildMember(env, submission.discord_id)) return Response.json({ error:"Submitter is no longer an active Discord clan member." }, { status:403, headers:noStore });
   const message = await bossMessage(env, submission.boss);
   const legacy = parseDiscordBoard(message?.embeds?.[0]?.description || "");
   const alreadyApproved = await approvedForBoss(env, submission.boss);
