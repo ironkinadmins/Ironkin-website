@@ -1,4 +1,5 @@
 import { hybridKv } from "../../../_hybridKv.js";
+import { nextNominationWindow, sendNominationDm } from "../../../_winnerNominationNotifications.js";
 import { buildCyclePayoutDraft } from "../../../_cyclePayouts.js";
 import { syncRecordEmbeds } from "../../../_recordsAutoSync.js";
 import { getSession, isStaffSession } from "../../_auth.js";
@@ -28,8 +29,8 @@ function nextNominationDeadline(cycle, type, now = new Date()) {
 // Winner nomination eligibility is derived from the approved archive snapshot.
 // Never infer a Discord account from an unverified Discord display name.
 async function syncNominationWinner(env, entry) {
-  if (!["botw", "sotw"].includes(entry.type)) return null;
-  const category = entry.type === "botw" ? (entry.botwTier === "standard" ? "botw-standard" : entry.botwTier === "elite" ? "botw-elite" : null) : "sotw";
+  if (!["botw", "botw-standard", "botw-elite", "sotw"].includes(entry.type)) return null;
+  const category = entry.type === "botw-standard" || entry.type === "botw-elite" ? entry.type : entry.type === "botw" ? (entry.botwTier === "standard" ? "botw-standard" : entry.botwTier === "elite" ? "botw-elite" : null) : "sotw";
   // Historical BOTW archives without a verified tier are intentionally not migrated.
   if (!category) return {state:"unresolved",reason:"Historical BOTW tier is unknown; staff verification required."};
   const kv = hybridKv(env, "drops");
@@ -71,43 +72,60 @@ async function syncNominationWinner(env, entry) {
   // A correction or a new winner must invalidate nominations from the old winner.
   if (winners[category] !== (status.discordId || null)) delete nominations[category];
   winners[category] = status.discordId || null;
+  // Store the cycle-scoped receipt identifier together with the winner status.
+  // Otherwise a concurrent reminder may read a status without its receipt key
+  // and fall back to the previous cycle's reusable event-ID receipt.
+  const noticeId = String(entry.archiveRequestId || entry.womCompetitionId || "").trim();
+  if (noticeId) status.noticeKey = `events:sotw-botw-winner-notice:${category}:${noticeId}`;
   statuses[category] = status;
   await kv.put(key, JSON.stringify(winners));
   await kv.put(nominationsKey, JSON.stringify(nominations));
   await kv.put(statusKey, JSON.stringify(statuses));
   await kv.put(`${statusKey}:${category}`, JSON.stringify(status));
-  // Best-effort private nomination invitation; a failed DM never blocks results.
-  // A new winner receives a single invitation for this finalized event.
-  if (status.state === "resolved" && status.discordId && env.DISCORD_BOT_TOKEN) {
-    const noticeKey = `events:sotw-botw-winner-notice:${category}:${entry.eventId}`;
-    if (!(await kv.get(noticeKey))) {
-      try {
-        const headers = { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" };
-        const dm = await fetch("https://discord.com/api/v10/users/@me/channels", {
-          method: "POST", headers, body: JSON.stringify({ recipient_id: status.discordId })
-        });
-        if (!dm.ok) throw Error(`Discord DM channel HTTP ${dm.status}`);
-        const channel = await dm.json();
-        const site = String(env.SITE_URL || "https://ironkinclan.com").replace(/\/+$/, "");
-        const cycle = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
-        const deadline = nextNominationDeadline(cycle, category);
-        const sent = await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
-          method: "POST", headers,
-          body: JSON.stringify({ embeds: [{ title: `🏆 Your next ${category.toUpperCase()} picks`,
-            description: `Congratulations! Choose **two** options for the next ${category.toUpperCase()} poll. The third option is selected automatically.${deadline ? `\n\n**Nomination deadline:** ${deadline}.` : ""}\n\n[Submit your two picks](${site}/winner-nominations.html?type=${encodeURIComponent(category)})`,
-            color: 15891968 }], allowed_mentions: { parse: [] } })
-        });
-        if (!sent.ok) throw Error(`Discord DM message HTTP ${sent.status}`);
-        await kv.put(noticeKey, JSON.stringify({ sentAt: new Date().toISOString(), discordId: status.discordId, deadline, state:"sent" }));
-        status.notification = "sent";
-      } catch (error) {
-        status.notification = "failed";
-        status.notificationError = String(error?.message || error).slice(0, 180);
-        await kv.put(noticeKey, JSON.stringify({state:"failed",discordId:status.discordId,failedAt:new Date().toISOString(),error:status.notificationError}));
-        console.warn("Winner nomination DM failed:", error);
+  // Share the same delivery receipt and DM implementation as the nomination admin
+  // and reminder paths. Never automatically replay an attempted Discord send: a
+  // network failure can occur after Discord has accepted the message.
+  if (status.state === "resolved" && status.discordId) {
+    const noticeKey = status.noticeKey;
+    if (!noticeKey) {
+      status.notification = "needs_review";
+      status.notificationError = "Missing unique competition identifier; invitation was not attempted.";
+      return status;
+    }
+    const previousNotice = parse(await kv.get(noticeKey), null);
+    if (previousNotice) {
+      status.notification = previousNotice.state === "sent" ? "previously_sent" : "needs_review";
+    } else if (env.DISCORD_BOT_TOKEN) {
+      const cycle = parse(await kv.get("events:sotw-botw-cycle:v1"), {});
+      const window = nextNominationWindow(cycle, category);
+      if (window?.open) {
+        const claimed = { state: "sending", discordId: status.discordId,
+          attemptedAt: new Date().toISOString(), deadline: window.deadline };
+        await kv.put(noticeKey, JSON.stringify(claimed));
+        try {
+          const receipt = await sendNominationDm(env, status.discordId, category, window.deadline, "invitation");
+          await kv.put(noticeKey, JSON.stringify({ ...claimed, ...receipt,
+            state: "sent", sentAt: new Date().toISOString() }));
+          status.notification = "sent";
+        } catch (error) {
+          status.notification = "needs_review";
+          status.notificationError = String(error?.message || error).slice(0, 180);
+          await kv.put(noticeKey, JSON.stringify({ ...claimed, state: "needs_review",
+            failedAt: new Date().toISOString(), error: status.notificationError }));
+          console.warn("Winner nomination DM outcome needs review:", error);
+        }
+      } else {
+        status.notification = "window_closed";
       }
-    } else status.notification = "previously_sent";
+    } else {
+      status.notification = "not_configured";
+    }
   }
+  // Persist the final receipt state for the existing nomination management UI.
+  // The per-category status is also read by the reminder workflow.
+  statuses[category] = status;
+  await kv.put(statusKey, JSON.stringify(statuses));
+  await kv.put(`${statusKey}:${category}`, JSON.stringify(status));
   return status;
 }
 
@@ -303,7 +321,7 @@ export async function archiveEventInternal({env, body}) {
 
   // Resolve the next nomination winner from finalized standings, independently of
   // whether the Discord announcement succeeds. Unmatched/tied winners stay blocked.
-  if (event.type === "botw" || event.type === "sotw") {
+  if (["botw", "botw-standard", "botw-elite", "sotw"].includes(event.type)) {
     try { archiveEntry.nominationWinner = await syncNominationWinner(env, archiveEntry); }
     catch (error) {
       archiveEntry.nominationWinner = {state:"error", reason:String(error?.message || error).slice(0,250)};
@@ -365,7 +383,7 @@ export async function archiveEventInternal({env, body}) {
     // The archive above retains configuredDrops/template.configuredDrops for reuse.
     // Clear the live drop catalog only after the archived event is saved and
     // removed from active tracking, so the next BOTW/SOTW starts empty.
-    if (event.type === "botw" || event.type === "sotw") {
+    if (["botw", "botw-standard", "botw-elite", "sotw"].includes(event.type)) {
       await hybridKv(env, "drops").put(`drops:${event.id}`, JSON.stringify([]));
     }
   }

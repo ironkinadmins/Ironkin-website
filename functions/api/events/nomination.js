@@ -55,7 +55,7 @@ export async function onRequest({request,env}) {
     const cycleId=`${type}:${eventDate}`;
     return [type,{open:localParts()<deadline && !(drafts[type]?.cycleId===cycleId && drafts[type]?.status==="published"),deadline,cycleId}];
   }));
-  if (request.method==="GET") return Response.json({eligible, pools:Object.fromEntries(eligible.map(type=>[type,pools[type]||[]])), nominations:Object.fromEntries(eligible.map(type=>[type,nominations[type]?.options||[]])),windows},{headers:{"Cache-Control":"no-store"}});
+  if (request.method==="GET") return Response.json({eligible, pools:Object.fromEntries(eligible.map(type=>[type,pools[type]||[]])), nominations:Object.fromEntries(eligible.map(type=>[type,nominations[type]?.cycleId===windows[type]?.cycleId ? nominations[type].options||[] : []])),windows},{headers:{"Cache-Control":"no-store"}});
   let body;
   try {body=await request.json();}catch{return Response.json({error:"Invalid JSON."},{status:400});}
   const type=body?.type;
@@ -78,7 +78,7 @@ export async function onRequest({request,env}) {
   if (new Set(selected).size!==max||selected.some(x=>!enabled.has(x))) return Response.json({error:"Selections must be distinct, enabled options."},{status:400});
   // Resolve labels from the enabled catalog rather than trusting user-provided text.
   const labels=selected.map(key=>(pools[type]||[]).find(x=>canonical(x,type)===key));
-  nominations[type]={discordId:String(session.id),options:labels,updatedAt:new Date().toISOString()};
+  nominations[type]={discordId:String(session.id),cycleId:windows[type].cycleId,options:labels,updatedAt:new Date().toISOString()};
   await kv.put(NOMINATIONS_KEY,JSON.stringify(nominations));
   // Poll drafts are regenerated from the authoritative saved nominations.
   // Live/published polls must never be mutated by a late submission.

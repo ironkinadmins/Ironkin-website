@@ -354,10 +354,11 @@ async function writeProfileRecord(env, member, now, guildRoles = [], guildEmojis
     staffRankRoleId: staffRank.roleId || "",
     staffRankIconUrl: staffRank.iconUrl || "",
     staffRankUnicodeEmoji: staffRank.unicodeEmoji || "",
-    // Discord nicknames are the clan's RSNs. Keep the saved RSN in sync when a
-    // member renames, while retaining old names as aliases for in-flight WOM events.
-    rsn: displayName,
-    previousRsns: mergePreviousRsns(existing, displayName),
+    // A Discord nickname is a display label, not proof of an OSRS name change.
+    // Bootstrap new profiles from the nickname, but never replace an established
+    // RSN or append nickname changes as historical RSN aliases during guild sync.
+    rsn: String(existing.rsn || displayName).trim(),
+    previousRsns: mergePreviousRsns(existing, String(existing.rsn || displayName).trim()),
     memberSince: member.joined_at || existing.memberSince || null,
     discordSyncedAt: now
   };

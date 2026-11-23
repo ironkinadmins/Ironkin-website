@@ -554,7 +554,7 @@ export async function onRequest({request,env,context}) {
         resolvedId = winnerInfo.status?.state === "resolved" ? String(winnerInfo.status.discordId || "") : "";
       }
       const bootstrapValid=candidate.type==="sotw" && nomination?.source==="initial-staff-bootstrap" && nomination?.cycleId===candidate.id && !resolvedId;
-      const picks=(staffSotw || bootstrapValid || (resolvedId && String(nomination?.discordId)===resolvedId && (!nomination.cycleId || nomination.cycleId===candidate.id))) ? nomination.options : null;
+      const picks=(staffSotw || bootstrapValid || (resolvedId && String(nomination?.discordId)===resolvedId && nomination.cycleId===candidate.id)) ? nomination.options : null;
       const distinct=Array.isArray(picks)?[...new Map(picks.filter(x=>unique.some(v=>key(v,candidate.type)===key(x,candidate.type))).map(x=>[key(x,candidate.type),x])).values()]:[];
       try {
         if(distinct.length!==2)throw Error("Two valid previous-winner nominations are required before publishing; no random fallback.");

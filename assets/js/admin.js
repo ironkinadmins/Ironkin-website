@@ -1849,6 +1849,7 @@ function openProfileEditor(member) {
   const usernameInput = document.getElementById("profileEditorUsername");
   const avatarInput = document.getElementById("profileAvatarOverrideInput");
   const blurbInput = document.getElementById("profileBlurbOverrideInput");
+  const rsnInput = document.getElementById("profileRsnInput");
   const rankInput = document.getElementById("profileRankOverrideInput");
   const status = document.getElementById("profileAdminStatus");
 
@@ -1860,6 +1861,7 @@ function openProfileEditor(member) {
   if (usernameInput) usernameInput.value = member.username || "";
   if (avatarInput) avatarInput.value = member.adminAvatarOverride || "";
   if (blurbInput) blurbInput.value = member.adminBlurbOverride || "";
+  if (rsnInput) rsnInput.value = member.rsn || "";
   if (rankInput) rankInput.value = member.rankOverride || "";
   if (status) status.textContent = "";
   void refreshProfilePluginAccess();
@@ -1871,6 +1873,7 @@ async function saveProfileOverrides(clear = false) {
   const username = document.getElementById("profileEditorUsername")?.value.trim();
   const avatarInput = document.getElementById("profileAvatarOverrideInput");
   const blurbInput = document.getElementById("profileBlurbOverrideInput");
+  const rsnInput = document.getElementById("profileRsnInput");
   const rankInput = document.getElementById("profileRankOverrideInput");
   const status = document.getElementById("profileAdminStatus");
 
@@ -1890,6 +1893,7 @@ async function saveProfileOverrides(clear = false) {
       username,
       adminAvatarOverride: clear ? "" : avatarInput?.value.trim() || "",
       adminBlurbOverride: clear ? "" : blurbInput?.value.trim() || "",
+      rsn: rsnInput?.value.trim() || "",
       rankOverride: clear ? "" : rankInput?.value.trim() || ""
     })
   });

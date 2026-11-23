@@ -14,7 +14,7 @@ export async function onRequest({request,env}){
  const [poolsRaw,nominationsRaw,draftsRaw]=await Promise.all([kv.get(K.pools),kv.get(K.nominations),kv.get(K.drafts)]);
  const pools=parse(poolsRaw,{}),nominations=parse(nominationsRaw,{}),drafts=parse(draftsRaw,{});
  const statuses=await Promise.all(TYPES.map(async type=>{const s=await nominationNoticeStatus(env,type);const cycleId=s.window?.date?`${type}:${s.window.date}`:null;const state=cycleId?parse(await kv.get(PREFIX+cycleId),{}):{};const draft=drafts[type];const locked=!!(Array.isArray(state.pollOptions)||state.messageId||state.publishedAt||(draft?.cycleId===cycleId&&draft?.status==='published'));
- return {type,winner:s.status?.state==='resolved'?{rsn:s.status.rsn,discordId:s.status.discordId}:null,window:s.window,cycleId,locked,picks:nominations[type]?.options||[],pool:pools[type]||[],draftStatus:draft?.cycleId===cycleId?draft.status:null};}));
+ return {type,winner:s.status?.state==='resolved'?{rsn:s.status.rsn,discordId:s.status.discordId}:null,window:s.window,cycleId,locked,picks:nominations[type]?.cycleId===cycleId ? nominations[type].options||[] : [],pool:pools[type]||[],draftStatus:draft?.cycleId===cycleId?draft.status:null};}));
  if(request.method==='GET')return Response.json({statuses},{headers:{'Cache-Control':'no-store'}});
  const origin=request.headers.get('Origin');if(!origin||new URL(origin).origin!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const body=await request.json().catch(()=>null);const type=body?.type;const info=statuses.find(s=>s.type===type);

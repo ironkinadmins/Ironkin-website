@@ -1,4 +1,5 @@
 import { supabaseRest } from "../_supabase.js";
+import { activeGuildMember } from "../_activeGuildMember.js";
 import { requirePluginUser } from "../_pluginAuth.js";
 import { bossMessage, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
 
@@ -34,6 +35,11 @@ export async function onRequestPost({ request, env }) {
   const auth = await requirePersonalPluginUser(request, env);
   if (!auth.ok) return auth.response;
   const pluginUser = auth.pluginUser;
+  // A valid personal key does not establish current clan membership.
+  // Fail closed if Discord cannot verify the member.
+  if (!await activeGuildMember(env, pluginUser?.discordId)) {
+    return Response.json({ error:"Active Discord clan membership could not be verified." }, { status:403, headers:noStore });
+  }
 
   const contentType = String(request.headers.get("content-type") || "").toLowerCase();
   if (!contentType.startsWith("multipart/form-data")) {

@@ -1,4 +1,3 @@
-import { ensureHistoricalRecordsLast } from "../../_hofRecordOrder.js";
 import { getSupabaseKey, supabaseRest } from "../_supabase.js";
 import { hybridKv } from "../../_hybridKv.js";
 
@@ -139,7 +138,7 @@ export async function discordMessages(env) {
   const token = env.DISCORD_BOT_TOKEN;
   const { channelId } = await getHallOfFlameDiscordSettings(env);
   if (!token || !channelId) throw new Error("Discord Hall of Flame integration is not configured.");
-  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, { headers: { Authorization: `Bot ${token}` } });
+  const response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, { headers: { Authorization: `Bot ${token}` } });
   const data = await response.json();
   if (!response.ok) throw new Error(data?.message || "Could not load Hall of Flame Discord messages.");
   return data;
@@ -232,7 +231,9 @@ export async function syncDiscordBoard(env, boss, board, proofUrl = "", imageUrl
     const createdResponse = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages`, { method:"POST", headers, body:JSON.stringify({ embeds:[embed] }) });
     if (!createdResponse.ok) throw new Error(`Discord Hall of Flame create failed: ${await createdResponse.text()}`);
     const created = await createdResponse.json();
-    try { await ensureHistoricalRecordsLast(env); } catch (error) { console.warn("Historical record reposition failed", error); }
+    // Historical-board ordering is an explicit maintenance/bulk-sync action.
+    // Reordering it on every new PB board causes unrelated Discord writes and
+    // can exhaust rate-limit budgets during normal approvals.
     return { synced:true, messageId:created.id, mode:"created" };
   }
   let response = await discordFetch(`https://discord.com/api/v10/channels/${channelId}/messages/${message.id}`, { method:"PATCH", headers, body:JSON.stringify({ embeds:[embed] }) });

@@ -36,7 +36,9 @@ export async function nominationNoticeStatus(env,type){
   const status=categoryStatus && (!sharedStatus || String(categoryStatus.updatedAt||"")>=String(sharedStatus.updatedAt||"")) ? categoryStatus : sharedStatus;
   const config=parse(await kv.get("events:sotw-botw-cycle:v1"),{});
   const window=nextNominationWindow(config,type);
-  const noticeKey=status?.eventId?`events:sotw-botw-winner-notice:${type}:${status.eventId}`:null;
+  // New archives store an explicit cycle-scoped key; retain legacy fallback
+  // for notices written before the migration to unique archive receipts.
+  const noticeKey=status?.noticeKey || (status?.eventId?`events:sotw-botw-winner-notice:${type}:${status.eventId}`:null);
   const notice=noticeKey?parse(await kv.get(noticeKey),null):null;
   const nominations=parse(await kv.get("events:sotw-botw-nominations:v1"),{});
   const complete=status?.discordId&&nominations[type]?.discordId===status.discordId&&Array.isArray(nominations[type]?.options)&&nominations[type].options.length===2;

@@ -186,45 +186,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Separate live-test namespace: never changes the official schedule or active event registry.
-document.addEventListener("DOMContentLoaded", () => {
-  const start=document.getElementById("ikLiveTestStart"), refresh=document.getElementById("ikLiveTestRefresh"), reset=document.getElementById("ikLiveTestReset"), status=document.getElementById("ikLiveTestStatus");
-  if(!start||!refresh||!status)return;
-  const update=async()=>{
-    const r=await fetch("/api/admin/events/cycle-live-test",{credentials:"same-origin",cache:"no-store"});
-    const d=await r.json();if(!r.ok)throw Error(d.error||"Could not load test status");
-    const t=d.test;status.textContent=t?`Status: ${t.status}\nPoll closes: ${t.pollClosesAt}\nWOM starts: ${t.womStartsAt}\nWOM ends: ${t.womEndsAt}\nChoices: ${(t.options||[]).map(x=>x.label).join(" / ")}\nVotes: ${JSON.stringify(t.counts||[])}\nWOM: ${t.womUrl||t.womStatus||"Not created"}\n${t.error||""}`:"No live test started.";
-    reset.disabled=!t||!["needs_review","failed","cancelled","completed"].includes(t.status)||!!t.womCompetitionId||["created","attempted","needs_review"].includes(t.womStatus);
-    start.disabled=!!t&&!["cancelled","completed","failed"].includes(t.status);
-  };
-  refresh.addEventListener("click",()=>update().catch(e=>status.textContent=e.message));
-  reset.addEventListener("click",async()=>{
-    if(!confirm("Reset this finished/failed live test so a new poll can start? The old Discord message will remain; no WOM competition or official event will be deleted."))return;
-    reset.disabled=true;
-    try{
-      const r=await fetch("/api/admin/events/cycle-live-test",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"reset"})});
-      const d=await r.json();if(!r.ok)throw Error(d.error||"Reset failed");await update();
-    }catch(e){status.textContent=e.message;await update().catch(()=>{});}
-  });
-
-  start.addEventListener("click",async()=>{
-    if(!confirm("Post a PUBLIC 3-minute SOTW test poll and attempt to create a REAL 15-minute WOM competition in group 12095? No rewards or nominations will be issued."))return;
-    start.disabled=true;
-    try{
-      const r=await fetch("/api/admin/events/cycle-live-test",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"start"})});
-      const d=await r.json();if(!r.ok)throw Error(d.error||"Test could not start");await update();
-    }catch(e){status.textContent=e.message;start.disabled=false;}
-  });
-  update().catch(e=>status.textContent=e.message);
-});
-
 // Review archived SOTW/BOTW Ember payouts. Credits are performed by the bot
 // only after a staff member approves a fully resolved draft.
 document.addEventListener('DOMContentLoaded',()=>{
   const anchor=document.getElementById('ikPayoutApprovalAnchor');
   if(!anchor)return;
-  const panel=document.createElement('section');
-  panel.className='admin-card';
+  const panel=document.createElement('div');
+  panel.className='ik-payout-approval-controls';
   panel.style.marginTop='1.5rem';
   const heading=document.createElement('h3');heading.textContent='SOTW/BOTW Ember payout approval';
   const explanation=document.createElement('p');explanation.textContent='Recalculation fetches the FULL historical WOM standings and uses CURRENT Event Rewards (02) settings. No Embers are credited until you approve a fully matched draft.';
