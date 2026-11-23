@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Review archived SOTW/BOTW Ember payouts. Credits are performed by the bot
 // only after a staff member approves a fully resolved draft.
 document.addEventListener('DOMContentLoaded',()=>{
-  const anchor=document.getElementById('ikLiveTestStatus');
+  const anchor=document.getElementById('ikPayoutApprovalAnchor');
   if(!anchor)return;
   const panel=document.createElement('section');
   panel.className='admin-card';
