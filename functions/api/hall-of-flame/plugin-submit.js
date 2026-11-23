@@ -1,4 +1,3 @@
-import { activeGuildMember } from "../_activeGuildMember.js";
 import { supabaseRest } from "../_supabase.js";
 import { requirePluginUser } from "../_pluginAuth.js";
 import { bossMessage, normalizeBoss, parseDiscordBoard, parseSubmissionTimeToMs, projectedPlacement, uploadProof, notifyHallOfFlameReview } from "./_records.js";
@@ -35,7 +34,6 @@ export async function onRequestPost({ request, env }) {
   const auth = await requirePersonalPluginUser(request, env);
   if (!auth.ok) return auth.response;
   const pluginUser = auth.pluginUser;
-  if (!await activeGuildMember(env, pluginUser.discordId)) return Response.json({ error:"Active Discord clan membership could not be verified." }, { status:403, headers:noStore });
 
   const contentType = String(request.headers.get("content-type") || "").toLowerCase();
   if (!contentType.startsWith("multipart/form-data")) {
@@ -51,8 +49,8 @@ export async function onRequestPost({ request, env }) {
 
   const submittedPlayer = String(form.get("player") || form.get("rsn") || "").replace(/\s+/g, " ").trim().slice(0, 64);
   // Authentication is bound to the Discord member behind the personal API key.
-  // The plugin reports the character that actually earned the PB. The
-  // Discord-linked profile RSN can lag after a name change.
+  // Use the character name supplied with this authenticated RuneLite submission.
+  // The profile RSN is a fallback, not an override: it can lag behind name changes.
   const player = String(submittedPlayer || pluginUser?.rsn || pluginUser?.displayName || "").replace(/\s+/g, " ").trim().slice(0, 64);
   const boss = normalizeBoss(form.get("boss"));
   const timeText = String(form.get("time") || "").trim();

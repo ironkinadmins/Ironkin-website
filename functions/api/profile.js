@@ -84,8 +84,6 @@ function randomApiKey() {
 }
 
 async function upsertPluginApiKey(env, record) {
-  // A staff revocation must never be undone by viewing or saving a profile.
-  if (await hybridKv(env, "drops").get(`plugin-key-revoked:${record.discordId}`)) return "";
   if (record.pluginApiKey) {
     await hybridKv(env, "drops").put(`plugin-api-key:${record.pluginApiKey}`, JSON.stringify({
       discordId: record.discordId,
@@ -111,7 +109,6 @@ async function upsertPluginApiKey(env, record) {
 }
 
 async function rotatePluginApiKey(env, record) {
-  if (await hybridKv(env, "drops").get(`plugin-key-revoked:${record.discordId}`)) throw Error("Plugin access revoked by staff.");
   if (record.pluginApiKey) {
     await hybridKv(env, "drops").delete(`plugin-api-key:${record.pluginApiKey}`);
   }
@@ -463,7 +460,7 @@ const displayRank =
     placements,
     isOwnProfile,
     plugin: isOwnProfile ? {
-      apiKey: record.pluginKeyRevoked ? "" : (record.pluginApiKey || ""),
+      apiKey: record.pluginApiKey || "",
       serverUrl: "https://ironkinclan.com",
       bingoId: "battleship-bingo"
     } : null
@@ -494,7 +491,8 @@ export async function onRequestGet({ request, env }) {
 
   if (isOwnProfile) {
     const displayName = getDisplayName(session);
-    const rsn = displayName;
+    // Discord nickname is not authoritative for an established OSRS identity.
+    const rsn = String(record.rsn || displayName).trim();
     const previousRsns = mergePreviousRsns(record, rsn);
     const discordAvatarUrl = getDiscordAvatarUrl(session);
     const roleIds = Array.isArray(session.roles) ? session.roles : [];
@@ -516,7 +514,6 @@ export async function onRequestGet({ request, env }) {
       memberSince: session.joined_at || session.joinedAt || record.memberSince || null,
       lastSeenAt: new Date().toISOString()
     };
-    record.pluginKeyRevoked = Boolean(await hybridKv(env, "drops").get(`plugin-key-revoked:${session.id}`));
     await upsertPluginApiKey(env, record);
     await saveProfileRecord(env, session.id, record);
 
@@ -606,7 +603,8 @@ export async function onRequestPost({ request, env }) {
   const existing = await getProfileRecord(env, session.id);
   const roleIds = Array.isArray(session.roles) ? session.roles : [];
   const discordAvatarUrl = getDiscordAvatarUrl(session);
-  const previousRsns = mergePreviousRsns(existing, displayName);
+  const rsn = String(existing.rsn || displayName).trim();
+  const previousRsns = mergePreviousRsns(existing, rsn);
 
   const next = {
     ...existing,
@@ -618,7 +616,7 @@ export async function onRequestPost({ request, env }) {
     roles: roleIds,
     rank: getHighestRank(roleIds, CLAN_RANKS) || existing.rank || "Member",
     staffRank: getHighestRank(roleIds, STAFF_RANKS) || null,
-    rsn: displayName,
+    rsn,
     previousRsns,
     memberSince: session.joined_at || session.joinedAt || existing.memberSince || null,
     customAvatarUrl,
@@ -630,8 +628,6 @@ export async function onRequestPost({ request, env }) {
     updatedAt: new Date().toISOString()
   };
 
-  next.pluginKeyRevoked = Boolean(await hybridKv(env, "drops").get(`plugin-key-revoked:${session.id}`));
-  if (regeneratePluginApiKey && next.pluginKeyRevoked) return Response.json({ error:"Plugin access revoked by staff." }, { status:403 });
   if (regeneratePluginApiKey) {
     await rotatePluginApiKey(env, next);
   } else {
@@ -642,8 +638,8 @@ export async function onRequestPost({ request, env }) {
 
   const [embers, wom, placements] = await Promise.all([
     getEmberBalance(env, session.id, displayName),
-    getWomStats(env, displayName),
-    getEventPlacements(env, displayName)
+    getWomStats(env, rsn),
+    getEventPlacements(env, rsn)
   ]);
 
   return Response.json({
